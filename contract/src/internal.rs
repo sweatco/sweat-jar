@@ -1,6 +1,10 @@
 use crate::*;
 
 impl Contract {
+    pub(crate) fn assert_admin(&self) {
+        assert!(self.admin_allowlist.contains(&env::predecessor_account_id()), "Can be performed only by admin");
+    }
+
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: &Jar) {
         self.jars.push(jar);
         

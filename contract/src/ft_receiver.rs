@@ -21,6 +21,8 @@ impl FungibleTokenReceiver for Contract {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
+        println!("Got {:?} tokens from {:?}", amount, sender_id);
+
         let ft_message: FtMessage = serde_json::from_str(&msg).unwrap();
 
         match ft_message {
