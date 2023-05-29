@@ -4,10 +4,12 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
 
-const YEAR_IN_SECONDS: u32 = 365 * 24 * 60 * 60;
+const SECONDS_IN_YEAR: Duration = 365 * 24 * 60 * 60;
 
+/// Milliseconds since the Unix epoch (January 1, 1970 (midnight UTC/GMT))
 pub type Timestamp = u64;
 
+/// Duration in milliseconds
 pub type Duration = u64;
 
 pub type ProductId = String;
@@ -25,6 +27,12 @@ pub struct Product {
     pub is_refillable: bool,
     pub apy: f32,
     pub cap: Balance,
+}
+
+impl Product {
+    fn per_second_interest_rate(&self) -> f32 {
+        self.apy / SECONDS_IN_YEAR as f32
+    }
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -52,32 +60,34 @@ impl Jar {
     }
 
     pub fn get_intereset(&self, product: Product, now: Timestamp) -> Balance {
-        let jar_start_timestamp = self
+        let jar_start: Timestamp = self
             .stakes
             .first()
             .expect("Jar must contain at least one stake")
             .since;
-        let maturity_date = jar_start_timestamp + product.maturity_term;
+        let maturity_date: Timestamp = jar_start + product.maturity_term;
 
-        let last_claim_ms = self.last_claim_timestamp.unwrap_or(0);
-        let interval_end_ms = cmp::min(now, maturity_date);
+        let last_claim_timestamp: Timestamp = self.last_claim_timestamp.unwrap_or(0);
+        let interval_end: Timestamp = cmp::min(now, maturity_date);
 
-        let principal_part = self.stakes.iter().fold(0, |acc, stake| {
-            let interval_start_ms = cmp::max(last_claim_ms, stake.since);
+        let interest = self.stakes.iter().fold(0, |acc, stake| {
+            let interval_start: Timestamp = cmp::max(last_claim_timestamp, stake.since);
+            let interval: Duration = interval_end - interval_start;
+            let interval_in_seconds = interval / 1000;
+            let percents_for_interval =
+                interval_in_seconds as f32 * product.per_second_interest_rate();
 
-            let interval_ms = interval_end_ms - interval_start_ms;
-
-            acc + stake.amount * interval_ms as u128
+            acc + (stake.amount as f32 * percents_for_interval) as u128
         });
 
-        (principal_part as f64 * product.apy as f64) as u128 / YEAR_IN_SECONDS as u128
+        interest
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    //    use super::*;
+    //
     //    #[test]
     //    fn given_jar_with_single_stake_when_get_principle_then_it_equals_to_stake() {
     //        let account_id = AccountId::new_unchecked(String::from("alice"));

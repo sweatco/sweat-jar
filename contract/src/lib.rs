@@ -83,6 +83,39 @@ impl Contract {
         result
     }
 
+    pub fn get_interest(&self) -> Balance {
+        let mut result: Balance = 0;
+        let account_id = env::predecessor_account_id().clone();
+        let jar_ids = self
+            .account_jars
+            .get(&account_id)
+            .clone()
+            .expect("Account doesn't have jars")
+            .clone();
+        let now = env::block_timestamp_ms();
+
+        println!("@@ method -> now: {}", now);
+
+        let jar_ids_iter = jar_ids.iter();
+        for i in jar_ids_iter {
+            let jar = self
+                .jars
+                .get(*i as _)
+                .expect(format!("Jar on index {} doesn't exist", i).as_ref());
+
+            println!("@@ method -> jar: {:?}", jar);
+
+            let product = self
+                .products
+                .get(&jar.product_id)
+                .expect("Product doesn't exist");
+
+            result += jar.get_intereset(product, now);
+        }
+
+        result
+    }
+
     #[private]
     pub fn create_jar(
         &mut self,
@@ -96,7 +129,7 @@ impl Contract {
         );
 
         let index = self.jars.len() as JarIndex;
-        let now = env::block_timestamp_ms() * 1000;
+        let now = env::block_timestamp_ms();
         let jar = Jar {
             index,
             product_id,
@@ -126,8 +159,8 @@ mod tests {
     fn get_product() -> Product {
         Product {
             id: "product".to_string(),
-            lockup_term: 0,
-            maturity_term: 0,
+            lockup_term: 365 * 60 * 60 * 1000 * 1000,
+            maturity_term: 365 * 60 * 60 * 1000 * 1000,
             notice_term: 0,
             is_refillable: false,
             apy: 0.1,
@@ -140,7 +173,8 @@ mod tests {
         builder
             .current_account_id(accounts(0))
             .signer_account_id(predecessor_account_id.clone())
-            .predecessor_account_id(predecessor_account_id.clone());
+            .predecessor_account_id(predecessor_account_id.clone())
+            .block_timestamp(0);
 
         builder
     }
@@ -228,4 +262,111 @@ mod tests {
         let principal = contract.get_principal();
         assert_eq!(principal, 700);
     }
+
+    #[test]
+    #[should_panic(expected = "Account doesn't have jars")]
+    fn get_total_interest_with_no_jars() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        contract.get_interest();
+    }
+
+    #[test]
+    fn get_total_interest_with_single_jar_after_half_term() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        let product = get_product();
+
+        contract.register_product(product.clone());
+        contract.create_jar(accounts(1), product.clone().id, 100);
+
+        testing_env!(get_context(accounts(1))
+            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
+            .build());
+
+        let interest = contract.get_interest();
+        assert_eq!(interest, 5);
+    }
+
+    #[test]
+    fn get_total_interest_with_single_jar_on_maturity() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        let product = get_product();
+
+        contract.register_product(product.clone());
+        contract.create_jar(accounts(1), product.clone().id, 100);
+
+        testing_env!(get_context(accounts(1))
+            .block_timestamp(365 * 24 * 60 * 60 * u64::pow(10, 9))
+            .build());
+
+        let interest = contract.get_interest();
+        assert_eq!(interest, 10);
+    }
+
+    #[test]
+    fn get_total_interest_with_single_jar_after_maturity() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        let product = get_product();
+
+        contract.register_product(product.clone());
+        contract.create_jar(accounts(1), product.clone().id, 100);
+
+        testing_env!(get_context(accounts(1))
+            .block_timestamp(400 * 24 * 60 * 60 * u64::pow(10, 9))
+            .build());
+
+        let interest = contract.get_interest();
+        assert_eq!(interest, 10);
+    }
+
+//    #[test]
+//    fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
+//        let context = get_context(accounts(0));
+//        testing_env!(context.build());
+//        let mut contract = Contract::init(
+//            AccountId::new_unchecked("token".to_string()),
+//            vec![accounts(0)],
+//        );
+//
+//        let product = get_product();
+//
+//        contract.register_product(product.clone());
+//        contract.create_jar(accounts(1), product.clone().id, 100);
+//
+//        testing_env!(get_context(accounts(1))
+//            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
+//            .build());
+//
+//        contract.claim();
+//
+//        testing_env!(get_context(accounts(1))
+//            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
+//            .build());
+//
+//        let interest = contract.get_interest();
+//        assert_eq!(interest, 5);
+//    }
 }
