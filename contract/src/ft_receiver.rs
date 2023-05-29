@@ -10,7 +10,13 @@ use crate::*;
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub enum FtMessage {
-    Stake(),
+    Stake(StakeMessage),
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct StakeMessage {
+    product_id: ProductId,
 }
 
 #[near_bindgen]
@@ -26,9 +32,26 @@ impl FungibleTokenReceiver for Contract {
         let ft_message: FtMessage = serde_json::from_str(&msg).unwrap();
 
         match ft_message {
-            FtMessage::Stake() => {}
+            FtMessage::Stake(message) => {
+                self.create_jar(sender_id.clone(), message.product_id, amount.0);
+            }
         }
 
         PromiseOrValue::Value(0.into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serialize() {
+        let data = FtMessage::Stake(StakeMessage {
+            product_id: "fix_1".to_string(),
+        });
+
+        let json = serde_json::to_string(&data).unwrap();
+        println!("@@ json = {}", json);
     }
 }

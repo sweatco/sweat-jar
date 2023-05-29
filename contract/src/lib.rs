@@ -1,8 +1,13 @@
+use external::{ext_self, GAS_FOR_AFTER_CLAIM};
 use jar::{Jar, JarIndex, Product, ProductId, Stake};
+use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
-use near_sdk::{env, near_bindgen, AccountId, Balance, BorshStorageKey, PanicOnDefault};
+use near_sdk::json_types::U128;
+use near_sdk::{
+    env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, PromiseOrValue,
+};
 
 mod external;
 mod ft_receiver;
@@ -61,9 +66,8 @@ impl Contract {
         self.products.values_as_vector().to_vec()
     }
 
-    pub fn get_principal(&self) -> Balance {
+    pub fn get_principal(&self, account_id: AccountId) -> Balance {
         let mut result: Balance = 0;
-        let account_id = env::predecessor_account_id().clone();
         let jar_ids = self
             .account_jars
             .get(&account_id)
@@ -83,9 +87,8 @@ impl Contract {
         result
     }
 
-    pub fn get_interest(&self) -> Balance {
+    pub fn get_interest(&self, account_id: AccountId) -> Balance {
         let mut result: Balance = 0;
-        let account_id = env::predecessor_account_id().clone();
         let jar_ids = self
             .account_jars
             .get(&account_id)
@@ -94,16 +97,12 @@ impl Contract {
             .clone();
         let now = env::block_timestamp_ms();
 
-        println!("@@ method -> now: {}", now);
-
         let jar_ids_iter = jar_ids.iter();
         for i in jar_ids_iter {
             let jar = self
                 .jars
                 .get(*i as _)
                 .expect(format!("Jar on index {} doesn't exist", i).as_ref());
-
-            println!("@@ method -> jar: {:?}", jar);
 
             let product = self
                 .products
@@ -114,6 +113,53 @@ impl Contract {
         }
 
         result
+    }
+
+    pub fn claim(&mut self) -> PromiseOrValue<Balance> {
+        let mut interest: Balance = 0;
+        let account_id = env::predecessor_account_id().clone();
+        let jar_ids = self
+            .account_jars
+            .get(&account_id)
+            .clone()
+            .expect("Account doesn't have jars")
+            .clone();
+        let now = env::block_timestamp_ms();
+
+        let jar_ids_iter = jar_ids.iter();
+        for i in jar_ids_iter {
+            let jar = self
+                .jars
+                .get(*i as _)
+                .expect(format!("Jar on index {} doesn't exist", i).as_ref());
+
+            let product = self
+                .products
+                .get(&jar.product_id)
+                .expect("Product doesn't exist");
+
+            let updated_jar = Jar {
+                last_claim_attempt_timestamp: Some(now),
+                ..jar.clone()
+            };
+            self.jars.replace(*i as _, &updated_jar);
+
+            interest += jar.get_intereset(product, now);
+        }
+
+        if interest > 0 {
+            ext_ft_core::ext(self.token_account_id.clone())
+                .with_attached_deposit(1)
+                .ft_transfer(account_id.clone(), U128::from(interest.clone()), None)
+                .then(
+                    ext_self::ext(env::current_account_id())
+                        .with_static_gas(Gas::from(GAS_FOR_AFTER_CLAIM))
+                        .after_claim(account_id, interest.clone()),
+                )
+                .into()
+        } else {
+            PromiseOrValue::Value(0)
+        }
     }
 
     #[private]
@@ -138,6 +184,7 @@ impl Contract {
                 amount,
                 since: now,
             }],
+            last_claim_attempt_timestamp: None,
             last_claim_timestamp: None,
         };
 
@@ -218,7 +265,7 @@ mod tests {
             vec![accounts(1)],
         );
 
-        contract.get_principal();
+        contract.get_principal(accounts(0));
     }
 
     #[test]
@@ -237,7 +284,7 @@ mod tests {
 
         testing_env!(get_context(accounts(1)).build());
 
-        let principal = contract.get_principal();
+        let principal = contract.get_principal(accounts(1));
         assert_eq!(principal, 100);
     }
 
@@ -259,7 +306,7 @@ mod tests {
 
         testing_env!(get_context(accounts(1)).build());
 
-        let principal = contract.get_principal();
+        let principal = contract.get_principal(accounts(1));
         assert_eq!(principal, 700);
     }
 
@@ -273,7 +320,7 @@ mod tests {
             vec![accounts(0)],
         );
 
-        contract.get_interest();
+        contract.get_interest(accounts(0));
     }
 
     #[test]
@@ -294,7 +341,7 @@ mod tests {
             .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
             .build());
 
-        let interest = contract.get_interest();
+        let interest = contract.get_interest(accounts(1));
         assert_eq!(interest, 5);
     }
 
@@ -316,7 +363,7 @@ mod tests {
             .block_timestamp(365 * 24 * 60 * 60 * u64::pow(10, 9))
             .build());
 
-        let interest = contract.get_interest();
+        let interest = contract.get_interest(accounts(1));
         assert_eq!(interest, 10);
     }
 
@@ -338,35 +385,85 @@ mod tests {
             .block_timestamp(400 * 24 * 60 * 60 * u64::pow(10, 9))
             .build());
 
-        let interest = contract.get_interest();
+        let interest = contract.get_interest(accounts(1));
         assert_eq!(interest, 10);
     }
 
-//    #[test]
-//    fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
-//        let context = get_context(accounts(0));
-//        testing_env!(context.build());
-//        let mut contract = Contract::init(
-//            AccountId::new_unchecked("token".to_string()),
-//            vec![accounts(0)],
-//        );
-//
-//        let product = get_product();
-//
-//        contract.register_product(product.clone());
-//        contract.create_jar(accounts(1), product.clone().id, 100);
-//
-//        testing_env!(get_context(accounts(1))
-//            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
-//            .build());
-//
-//        contract.claim();
-//
-//        testing_env!(get_context(accounts(1))
-//            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
-//            .build());
-//
-//        let interest = contract.get_interest();
-//        assert_eq!(interest, 5);
-//    }
+    #[test]
+    fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        let product = get_product();
+
+        contract.register_product(product.clone());
+        contract.create_jar(accounts(1), product.clone().id, 100);
+
+        testing_env!(get_context(accounts(1))
+            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
+            .build());
+
+        contract.claim();
+
+        testing_env!(get_context(accounts(1))
+            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
+            .build());
+
+        let interest = contract.get_interest(accounts(1));
+        assert_eq!(interest, 5);
+    }
+
+    //    #[test]
+    //    fn get_half_of_interest_when_claim_on_half_term() {
+    //        let context = get_context(accounts(0));
+    //        testing_env!(context.build());
+    //        let mut contract = Contract::init(
+    //            AccountId::new_unchecked("token".to_string()),
+    //            vec![accounts(0)],
+    //        );
+    //
+    //        let product = get_product();
+    //
+    //        contract.register_product(product.clone());
+    //        contract.create_jar(accounts(1), product.clone().id, 100);
+    //
+    //        testing_env!(get_context(accounts(1))
+    //            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
+    //            .build());
+    //
+    //        let claim_promise = contract.claim();
+    //
+    //        if let PromiseOrValue::Promise(promise) = contract.claim() {
+    //        }
+    //        let interest = contract.claim();
+    //
+    //        assert_eq!(interest, 5);
+    //    }
+    //
+    //    #[test]
+    //    fn get_total_interest_when_claim_on_maturity() {
+    //        let context = get_context(accounts(0));
+    //        testing_env!(context.build());
+    //        let mut contract = Contract::init(
+    //            AccountId::new_unchecked("token".to_string()),
+    //            vec![accounts(0)],
+    //        );
+    //
+    //        let product = get_product();
+    //
+    //        contract.register_product(product.clone());
+    //        contract.create_jar(accounts(1), product.clone().id, 100);
+    //
+    //        testing_env!(get_context(accounts(1))
+    //            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
+    //            .build());
+    //
+    //        let interest = contract.claim();
+    //
+    //        assert_eq!(interest, 10);
+    //    }
 }

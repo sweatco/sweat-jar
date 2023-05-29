@@ -16,9 +16,9 @@ pub type ProductId = String;
 
 pub type JarIndex = u32;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct Product {
     pub id: ProductId,
     pub lockup_term: Duration,
@@ -35,19 +35,20 @@ impl Product {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct Jar {
     pub index: JarIndex,
     pub product_id: ProductId,
     pub stakes: Vec<Stake>,
+    pub last_claim_attempt_timestamp: Option<Timestamp>,
     pub last_claim_timestamp: Option<Timestamp>,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq, Clone))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct Stake {
     pub account_id: AccountId,
     pub amount: Balance,
@@ -60,6 +61,10 @@ impl Jar {
     }
 
     pub fn get_intereset(&self, product: Product, now: Timestamp) -> Balance {
+        if let Some(_) = self.last_claim_attempt_timestamp {
+            return 0;
+        }
+
         let jar_start: Timestamp = self
             .stakes
             .first()
