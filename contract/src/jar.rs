@@ -4,164 +4,96 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
 
-const SECONDS_IN_YEAR: Duration = 365 * 24 * 60 * 60;
-
-/// Milliseconds since the Unix epoch (January 1, 1970 (midnight UTC/GMT))
-pub type Timestamp = u64;
-
-/// Duration in milliseconds
-pub type Duration = u64;
-
-pub type ProductId = String;
+use crate::common::{Timestamp, UDecimal};
+use crate::product::{Product, ProductId};
 
 pub type JarIndex = u32;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
-pub struct Product {
-    pub id: ProductId,
-    pub lockup_term: Duration,
-    pub maturity_term: Duration,
-    pub notice_term: Duration,
-    pub is_refillable: bool,
-    pub apy: f32,
-    pub cap: Balance,
-}
-
-impl Product {
-    fn per_second_interest_rate(&self) -> f32 {
-        self.apy / SECONDS_IN_YEAR as f32
-    }
-}
-
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct Jar {
     pub index: JarIndex,
+    pub account_id: AccountId,
     pub product_id: ProductId,
-    pub stakes: Vec<Stake>,
-    pub last_claim_attempt_timestamp: Option<Timestamp>,
-    pub last_claim_timestamp: Option<Timestamp>,
+    pub created_at: Timestamp,
+    pub principal: Balance,
+    pub cache: Option<JarCache>,
+    pub claimed_balance: Balance,
+    pub is_locked: bool,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
-pub struct Stake {
-    pub account_id: AccountId,
-    pub amount: Balance,
-    pub since: Timestamp,
+pub struct JarCache {
+    pub updated_at: Timestamp,
+    pub interest: Balance,
 }
 
 impl Jar {
-    pub fn get_principal(&self) -> Balance {
-        self.stakes.iter().fold(0, |acc, stake| acc + stake.amount)
-    }
-
-    pub fn get_intereset(&self, product: Product, now: Timestamp) -> Balance {
-        if let Some(_) = self.last_claim_attempt_timestamp {
-            return 0;
+    pub fn create(
+        index: JarIndex,
+        account_id: AccountId,
+        product_id: ProductId,
+        principal: Balance,
+        created_at: Timestamp,
+    ) -> Self {
+        Self {
+            index,
+            account_id,
+            product_id,
+            principal,
+            created_at,
+            cache: None,
+            claimed_balance: 0,
+            is_locked: false,
         }
-
-        let jar_start: Timestamp = self
-            .stakes
-            .first()
-            .expect("Jar must contain at least one stake")
-            .since;
-        let maturity_date: Timestamp = jar_start + product.maturity_term;
-
-        let last_claim_timestamp: Timestamp = self.last_claim_timestamp.unwrap_or(0);
-        let interval_end: Timestamp = cmp::min(now, maturity_date);
-
-        let interest = self.stakes.iter().fold(0, |acc, stake| {
-            let interval_start: Timestamp = cmp::max(last_claim_timestamp, stake.since);
-            let interval: Duration = interval_end - interval_start;
-            let interval_in_seconds = interval / 1000;
-            let percents_for_interval =
-                interval_in_seconds as f32 * product.per_second_interest_rate();
-
-            acc + (stake.amount as f32 * percents_for_interval) as u128
-        });
-
-        interest
     }
-}
 
-#[cfg(test)]
-mod tests {
-    //    use super::*;
-    //
-    //    #[test]
-    //    fn given_jar_with_single_stake_when_get_principle_then_it_equals_to_stake() {
-    //        let account_id = AccountId::new_unchecked(String::from("alice"));
-    //        let jar = Jar {
-    //            stakes: vec![Stake {
-    //                account_id,
-    //                amount: 100,
-    //                since: 0,
-    //            }],
-    //            last_claim_timestamp: None,
-    //        };
-    //
-    //        assert_eq!(100, jar.get_principal());
-    //    }
-    //
-    //    #[test]
-    //    fn given_jar_with_multiple_stakes_when_get_principle_then_it_equals_to_sum() {
-    //        let account_id = AccountId::new_unchecked(String::from("alice"));
-    //        let jar = Jar {
-    //            stakes: vec![
-    //                Stake {
-    //                    account_id: account_id.clone(),
-    //                    amount: 100,
-    //                    since: 0,
-    //                },
-    //                Stake {
-    //                    account_id: account_id.clone(),
-    //                    amount: 100,
-    //                    since: 0,
-    //                },
-    //                Stake {
-    //                    account_id: account_id.clone(),
-    //                    amount: 300,
-    //                    since: 0,
-    //                },
-    //            ],
-    //            last_claim_timestamp: None,
-    //        };
-    //
-    //        assert_eq!(500, jar.get_principal());
-    //    }
-    //
-    //    #[test]
-    //    fn given_new_stake_when_get_principal_then_return_zero() {
-    //        let account_id = AccountId::new_unchecked(String::from("alice"));
-    //        let jar = Jar {
-    //            stakes: vec![Stake {
-    //                account_id: account_id.clone(),
-    //                amount: 100,
-    //                since: 0,
-    //            }],
-    //            last_claim_timestamp: None,
-    //        };
-    //
-    //        assert_eq!(0, jar.get_intereset(0.05, 1, 0));
-    //    }
-    //
-    //    #[test]
-    //    fn given_mature_stake_when_get_principal_then_return_max_interest() {
-    //        let account_id = AccountId::new_unchecked(String::from("alice"));
-    //        let jar = Jar {
-    //            stakes: vec![Stake {
-    //                account_id: account_id.clone(),
-    //                amount: 100,
-    //                since: 0,
-    //            }],
-    //            last_claim_timestamp: None,
-    //        };
-    //
-    //        assert_eq!(5, jar.get_intereset(0.05, 1, 24 * 60 * 60));
-    //    }
+    pub fn topped_up(&self, amount: Balance, product: &Product, now: Timestamp) -> Self {
+        let current_interest = self.get_interest(product, now);
+        Self {
+            principal: self.principal + amount,
+            cache: Some(JarCache {
+                updated_at: now,
+                interest: current_interest,
+            }),
+            ..self.clone()
+        }
+    }
+
+    pub fn claimed(&self, amount: Balance, now: Timestamp) -> Self {
+        Self {
+            claimed_balance: self.claimed_balance + amount,
+            cache: Some(JarCache {
+                updated_at: now,
+                interest: 0,
+            }),
+            ..self.clone()
+        }
+    }
+
+    pub fn get_interest(&self, product: &Product, now: Timestamp) -> Balance {
+        let (base_date, base_interest) = if let Some(cache) = &self.cache {
+            (cache.updated_at, cache.interest)
+        } else {
+            (self.created_at, 0)
+        };
+        let until_date = if let Some(maturity_term) = product.maturity_term {
+            cmp::min(now, self.created_at + maturity_term)
+        } else {
+            now
+        };
+
+        let term = (until_date - base_date) / 1000;
+        let rate_pecent = product.per_second_interest_rate();
+        let rate = UDecimal {
+            significand: rate_pecent.significand * self.principal,
+            ..rate_pecent
+        };
+        let interest = (rate.significand * term as u128) / (10_u128.pow(rate.exponent as _));
+
+        base_interest + interest
+    }
 }

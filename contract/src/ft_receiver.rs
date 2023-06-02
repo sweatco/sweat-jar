@@ -40,18 +40,3 @@ impl FungibleTokenReceiver for Contract {
         PromiseOrValue::Value(0.into())
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_serialize() {
-        let data = FtMessage::Stake(StakeMessage {
-            product_id: "fix_1".to_string(),
-        });
-
-        let json = serde_json::to_string(&data).unwrap();
-        println!("@@ json = {}", json);
-    }
-}

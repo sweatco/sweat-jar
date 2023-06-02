@@ -1,5 +1,5 @@
 use external::{ext_self, GAS_FOR_AFTER_CLAIM};
-use jar::{Jar, JarIndex, Product, ProductId, Stake};
+use jar::{Jar, JarIndex};
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
@@ -8,11 +8,17 @@ use near_sdk::json_types::U128;
 use near_sdk::{
     env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, PromiseOrValue,
 };
+use product::{Product, ProductApi, ProductId};
 
+use crate::external::GAS_FOR_AFTER_WITHDRAW;
+
+mod assert;
+mod common;
 mod external;
 mod ft_receiver;
 mod internal;
 mod jar;
+mod product;
 
 // TODO
 // 1. view get_principal
@@ -40,6 +46,13 @@ pub(crate) enum StorageKey {
     AccountJars,
 }
 
+pub trait ContractApi {
+    fn get_principal(&self, account_id: AccountId) -> Balance;
+    fn get_interest(&self, account_id: AccountId) -> Balance;
+    fn claim(&mut self) -> PromiseOrValue<Balance>;
+    fn withdraw(&mut self, jar_id: JarIndex) -> PromiseOrValue<Balance>;
+}
+
 #[near_bindgen]
 impl Contract {
     #[init]
@@ -56,17 +69,31 @@ impl Contract {
         }
     }
 
-    pub fn register_product(&mut self, product: Product) {
-        self.assert_admin();
+    #[private]
+    pub fn create_jar(
+        &mut self,
+        account_id: AccountId,
+        product_id: ProductId,
+        amount: Balance,
+    ) -> Jar {
+        assert!(
+            self.products.get(&product_id).is_some(),
+            "Product doesn't exist"
+        );
 
-        self.products.insert(&product.id, &product);
+        let index = self.jars.len() as JarIndex;
+        let now = env::block_timestamp_ms();
+        let jar = Jar::create(index, account_id.clone(), product_id, amount, now);
+
+        self.save_jar(&account_id, &jar);
+
+        return jar;
     }
+}
 
-    pub fn get_products(&self) -> Vec<Product> {
-        self.products.values_as_vector().to_vec()
-    }
-
-    pub fn get_principal(&self, account_id: AccountId) -> Balance {
+#[near_bindgen]
+impl ContractApi for Contract {
+    fn get_principal(&self, account_id: AccountId) -> Balance {
         let mut result: Balance = 0;
         let jar_ids = self
             .account_jars
@@ -81,13 +108,13 @@ impl Contract {
                 .jars
                 .get(*i as _)
                 .expect(format!("Jar on index {} doesn't exist", i).as_ref());
-            result += jar.get_principal();
+            result += jar.principal;
         }
 
         result
     }
 
-    pub fn get_interest(&self, account_id: AccountId) -> Balance {
+    fn get_interest(&self, account_id: AccountId) -> Balance {
         let mut result: Balance = 0;
         let jar_ids = self
             .account_jars
@@ -109,13 +136,13 @@ impl Contract {
                 .get(&jar.product_id)
                 .expect("Product doesn't exist");
 
-            result += jar.get_intereset(product, now);
+            result += jar.get_interest(&product, now);
         }
 
         result
     }
 
-    pub fn claim(&mut self) -> PromiseOrValue<Balance> {
+    fn claim(&mut self) -> PromiseOrValue<Balance> {
         let mut interest: Balance = 0;
         let account_id = env::predecessor_account_id().clone();
         let jar_ids = self
@@ -138,13 +165,10 @@ impl Contract {
                 .get(&jar.product_id)
                 .expect("Product doesn't exist");
 
-            let updated_jar = Jar {
-                last_claim_attempt_timestamp: Some(now),
-                ..jar.clone()
-            };
-            self.jars.replace(*i as _, &updated_jar);
+            interest += jar.get_interest(&product, now);
 
-            interest += jar.get_intereset(product, now);
+            let updated_jar = jar.claimed(interest, now);
+            self.jars.replace(*i as _, &updated_jar);
         }
 
         if interest > 0 {
@@ -162,35 +186,40 @@ impl Contract {
         }
     }
 
-    #[private]
-    pub fn create_jar(
-        &mut self,
-        account_id: AccountId,
-        product_id: ProductId,
-        amount: Balance,
-    ) -> Jar {
-        assert!(
-            self.products.get(&product_id).is_some(),
-            "Product doesn't exist"
+    fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
+        let jar = self.jars.get(jar_index as _).expect("Jar doesn't exist");
+        let account_id = env::predecessor_account_id();
+
+        assert_eq!(
+            jar.account_id.clone(),
+            account_id.clone(),
+            "Account doesn't own this jar"
         );
 
-        let index = self.jars.len() as JarIndex;
-        let now = env::block_timestamp_ms();
-        let jar = Jar {
-            index,
-            product_id,
-            stakes: vec![Stake {
-                account_id: account_id.clone(),
-                amount,
-                since: now,
-            }],
-            last_claim_attempt_timestamp: None,
-            last_claim_timestamp: None,
-        };
+        assert!(jar.principal > 0, "Jar is empty");
 
-        self.save_jar(&account_id, &jar);
+        ext_ft_core::ext(self.token_account_id.clone())
+            .with_attached_deposit(1)
+            .ft_transfer(account_id.clone(), U128::from(jar.principal), None)
+            .then(
+                ext_self::ext(env::current_account_id())
+                    .with_static_gas(Gas::from(GAS_FOR_AFTER_WITHDRAW))
+                    .after_withdrow(account_id, jar.principal),
+            )
+            .into()
+    }
+}
 
-        return jar;
+#[near_bindgen]
+impl ProductApi for Contract {
+    fn register_product(&mut self, product: Product) {
+        self.assert_admin();
+
+        self.products.insert(&product.id, &product);
+    }
+
+    fn get_products(&self) -> Vec<Product> {
+        self.products.values_as_vector().to_vec()
     }
 }
 
@@ -201,17 +230,25 @@ mod tests {
         testing_env,
     };
 
+    use crate::common::UDecimal;
+
     use super::*;
 
     fn get_product() -> Product {
         Product {
             id: "product".to_string(),
             lockup_term: 365 * 60 * 60 * 1000 * 1000,
-            maturity_term: 365 * 60 * 60 * 1000 * 1000,
-            notice_term: 0,
+            maturity_term: Some(365 * 60 * 60 * 1000 * 1000),
+            notice_term: None,
             is_refillable: false,
-            apy: 0.1,
+            apy: UDecimal {
+                significand: 1,
+                exponent: 1,
+            },
             cap: 100,
+            is_restakable: false,
+            withdrowal_fee: None,
+            is_public: true,
         }
     }
 
@@ -360,7 +397,7 @@ mod tests {
         contract.create_jar(accounts(1), product.clone().id, 100);
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(365 * 24 * 60 * 60 * u64::pow(10, 9))
+            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
             .build());
 
         let interest = contract.get_interest(accounts(1));
