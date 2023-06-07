@@ -20,12 +20,6 @@ mod internal;
 mod jar;
 mod product;
 
-// TODO
-// 1. view get_principal
-// 2. view get_interest
-// 3. create deposit by transfer
-// 4. claim all the interest
-
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
@@ -76,10 +70,7 @@ impl Contract {
         product_id: ProductId,
         amount: Balance,
     ) -> Jar {
-        assert!(
-            self.products.get(&product_id).is_some(),
-            "Product doesn't exist"
-        );
+        self.assert_product_exists(&product_id);
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
@@ -94,81 +85,45 @@ impl Contract {
 #[near_bindgen]
 impl ContractApi for Contract {
     fn get_principal(&self, account_id: AccountId) -> Balance {
-        let mut result: Balance = 0;
-        let jar_ids = self
-            .account_jars
-            .get(&account_id)
-            .clone()
-            .expect("Account doesn't have jars")
-            .clone();
+        let jar_ids = self.account_jar_ids(&account_id).clone();
 
-        let jar_ids_iter = jar_ids.iter();
-        for i in jar_ids_iter {
-            let jar = self
-                .jars
-                .get(*i as _)
-                .expect(format!("Jar on index {} doesn't exist", i).as_ref());
-            result += jar.principal;
-        }
-
-        result
+        jar_ids
+            .iter()
+            .map(|index| self.get_jar(*index))
+            .fold(0, |acc, jar| acc + jar.principal)
     }
 
     fn get_interest(&self, account_id: AccountId) -> Balance {
-        let mut result: Balance = 0;
-        let jar_ids = self
-            .account_jars
-            .get(&account_id)
-            .clone()
-            .expect("Account doesn't have jars")
-            .clone();
         let now = env::block_timestamp_ms();
+        let jar_ids = self.account_jar_ids(&account_id).clone();
 
-        let jar_ids_iter = jar_ids.iter();
-        for i in jar_ids_iter {
-            let jar = self
-                .jars
-                .get(*i as _)
-                .expect(format!("Jar on index {} doesn't exist", i).as_ref());
-
-            let product = self
-                .products
-                .get(&jar.product_id)
-                .expect("Product doesn't exist");
-
-            result += jar.get_interest(&product, now);
-        }
-
-        result
+        jar_ids
+            .iter()
+            .map(|index| self.get_jar(*index))
+            .map(|jar| jar.get_interest(&self.get_product(&jar.product_id), now))
+            .fold(0, |acc, interest| acc + interest)
     }
 
     fn claim(&mut self) -> PromiseOrValue<Balance> {
-        let mut interest: Balance = 0;
         let account_id = env::predecessor_account_id().clone();
-        let jar_ids = self
-            .account_jars
-            .get(&account_id)
-            .clone()
-            .expect("Account doesn't have jars")
-            .clone();
         let now = env::block_timestamp_ms();
 
+        let jar_ids = self.account_jar_ids(&account_id).clone();
         let jar_ids_iter = jar_ids.iter();
-        for i in jar_ids_iter {
-            let jar = self
-                .jars
-                .get(*i as _)
-                .expect(format!("Jar on index {} doesn't exist", i).as_ref());
 
-            let product = self
-                .products
-                .get(&jar.product_id)
-                .expect("Product doesn't exist");
+        let mut interest: Balance = 0;
 
+        let unlocked_jars: Vec<Jar> = jar_ids_iter
+            .map(|index| self.get_jar(*index))
+            .filter(|jar| !jar.is_locked)
+            .collect();
+
+        for jar in unlocked_jars {
+            let product = self.get_product(&jar.product_id);
             interest += jar.get_interest(&product, now);
 
-            let updated_jar = jar.claimed(interest, now);
-            self.jars.replace(*i as _, &updated_jar);
+            let updated_jar = jar.claimed(interest, now).locked();
+            self.jars.replace(jar.index, &updated_jar);
         }
 
         if interest > 0 {
@@ -187,7 +142,7 @@ impl ContractApi for Contract {
     }
 
     fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
-        let jar = self.jars.get(jar_index as _).expect("Jar doesn't exist");
+        let jar = self.get_jar(jar_index);
         let account_id = env::predecessor_account_id();
 
         assert_eq!(
@@ -293,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account doesn't have jars")]
+    #[should_panic(expected = "Account alice doesn't have jars")]
     fn get_principle_with_no_jars() {
         let context = get_context(accounts(0));
         testing_env!(context.build());
@@ -348,7 +303,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account doesn't have jars")]
+    #[should_panic(expected = "Account alice doesn't have jars")]
     fn get_total_interest_with_no_jars() {
         let context = get_context(accounts(0));
         testing_env!(context.build());

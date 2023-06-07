@@ -35,15 +35,11 @@ pub enum WithdrawalFee {
 
 impl Product {
     pub(crate) fn per_second_interest_rate(&self) -> UDecimal {
-        println!("@@ per_second_interest_rate: self = {:?}", self);
-        
         let apy = Decimal::new(self.apy.significand as _, self.apy.exponent);
         let per_second_rate = apy
             .checked_div(Decimal::new(SECONDS_IN_YEAR as _, 0))
             .expect("Division error");
         
-        println!("@@ per_second_interest_rate: sig = {}, e = {}", per_second_rate.mantissa(), per_second_rate.scale());
-
         UDecimal {
             significand: per_second_rate.mantissa() as _,
             exponent: per_second_rate.scale(),

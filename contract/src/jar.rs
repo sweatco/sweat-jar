@@ -7,7 +7,7 @@ use near_sdk::{AccountId, Balance};
 use crate::common::{Timestamp, UDecimal};
 use crate::product::{Product, ProductId};
 
-pub type JarIndex = u32;
+pub type JarIndex = u64;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -48,6 +48,20 @@ impl Jar {
             cache: None,
             claimed_balance: 0,
             is_locked: false,
+        }
+    }
+
+    pub fn locked(&self) -> Self {
+        Self {
+            is_locked: true,
+            ..self.clone()
+        }
+    }
+
+    pub fn unlocked(&self) -> Self {
+        Self {
+            is_locked: false,
+            ..self.clone()
         }
     }
 
