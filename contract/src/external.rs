@@ -1,45 +1,30 @@
-use near_sdk::ext_contract;
+use near_sdk::{ext_contract, is_promise_success};
 
 use crate::*;
 
 // TODO: maybe calculate in runtime
-pub(crate) const GAS_FOR_AFTER_CLAIM: u64 = 20_000_000_000_000;
-pub(crate) const GAS_FOR_AFTER_WITHDRAW: u64 = 20_000_000_000_000;
+pub(crate) const GAS_FOR_AFTER_TRANSFER: u64 = 20_000_000_000_000;
 
 #[ext_contract(ext_self)]
 pub trait SelfCallbacks {
-    fn after_claim(&mut self, account_id: AccountId, claimed_balance: Balance) -> Balance;
-    fn after_withdrow(&mut self, account_id: AccountId, withdrawed_balance: Balance) -> Balance;
+    fn after_transfer(&mut self, jars_before_transfer: Vec<Jar>);
 }
 
+#[near_bindgen]
 impl SelfCallbacks for Contract {
-    fn after_claim(&mut self, account_id: AccountId, claimed_balance: Balance) -> Balance {
-        // TODO: add error handling
-
-        let jar_ids = self
-            .account_jars
-            .get(&account_id)
-            .clone()
-            .expect("Account doesn't have jars")
-            .clone();
-
-        let jar_ids_iter = jar_ids.iter();
-        for i in jar_ids_iter {
-            let jar = self
-                .jars
-                .get(*i as _)
-                .expect(format!("Jar on index {} doesn't exist", i).as_ref());
-
-//            let updated_jar = Jar {
-//                ..jar.clone()
-//            };
-//            self.jars.replace(*i as _, &updated_jar);
+    #[private]
+    fn after_transfer(&mut self, jars_before_transfer: Vec<Jar>) {
+        if is_promise_success() {
+            for jar_before_transfer in jars_before_transfer.iter() {
+                let jar = self.get_jar(jar_before_transfer.index);
+                self.jars
+                    .replace(jar_before_transfer.index, &jar.unlocked());
+            }
+        } else {
+            for jar_before_transfer in jars_before_transfer.iter() {
+                self.jars
+                    .replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
+            }
         }
-
-        claimed_balance
-    }
-
-    fn after_withdrow(&mut self, account_id: AccountId, withdrawed_balance: Balance) -> Balance {
-        panic!("Not implemented");
     }
 }

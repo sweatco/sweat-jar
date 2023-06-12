@@ -21,7 +21,7 @@ pub struct Product {
     pub cap: Balance,
     pub is_refillable: bool,
     pub is_restakable: bool,
-    pub withdrowal_fee: Option<WithdrawalFee>,
+    pub withdrawal_fee: Option<WithdrawalFee>,
     pub is_public: bool,
 }
 

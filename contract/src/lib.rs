@@ -1,20 +1,19 @@
-use external::{ext_self, GAS_FOR_AFTER_CLAIM};
+use external::{ext_self, GAS_FOR_AFTER_TRANSFER};
+use ft_interface::{FungibleTokenContract, FungibleTokenInterface};
 use jar::{Jar, JarIndex};
-use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
-use near_sdk::json_types::U128;
 use near_sdk::{
-    env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, PromiseOrValue,
+    env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, Promise,
+    PromiseOrValue,
 };
 use product::{Product, ProductApi, ProductId};
-
-use crate::external::GAS_FOR_AFTER_WITHDRAW;
 
 mod assert;
 mod common;
 mod external;
+mod ft_interface;
 mod ft_receiver;
 mod internal;
 mod jar;
@@ -80,6 +79,13 @@ impl Contract {
 
         return jar;
     }
+
+    #[private]
+    fn after_transfer_call(jars_before_transfer: Vec<Jar>) -> Promise {
+        ext_self::ext(env::current_account_id())
+            .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
+            .after_transfer(jars_before_transfer)
+    }
 }
 
 #[near_bindgen]
@@ -115,10 +121,10 @@ impl ContractApi for Contract {
 
         let unlocked_jars: Vec<Jar> = jar_ids_iter
             .map(|index| self.get_jar(*index))
-            .filter(|jar| !jar.is_locked)
+            .filter(|jar| !jar.is_pending_withdraw)
             .collect();
 
-        for jar in unlocked_jars {
+        for jar in unlocked_jars.clone() {
             let product = self.get_product(&jar.product_id);
             interest += jar.get_interest(&product, now);
 
@@ -127,13 +133,11 @@ impl ContractApi for Contract {
         }
 
         if interest > 0 {
-            ext_ft_core::ext(self.token_account_id.clone())
-                .with_attached_deposit(1)
-                .ft_transfer(account_id.clone(), U128::from(interest.clone()), None)
-                .then(
-                    ext_self::ext(env::current_account_id())
-                        .with_static_gas(Gas::from(GAS_FOR_AFTER_CLAIM))
-                        .after_claim(account_id, interest.clone()),
+            FungibleTokenContract::new(self.token_account_id.clone())
+                .transfer(
+                    account_id.clone(),
+                    interest.clone(),
+                    Self::after_transfer_call(unlocked_jars.clone()),
                 )
                 .into()
         } else {
@@ -153,13 +157,11 @@ impl ContractApi for Contract {
 
         assert!(jar.principal > 0, "Jar is empty");
 
-        ext_ft_core::ext(self.token_account_id.clone())
-            .with_attached_deposit(1)
-            .ft_transfer(account_id.clone(), U128::from(jar.principal), None)
-            .then(
-                ext_self::ext(env::current_account_id())
-                    .with_static_gas(Gas::from(GAS_FOR_AFTER_WITHDRAW))
-                    .after_withdrow(account_id, jar.principal),
+        FungibleTokenContract::new(self.token_account_id.clone())
+            .transfer(
+                account_id.clone(),
+                jar.principal.clone(),
+                Self::after_transfer_call(vec![jar]),
             )
             .into()
     }
@@ -202,7 +204,7 @@ mod tests {
             },
             cap: 100,
             is_restakable: false,
-            withdrowal_fee: None,
+            withdrawal_fee: None,
             is_public: true,
         }
     }

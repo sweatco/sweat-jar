@@ -20,7 +20,7 @@ pub struct Jar {
     pub principal: Balance,
     pub cache: Option<JarCache>,
     pub claimed_balance: Balance,
-    pub is_locked: bool,
+    pub is_pending_withdraw: bool,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
@@ -47,20 +47,20 @@ impl Jar {
             created_at,
             cache: None,
             claimed_balance: 0,
-            is_locked: false,
+            is_pending_withdraw: false,
         }
     }
 
     pub fn locked(&self) -> Self {
         Self {
-            is_locked: true,
+            is_pending_withdraw: true,
             ..self.clone()
         }
     }
 
     pub fn unlocked(&self) -> Self {
         Self {
-            is_locked: false,
+            is_pending_withdraw: false,
             ..self.clone()
         }
     }
