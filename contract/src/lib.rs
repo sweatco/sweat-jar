@@ -1,3 +1,7 @@
+use std::str::FromStr;
+
+use assert::assert_signature_is_valid;
+use ed25519_dalek::{PublicKey, Signature};
 use external::{ext_self, GAS_FOR_AFTER_TRANSFER};
 use ft_interface::{FungibleTokenContract, FungibleTokenInterface};
 use jar::{Jar, JarIndex};
@@ -59,6 +63,29 @@ impl Contract {
             products: UnorderedMap::new(StorageKey::Products),
             jars: Vector::new(StorageKey::Jars),
             account_jars: LookupMap::new(StorageKey::AccountJars),
+        }
+    }
+
+    pub fn is_authorized_for_product(
+        &self,
+        account_id: AccountId,
+        product_id: ProductId,
+        signature: Option<String>,
+    ) -> bool {
+        let product = self.get_product(&product_id);
+
+        if let Some(pk) = product.public_key {
+            let signature = match signature {
+                Some(ref s) => Signature::from_str(s).expect("Invalid signature"),
+                None => panic!("Signature is required for private products"),
+            };
+
+            PublicKey::from_bytes(pk.clone().as_slice())
+                .expect("Public key is invalid")
+                .verify_strict(account_id.as_bytes(), &signature)
+                .map_or(false, |_| true)
+        } else {
+            true
         }
     }
 
@@ -205,7 +232,7 @@ mod tests {
             cap: 100,
             is_restakable: false,
             withdrawal_fee: None,
-            is_public: true,
+            public_key: None,
         }
     }
 
@@ -409,6 +436,67 @@ mod tests {
 
         let interest = contract.get_interest(accounts(1));
         assert_eq!(interest, 5);
+    }
+
+    #[test]
+    fn check_authorization_for_public_product() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        let product = get_product();
+        contract.register_product(product.clone());
+
+        let result = contract.is_authorized_for_product(accounts(0), product.id, None);
+        assert_eq!(result, true);
+    }
+
+    #[test]
+    #[should_panic(expected = "Signature is required for private products")]
+    fn check_authorization_for_private_product_without_signature() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        let product = Product {
+            public_key: Some(b"signature".to_vec()),
+            ..get_product()
+        };
+        contract.register_product(product.clone());
+
+        contract.is_authorized_for_product(accounts(0), product.id, None);
+    }
+
+    #[test]
+    fn check_authorization_for_private_product_with_correct_signature() {
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![accounts(0)],
+        );
+
+        let product = Product {
+            public_key: Some(vec![
+                26, 19, 155, 89, 46, 117, 31, 171, 221, 114, 253, 247, 67, 65, 59, 77, 221, 88, 57,
+                24, 102, 211, 115, 9, 238, 50, 221, 246, 161, 94, 210, 116,
+            ]),
+            ..get_product()
+        };
+        contract.register_product(product.clone());
+
+        let result = contract.is_authorized_for_product(
+            accounts(0),
+            product.id,
+            Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
+        );
+        assert_eq!(result, true);
     }
 
     //    #[test]

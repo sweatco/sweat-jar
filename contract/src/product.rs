@@ -22,7 +22,7 @@ pub struct Product {
     pub is_refillable: bool,
     pub is_restakable: bool,
     pub withdrawal_fee: Option<WithdrawalFee>,
-    pub is_public: bool,
+    pub public_key: Option<Vec<u8>>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
