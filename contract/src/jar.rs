@@ -77,12 +77,17 @@ impl Jar {
         }
     }
 
-    pub fn claimed(&self, amount: Balance, now: Timestamp) -> Self {
+    pub fn claimed(
+        &self,
+        available_yield: Balance,
+        claimed_amount: Balance,
+        now: Timestamp,
+    ) -> Self {
         Self {
-            claimed_balance: self.claimed_balance + amount,
+            claimed_balance: self.claimed_balance + claimed_amount,
             cache: Some(JarCache {
                 updated_at: now,
-                interest: 0,
+                interest: available_yield - claimed_amount,
             }),
             ..self.clone()
         }

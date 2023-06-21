@@ -1,6 +1,12 @@
+// TODO: 1. partial claim
+// TODO: 2. broadcast events
+// TODO: 3. withdrowal allowance (no need)
+// TODO: 4. withdrawal notification
+// TODO: 5. migration
+
+use std::cmp;
 use std::str::FromStr;
 
-use assert::assert_signature_is_valid;
 use ed25519_dalek::{PublicKey, Signature};
 use external::{ext_self, GAS_FOR_AFTER_TRANSFER};
 use ft_interface::{FungibleTokenContract, FungibleTokenInterface};
@@ -13,6 +19,8 @@ use near_sdk::{
     PromiseOrValue,
 };
 use product::{Product, ProductApi, ProductId};
+
+use crate::assert::{assert_is_not_empty, assert_ownership};
 
 mod assert;
 mod common;
@@ -46,8 +54,13 @@ pub(crate) enum StorageKey {
 pub trait ContractApi {
     fn get_principal(&self, account_id: AccountId) -> Balance;
     fn get_interest(&self, account_id: AccountId) -> Balance;
-    fn claim(&mut self) -> PromiseOrValue<Balance>;
     fn withdraw(&mut self, jar_id: JarIndex) -> PromiseOrValue<Balance>;
+    fn claim_total(&mut self) -> PromiseOrValue<Balance>;
+    fn claim_jars(
+        &mut self,
+        jar_indices: Vec<JarIndex>,
+        amount: Option<Balance>,
+    ) -> PromiseOrValue<Balance>;
 }
 
 #[near_bindgen]
@@ -115,7 +128,6 @@ impl Contract {
     }
 }
 
-#[near_bindgen]
 impl ContractApi for Contract {
     fn get_principal(&self, account_id: AccountId) -> Balance {
         let jar_ids = self.account_jar_ids(&account_id).clone();
@@ -137,52 +149,12 @@ impl ContractApi for Contract {
             .fold(0, |acc, interest| acc + interest)
     }
 
-    fn claim(&mut self) -> PromiseOrValue<Balance> {
-        let account_id = env::predecessor_account_id().clone();
-        let now = env::block_timestamp_ms();
-
-        let jar_ids = self.account_jar_ids(&account_id).clone();
-        let jar_ids_iter = jar_ids.iter();
-
-        let mut interest: Balance = 0;
-
-        let unlocked_jars: Vec<Jar> = jar_ids_iter
-            .map(|index| self.get_jar(*index))
-            .filter(|jar| !jar.is_pending_withdraw)
-            .collect();
-
-        for jar in unlocked_jars.clone() {
-            let product = self.get_product(&jar.product_id);
-            interest += jar.get_interest(&product, now);
-
-            let updated_jar = jar.claimed(interest, now).locked();
-            self.jars.replace(jar.index, &updated_jar);
-        }
-
-        if interest > 0 {
-            FungibleTokenContract::new(self.token_account_id.clone())
-                .transfer(
-                    account_id.clone(),
-                    interest.clone(),
-                    Self::after_transfer_call(unlocked_jars.clone()),
-                )
-                .into()
-        } else {
-            PromiseOrValue::Value(0)
-        }
-    }
-
     fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
         let jar = self.get_jar(jar_index);
         let account_id = env::predecessor_account_id();
 
-        assert_eq!(
-            jar.account_id.clone(),
-            account_id.clone(),
-            "Account doesn't own this jar"
-        );
-
-        assert!(jar.principal > 0, "Jar is empty");
+        assert_ownership(&jar, &account_id);
+        assert_is_not_empty(&jar);
 
         FungibleTokenContract::new(self.token_account_id.clone())
             .transfer(
@@ -191,6 +163,62 @@ impl ContractApi for Contract {
                 Self::after_transfer_call(vec![jar]),
             )
             .into()
+    }
+
+    fn claim_total(&mut self) -> PromiseOrValue<Balance> {
+        let account_id = env::predecessor_account_id().clone();
+        let jar_indices = self.account_jar_ids(&account_id).clone();
+
+        self.claim_jars(jar_indices.into_iter().collect(), None)
+    }
+
+    fn claim_jars(
+        &mut self,
+        jar_indices: Vec<JarIndex>,
+        amount: Option<Balance>,
+    ) -> PromiseOrValue<Balance> {
+        let account_id = env::predecessor_account_id().clone();
+        let now = env::block_timestamp_ms();
+
+        let get_interest_to_claim: Box<dyn Fn(Balance, Balance) -> Balance> = match amount {
+            Some(ref a) => Box::new(|available, total| cmp::min(available, a.clone() - total)),
+            None => Box::new(|available, _| available),
+        };
+
+        let jar_ids_iter = jar_indices.iter();
+        let unlocked_jars: Vec<Jar> = jar_ids_iter
+            .map(|index| self.get_jar(*index))
+            .filter(|jar| !jar.is_pending_withdraw)
+            .filter(|jar| jar.account_id == account_id)
+            .collect();
+
+        let mut total_interest_to_claim: Balance = 0;
+
+        for jar in unlocked_jars.clone() {
+            let product = self.get_product(&jar.product_id);
+            let available_interest = jar.get_interest(&product, now);
+            let interest_to_claim =
+                get_interest_to_claim(available_interest, total_interest_to_claim);
+
+            let updated_jar = jar
+                .claimed(available_interest, interest_to_claim, now)
+                .locked();
+            self.jars.replace(jar.index, &updated_jar);
+
+            total_interest_to_claim += interest_to_claim;
+        }
+
+        if total_interest_to_claim > 0 {
+            FungibleTokenContract::new(self.token_account_id.clone())
+                .transfer(
+                    account_id.clone(),
+                    total_interest_to_claim.clone(),
+                    Self::after_transfer_call(unlocked_jars.clone()),
+                )
+                .into()
+        } else {
+            PromiseOrValue::Value(0)
+        }
     }
 }
 
@@ -428,7 +456,7 @@ mod tests {
             .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
             .build());
 
-        contract.claim();
+        contract.claim_total();
 
         testing_env!(get_context(accounts(1))
             .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
