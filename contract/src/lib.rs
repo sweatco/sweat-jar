@@ -1,7 +1,4 @@
-// TODO: 1. partial claim
 // TODO: 2. broadcast events
-// TODO: 3. withdrowal allowance (no need)
-// TODO: 4. withdrawal notification
 // TODO: 5. migration
 
 use std::cmp;
@@ -24,6 +21,7 @@ use crate::assert::{assert_is_not_empty, assert_ownership};
 
 mod assert;
 mod common;
+mod event;
 mod external;
 mod ft_interface;
 mod ft_receiver;
@@ -121,6 +119,17 @@ impl Contract {
     }
 
     #[private]
+    fn transfer(&self, receiver_account_id: &AccountId, jar: &Jar) -> PromiseOrValue<Balance> {
+        FungibleTokenContract::new(self.token_account_id.clone())
+            .transfer(
+                receiver_account_id.clone(),
+                jar.principal.clone(),
+                Self::after_transfer_call(vec![jar.clone()]),
+            )
+            .into()
+    }
+
+    #[private]
     fn after_transfer_call(jars_before_transfer: Vec<Jar>) -> Promise {
         ext_self::ext(env::current_account_id())
             .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
@@ -151,18 +160,31 @@ impl ContractApi for Contract {
 
     fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
         let jar = self.get_jar(jar_index);
-        let account_id = env::predecessor_account_id();
 
-        assert_ownership(&jar, &account_id);
         assert_is_not_empty(&jar);
 
-        FungibleTokenContract::new(self.token_account_id.clone())
-            .transfer(
-                account_id.clone(),
-                jar.principal.clone(),
-                Self::after_transfer_call(vec![jar]),
-            )
-            .into()
+        let now = env::block_timestamp_ms();
+        let product = self.get_product(&jar.product_id);
+        let account_id = env::predecessor_account_id();
+
+        if let Some(notice_term) = product.notice_term {
+            if let Some(noticed_at) = jar.noticed_at {
+                if now - noticed_at >= notice_term {
+                    return self.transfer(&account_id, &jar);
+                }
+            } else {
+                assert_ownership(&jar, &account_id);
+
+                let noticed_jar = jar.clone().noticed(env::block_timestamp());
+                self.jars.replace(noticed_jar.index, &noticed_jar);
+            }
+        } else {
+            assert_ownership(&jar, &account_id);
+
+            return self.transfer(&account_id, &jar);
+        }
+
+        PromiseOrValue::Value(0)
     }
 
     fn claim_total(&mut self) -> PromiseOrValue<Balance> {

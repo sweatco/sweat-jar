@@ -21,6 +21,7 @@ pub struct Jar {
     pub cache: Option<JarCache>,
     pub claimed_balance: Balance,
     pub is_pending_withdraw: bool,
+    pub noticed_at: Option<Timestamp>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
@@ -48,6 +49,7 @@ impl Jar {
             cache: None,
             claimed_balance: 0,
             is_pending_withdraw: false,
+            noticed_at: None,
         }
     }
 
@@ -62,6 +64,13 @@ impl Jar {
         Self {
             is_pending_withdraw: false,
             ..self.clone()
+        }
+    }
+
+    pub fn noticed(&self, noticed_at: Timestamp) -> Self {
+        Self {
+            noticed_at: Some(noticed_at),
+            ...self.clone()
         }
     }
 
