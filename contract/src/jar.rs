@@ -70,7 +70,7 @@ impl Jar {
     pub fn noticed(&self, noticed_at: Timestamp) -> Self {
         Self {
             noticed_at: Some(noticed_at),
-            ...self.clone()
+            ..self.clone()
         }
     }
 
