@@ -1,5 +1,6 @@
 // TODO: 2. broadcast events
 // TODO: 5. migration
+// TODO: 6. Update APY when subscription state changes
 
 use std::cmp;
 use std::str::FromStr;
@@ -15,7 +16,7 @@ use near_sdk::{
     env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, Promise,
     PromiseOrValue,
 };
-use product::{Product, ProductApi, ProductId};
+use product::{Product, ProductApi, ProductId, Apy};
 
 use crate::assert::{assert_is_not_empty, assert_ownership};
 
@@ -59,6 +60,11 @@ pub trait ContractApi {
         jar_indices: Vec<JarIndex>,
         amount: Option<Balance>,
     ) -> PromiseOrValue<Balance>;
+}
+
+pub trait PenaltyApi {
+    // TODO: naming
+    fn set_penalty(&mut self, jar_index: JarIndex, value: bool);
 }
 
 #[near_bindgen]
@@ -107,7 +113,7 @@ impl Contract {
         product_id: ProductId,
         amount: Balance,
     ) -> Jar {
-        self.assert_product_exists(&product_id);
+        let product = self.get_product(&product_id);
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
@@ -257,6 +263,22 @@ impl ProductApi for Contract {
     }
 }
 
+#[near_bindgen]
+impl PenaltyApi for Contract {
+    fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
+        let jar = self.get_jar(jar_index);
+        let product = self.get_product(&jar.product_id);
+
+        match product.apy {
+            Apy::Downgradable(_) => {
+                let updated_jar = jar.with_penalty_applied(value);
+                self.jars.replace(jar.index, &updated_jar);
+            },
+            _ => panic!("Penalty is not applicable"),
+        };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use near_sdk::{
@@ -275,10 +297,10 @@ mod tests {
             maturity_term: Some(365 * 60 * 60 * 1000 * 1000),
             notice_term: None,
             is_refillable: false,
-            apy: UDecimal {
+            apy: Apy::Constant(UDecimal {
                 significand: 1,
                 exponent: 1,
-            },
+            }),
             cap: 100,
             is_restakable: false,
             withdrawal_fee: None,

@@ -5,7 +5,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{AccountId, Balance};
 
 use crate::common::{Timestamp, UDecimal};
-use crate::product::{Product, ProductId};
+use crate::product::{Product, ProductId, Apy, per_second_interest_rate};
 
 pub type JarIndex = u64;
 
@@ -22,6 +22,7 @@ pub struct Jar {
     pub claimed_balance: Balance,
     pub is_pending_withdraw: bool,
     pub noticed_at: Option<Timestamp>,
+    pub is_penalty_applied: bool,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
@@ -50,6 +51,7 @@ impl Jar {
             claimed_balance: 0,
             is_pending_withdraw: false,
             noticed_at: None,
+            is_penalty_applied: false,
         }
     }
 
@@ -70,6 +72,13 @@ impl Jar {
     pub fn noticed(&self, noticed_at: Timestamp) -> Self {
         Self {
             noticed_at: Some(noticed_at),
+            ..self.clone()
+        }
+    }
+
+    pub fn with_penalty_applied(&self, is_applied: bool) -> Self {
+        Self {
+            is_penalty_applied: is_applied,
             ..self.clone()
         }
     }
@@ -114,11 +123,21 @@ impl Jar {
             now
         };
 
+        let apy = product.apy.clone();
+        let rate = match apy {
+            Apy::Constant(apy) => apy,
+            Apy::Downgradable(apy) => if self.is_penalty_applied {
+                apy.fallback
+            } else {
+                apy.default
+            },
+        };
+        let rate_per_second = per_second_interest_rate(rate);
+
         let term = (until_date - base_date) / 1000;
-        let rate_pecent = product.per_second_interest_rate();
         let rate = UDecimal {
-            significand: rate_pecent.significand * self.principal,
-            ..rate_pecent
+            significand: rate_per_second.significand * self.principal,
+            ..rate_per_second
         };
         let interest = (rate.significand * term as u128) / (10_u128.pow(rate.exponent as _));
 

@@ -17,7 +17,7 @@ pub struct Product {
     pub lockup_term: Duration,
     pub maturity_term: Option<Duration>,
     pub notice_term: Option<Duration>,
-    pub apy: UDecimal,
+    pub apy: Apy,
     pub cap: Balance,
     pub is_refillable: bool,
     pub is_restakable: bool,
@@ -33,17 +33,31 @@ pub enum WithdrawalFee {
     Percent(f32),
 }
 
-impl Product {
-    pub(crate) fn per_second_interest_rate(&self) -> UDecimal {
-        let apy = Decimal::new(self.apy.significand as _, self.apy.exponent);
-        let per_second_rate = apy
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+pub enum Apy {
+    Constant(UDecimal),
+    Downgradable(DowngradableApy)
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+pub struct DowngradableApy {
+    pub default: UDecimal,
+    pub fallback: UDecimal,
+}
+
+pub(crate) fn per_second_interest_rate(rate: UDecimal) -> UDecimal {
+    let apy = Decimal::new(rate.significand as _, rate.exponent);
+    let per_second_rate = apy
             .checked_div(Decimal::new(SECONDS_IN_YEAR as _, 0))
             .expect("Division error");
-        
-        UDecimal {
-            significand: per_second_rate.mantissa() as _,
-            exponent: per_second_rate.scale(),
-        }
+
+    UDecimal {
+        significand: per_second_rate.mantissa() as _,
+        exponent: per_second_rate.scale(),
     }
 }
 
