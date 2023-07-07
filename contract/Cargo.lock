@@ -526,17 +526,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
-name = "hello_near"
-version = "1.0.0"
-dependencies = [
- "ed25519-dalek",
- "near-contract-standards",
- "near-sdk",
- "rust_decimal",
- "uint",
-]
-
-[[package]]
 name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1388,6 +1377,17 @@ name = "subtle"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
+
+[[package]]
+name = "sweat_jar"
+version = "1.0.0"
+dependencies = [
+ "ed25519-dalek",
+ "near-contract-standards",
+ "near-sdk",
+ "rust_decimal",
+ "uint",
+]
 
 [[package]]
 name = "syn"
