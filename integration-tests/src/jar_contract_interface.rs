@@ -6,7 +6,7 @@ use workspaces::{Account, AccountId, Contract};
 #[async_trait]
 pub(crate) trait JarContractInterface {
     fn account(&self) -> &Account;
-    
+
     async fn init(
         &self,
         token_contract_account: &Account,
@@ -64,11 +64,15 @@ impl JarContractInterface for Contract {
             "product": product_json,
         });
 
-        user.call(self.id(), "register_product")
+        let result = user.call(self.id(), "register_product")
             .args_json(args)
             .transact()
             .await?
             .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {:?}", log);
+        }
 
         Ok(())
     }
@@ -82,7 +86,7 @@ impl JarContractInterface for Contract {
             .await?
             .json()?;
 
-        println!("@@ Products = {:?}", products);
+        println!("   ✅ {:?}", products);
 
         Ok(products)
     }
@@ -113,13 +117,17 @@ impl JarContractInterface for Contract {
             "msg": msg.to_string(),
         });
 
-        user.call(ft_contract_id, "ft_transfer_call")
+        let result = user.call(ft_contract_id, "ft_transfer_call")
             .args_json(args)
             .max_gas()
             .deposit(parse_near!("1 yocto"))
             .transact()
             .await?
             .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {:?}", log);
+        }
 
         Ok(())
     }

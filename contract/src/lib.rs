@@ -12,17 +12,14 @@ use jar::{Jar, JarIndex};
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
-use near_sdk::{
-    env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, Promise,
-    PromiseOrValue,
-};
-use product::{Product, ProductApi, ProductId, Apy};
+use near_sdk::{env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, Promise, PromiseOrValue, serde_json};
+use near_sdk::serde_json::json;
+use product::{Apy, Product, ProductApi, ProductId};
 
 use crate::assert::{assert_is_not_empty, assert_ownership};
 
 mod assert;
 mod common;
-mod event;
 mod external;
 mod ft_interface;
 mod ft_receiver;
@@ -50,10 +47,15 @@ pub(crate) enum StorageKey {
     AccountJars,
 }
 
+// TODO: get principal by jar indices
+// TODO: get interest by jar indices
+// TODO: get jars for user
 pub trait ContractApi {
     fn get_principal(&self, account_id: AccountId) -> Balance;
     fn get_interest(&self, account_id: AccountId) -> Balance;
+    // TODO: make it partial
     fn withdraw(&mut self, jar_id: JarIndex) -> PromiseOrValue<Balance>;
+    fn restake(&mut self, jar_index: JarIndex) -> Jar;
     fn claim_total(&mut self) -> PromiseOrValue<Balance>;
     fn claim_jars(
         &mut self,
@@ -121,7 +123,15 @@ impl Contract {
 
         self.save_jar(&account_id, &jar);
 
-        return jar;
+        let event = json!({
+            "standard": "sweat_jar",
+            "version": "0.0.1",
+            "event": "create_jar",
+            "data": jar,
+        });
+        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
+        jar
     }
 
     #[private]
@@ -129,7 +139,7 @@ impl Contract {
         FungibleTokenContract::new(self.token_account_id.clone())
             .transfer(
                 receiver_account_id.clone(),
-                jar.principal.clone(),
+                jar.principal,
                 Self::after_transfer_call(vec![jar.clone()]),
             )
             .into()
@@ -143,9 +153,10 @@ impl Contract {
     }
 }
 
+#[near_bindgen]
 impl ContractApi for Contract {
     fn get_principal(&self, account_id: AccountId) -> Balance {
-        let jar_ids = self.account_jar_ids(&account_id).clone();
+        let jar_ids = self.account_jar_ids(&account_id);
 
         jar_ids
             .iter()
@@ -161,11 +172,13 @@ impl ContractApi for Contract {
             .iter()
             .map(|index| self.get_jar(*index))
             .map(|jar| jar.get_interest(&self.get_product(&jar.product_id), now))
-            .fold(0, |acc, interest| acc + interest)
+            .sum()
     }
 
     fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
         let jar = self.get_jar(jar_index);
+
+        // TODO: mark jar as  withdrawing
 
         assert_is_not_empty(&jar);
 
@@ -176,16 +189,53 @@ impl ContractApi for Contract {
         if let Some(notice_term) = product.notice_term {
             if let Some(noticed_at) = jar.noticed_at {
                 if now - noticed_at >= notice_term {
+                    let event = json!({
+                        "standard": "sweat_jar",
+                        "version": "0.0.1",
+                        "event": "withdraw",
+                        "data": {
+                            "index": jar_index,
+                            "action": "withdrawn",
+                        },
+                    });
+                    env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
                     return self.transfer(&account_id, &jar);
                 }
             } else {
                 assert_ownership(&jar, &account_id);
 
+                let event = json!({
+                    "standard": "sweat_jar",
+                    "version": "0.0.1",
+                    "event": "withdraw",
+                    "data": {
+                        "index": jar_index,
+                        "action": "noticed",
+                    },
+                });
+                env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
                 let noticed_jar = jar.clone().noticed(env::block_timestamp());
                 self.jars.replace(noticed_jar.index, &noticed_jar);
+
+                // TODO: broadcast Notice event
             }
         } else {
             assert_ownership(&jar, &account_id);
+
+            // TODO: check maturity
+
+            let event = json!({
+                "standard": "sweat_jar",
+                "version": "0.0.1",
+                "event": "withdraw",
+                "data": {
+                    "index": jar_index,
+                    "action": "withdrawn",
+                },
+            });
+            env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
 
             return self.transfer(&account_id, &jar);
         }
@@ -194,8 +244,8 @@ impl ContractApi for Contract {
     }
 
     fn claim_total(&mut self) -> PromiseOrValue<Balance> {
-        let account_id = env::predecessor_account_id().clone();
-        let jar_indices = self.account_jar_ids(&account_id).clone();
+        let account_id = env::predecessor_account_id();
+        let jar_indices = self.account_jar_ids(&account_id);
 
         self.claim_jars(jar_indices.into_iter().collect(), None)
     }
@@ -205,11 +255,11 @@ impl ContractApi for Contract {
         jar_indices: Vec<JarIndex>,
         amount: Option<Balance>,
     ) -> PromiseOrValue<Balance> {
-        let account_id = env::predecessor_account_id().clone();
+        let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
         let get_interest_to_claim: Box<dyn Fn(Balance, Balance) -> Balance> = match amount {
-            Some(ref a) => Box::new(|available, total| cmp::min(available, a.clone() - total)),
+            Some(ref a) => Box::new(|available, total| cmp::min(available, *a - total)),
             None => Box::new(|available, _| available),
         };
 
@@ -221,6 +271,8 @@ impl ContractApi for Contract {
             .collect();
 
         let mut total_interest_to_claim: Balance = 0;
+
+        let mut event_data: Vec<serde_json::Value> = vec![];
 
         for jar in unlocked_jars.clone() {
             let product = self.get_product(&jar.product_id);
@@ -234,19 +286,33 @@ impl ContractApi for Contract {
             self.jars.replace(jar.index, &updated_jar);
 
             total_interest_to_claim += interest_to_claim;
+
+            event_data.push(json!({ "index": jar.index, "interest_to_claim": interest_to_claim }));
         }
+
+        let event = json!({
+            "standard": "sweat_jar",
+            "version": "0.0.1",
+            "event": "claim_jars",
+            "data": event_data,
+        });
+        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
 
         if total_interest_to_claim > 0 {
             FungibleTokenContract::new(self.token_account_id.clone())
                 .transfer(
-                    account_id.clone(),
-                    total_interest_to_claim.clone(),
-                    Self::after_transfer_call(unlocked_jars.clone()),
+                    account_id,
+                    total_interest_to_claim,
+                    Self::after_transfer_call(unlocked_jars),
                 )
                 .into()
         } else {
             PromiseOrValue::Value(0)
         }
+    }
+
+    fn restake(&mut self, jar_index: JarIndex) -> Jar {
+        todo!("Add implementation and broadcast event");
     }
 }
 
@@ -256,6 +322,14 @@ impl ProductApi for Contract {
         self.assert_admin();
 
         self.products.insert(&product.id, &product);
+
+        let event = json!({
+            "standard": "sweat_jar",
+            "version": "0.0.1",
+            "event": "register_product",
+            "data": product,
+        });
+        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
     }
 
     fn get_products(&self) -> Vec<Product> {
@@ -273,7 +347,7 @@ impl PenaltyApi for Contract {
             Apy::Downgradable(_) => {
                 let updated_jar = jar.with_penalty_applied(value);
                 self.jars.replace(jar.index, &updated_jar);
-            },
+            }
             _ => panic!("Penalty is not applicable"),
         };
     }

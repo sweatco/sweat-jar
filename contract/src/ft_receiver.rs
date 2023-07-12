@@ -33,6 +33,8 @@ impl FungibleTokenReceiver for Contract {
 
         match ft_message {
             FtMessage::Stake(message) => {
+                // TODO: add validation
+                // TODO: add receiver_id so that a user can create a deposit for another user
                 self.create_jar(sender_id.clone(), message.product_id, amount.0);
             }
         }
