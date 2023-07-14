@@ -366,6 +366,7 @@ mod tests {
     };
 
     use crate::common::UDecimal;
+    use crate::product::Cap;
 
     use super::*;
 
@@ -380,7 +381,10 @@ mod tests {
                 significand: 12,
                 exponent: 1,
             }),
-            cap: 100,
+            cap: Cap {
+                min: 100_000,
+                max: 100_000_000_000,
+            },
             is_restakable: false,
             withdrawal_fee: None,
             public_key: None,
