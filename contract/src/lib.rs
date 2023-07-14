@@ -65,6 +65,12 @@ pub trait ContractApi {
     ) -> PromiseOrValue<Balance>;
 }
 
+pub trait AuthApi {
+    fn get_admin_allowlist(&self) -> Vec<AccountId>;
+    fn add_admin(&mut self, account_id: AccountId);
+    fn remove_admin(&mut self, account_id: AccountId);
+}
+
 pub trait PenaltyApi {
     // TODO: naming
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool);
@@ -339,6 +345,25 @@ impl ProductApi for Contract {
 
     fn get_products(&self) -> Vec<Product> {
         self.products.values_as_vector().to_vec()
+    }
+}
+
+#[near_bindgen]
+impl AuthApi for Contract {
+    fn get_admin_allowlist(&self) -> Vec<AccountId> {
+        self.admin_allowlist.to_vec()
+    }
+
+    fn add_admin(&mut self, account_id: AccountId) {
+        self.assert_admin();
+
+        self.admin_allowlist.insert(&account_id);
+    }
+
+    fn remove_admin(&mut self, account_id: AccountId) {
+        self.assert_admin();
+
+        self.admin_allowlist.remove(&account_id);
     }
 }
 
