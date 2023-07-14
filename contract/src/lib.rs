@@ -412,7 +412,7 @@ mod tests {
                 exponent: 1,
             }),
             cap: Cap {
-                min: 100_000,
+                min: 100,
                 max: 100_000_000_000,
             },
             is_restakable: false,
@@ -430,6 +430,84 @@ mod tests {
             .block_timestamp(0);
 
         builder
+    }
+
+    #[test]
+    fn add_admin_by_admin() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![admin.clone()],
+        );
+
+        testing_env!(get_context(admin.clone()).build());
+
+        contract.add_admin(alice.clone());
+        let admins = contract.get_admin_allowlist();
+
+        assert_eq!(2, admins.len());
+        assert!(admins.contains(&alice.clone()));
+    }
+
+    #[test]
+    #[should_panic(expected = "Can be performed only by admin")]
+    fn add_admin_by_not_admin() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![admin.clone()],
+        );
+
+        testing_env!(get_context(alice.clone()).build());
+
+        contract.add_admin(alice.clone());
+    }
+
+    #[test]
+    fn remove_admin_by_admin() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![admin.clone(), alice.clone()],
+        );
+
+        testing_env!(get_context(admin.clone()).build());
+
+        contract.remove_admin(alice.clone());
+        let admins = contract.get_admin_allowlist();
+
+        assert_eq!(1, admins.len());
+        assert!(!admins.contains(&alice.clone()));
+    }
+
+    #[test]
+    #[should_panic(expected = "Can be performed only by admin")]
+    fn remove_admin_by_not_admin() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let context = get_context(accounts(0));
+        testing_env!(context.build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![admin.clone()],
+        );
+
+        testing_env!(get_context(alice.clone()).build());
+
+        contract.remove_admin(admin.clone());
     }
 
     #[test]
@@ -607,7 +685,7 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100);
+        contract.create_jar(accounts(1), product.clone().id, 100_000_000);
 
         testing_env!(get_context(accounts(1))
             .block_timestamp(days_to_nano_ms(183))
