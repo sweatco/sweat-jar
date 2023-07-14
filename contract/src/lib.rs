@@ -6,14 +6,15 @@ use std::cmp;
 use std::str::FromStr;
 
 use ed25519_dalek::{PublicKey, Signature};
+use near_sdk::{AccountId, Balance, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise, PromiseOrValue, serde_json};
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::borsh::maybestd::collections::HashSet;
+use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
+use near_sdk::serde_json::json;
+
 use external::{ext_self, GAS_FOR_AFTER_TRANSFER};
 use ft_interface::{FungibleTokenContract, FungibleTokenInterface};
 use jar::{Jar, JarIndex};
-use near_sdk::borsh::maybestd::collections::HashSet;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
-use near_sdk::{env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, PanicOnDefault, Promise, PromiseOrValue, serde_json};
-use near_sdk::serde_json::json;
 use product::{Apy, Product, ProductApi, ProductId};
 
 use crate::assert::{assert_is_not_empty, assert_ownership};
@@ -71,10 +72,14 @@ pub trait PenaltyApi {
 
 #[near_bindgen]
 impl Contract {
+    pub fn time() -> u64 {
+        env::block_timestamp_ms()
+    }
+
     #[init]
     pub fn init(token_account_id: AccountId, admin_allowlist: Vec<AccountId>) -> Self {
         let mut admin_allowlist_set = UnorderedSet::new(StorageKey::Administrators);
-        admin_allowlist_set.extend(admin_allowlist.clone().into_iter().map(|item| item.into()));
+        admin_allowlist_set.extend(admin_allowlist.into_iter());
 
         Self {
             token_account_id,
@@ -166,7 +171,7 @@ impl ContractApi for Contract {
 
     fn get_interest(&self, account_id: AccountId) -> Balance {
         let now = env::block_timestamp_ms();
-        let jar_ids = self.account_jar_ids(&account_id).clone();
+        let jar_ids = self.account_jar_ids(&account_id);
 
         jar_ids
             .iter()
@@ -372,7 +377,7 @@ mod tests {
             notice_term: None,
             is_refillable: false,
             apy: Apy::Constant(UDecimal {
-                significand: 1,
+                significand: 12,
                 exponent: 1,
             }),
             cap: 100,
@@ -447,7 +452,7 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100);
+        contract.create_jar(accounts(1), product.id, 100);
 
         testing_env!(get_context(accounts(1)).build());
 
@@ -502,14 +507,14 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100);
+        contract.create_jar(accounts(1), product.id, 100_000_000);
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
+            .block_timestamp(minutes_to_nano_ms(30))
             .build());
 
         let interest = contract.get_interest(accounts(1));
-        assert_eq!(interest, 5);
+        assert_eq!(interest, 684);
     }
 
     #[test]
@@ -524,14 +529,14 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100);
+        contract.create_jar(accounts(1), product.id, 100_000_000);
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
+            .block_timestamp(days_to_nano_ms(365))
             .build());
 
         let interest = contract.get_interest(accounts(1));
-        assert_eq!(interest, 10);
+        assert_eq!(interest, 12_000_000);
     }
 
     #[test]
@@ -546,14 +551,14 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100);
+        contract.create_jar(accounts(1), product.id, 100_000_000);
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(400 * 24 * 60 * 60 * u64::pow(10, 9))
+            .block_timestamp(days_to_nano_ms(400))
             .build());
 
         let interest = contract.get_interest(accounts(1));
-        assert_eq!(interest, 10);
+        assert_eq!(interest, 12_000_000);
     }
 
     #[test]
@@ -571,13 +576,13 @@ mod tests {
         contract.create_jar(accounts(1), product.clone().id, 100);
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
+            .block_timestamp(days_to_nano_ms(183))
             .build());
 
         contract.claim_total();
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
+            .block_timestamp(days_to_nano_ms(366))
             .build());
 
         let interest = contract.get_interest(accounts(1));
@@ -597,7 +602,7 @@ mod tests {
         contract.register_product(product.clone());
 
         let result = contract.is_authorized_for_product(accounts(0), product.id, None);
-        assert_eq!(result, true);
+        assert!(result);
     }
 
     #[test]
@@ -642,7 +647,7 @@ mod tests {
             product.id,
             Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
         );
-        assert_eq!(result, true);
+        assert!(result);
     }
 
     //    #[test]
@@ -694,4 +699,12 @@ mod tests {
     //
     //        assert_eq!(interest, 10);
     //    }
+
+    fn days_to_nano_ms(days: u64) -> u64 {
+        minutes_to_nano_ms(days * 60 * 24)
+    }
+
+    fn minutes_to_nano_ms(minutes: u64) -> u64 {
+        minutes * 60 * u64::pow(10, 9)
+    }
 }

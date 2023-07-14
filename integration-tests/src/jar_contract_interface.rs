@@ -28,6 +28,8 @@ pub(crate) trait JarContractInterface {
     async fn get_principal(&self, user: &Account) -> anyhow::Result<serde_json::Value>;
 
     async fn get_interest(&self, user: &Account) -> anyhow::Result<serde_json::Value>;
+
+    async fn time(&self) -> anyhow::Result<u64>;
 }
 
 #[async_trait]
@@ -153,8 +155,8 @@ impl JarContractInterface for Contract {
         println!("▶️ Get total interest for user {:?}", user.id());
 
         let args = json!({
-        "account_id": user.id(),
-    });
+            "account_id": user.id(),
+        });
 
         let result: serde_json::Value = self
             .call("get_interest")
@@ -164,5 +166,17 @@ impl JarContractInterface for Contract {
             .json()?;
 
         Ok(result)
+    }
+
+    async fn time(&self) -> anyhow::Result<u64> {
+        println!("▶️ Get current block time");
+
+        let result: serde_json::Value = self
+            .call("time")
+            .view()
+            .await?
+            .json()?;
+
+        Ok(result.as_u64().unwrap())
     }
 }

@@ -32,9 +32,13 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     assert_eq!(1_000_000, alice_principal);
     assert_eq!(0, alice_interest);
 
+    let mut time = context.jar_contract.time().await?;
+    println!("@@ Current block time: {}", time);
     context.fast_forward(1).await?;
+    time = context.jar_contract.time().await?;
+    println!("@@ Current block time: {}", time);
 
-    alice_interest = context.jar_contract.get_interest(&alice).await?.as_u64().unwrap();
+    alice_interest = context.jar_contract.get_interest(alice).await?.as_u64().unwrap();
     println!("@@ Alices interest = {:?}", alice_interest);
 
     Ok(())
