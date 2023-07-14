@@ -127,6 +127,11 @@ impl Contract {
         amount: Balance,
     ) -> Jar {
         let product = self.get_product(&product_id);
+        let cap = product.cap;
+
+        if cap.min > amount || amount > cap.max {
+            panic!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max);
+        }
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
