@@ -1,11 +1,8 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::Balance;
-use rust_decimal::Decimal;
 
-use crate::common::{Duration, UDecimal};
-
-const SECONDS_IN_YEAR: Duration = 365 * 24 * 60 * 60;
+use crate::common::{Duration, MINUTES_IN_YEAR};
 
 pub type ProductId = String;
 
@@ -37,7 +34,7 @@ pub enum WithdrawalFee {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub enum Apy {
-    Constant(UDecimal),
+    Constant(f32),
     Downgradable(DowngradableApy),
 }
 
@@ -45,8 +42,8 @@ pub enum Apy {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct DowngradableApy {
-    pub default: UDecimal,
-    pub fallback: UDecimal,
+    pub default: f32,
+    pub fallback: f32,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
@@ -57,16 +54,8 @@ pub struct Cap {
     pub max: u128,
 }
 
-pub(crate) fn per_second_interest_rate(rate: UDecimal) -> UDecimal {
-    let apy = Decimal::new(rate.significand as _, rate.exponent);
-    let per_second_rate = apy
-        .checked_div(Decimal::new(SECONDS_IN_YEAR as _, 0))
-        .expect("Division error");
-
-    UDecimal {
-        significand: per_second_rate.mantissa() as _,
-        exponent: per_second_rate.scale(),
-    }
+pub(crate) fn per_minute_interest_rate(rate: f32) -> f32 {
+    rate / MINUTES_IN_YEAR as f32
 }
 
 pub trait ProductApi {

@@ -395,7 +395,6 @@ mod tests {
         testing_env,
     };
 
-    use crate::common::UDecimal;
     use crate::product::Cap;
 
     use super::*;
@@ -403,14 +402,11 @@ mod tests {
     fn get_product() -> Product {
         Product {
             id: "product".to_string(),
-            lockup_term: 365 * 60 * 60 * 1000 * 1000,
-            maturity_term: Some(365 * 60 * 60 * 1000 * 1000),
+            lockup_term: 365 * 24 * 60 * 60 * 1000,
+            maturity_term: Some(365 * 24 * 60 * 60 * 1000),
             notice_term: None,
             is_refillable: false,
-            apy: Apy::Constant(UDecimal {
-                significand: 12,
-                exponent: 1,
-            }),
+            apy: Apy::Constant(0.12),
             cap: Cap {
                 min: 100,
                 max: 100_000_000_000,
@@ -608,7 +604,7 @@ mod tests {
     }
 
     #[test]
-    fn get_total_interest_with_single_jar_after_half_term() {
+    fn get_total_interest_with_single_jar_after_30_minutes() {
         let context = get_context(accounts(0));
         testing_env!(context.build());
         let mut contract = Contract::init(
@@ -626,7 +622,7 @@ mod tests {
             .build());
 
         let interest = contract.get_interest(accounts(1));
-        assert_eq!(interest, 684);
+        assert_eq!(interest, 685);
     }
 
     #[test]
@@ -688,17 +684,20 @@ mod tests {
         contract.create_jar(accounts(1), product.clone().id, 100_000_000);
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(days_to_nano_ms(183))
+            .block_timestamp(days_to_nano_ms(182))
             .build());
+
+        let mut interest = contract.get_interest(accounts(1));
+        assert_eq!(interest, 5_983_562);
 
         contract.claim_total();
 
         testing_env!(get_context(accounts(1))
-            .block_timestamp(days_to_nano_ms(366))
+            .block_timestamp(days_to_nano_ms(365))
             .build());
 
-        let interest = contract.get_interest(accounts(1));
-        assert_eq!(interest, 5);
+        interest = contract.get_interest(accounts(1));
+        assert_eq!(interest, 6_016_438);
     }
 
     #[test]
