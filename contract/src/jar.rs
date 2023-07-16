@@ -147,25 +147,7 @@ impl Jar {
 mod tests {
     use near_sdk::AccountId;
     use crate::jar::Jar;
-    use crate::product::{Apy, Cap, Product};
-
-    fn get_product() -> Product {
-        Product {
-            id: "product".to_string(),
-            lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: Some(365 * 24 * 60 * 60 * 1000),
-            notice_term: None,
-            is_refillable: false,
-            apy: Apy::Constant(0.12),
-            cap: Cap {
-                min: 100,
-                max: 100_000_000_000,
-            },
-            is_restakable: false,
-            withdrawal_fee: None,
-            public_key: None,
-        }
-    }
+    use crate::product::tests::get_product;
 
     #[test]
     fn get_interest_before_maturity() {

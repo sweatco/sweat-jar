@@ -125,9 +125,14 @@ impl Contract {
         account_id: AccountId,
         product_id: ProductId,
         amount: Balance,
+        signature: Option<String>,
     ) -> Jar {
         let product = self.get_product(&product_id);
         let cap = product.cap;
+
+        if !self.is_authorized_for_product(account_id.clone(), product_id.clone(), signature) {
+            panic!("Signature is invalid");
+        }
 
         if cap.min > amount || amount > cap.max {
             panic!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max);
@@ -135,7 +140,7 @@ impl Contract {
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
-        let jar = Jar::create(index, account_id.clone(), product_id, amount, now);
+        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
 
         self.save_jar(&account_id, &jar);
 
@@ -375,6 +380,8 @@ impl AuthApi for Contract {
 #[near_bindgen]
 impl PenaltyApi for Contract {
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
+        self.assert_admin();
+
         let jar = self.get_jar(jar_index);
         let product = self.get_product(&jar.product_id);
 
@@ -395,27 +402,9 @@ mod tests {
         testing_env,
     };
 
-    use crate::product::Cap;
+    use crate::product::tests::{get_premium_product, get_product};
 
     use super::*;
-
-    fn get_product() -> Product {
-        Product {
-            id: "product".to_string(),
-            lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: Some(365 * 24 * 60 * 60 * 1000),
-            notice_term: None,
-            is_refillable: false,
-            apy: Apy::Constant(0.12),
-            cap: Cap {
-                min: 100,
-                max: 100_000_000_000,
-            },
-            is_restakable: false,
-            withdrawal_fee: None,
-            public_key: None,
-        }
-    }
 
     fn get_context(predecessor_account_id: AccountId) -> VMContextBuilder {
         let mut builder = VMContextBuilder::new();
@@ -560,7 +549,7 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100);
+        contract.create_jar(accounts(1), product.id, 100, None);
 
         testing_env!(get_context(accounts(1)).build());
 
@@ -580,9 +569,9 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100);
-        contract.create_jar(accounts(1), product.clone().id, 200);
-        contract.create_jar(accounts(1), product.clone().id, 400);
+        contract.create_jar(accounts(1), product.clone().id, 100, None);
+        contract.create_jar(accounts(1), product.clone().id, 200, None);
+        contract.create_jar(accounts(1), product.clone().id, 400, None);
 
         testing_env!(get_context(accounts(1)).build());
 
@@ -615,7 +604,7 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100_000_000);
+        contract.create_jar(accounts(1), product.id, 100_000_000, None);
 
         testing_env!(get_context(accounts(1))
             .block_timestamp(minutes_to_nano_ms(30))
@@ -637,7 +626,7 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100_000_000);
+        contract.create_jar(accounts(1), product.id, 100_000_000, None);
 
         testing_env!(get_context(accounts(1))
             .block_timestamp(days_to_nano_ms(365))
@@ -659,7 +648,7 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100_000_000);
+        contract.create_jar(accounts(1), product.id, 100_000_000, None);
 
         testing_env!(get_context(accounts(1))
             .block_timestamp(days_to_nano_ms(400))
@@ -681,7 +670,7 @@ mod tests {
         let product = get_product();
 
         contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100_000_000);
+        contract.create_jar(accounts(1), product.clone().id, 100_000_000, None);
 
         testing_env!(get_context(accounts(1))
             .block_timestamp(days_to_nano_ms(182))
@@ -726,10 +715,7 @@ mod tests {
             vec![accounts(0)],
         );
 
-        let product = Product {
-            public_key: Some(b"signature".to_vec()),
-            ..get_product()
-        };
+        let product = get_premium_product();
         contract.register_product(product.clone());
 
         contract.is_authorized_for_product(accounts(0), product.id, None);
@@ -744,13 +730,7 @@ mod tests {
             vec![accounts(0)],
         );
 
-        let product = Product {
-            public_key: Some(vec![
-                26, 19, 155, 89, 46, 117, 31, 171, 221, 114, 253, 247, 67, 65, 59, 77, 221, 88, 57,
-                24, 102, 211, 115, 9, 238, 50, 221, 246, 161, 94, 210, 116,
-            ]),
-            ..get_product()
-        };
+        let product = get_premium_product();
         contract.register_product(product.clone());
 
         let result = contract.is_authorized_for_product(
@@ -759,6 +739,49 @@ mod tests {
             Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
         );
         assert!(result);
+    }
+
+    #[test]
+    fn get_total_interest_for_premium_with_penalty_after_half_term() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+        let owner = accounts(2);
+
+        testing_env!(get_context(owner.clone()).build());
+        let mut contract = Contract::init(
+            AccountId::new_unchecked("token".to_string()),
+            vec![admin.clone()],
+        );
+
+        testing_env!(get_context(admin.clone()).build());
+
+        let product = get_premium_product();
+        contract.register_product(product.clone());
+
+        testing_env!(get_context(owner.clone()).build());
+
+        contract.create_jar(
+            alice.clone(),
+            product.id, 100_000_000,
+            Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
+        );
+
+        testing_env!(get_context(alice.clone())
+            .block_timestamp(days_to_nano_ms(182))
+            .build());
+
+        let mut interest = contract.get_interest(alice.clone());
+        assert_eq!(interest, 9_972_603);
+
+        testing_env!(get_context(admin.clone()).build());
+        contract.set_penalty(0, true);
+
+        testing_env!(get_context(alice.clone())
+            .block_timestamp(days_to_nano_ms(365))
+            .build());
+
+        interest = contract.get_interest(alice);
+        assert_eq!(interest, 10_000_000);
     }
 
     //    #[test]
