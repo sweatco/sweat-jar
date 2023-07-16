@@ -14,12 +14,12 @@ impl Products {
                 "maturity_term": 31_556_952_000_u64,
                 "is_refillable": false,
                 "apy": {
-                    "Constant": {
-                        "significand": 12,
-                        "exponent": 1,
-                    },
+                    "Constant": 0.12,
                 },
-                "cap": 100_000_000_000u64,
+                "cap": {
+                    "min": 100_000u64,
+                    "max": 100_000_000_000u64,
+                },
                 "is_restakable": false,
             }),
             Products::Locked6Months6Percents => json!({
@@ -28,12 +28,12 @@ impl Products {
                 "maturity_term": 15_778_476_000_u64,
                 "is_refillable": false,
                 "apy": {
-                    "Constant": {
-                        "significand": 6,
-                        "exponent": 1,
-                    },
+                    "Constant": 0.12,
                 },
-                "cap": 100_000_000_000u64,
+                "cap": {
+                    "min": 100_000u64,
+                    "max": 100_000_000_000u64,
+                },
                 "is_restakable": false,
             }),
         }
