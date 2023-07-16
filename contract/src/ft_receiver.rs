@@ -18,6 +18,7 @@ pub enum FtMessage {
 pub struct StakeMessage {
     product_id: ProductId,
     signature: Option<String>,
+    receiver_id: Option<AccountId>,
 }
 
 #[near_bindgen]
@@ -34,9 +35,9 @@ impl FungibleTokenReceiver for Contract {
 
         match ft_message {
             FtMessage::Stake(message) => {
-                // TODO: add receiver_id so that a user can create a deposit for another user
+                let receiver_id = message.receiver_id.unwrap_or_else(|| sender_id.clone());
                 self.create_jar(
-                    sender_id.clone(),
+                    receiver_id,
                     message.product_id,
                     amount.0,
                     message.signature,
