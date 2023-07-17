@@ -52,8 +52,10 @@ pub(crate) enum StorageKey {
 // TODO: get principal by jar indices
 // TODO: get interest by jar indices
 pub trait ContractApi {
-    fn get_principal(&self, account_id: AccountId) -> Balance;
-    fn get_interest(&self, account_id: AccountId) -> Balance;
+    fn get_total_principal(&self, account_id: AccountId) -> Balance;
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance;
+    fn get_total_interest(&self, account_id: AccountId) -> Balance;
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance;
     // TODO: make it partial
     fn withdraw(&mut self, jar_id: JarIndex) -> PromiseOrValue<Balance>;
     fn restake(&mut self, jar_index: JarIndex) -> Jar;
@@ -223,20 +225,31 @@ impl Contract {
 
 #[near_bindgen]
 impl ContractApi for Contract {
-    fn get_principal(&self, account_id: AccountId) -> Balance {
-        let jar_ids = self.account_jar_ids(&account_id);
+    fn get_total_principal(&self, account_id: AccountId) -> Balance {
+        let jar_indices = self.account_jar_ids(&account_id);
 
-        jar_ids
+        self.get_principal(jar_indices)
+    }
+
+    // TODO: tests
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance {
+        jar_indices
             .iter()
             .map(|index| self.get_jar(*index))
             .fold(0, |acc, jar| acc + jar.principal)
     }
 
-    fn get_interest(&self, account_id: AccountId) -> Balance {
-        let now = env::block_timestamp_ms();
-        let jar_ids = self.account_jar_ids(&account_id);
+    fn get_total_interest(&self, account_id: AccountId) -> Balance {
+        let jar_indices = self.account_jar_ids(&account_id);
 
-        jar_ids
+        self.get_interest(jar_indices)
+    }
+
+    // TODO: tests
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance {
+        let now = env::block_timestamp_ms();
+
+        jar_indices
             .iter()
             .map(|index| self.get_jar(*index))
             .map(|jar| jar.get_interest(&self.get_product(&jar.product_id), now))
@@ -251,7 +264,7 @@ impl ContractApi for Contract {
         let account_id = env::predecessor_account_id();
         let jar_indices = self.account_jar_ids(&account_id);
 
-        self.claim_jars(jar_indices.into_iter().collect(), None)
+        self.claim_jars(jar_indices, None)
     }
 
     fn claim_jars(
@@ -423,8 +436,7 @@ impl JarApi for Contract {
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar> {
-        let jar_indices = self.account_jar_ids(&account_id);
-        jar_indices
+        self.account_jar_ids(&account_id)
             .iter()
             .map(|index| self.get_jar(*index))
             .collect()
@@ -523,7 +535,7 @@ mod tests {
         let alice = accounts(0);
         let mut context = Context::new(vec![]);
 
-        context.contract.get_principal(alice);
+        context.contract.get_total_principal(alice);
     }
 
     #[test]
@@ -541,7 +553,7 @@ mod tests {
         context.switch_account_to_owner();
         context.contract.create_jar(alice.clone(), product.id, 100, None);
 
-        let principal = context.contract.get_principal(alice.clone());
+        let principal = context.contract.get_total_principal(alice.clone());
         assert_eq!(principal, 100);
     }
 
@@ -561,7 +573,7 @@ mod tests {
         context.contract.create_jar(alice.clone(), product.clone().id, 200, None);
         context.contract.create_jar(alice.clone(), product.clone().id, 400, None);
 
-        let principal = context.contract.get_principal(alice.clone());
+        let principal = context.contract.get_total_principal(alice.clone());
         assert_eq!(principal, 700);
     }
 
@@ -572,7 +584,7 @@ mod tests {
 
         let mut context = Context::new(vec![]);
 
-        context.contract.get_interest(alice);
+        context.contract.get_total_interest(alice);
     }
 
     #[test]
@@ -591,7 +603,7 @@ mod tests {
 
         context.set_block_timestamp_in_minutes(30);
 
-        let interest = context.contract.get_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 685);
     }
 
@@ -611,7 +623,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        let interest = context.contract.get_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 12_000_000);
     }
 
@@ -631,7 +643,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(400);
 
-        let interest = context.contract.get_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 12_000_000);
     }
 
@@ -651,7 +663,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_interest(alice.clone());
+        let mut interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 5_983_562);
 
         context.switch_account(&alice);
@@ -659,7 +671,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_interest(alice.clone());
+        interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 6_016_438);
     }
 
@@ -732,7 +744,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_interest(alice.clone());
+        let mut interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 9_972_603);
 
         context.switch_account(&admin);
@@ -740,7 +752,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_interest(alice.clone());
+        interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 10_000_000);
     }
 

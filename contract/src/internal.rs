@@ -1,4 +1,3 @@
-use near_sdk::__private::schemars::schema::SingleOrVec::Vec;
 use crate::*;
 
 impl Contract {
@@ -16,10 +15,13 @@ impl Contract {
             .unwrap_or_else(|| panic!("Product {} doesn't exist", product_id))
     }
 
-    pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> HashSet<JarIndex> {
+    pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> Vec<JarIndex> {
         self.account_jars
             .get(account_id)
             .unwrap_or_else(|| panic!("Account {} doesn't have jars", account_id))
+            .iter()
+            .cloned()
+            .collect()
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: &Jar) {
