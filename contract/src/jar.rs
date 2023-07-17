@@ -90,6 +90,13 @@ impl Jar {
         }
     }
 
+    pub fn closed(&self) -> Self {
+        Self {
+            state: JarState::Closed,
+            ..self.clone()
+        }
+    }
+
     pub fn noticed(&self, noticed_at: Timestamp) -> Self {
         Self {
             state: JarState::Noticed(noticed_at),

@@ -143,7 +143,12 @@ impl Contract {
     fn after_transfer_internal(&mut self, jars_before_transfer: Vec<Jar>, is_promise_success: bool) {
         if is_promise_success {
             for jar_before_transfer in jars_before_transfer.iter() {
-                let jar = self.get_jar(jar_before_transfer.index);
+                let mut jar = self.get_jar(jar_before_transfer.index);
+
+                if let JarState::Noticed(_) = jar.state {
+                    jar = jar.closed();
+                }
+
                 self.jars.replace(jar_before_transfer.index, &jar.unlocked());
             }
         } else {
@@ -790,6 +795,6 @@ mod tests {
         });
 
         jar = context.contract.get_jar(0);
-        println!("@@ jar after withdraw = {:?}", jar);
+        assert_eq!(JarState::Closed, jar.state);
     }
 }
