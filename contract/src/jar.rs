@@ -21,7 +21,7 @@ pub struct Jar {
     pub cache: Option<JarCache>,
     pub claimed_balance: Balance,
     pub is_pending_withdraw: bool,
-    pub noticed_at: Option<Timestamp>,
+    pub state: JarState,
     pub is_penalty_applied: bool,
 }
 
@@ -31,6 +31,27 @@ pub struct Jar {
 pub struct JarCache {
     pub updated_at: Timestamp,
     pub interest: Balance,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+pub enum JarState {
+    Active,
+    Noticed(Timestamp),
+    Closed,
+}
+
+pub trait JarApi {
+    fn create_jar(
+        &mut self,
+        account_id: AccountId,
+        product_id: ProductId,
+        amount: Balance,
+        signature: Option<String>,
+    ) -> Jar;
+    fn get_jar(&self, jar_index: JarIndex) -> Jar;
+    fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar>;
 }
 
 impl Jar {
@@ -50,7 +71,7 @@ impl Jar {
             cache: None,
             claimed_balance: 0,
             is_pending_withdraw: false,
-            noticed_at: None,
+            state: JarState::Active,
             is_penalty_applied: false,
         }
     }
@@ -71,7 +92,7 @@ impl Jar {
 
     pub fn noticed(&self, noticed_at: Timestamp) -> Self {
         Self {
-            noticed_at: Some(noticed_at),
+            state: JarState::Noticed(noticed_at),
             ..self.clone()
         }
     }

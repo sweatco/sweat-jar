@@ -17,7 +17,8 @@ use ft_interface::{FungibleTokenContract, FungibleTokenInterface};
 use jar::{Jar, JarIndex};
 use product::{Apy, Product, ProductApi, ProductId};
 
-use crate::assert::{assert_is_not_empty, assert_ownership};
+use crate::assert::{assert_is_not_closed, assert_is_not_empty, assert_ownership};
+use crate::jar::{JarApi, JarState};
 
 mod assert;
 mod common;
@@ -50,7 +51,6 @@ pub(crate) enum StorageKey {
 
 // TODO: get principal by jar indices
 // TODO: get interest by jar indices
-// TODO: get jars for user
 pub trait ContractApi {
     fn get_principal(&self, account_id: AccountId) -> Balance;
     fn get_interest(&self, account_id: AccountId) -> Balance;
@@ -120,42 +120,6 @@ impl Contract {
     }
 
     #[private]
-    pub fn create_jar(
-        &mut self,
-        account_id: AccountId,
-        product_id: ProductId,
-        amount: Balance,
-        signature: Option<String>,
-    ) -> Jar {
-        let product = self.get_product(&product_id);
-        let cap = product.cap;
-
-        if !self.is_authorized_for_product(account_id.clone(), product_id.clone(), signature) {
-            panic!("Signature is invalid");
-        }
-
-        if cap.min > amount || amount > cap.max {
-            panic!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max);
-        }
-
-        let index = self.jars.len() as JarIndex;
-        let now = env::block_timestamp_ms();
-        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
-
-        self.save_jar(&account_id, &jar);
-
-        let event = json!({
-            "standard": "sweat_jar",
-            "version": "0.0.1",
-            "event": "create_jar",
-            "data": jar,
-        });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-        jar
-    }
-
-    #[private]
     fn transfer(&mut self, receiver_account_id: &AccountId, jar: &Jar) -> PromiseOrValue<Balance> {
         FungibleTokenContract::new(self.token_account_id.clone())
             .transfer(
@@ -191,13 +155,14 @@ impl Contract {
     fn withdraw_internal<F>(&mut self, jar_index: JarIndex, transfer: F) -> PromiseOrValue<Balance> where F: Fn(&mut Contract, &AccountId, &Jar) -> PromiseOrValue<Balance> {
         let jar = self.get_jar(jar_index).locked();
         assert_is_not_empty(&jar);
+        assert_is_not_closed(&jar);
 
         let now = env::block_timestamp_ms();
         let product = self.get_product(&jar.product_id);
         let account_id = env::predecessor_account_id();
 
         if let Some(notice_term) = product.notice_term {
-            if let Some(noticed_at) = jar.noticed_at {
+            if let JarState::Noticed(noticed_at) = jar.state {
                 if now - noticed_at >= notice_term {
                     let event = json!({
                         "standard": "sweat_jar",
@@ -228,7 +193,7 @@ impl Contract {
                 });
                 env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
 
-                let noticed_jar = jar.clone().noticed(env::block_timestamp());
+                let noticed_jar = jar.clone().noticed(env::block_timestamp_ms());
                 self.jars.replace(noticed_jar.index, &noticed_jar);
             }
         } else {
@@ -410,6 +375,59 @@ impl PenaltyApi for Contract {
             }
             _ => panic!("Penalty is not applicable"),
         };
+    }
+}
+
+#[near_bindgen]
+impl JarApi for Contract {
+    #[private]
+    fn create_jar(
+        &mut self,
+        account_id: AccountId,
+        product_id: ProductId,
+        amount: Balance,
+        signature: Option<String>,
+    ) -> Jar {
+        let product = self.get_product(&product_id);
+        let cap = product.cap;
+
+        if !self.is_authorized_for_product(account_id.clone(), product_id.clone(), signature) {
+            panic!("Signature is invalid");
+        }
+
+        if cap.min > amount || amount > cap.max {
+            panic!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max);
+        }
+
+        let index = self.jars.len() as JarIndex;
+        let now = env::block_timestamp_ms();
+        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
+
+        self.save_jar(&account_id, &jar);
+
+        let event = json!({
+            "standard": "sweat_jar",
+            "version": "0.0.1",
+            "event": "create_jar",
+            "data": jar,
+        });
+        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
+        jar
+    }
+
+    fn get_jar(&self, index: JarIndex) -> Jar {
+        self.jars
+            .get(index)
+            .unwrap_or_else(|| panic!("Jar on index {} doesn't exist", index))
+    }
+
+    fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar> {
+        let jar_indices = self.account_jar_ids(&account_id);
+        jar_indices
+            .iter()
+            .map(|index| self.get_jar(*index))
+            .collect()
     }
 }
 
@@ -727,7 +745,7 @@ mod tests {
     }
 
     #[test]
-    fn withdraw_without_notice() {
+    fn withdraw_with_notice() {
         let alice = accounts(0);
         let admin = accounts(1);
 
@@ -747,5 +765,19 @@ mod tests {
             contract.after_transfer_internal(vec![jar.clone()], true);
             PromiseOrValue::Value(0)
         });
+
+        let mut jar = context.contract.get_jar(0);
+        println!("@@ jar after notice = {:?}", jar);
+        assert_eq!(JarState::Noticed(31_622_400_000), jar.state);
+
+        context.set_block_timestamp_in_days(368);
+
+        context.contract.withdraw_internal(0, |contract, _, jar| {
+            contract.after_transfer_internal(vec![jar.clone()], true);
+            PromiseOrValue::Value(0)
+        });
+
+        jar = context.contract.get_jar(0);
+        println!("@@ jar after withdraw = {:?}", jar);
     }
 }
