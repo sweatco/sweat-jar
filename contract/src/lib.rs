@@ -156,7 +156,7 @@ impl Contract {
     }
 
     #[private]
-    fn transfer(&self, receiver_account_id: &AccountId, jar: &Jar) -> PromiseOrValue<Balance> {
+    fn transfer(&mut self, receiver_account_id: &AccountId, jar: &Jar) -> PromiseOrValue<Balance> {
         FungibleTokenContract::new(self.token_account_id.clone())
             .transfer(
                 receiver_account_id.clone(),
@@ -171,6 +171,88 @@ impl Contract {
         ext_self::ext(env::current_account_id())
             .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
             .after_transfer(jars_before_transfer)
+    }
+
+    #[private]
+    fn after_transfer_internal(&mut self, jars_before_transfer: Vec<Jar>, is_promise_success: bool) {
+        if is_promise_success {
+            for jar_before_transfer in jars_before_transfer.iter() {
+                let jar = self.get_jar(jar_before_transfer.index);
+                self.jars.replace(jar_before_transfer.index, &jar.unlocked());
+            }
+        } else {
+            for jar_before_transfer in jars_before_transfer.iter() {
+                self.jars.replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
+            }
+        }
+    }
+
+    #[private]
+    fn withdraw_internal<F>(&mut self, jar_index: JarIndex, transfer: F) -> PromiseOrValue<Balance> where F: Fn(&mut Contract, &AccountId, &Jar) -> PromiseOrValue<Balance> {
+        let jar = self.get_jar(jar_index).locked();
+        assert_is_not_empty(&jar);
+
+        let now = env::block_timestamp_ms();
+        let product = self.get_product(&jar.product_id);
+        let account_id = env::predecessor_account_id();
+
+        if let Some(notice_term) = product.notice_term {
+            if let Some(noticed_at) = jar.noticed_at {
+                if now - noticed_at >= notice_term {
+                    let event = json!({
+                        "standard": "sweat_jar",
+                        "version": "0.0.1",
+                        "event": "withdraw",
+                        "data": {
+                            "index": jar_index,
+                            "action": "withdrawn",
+                        },
+                    });
+                    env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
+                    self.jars.replace(jar.index, &jar.locked());
+
+                    return transfer(self, &account_id, &jar);
+                }
+            } else {
+                assert_ownership(&jar, &account_id);
+
+                let event = json!({
+                    "standard": "sweat_jar",
+                    "version": "0.0.1",
+                    "event": "withdraw",
+                    "data": {
+                        "index": jar_index,
+                        "action": "noticed",
+                    },
+                });
+                env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
+                let noticed_jar = jar.clone().noticed(env::block_timestamp());
+                self.jars.replace(noticed_jar.index, &noticed_jar);
+            }
+        } else {
+            assert_ownership(&jar, &account_id);
+
+            // TODO: check maturity
+
+            let event = json!({
+                "standard": "sweat_jar",
+                "version": "0.0.1",
+                "event": "withdraw",
+                "data": {
+                    "index": jar_index,
+                    "action": "withdrawn",
+                },
+            });
+            env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
+            self.jars.replace(jar.index, &jar.locked());
+
+            return transfer(self, &account_id, &jar);
+        }
+
+        PromiseOrValue::Value(0)
     }
 }
 
@@ -197,71 +279,7 @@ impl ContractApi for Contract {
     }
 
     fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
-        let jar = self.get_jar(jar_index);
-
-        // TODO: mark jar as  withdrawing
-
-        assert_is_not_empty(&jar);
-
-        let now = env::block_timestamp_ms();
-        let product = self.get_product(&jar.product_id);
-        let account_id = env::predecessor_account_id();
-
-        if let Some(notice_term) = product.notice_term {
-            if let Some(noticed_at) = jar.noticed_at {
-                if now - noticed_at >= notice_term {
-                    let event = json!({
-                        "standard": "sweat_jar",
-                        "version": "0.0.1",
-                        "event": "withdraw",
-                        "data": {
-                            "index": jar_index,
-                            "action": "withdrawn",
-                        },
-                    });
-                    env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-                    return self.transfer(&account_id, &jar);
-                }
-            } else {
-                assert_ownership(&jar, &account_id);
-
-                let event = json!({
-                    "standard": "sweat_jar",
-                    "version": "0.0.1",
-                    "event": "withdraw",
-                    "data": {
-                        "index": jar_index,
-                        "action": "noticed",
-                    },
-                });
-                env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-                let noticed_jar = jar.clone().noticed(env::block_timestamp());
-                self.jars.replace(noticed_jar.index, &noticed_jar);
-
-                // TODO: broadcast Notice event
-            }
-        } else {
-            assert_ownership(&jar, &account_id);
-
-            // TODO: check maturity
-
-            let event = json!({
-                "standard": "sweat_jar",
-                "version": "0.0.1",
-                "event": "withdraw",
-                "data": {
-                    "index": jar_index,
-                    "action": "withdrawn",
-                },
-            });
-            env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-            return self.transfer(&account_id, &jar);
-        }
-
-        PromiseOrValue::Value(0)
+        self.withdraw_internal(jar_index, Self::transfer)
     }
 
     fn claim_total(&mut self) -> PromiseOrValue<Balance> {
@@ -398,41 +416,23 @@ impl PenaltyApi for Contract {
 #[cfg(test)]
 mod tests {
     use near_sdk::{
-        test_utils::{accounts, VMContextBuilder},
-        testing_env,
+        test_utils::accounts,
     };
+    use common::tests::Context;
 
-    use crate::product::tests::{get_premium_product, get_product};
+    use crate::product::tests::{get_premium_product, get_product, get_product_with_notice};
 
     use super::*;
-
-    fn get_context(predecessor_account_id: AccountId) -> VMContextBuilder {
-        let mut builder = VMContextBuilder::new();
-        builder
-            .current_account_id(accounts(0))
-            .signer_account_id(predecessor_account_id.clone())
-            .predecessor_account_id(predecessor_account_id.clone())
-            .block_timestamp(0);
-
-        builder
-    }
 
     #[test]
     fn add_admin_by_admin() {
         let alice = accounts(0);
         let admin = accounts(1);
+        let mut context = Context::new(vec![admin.clone()]);
 
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![admin.clone()],
-        );
-
-        testing_env!(get_context(admin.clone()).build());
-
-        contract.add_admin(alice.clone());
-        let admins = contract.get_admin_allowlist();
+        context.switch_account(&admin);
+        context.contract.add_admin(alice.clone());
+        let admins = context.contract.get_admin_allowlist();
 
         assert_eq!(2, admins.len());
         assert!(admins.contains(&alice.clone()));
@@ -444,16 +444,10 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![admin.clone()],
-        );
+        let mut context = Context::new(vec![admin.clone()]);
+        context.switch_account(&alice);
 
-        testing_env!(get_context(alice.clone()).build());
-
-        contract.add_admin(alice.clone());
+        context.contract.add_admin(alice.clone());
     }
 
     #[test]
@@ -461,17 +455,11 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![admin.clone(), alice.clone()],
-        );
+        let mut context = Context::new(vec![admin.clone(), alice.clone()]);
+        context.switch_account(&admin);
 
-        testing_env!(get_context(admin.clone()).build());
-
-        contract.remove_admin(alice.clone());
-        let admins = contract.get_admin_allowlist();
+        context.contract.remove_admin(alice.clone());
+        let admins = context.contract.get_admin_allowlist();
 
         assert_eq!(1, admins.len());
         assert!(!admins.contains(&alice.clone()));
@@ -483,30 +471,21 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![admin.clone()],
-        );
+        let mut context = Context::new(vec![admin.clone()]);
+        context.switch_account(&alice);
 
-        testing_env!(get_context(alice.clone()).build());
-
-        contract.remove_admin(admin.clone());
+        context.contract.remove_admin(admin.clone());
     }
 
     #[test]
     fn add_product_to_list_by_admin() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
 
-        contract.register_product(get_product());
+        context.switch_account(&admin);
+        context.contract.register_product(get_product());
 
-        let products = contract.get_products();
+        let products = context.contract.get_products();
         assert_eq!(products.len(), 1);
         assert_eq!(products.first().unwrap().id, "product".to_string());
     }
@@ -514,227 +493,201 @@ mod tests {
     #[test]
     #[should_panic(expected = "Can be performed only by admin")]
     fn add_product_to_list_by_not_admin() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(1)],
-        );
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
 
-        contract.register_product(get_product());
+        context.contract.register_product(get_product());
     }
 
     #[test]
     #[should_panic(expected = "Account alice doesn't have jars")]
     fn get_principle_with_no_jars() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(1)],
-        );
+        let alice = accounts(0);
+        let mut context = Context::new(vec![]);
 
-        contract.get_principal(accounts(0));
+        context.contract.get_principal(alice);
     }
 
     #[test]
     fn get_principal_with_single_jar() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
 
         let product = get_product();
+        context.contract.register_product(product.clone());
 
-        contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100, None);
+        context.switch_account_to_owner();
+        context.contract.create_jar(alice.clone(), product.id, 100, None);
 
-        testing_env!(get_context(accounts(1)).build());
-
-        let principal = contract.get_principal(accounts(1));
+        let principal = context.contract.get_principal(alice.clone());
         assert_eq!(principal, 100);
     }
 
     #[test]
     fn get_principal_with_multiple_jars() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let mut context = Context::new(vec![admin.clone()]);
+        context.switch_account(&admin);
 
         let product = get_product();
+        context.contract.register_product(product.clone());
 
-        contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100, None);
-        contract.create_jar(accounts(1), product.clone().id, 200, None);
-        contract.create_jar(accounts(1), product.clone().id, 400, None);
+        context.switch_account_to_owner();
+        context.contract.create_jar(alice.clone(), product.clone().id, 100, None);
+        context.contract.create_jar(alice.clone(), product.clone().id, 200, None);
+        context.contract.create_jar(alice.clone(), product.clone().id, 400, None);
 
-        testing_env!(get_context(accounts(1)).build());
-
-        let principal = contract.get_principal(accounts(1));
+        let principal = context.contract.get_principal(alice.clone());
         assert_eq!(principal, 700);
     }
 
     #[test]
     #[should_panic(expected = "Account alice doesn't have jars")]
     fn get_total_interest_with_no_jars() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
 
-        contract.get_interest(accounts(0));
+        let mut context = Context::new(vec![]);
+
+        context.contract.get_interest(alice);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_after_30_minutes() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
 
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
         let product = get_product();
+        context.contract.register_product(product.clone());
 
-        contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100_000_000, None);
+        context.switch_account_to_owner();
+        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
 
-        testing_env!(get_context(accounts(1))
-            .block_timestamp(minutes_to_nano_ms(30))
-            .build());
+        context.set_block_timestamp_in_minutes(30);
 
-        let interest = contract.get_interest(accounts(1));
+        let interest = context.contract.get_interest(alice.clone());
         assert_eq!(interest, 685);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_on_maturity() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
 
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
         let product = get_product();
+        context.contract.register_product(product.clone());
 
-        contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100_000_000, None);
+        context.switch_account_to_owner();
+        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
 
-        testing_env!(get_context(accounts(1))
-            .block_timestamp(days_to_nano_ms(365))
-            .build());
+        context.set_block_timestamp_in_days(365);
 
-        let interest = contract.get_interest(accounts(1));
+        let interest = context.contract.get_interest(alice.clone());
         assert_eq!(interest, 12_000_000);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_after_maturity() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
 
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
         let product = get_product();
+        context.contract.register_product(product.clone());
 
-        contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.id, 100_000_000, None);
+        context.switch_account_to_owner();
+        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
 
-        testing_env!(get_context(accounts(1))
-            .block_timestamp(days_to_nano_ms(400))
-            .build());
+        context.set_block_timestamp_in_days(400);
 
-        let interest = contract.get_interest(accounts(1));
+        let interest = context.contract.get_interest(alice.clone());
         assert_eq!(interest, 12_000_000);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
 
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
         let product = get_product();
+        context.contract.register_product(product.clone());
 
-        contract.register_product(product.clone());
-        contract.create_jar(accounts(1), product.clone().id, 100_000_000, None);
+        context.switch_account_to_owner();
+        context.contract.create_jar(alice.clone(), product.clone().id, 100_000_000, None);
 
-        testing_env!(get_context(accounts(1))
-            .block_timestamp(days_to_nano_ms(182))
-            .build());
+        context.set_block_timestamp_in_days(182);
 
-        let mut interest = contract.get_interest(accounts(1));
+        let mut interest = context.contract.get_interest(alice.clone());
         assert_eq!(interest, 5_983_562);
 
-        contract.claim_total();
+        context.switch_account(&alice);
+        context.contract.claim_total();
 
-        testing_env!(get_context(accounts(1))
-            .block_timestamp(days_to_nano_ms(365))
-            .build());
+        context.set_block_timestamp_in_days(365);
 
-        interest = contract.get_interest(accounts(1));
+        interest = context.contract.get_interest(alice.clone());
         assert_eq!(interest, 6_016_438);
     }
 
     #[test]
     fn check_authorization_for_public_product() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
 
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
         let product = get_product();
-        contract.register_product(product.clone());
+        context.contract.register_product(product.clone());
 
-        let result = contract.is_authorized_for_product(accounts(0), product.id, None);
+        let result = context.contract.is_authorized_for_product(alice, product.id, None);
         assert!(result);
     }
 
     #[test]
     #[should_panic(expected = "Signature is required for private products")]
     fn check_authorization_for_private_product_without_signature() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
 
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
         let product = get_premium_product();
-        contract.register_product(product.clone());
+        context.contract.register_product(product.clone());
 
-        contract.is_authorized_for_product(accounts(0), product.id, None);
+        context.contract.is_authorized_for_product(alice, product.id, None);
     }
 
     #[test]
     fn check_authorization_for_private_product_with_correct_signature() {
-        let context = get_context(accounts(0));
-        testing_env!(context.build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![accounts(0)],
-        );
+        let alice = accounts(0);
+        let admin = accounts(1);
 
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
         let product = get_premium_product();
-        contract.register_product(product.clone());
+        context.contract.register_product(product.clone());
 
-        let result = contract.is_authorized_for_product(
-            accounts(0),
+        let result = context.contract.is_authorized_for_product(
+            alice,
             product.id,
             Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
         );
@@ -745,100 +698,54 @@ mod tests {
     fn get_total_interest_for_premium_with_penalty_after_half_term() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let owner = accounts(2);
 
-        testing_env!(get_context(owner.clone()).build());
-        let mut contract = Contract::init(
-            AccountId::new_unchecked("token".to_string()),
-            vec![admin.clone()],
-        );
+        let mut context = Context::new(vec![admin.clone()]);
 
-        testing_env!(get_context(admin.clone()).build());
-
+        context.switch_account(&admin);
         let product = get_premium_product();
-        contract.register_product(product.clone());
+        context.contract.register_product(product.clone());
 
-        testing_env!(get_context(owner.clone()).build());
-
-        contract.create_jar(
+        context.switch_account_to_owner();
+        context.contract.create_jar(
             alice.clone(),
             product.id, 100_000_000,
             Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
         );
 
-        testing_env!(get_context(alice.clone())
-            .block_timestamp(days_to_nano_ms(182))
-            .build());
+        context.set_block_timestamp_in_days(182);
 
-        let mut interest = contract.get_interest(alice.clone());
+        let mut interest = context.contract.get_interest(alice.clone());
         assert_eq!(interest, 9_972_603);
 
-        testing_env!(get_context(admin.clone()).build());
-        contract.set_penalty(0, true);
+        context.switch_account(&admin);
+        context.contract.set_penalty(0, true);
 
-        testing_env!(get_context(alice.clone())
-            .block_timestamp(days_to_nano_ms(365))
-            .build());
+        context.set_block_timestamp_in_days(365);
 
-        interest = contract.get_interest(alice);
+        interest = context.contract.get_interest(alice.clone());
         assert_eq!(interest, 10_000_000);
     }
 
-    //    #[test]
-    //    fn get_half_of_interest_when_claim_on_half_term() {
-    //        let context = get_context(accounts(0));
-    //        testing_env!(context.build());
-    //        let mut contract = Contract::init(
-    //            AccountId::new_unchecked("token".to_string()),
-    //            vec![accounts(0)],
-    //        );
-    //
-    //        let product = get_product();
-    //
-    //        contract.register_product(product.clone());
-    //        contract.create_jar(accounts(1), product.clone().id, 100);
-    //
-    //        testing_env!(get_context(accounts(1))
-    //            .block_timestamp(183 * 24 * 60 * 60 * u64::pow(10, 9))
-    //            .build());
-    //
-    //        let claim_promise = contract.claim();
-    //
-    //        if let PromiseOrValue::Promise(promise) = contract.claim() {
-    //        }
-    //        let interest = contract.claim();
-    //
-    //        assert_eq!(interest, 5);
-    //    }
-    //
-    //    #[test]
-    //    fn get_total_interest_when_claim_on_maturity() {
-    //        let context = get_context(accounts(0));
-    //        testing_env!(context.build());
-    //        let mut contract = Contract::init(
-    //            AccountId::new_unchecked("token".to_string()),
-    //            vec![accounts(0)],
-    //        );
-    //
-    //        let product = get_product();
-    //
-    //        contract.register_product(product.clone());
-    //        contract.create_jar(accounts(1), product.clone().id, 100);
-    //
-    //        testing_env!(get_context(accounts(1))
-    //            .block_timestamp(366 * 24 * 60 * 60 * u64::pow(10, 9))
-    //            .build());
-    //
-    //        let interest = contract.claim();
-    //
-    //        assert_eq!(interest, 10);
-    //    }
+    #[test]
+    fn withdraw_without_notice() {
+        let alice = accounts(0);
+        let admin = accounts(1);
 
-    fn days_to_nano_ms(days: u64) -> u64 {
-        minutes_to_nano_ms(days * 60 * 24)
-    }
+        let mut context = Context::new(vec![admin.clone()]);
 
-    fn minutes_to_nano_ms(minutes: u64) -> u64 {
-        minutes * 60 * u64::pow(10, 9)
+        context.switch_account(&admin);
+        let product = get_product_with_notice();
+        context.contract.register_product(product.clone());
+
+        context.switch_account_to_owner();
+        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
+
+        context.set_block_timestamp_in_days(366);
+
+        context.switch_account(&alice);
+        context.contract.withdraw_internal(0, |contract, _, jar| {
+            contract.after_transfer_internal(vec![jar.clone()], true);
+            PromiseOrValue::Value(0)
+        });
     }
 }

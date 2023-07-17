@@ -14,17 +14,6 @@ pub trait SelfCallbacks {
 impl SelfCallbacks for Contract {
     #[private]
     fn after_transfer(&mut self, jars_before_transfer: Vec<Jar>) {
-        if is_promise_success() {
-            for jar_before_transfer in jars_before_transfer.iter() {
-                let jar = self.get_jar(jar_before_transfer.index);
-                self.jars
-                    .replace(jar_before_transfer.index, &jar.unlocked());
-            }
-        } else {
-            for jar_before_transfer in jars_before_transfer.iter() {
-                self.jars
-                    .replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
-            }
-        }
+        self.after_transfer_internal(jars_before_transfer, is_promise_success());
     }
 }

@@ -85,6 +85,24 @@ pub(crate) mod tests {
         }
     }
 
+    pub(crate) fn get_product_with_notice() -> Product {
+        Product {
+            id: "product_with_notice".to_string(),
+            lockup_term: 365 * 24 * 60 * 60 * 1000,
+            maturity_term: Some(365 * 24 * 60 * 60 * 1000),
+            notice_term: Some(48 * 60 * 60 * 1000),
+            is_refillable: false,
+            apy: Apy::Constant(0.12),
+            cap: Cap {
+                min: 100,
+                max: 100_000_000_000,
+            },
+            is_restakable: false,
+            withdrawal_fee: None,
+            public_key: None,
+        }
+    }
+
     pub(crate) fn get_premium_product() -> Product {
         Product {
             id: "product_premium".to_string(),
