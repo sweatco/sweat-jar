@@ -1,8 +1,10 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::Balance;
+use near_sdk::{Balance, env, near_bindgen};
+use near_sdk::serde_json::json;
 
 use crate::common::{Duration, MINUTES_IN_YEAR};
+use crate::*;
 
 pub type ProductId = String;
 
@@ -61,6 +63,27 @@ pub(crate) fn per_minute_interest_rate(rate: f32) -> f32 {
 pub trait ProductApi {
     fn register_product(&mut self, product: Product);
     fn get_products(&self) -> Vec<Product>;
+}
+
+#[near_bindgen]
+impl ProductApi for Contract {
+    fn register_product(&mut self, product: Product) {
+        self.assert_admin();
+
+        self.products.insert(&product.id, &product);
+
+        let event = json!({
+            "standard": "sweat_jar",
+            "version": "0.0.1",
+            "event": "register_product",
+            "data": product,
+        });
+        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+    }
+
+    fn get_products(&self) -> Vec<Product> {
+        self.products.values_as_vector().to_vec()
+    }
 }
 
 #[cfg(test)]

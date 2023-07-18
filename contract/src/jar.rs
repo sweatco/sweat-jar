@@ -1,9 +1,11 @@
 use std::cmp;
 
-use near_sdk::{AccountId, Balance};
+use near_sdk::{AccountId, Balance, env, near_bindgen};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::serde_json::json;
 
+use crate::*;
 use crate::common::{MS_IN_MINUTE, Timestamp};
 use crate::product::{Apy, per_minute_interest_rate, Product, ProductId};
 
@@ -50,8 +52,15 @@ pub trait JarApi {
         amount: Balance,
         signature: Option<String>,
     ) -> Jar;
+
     fn get_jar(&self, jar_index: JarIndex) -> Jar;
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar>;
+
+    fn get_total_principal(&self, account_id: AccountId) -> Balance;
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance;
+
+    fn get_total_interest(&self, account_id: AccountId) -> Balance;
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance;
 }
 
 impl Jar {
@@ -86,13 +95,6 @@ impl Jar {
     pub fn unlocked(&self) -> Self {
         Self {
             is_pending_withdraw: false,
-            ..self.clone()
-        }
-    }
-
-    pub fn closed(&self) -> Self {
-        Self {
-            state: JarState::Closed,
             ..self.clone()
         }
     }
@@ -171,9 +173,93 @@ impl Jar {
     }
 }
 
+#[near_bindgen]
+impl JarApi for Contract {
+    #[private]
+    fn create_jar(
+        &mut self,
+        account_id: AccountId,
+        product_id: ProductId,
+        amount: Balance,
+        signature: Option<String>,
+    ) -> Jar {
+        let product = self.get_product(&product_id);
+        let cap = product.cap;
+
+        if !self.is_authorized_for_product(account_id.clone(), product_id.clone(), signature) {
+            panic!("Signature is invalid");
+        }
+
+        if cap.min > amount || amount > cap.max {
+            panic!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max);
+        }
+
+        let index = self.jars.len() as JarIndex;
+        let now = env::block_timestamp_ms();
+        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
+
+        self.save_jar(&account_id, &jar);
+
+        let event = json!({
+            "standard": "sweat_jar",
+            "version": "0.0.1",
+            "event": "create_jar",
+            "data": jar,
+        });
+        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+
+        jar
+    }
+
+    fn get_jar(&self, index: JarIndex) -> Jar {
+        self.jars
+            .get(index)
+            .unwrap_or_else(|| panic!("Jar on index {} doesn't exist", index))
+    }
+
+    fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar> {
+        self.account_jar_ids(&account_id)
+            .iter()
+            .map(|index| self.get_jar(*index))
+            .collect()
+    }
+
+    fn get_total_principal(&self, account_id: AccountId) -> Balance {
+        let jar_indices = self.account_jar_ids(&account_id);
+
+        self.get_principal(jar_indices)
+    }
+
+    // TODO: tests
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance {
+        jar_indices
+            .iter()
+            .map(|index| self.get_jar(*index))
+            .fold(0, |acc, jar| acc + jar.principal)
+    }
+
+    fn get_total_interest(&self, account_id: AccountId) -> Balance {
+        let jar_indices = self.account_jar_ids(&account_id);
+
+        self.get_interest(jar_indices)
+    }
+
+    // TODO: tests
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance {
+        let now = env::block_timestamp_ms();
+
+        jar_indices
+            .iter()
+            .map(|index| self.get_jar(*index))
+            .map(|jar| jar.get_interest(&self.get_product(&jar.product_id), now))
+            .sum()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use near_sdk::AccountId;
+
     use crate::jar::Jar;
     use crate::product::tests::get_product;
 

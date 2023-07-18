@@ -1,8 +1,5 @@
-// TODO: 2. broadcast events
 // TODO: 5. migration
-// TODO: 6. Update APY when subscription state changes
 
-use std::cmp;
 use std::str::FromStr;
 
 use ed25519_dalek::{PublicKey, Signature};
@@ -28,6 +25,7 @@ mod ft_receiver;
 mod internal;
 mod jar;
 mod product;
+mod claim;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -49,22 +47,10 @@ pub(crate) enum StorageKey {
     AccountJars,
 }
 
-// TODO: get principal by jar indices
-// TODO: get interest by jar indices
 pub trait ContractApi {
-    fn get_total_principal(&self, account_id: AccountId) -> Balance;
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance;
-    fn get_total_interest(&self, account_id: AccountId) -> Balance;
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance;
     // TODO: make it partial
     fn withdraw(&mut self, jar_id: JarIndex) -> PromiseOrValue<Balance>;
     fn restake(&mut self, jar_index: JarIndex) -> Jar;
-    fn claim_total(&mut self) -> PromiseOrValue<Balance>;
-    fn claim_jars(
-        &mut self,
-        jar_indices: Vec<JarIndex>,
-        amount: Option<Balance>,
-    ) -> PromiseOrValue<Balance>;
 }
 
 pub trait AuthApi {
@@ -140,14 +126,16 @@ impl Contract {
     }
 
     #[private]
-    fn after_transfer_internal(&mut self, jars_before_transfer: Vec<Jar>, is_promise_success: bool) {
+    fn after_transfer_internal(
+        &mut self,
+        jars_before_transfer: Vec<Jar>,
+        is_promise_success: bool,
+    ) {
         if is_promise_success {
             for jar_before_transfer in jars_before_transfer.iter() {
                 let mut jar = self.get_jar(jar_before_transfer.index);
 
-                if let JarState::Noticed(_) = jar.state {
-                    jar = jar.closed();
-                }
+                todo!("Mark a jar as Closed when it's needed");
 
                 self.jars.replace(jar_before_transfer.index, &jar.unlocked());
             }
@@ -159,7 +147,9 @@ impl Contract {
     }
 
     #[private]
-    fn withdraw_internal<F>(&mut self, jar_index: JarIndex, transfer: F) -> PromiseOrValue<Balance> where F: Fn(&mut Contract, &AccountId, &Jar) -> PromiseOrValue<Balance> {
+    fn withdraw_internal<F>(&mut self, jar_index: JarIndex, transfer: F) -> PromiseOrValue<Balance>
+        where F: Fn(&mut Contract, &AccountId, &Jar) -> PromiseOrValue<Balance>
+    {
         let jar = self.get_jar(jar_index).locked();
         assert_is_not_empty(&jar);
         assert_is_not_closed(&jar);
@@ -230,132 +220,12 @@ impl Contract {
 
 #[near_bindgen]
 impl ContractApi for Contract {
-    fn get_total_principal(&self, account_id: AccountId) -> Balance {
-        let jar_indices = self.account_jar_ids(&account_id);
-
-        self.get_principal(jar_indices)
-    }
-
-    // TODO: tests
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance {
-        jar_indices
-            .iter()
-            .map(|index| self.get_jar(*index))
-            .fold(0, |acc, jar| acc + jar.principal)
-    }
-
-    fn get_total_interest(&self, account_id: AccountId) -> Balance {
-        let jar_indices = self.account_jar_ids(&account_id);
-
-        self.get_interest(jar_indices)
-    }
-
-    // TODO: tests
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance {
-        let now = env::block_timestamp_ms();
-
-        jar_indices
-            .iter()
-            .map(|index| self.get_jar(*index))
-            .map(|jar| jar.get_interest(&self.get_product(&jar.product_id), now))
-            .sum()
-    }
-
     fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
         self.withdraw_internal(jar_index, Self::transfer)
     }
 
-    fn claim_total(&mut self) -> PromiseOrValue<Balance> {
-        let account_id = env::predecessor_account_id();
-        let jar_indices = self.account_jar_ids(&account_id);
-
-        self.claim_jars(jar_indices, None)
-    }
-
-    fn claim_jars(
-        &mut self,
-        jar_indices: Vec<JarIndex>,
-        amount: Option<Balance>,
-    ) -> PromiseOrValue<Balance> {
-        let account_id = env::predecessor_account_id();
-        let now = env::block_timestamp_ms();
-
-        let get_interest_to_claim: Box<dyn Fn(Balance, Balance) -> Balance> = match amount {
-            Some(ref a) => Box::new(|available, total| cmp::min(available, *a - total)),
-            None => Box::new(|available, _| available),
-        };
-
-        let jar_ids_iter = jar_indices.iter();
-        let unlocked_jars: Vec<Jar> = jar_ids_iter
-            .map(|index| self.get_jar(*index))
-            .filter(|jar| !jar.is_pending_withdraw)
-            .filter(|jar| jar.account_id == account_id)
-            .collect();
-
-        let mut total_interest_to_claim: Balance = 0;
-
-        let mut event_data: Vec<serde_json::Value> = vec![];
-
-        for jar in unlocked_jars.clone() {
-            let product = self.get_product(&jar.product_id);
-            let available_interest = jar.get_interest(&product, now);
-            let interest_to_claim =
-                get_interest_to_claim(available_interest, total_interest_to_claim);
-
-            let updated_jar = jar
-                .claimed(available_interest, interest_to_claim, now)
-                .locked();
-            self.jars.replace(jar.index, &updated_jar);
-
-            total_interest_to_claim += interest_to_claim;
-
-            event_data.push(json!({ "index": jar.index, "interest_to_claim": interest_to_claim }));
-        }
-
-        let event = json!({
-            "standard": "sweat_jar",
-            "version": "0.0.1",
-            "event": "claim_jars",
-            "data": event_data,
-        });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-        if total_interest_to_claim > 0 {
-            FungibleTokenContract::new(self.token_account_id.clone())
-                .transfer(
-                    account_id,
-                    total_interest_to_claim,
-                    Self::after_transfer_call(unlocked_jars),
-                )
-                .into()
-        } else {
-            PromiseOrValue::Value(0)
-        }
-    }
-
     fn restake(&mut self, jar_index: JarIndex) -> Jar {
         todo!("Add implementation and broadcast event");
-    }
-}
-
-#[near_bindgen]
-impl ProductApi for Contract {
-    fn register_product(&mut self, product: Product) {
-        self.assert_admin();
-
-        self.products.insert(&product.id, &product);
-
-        let event = json!({
-            "standard": "sweat_jar",
-            "version": "0.0.1",
-            "event": "register_product",
-            "data": product,
-        });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-    }
-
-    fn get_products(&self) -> Vec<Product> {
-        self.products.values_as_vector().to_vec()
     }
 }
 
@@ -396,64 +266,12 @@ impl PenaltyApi for Contract {
     }
 }
 
-#[near_bindgen]
-impl JarApi for Contract {
-    #[private]
-    fn create_jar(
-        &mut self,
-        account_id: AccountId,
-        product_id: ProductId,
-        amount: Balance,
-        signature: Option<String>,
-    ) -> Jar {
-        let product = self.get_product(&product_id);
-        let cap = product.cap;
-
-        if !self.is_authorized_for_product(account_id.clone(), product_id.clone(), signature) {
-            panic!("Signature is invalid");
-        }
-
-        if cap.min > amount || amount > cap.max {
-            panic!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max);
-        }
-
-        let index = self.jars.len() as JarIndex;
-        let now = env::block_timestamp_ms();
-        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
-
-        self.save_jar(&account_id, &jar);
-
-        let event = json!({
-            "standard": "sweat_jar",
-            "version": "0.0.1",
-            "event": "create_jar",
-            "data": jar,
-        });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-        jar
-    }
-
-    fn get_jar(&self, index: JarIndex) -> Jar {
-        self.jars
-            .get(index)
-            .unwrap_or_else(|| panic!("Jar on index {} doesn't exist", index))
-    }
-
-    fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar> {
-        self.account_jar_ids(&account_id)
-            .iter()
-            .map(|index| self.get_jar(*index))
-            .collect()
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use near_sdk::{
-        test_utils::accounts,
-    };
+    use near_sdk::test_utils::accounts;
+
     use common::tests::Context;
+    use crate::claim::ClaimApi;
 
     use crate::product::tests::{get_premium_product, get_product, get_product_with_notice};
 
