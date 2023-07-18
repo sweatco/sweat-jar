@@ -1,25 +1,34 @@
 use near_contract_standards::fungible_token::core::ext_ft_core;
-use near_sdk::{json_types::U128, AccountId, Promise};
+use near_sdk::{json_types::U128, AccountId, Promise, near_bindgen};
+use crate::*;
 
 pub(crate) struct FungibleTokenContract {
     address: AccountId,
 }
 
 impl FungibleTokenContract {
-    pub(crate) fn new(address: AccountId) -> Self {
+    fn new(address: AccountId) -> Self {
         Self { address }
     }
 }
 
+#[near_bindgen]
+impl Contract {
+    pub(crate) fn ft_contract(&self) -> impl FungibleTokenInterface {
+        FungibleTokenContract::new(self.token_account_id.clone())
+    }
+}
+
 pub(crate) trait FungibleTokenInterface {
-    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> Promise;
+    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> PromiseOrValue<Balance>;
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
-    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> Promise {
+    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> PromiseOrValue<Balance> {
         ext_ft_core::ext(self.address.clone())
             .with_attached_deposit(1)
-            .ft_transfer(receiver_id.clone(), U128::from(amount), None)
+            .ft_transfer(receiver_id, U128::from(amount), None)
             .then(callback)
+            .into()
     }
 }

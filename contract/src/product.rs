@@ -56,6 +56,12 @@ pub struct Cap {
     pub max: u128,
 }
 
+impl Product {
+    pub(crate) fn is_flexible(&self) -> bool {
+        self.maturity_term.is_none()
+    } 
+}
+
 pub(crate) fn per_minute_interest_rate(rate: f32) -> f32 {
     rate / MINUTES_IN_YEAR as f32
 }

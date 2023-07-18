@@ -9,10 +9,9 @@ use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
 use near_sdk::serde_json::json;
 
-use external::{ext_self, GAS_FOR_AFTER_TRANSFER};
-use ft_interface::{FungibleTokenContract, FungibleTokenInterface};
+use ft_interface::FungibleTokenInterface;
 use jar::{Jar, JarIndex};
-use product::{Apy, Product, ProductApi, ProductId};
+use product::{Apy, Product, ProductId};
 
 use crate::assert::{assert_is_not_closed, assert_is_not_empty, assert_ownership};
 use crate::jar::{JarApi, JarState};
@@ -26,6 +25,7 @@ mod internal;
 mod jar;
 mod product;
 mod claim;
+mod withdraw;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -48,8 +48,6 @@ pub(crate) enum StorageKey {
 }
 
 pub trait ContractApi {
-    // TODO: make it partial
-    fn withdraw(&mut self, jar_id: JarIndex) -> PromiseOrValue<Balance>;
     fn restake(&mut self, jar_index: JarIndex) -> Jar;
 }
 
@@ -106,124 +104,10 @@ impl Contract {
             true
         }
     }
-
-    #[private]
-    fn transfer(&mut self, receiver_account_id: &AccountId, jar: &Jar) -> PromiseOrValue<Balance> {
-        FungibleTokenContract::new(self.token_account_id.clone())
-            .transfer(
-                receiver_account_id.clone(),
-                jar.principal,
-                Self::after_transfer_call(vec![jar.clone()]),
-            )
-            .into()
-    }
-
-    #[private]
-    fn after_transfer_call(jars_before_transfer: Vec<Jar>) -> Promise {
-        ext_self::ext(env::current_account_id())
-            .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
-            .after_transfer(jars_before_transfer)
-    }
-
-    #[private]
-    fn after_transfer_internal(
-        &mut self,
-        jars_before_transfer: Vec<Jar>,
-        is_promise_success: bool,
-    ) {
-        if is_promise_success {
-            for jar_before_transfer in jars_before_transfer.iter() {
-                let mut jar = self.get_jar(jar_before_transfer.index);
-
-                todo!("Mark a jar as Closed when it's needed");
-
-                self.jars.replace(jar_before_transfer.index, &jar.unlocked());
-            }
-        } else {
-            for jar_before_transfer in jars_before_transfer.iter() {
-                self.jars.replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
-            }
-        }
-    }
-
-    #[private]
-    fn withdraw_internal<F>(&mut self, jar_index: JarIndex, transfer: F) -> PromiseOrValue<Balance>
-        where F: Fn(&mut Contract, &AccountId, &Jar) -> PromiseOrValue<Balance>
-    {
-        let jar = self.get_jar(jar_index).locked();
-        assert_is_not_empty(&jar);
-        assert_is_not_closed(&jar);
-
-        let now = env::block_timestamp_ms();
-        let product = self.get_product(&jar.product_id);
-        let account_id = env::predecessor_account_id();
-
-        if let Some(notice_term) = product.notice_term {
-            if let JarState::Noticed(noticed_at) = jar.state {
-                if now - noticed_at >= notice_term {
-                    let event = json!({
-                        "standard": "sweat_jar",
-                        "version": "0.0.1",
-                        "event": "withdraw",
-                        "data": {
-                            "index": jar_index,
-                            "action": "withdrawn",
-                        },
-                    });
-                    env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-                    self.jars.replace(jar.index, &jar.locked());
-
-                    return transfer(self, &account_id, &jar);
-                }
-            } else {
-                assert_ownership(&jar, &account_id);
-
-                let event = json!({
-                    "standard": "sweat_jar",
-                    "version": "0.0.1",
-                    "event": "withdraw",
-                    "data": {
-                        "index": jar_index,
-                        "action": "noticed",
-                    },
-                });
-                env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-                let noticed_jar = jar.clone().noticed(env::block_timestamp_ms());
-                self.jars.replace(noticed_jar.index, &noticed_jar);
-            }
-        } else {
-            assert_ownership(&jar, &account_id);
-
-            // TODO: check maturity
-
-            let event = json!({
-                "standard": "sweat_jar",
-                "version": "0.0.1",
-                "event": "withdraw",
-                "data": {
-                    "index": jar_index,
-                    "action": "withdrawn",
-                },
-            });
-            env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
-
-            self.jars.replace(jar.index, &jar.locked());
-
-            return transfer(self, &account_id, &jar);
-        }
-
-        PromiseOrValue::Value(0)
-    }
 }
 
 #[near_bindgen]
 impl ContractApi for Contract {
-    fn withdraw(&mut self, jar_index: JarIndex) -> PromiseOrValue<Balance> {
-        self.withdraw_internal(jar_index, Self::transfer)
-    }
-
     fn restake(&mut self, jar_index: JarIndex) -> Jar {
         todo!("Add implementation and broadcast event");
     }
@@ -271,9 +155,11 @@ mod tests {
     use near_sdk::test_utils::accounts;
 
     use common::tests::Context;
-    use crate::claim::ClaimApi;
 
+    use crate::claim::ClaimApi;
+    use crate::product::ProductApi;
     use crate::product::tests::{get_premium_product, get_product, get_product_with_notice};
+    use crate::withdraw::WithdrawCallbacks;
 
     use super::*;
 
@@ -596,10 +482,7 @@ mod tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.withdraw_internal(0, |contract, _, jar| {
-            contract.after_transfer_internal(vec![jar.clone()], true);
-            PromiseOrValue::Value(0)
-        });
+        context.contract.withdraw_internal(0, None, withdraw_transfer);
 
         let mut jar = context.contract.get_jar(0);
         println!("@@ jar after notice = {:?}", jar);
@@ -607,12 +490,20 @@ mod tests {
 
         context.set_block_timestamp_in_days(368);
 
-        context.contract.withdraw_internal(0, |contract, _, jar| {
-            contract.after_transfer_internal(vec![jar.clone()], true);
-            PromiseOrValue::Value(0)
-        });
+        context.contract.withdraw_internal(0, None, withdraw_transfer);
 
         jar = context.contract.get_jar(0);
         assert_eq!(JarState::Closed, jar.state);
+    }
+
+    fn withdraw_transfer(
+        contract: &mut Contract,
+        _: &AccountId,
+        amount: Balance,
+        jar: &Jar,
+    ) -> PromiseOrValue<Balance> {
+        contract.after_withdraw_internal(jar.clone(), amount, true);
+
+        PromiseOrValue::Value(amount)
     }
 }

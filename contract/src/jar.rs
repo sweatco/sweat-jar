@@ -64,7 +64,7 @@ pub trait JarApi {
 }
 
 impl Jar {
-    pub fn create(
+    pub(crate) fn create(
         index: JarIndex,
         account_id: AccountId,
         product_id: ProductId,
@@ -85,35 +85,35 @@ impl Jar {
         }
     }
 
-    pub fn locked(&self) -> Self {
+    pub(crate) fn locked(&self) -> Self {
         Self {
             is_pending_withdraw: true,
             ..self.clone()
         }
     }
 
-    pub fn unlocked(&self) -> Self {
+    pub(crate) fn unlocked(&self) -> Self {
         Self {
             is_pending_withdraw: false,
             ..self.clone()
         }
     }
 
-    pub fn noticed(&self, noticed_at: Timestamp) -> Self {
+    pub(crate) fn noticed(&self, noticed_at: Timestamp) -> Self {
         Self {
             state: JarState::Noticed(noticed_at),
             ..self.clone()
         }
     }
 
-    pub fn with_penalty_applied(&self, is_applied: bool) -> Self {
+    pub(crate) fn with_penalty_applied(&self, is_applied: bool) -> Self {
         Self {
             is_penalty_applied: is_applied,
             ..self.clone()
         }
     }
 
-    pub fn topped_up(&self, amount: Balance, product: &Product, now: Timestamp) -> Self {
+    pub(crate) fn topped_up(&self, amount: Balance, product: &Product, now: Timestamp) -> Self {
         let current_interest = self.get_interest(product, now);
         Self {
             principal: self.principal + amount,
@@ -125,7 +125,7 @@ impl Jar {
         }
     }
 
-    pub fn claimed(
+    pub(crate) fn claimed(
         &self,
         available_yield: Balance,
         claimed_amount: Balance,
@@ -141,7 +141,32 @@ impl Jar {
         }
     }
 
-    pub fn get_interest(&self, product: &Product, now: Timestamp) -> Balance {
+    // TODO: maybe this mutation should be performed before transfer
+    pub(crate) fn withdrawn(
+        &self,
+        product: &Product,
+        withdrawn_amount: Balance,
+        now: Timestamp,
+    ) -> Self {
+        let current_interest = self.get_interest(product, now);
+        let state = get_final_state(product, self, withdrawn_amount);
+
+        Self {
+            principal: self.principal + withdrawn_amount,
+            cache: Some(JarCache {
+                updated_at: now,
+                interest: current_interest,
+            }),
+            state,
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn is_mature(&self, product: &Product, now: Timestamp) -> bool {
+        now - self.created_at > product.lockup_term
+    }
+
+    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> Balance {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
             (cache.updated_at, cache.interest)
         } else {
@@ -253,6 +278,14 @@ impl JarApi for Contract {
             .map(|index| self.get_jar(*index))
             .map(|jar| jar.get_interest(&self.get_product(&jar.product_id), now))
             .sum()
+    }
+}
+
+fn get_final_state(product: &Product, original_jar: &Jar, withdrawn_amount: Balance) -> JarState {
+    if product.is_flexible() || original_jar.principal - withdrawn_amount > 0 {
+        JarState::Active
+    } else {
+        JarState::Closed
     }
 }
 

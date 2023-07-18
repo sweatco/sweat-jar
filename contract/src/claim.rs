@@ -1,14 +1,10 @@
 use std::cmp;
-use near_sdk::{Balance, env, ext_contract, near_bindgen, PromiseOrValue, serde_json};
+use near_sdk::{Balance, env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue, serde_json};
 use near_sdk::serde_json::json;
 use crate::*;
-use crate::ft_interface::{FungibleTokenContract, FungibleTokenInterface};
+use crate::external::GAS_FOR_AFTER_TRANSFER;
+use crate::ft_interface::FungibleTokenInterface;
 use crate::jar::{Jar, JarApi, JarIndex};
-
-#[ext_contract(ext_self)]
-pub trait ClaimCallbacks {
-    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>);
-}
 
 pub trait ClaimApi {
     fn claim_total(&mut self) -> PromiseOrValue<Balance>;
@@ -17,6 +13,11 @@ pub trait ClaimApi {
         jar_indices: Vec<JarIndex>,
         amount: Option<Balance>,
     ) -> PromiseOrValue<Balance>;
+}
+
+#[ext_contract(ext_self)]
+pub trait ClaimCallbacks {
+    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>);
 }
 
 #[near_bindgen]
@@ -77,15 +78,31 @@ impl ClaimApi for Contract {
         env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
 
         if total_interest_to_claim > 0 {
-            FungibleTokenContract::new(self.token_account_id.clone())
+            self.ft_contract()
                 .transfer(
                     account_id,
                     total_interest_to_claim,
                     after_claim_call(unlocked_jars),
                 )
-                .into()
         } else {
             PromiseOrValue::Value(0)
+        }
+    }
+}
+
+#[near_bindgen]
+impl ClaimCallbacks for Contract {
+    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>) {
+        if is_promise_success() {
+            for jar_before_transfer in jars_before_transfer.iter() {
+                let jar = self.get_jar(jar_before_transfer.index);
+
+                self.jars.replace(jar_before_transfer.index, &jar.unlocked());
+            }
+        } else {
+            for jar_before_transfer in jars_before_transfer.iter() {
+                self.jars.replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
+            }
         }
     }
 }
