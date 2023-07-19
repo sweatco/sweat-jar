@@ -1,4 +1,4 @@
-use near_sdk::{log, serde_json};
+use near_sdk::{AccountId, log, serde_json};
 use near_sdk::serde::Serialize;
 
 use crate::{PACKAGE_NAME, VERSION};
@@ -14,7 +14,8 @@ pub(crate) enum EventKind {
     RegisterProduct(Product),
     CreateJar(Jar),
     Claim(Vec<ClaimEventItem>),
-    Withdraw(WithdrawData)
+    Withdraw(WithdrawData),
+    Migration(Vec<MigrationEventItem>),
 }
 
 #[derive(Serialize, Debug)]
@@ -47,6 +48,14 @@ pub(crate) struct WithdrawData {
 pub(crate) enum WithdrawEventAction {
     Withdrawn,
     Noticed,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub(crate) struct MigrationEventItem {
+    pub original_id: String,
+    pub index: JarIndex,
+    pub account_id: AccountId,
 }
 
 impl From<EventKind> for SweatJarEvent {

@@ -38,7 +38,7 @@ impl Products {
                 "is_restakable": false,
             }),
             Products::Locked6Months6PercentsWithWithdrawFee => json!({
-                "id": "locked_6_months_6_percents",
+                "id": "locked_6_months_6_percents_with_withdraw_fee",
                 "lockup_term": 15_778_476_000_u64,
                 "maturity_term": 15_778_476_000_u64,
                 "is_refillable": false,

@@ -42,6 +42,14 @@ impl Context {
             .into_result()?;
         accounts.insert("alice".to_string(), alice);
 
+        let bob = account
+            .create_subaccount("bob")
+            .initial_balance(parse_near!("3 N"))
+            .transact()
+            .await?
+            .into_result()?;
+        accounts.insert("bob".to_string(), bob);
+
         let jar_contract = worker
             .dev_deploy(&Self::load_wasm(&(env::args().nth(1).unwrap())))
             .await?;

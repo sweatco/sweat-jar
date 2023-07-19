@@ -29,6 +29,7 @@ mod product;
 mod claim;
 mod withdraw;
 mod event;
+mod migration;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -90,8 +91,8 @@ impl Contract {
 
     pub fn is_authorized_for_product(
         &self,
-        account_id: AccountId,
-        product_id: ProductId,
+        account_id: &AccountId,
+        product_id: &ProductId,
         signature: Option<String>,
     ) -> bool {
         let product = self.get_product(&product_id);
@@ -163,6 +164,7 @@ mod tests {
     use common::tests::Context;
 
     use crate::claim::ClaimApi;
+    use crate::common::TokenAmount;
     use crate::product::ProductApi;
     use crate::product::tests::{get_premium_product, get_product, get_product_with_notice};
     use crate::withdraw::WithdrawCallbacks;
@@ -401,7 +403,7 @@ mod tests {
         let product = get_product();
         context.contract.register_product(product.clone());
 
-        let result = context.contract.is_authorized_for_product(alice, product.id, None);
+        let result = context.contract.is_authorized_for_product(&alice, &product.id, None);
         assert!(result);
     }
 
@@ -417,7 +419,7 @@ mod tests {
         let product = get_premium_product();
         context.contract.register_product(product.clone());
 
-        context.contract.is_authorized_for_product(alice, product.id, None);
+        context.contract.is_authorized_for_product(&alice, &product.id, None);
     }
 
     #[test]
@@ -432,8 +434,8 @@ mod tests {
         context.contract.register_product(product.clone());
 
         let result = context.contract.is_authorized_for_product(
-            alice,
-            product.id,
+            &alice,
+            &product.id,
             Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
         );
         assert!(result);

@@ -1,7 +1,8 @@
 use async_trait::async_trait;
+use near_sdk::json_types::U128;
 use near_units::parse_near;
 use serde_json::json;
-use workspaces::{Account, Contract};
+use workspaces::{Account, AccountId, Contract};
 
 #[async_trait]
 pub(crate) trait FtContractInterface {
@@ -9,7 +10,7 @@ pub(crate) trait FtContractInterface {
 
     async fn init(&self) -> anyhow::Result<()>;
 
-    async fn ft_balance_of(&self, user: &Account) -> anyhow::Result<()>;
+    async fn ft_balance_of(&self, user: &Account) -> anyhow::Result<U128>;
 
     async fn mint_for_user(
         &self,
@@ -18,6 +19,14 @@ pub(crate) trait FtContractInterface {
     ) -> anyhow::Result<()>;
 
     async fn storage_deposit(&self, user: &Account) -> anyhow::Result<()>;
+
+    async fn ft_transfer_call(
+        &self,
+        account: &Account,
+        receiver_id: &AccountId,
+        amount: u128,
+        msg: String,
+    ) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -42,27 +51,22 @@ impl FtContractInterface for Contract {
         Ok(())
     }
 
-    async fn ft_balance_of(&self, user: &Account) -> anyhow::Result<()> {
+    async fn ft_balance_of(&self, user: &Account) -> anyhow::Result<U128> {
         println!("▶️ View ft balance of user {:?}", user.id());
 
         let args = json!({
             "account_id": user.id(),
         });
 
-        println!("  ▶️ Run ft_balance_of with args {:?}", args);
-
-        let result = user
-            .call(self.id(), "ft_balance_of")
+        let result = self
+            .view("ft_balance_of")
             .args_json(args)
-            .view()
-            .await?;
-        println!("    User balance = {:?}", result);
+            .await?
+            .json()?;
 
-        let parsed_result: String = result.borsh()?;
+        println!("   ✅ {:?}", result);
 
-        println!("    Parsed user balance = {:?}", parsed_result);
-
-        Ok(())
+        Ok(result)
     }
 
     async fn mint_for_user(
@@ -102,6 +106,36 @@ impl FtContractInterface for Contract {
             .transact()
             .await?
             .into_result()?;
+
+        Ok(())
+    }
+
+    async fn ft_transfer_call(
+        &self,
+        user: &Account,
+        receiver_id: &AccountId,
+        amount: u128,
+        msg: String,
+    ) -> anyhow::Result<()> {
+        println!("▶️ Transfer {} fungible tokens to {} with message: {}", amount, receiver_id, msg);
+
+        let args = json!({
+            "receiver_id": receiver_id,
+            "amount": amount.to_string(),
+            "msg": msg.to_string(),
+        });
+
+        let result = user.call(self.id(), "ft_transfer_call")
+            .args_json(args)
+            .max_gas()
+            .deposit(parse_near!("1 yocto"))
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {:?}", log);
+        }
 
         Ok(())
     }

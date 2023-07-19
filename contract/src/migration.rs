@@ -1,0 +1,77 @@
+use near_sdk::{AccountId, near_bindgen};
+use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::env::log_str;
+use near_sdk::serde::{Deserialize, Serialize};
+use crate::common::{Timestamp, TokenAmount};
+use crate::common::u128_dec_format;
+use crate::*;
+use crate::event::{emit, EventKind, MigrationEventItem};
+use crate::jar::JarCache;
+use crate::product::ProductId;
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+pub struct CeFiJar {
+    pub id: String,
+    pub account_id: AccountId,
+    pub product_id: ProductId,
+    #[serde(with = "u128_dec_format")]
+    pub principal: TokenAmount,
+    pub created_at: Timestamp,
+    #[serde(with = "u128_dec_format")]
+    pub claimed_amount: TokenAmount,
+    pub last_claim_at: Option<Timestamp>,
+}
+
+#[near_bindgen]
+impl Contract {
+    #[private]
+    pub fn migrate_jars(&mut self, jars: Vec<CeFiJar>, total_received: TokenAmount) {
+        let mut event_data: Vec<MigrationEventItem> = vec![];
+        let mut total_amount: TokenAmount = 0;
+
+        for ce_fi_jar in jars {
+            let index = self.jars.len();
+            let jar = Jar {
+                index,
+                account_id: ce_fi_jar.account_id,
+                product_id: ce_fi_jar.product_id,
+                created_at: ce_fi_jar.created_at,
+                principal: ce_fi_jar.principal,
+                cache: if let Some(last_claim_at) = ce_fi_jar.last_claim_at {
+                    Some(JarCache {
+                        updated_at: last_claim_at,
+                        interest: ce_fi_jar.claimed_amount,
+                    })
+                } else {
+                    None
+                },
+                claimed_balance: ce_fi_jar.claimed_amount,
+                is_pending_withdraw: false,
+                state: JarState::Active,
+                is_penalty_applied: false,
+            };
+
+            self.jars.push(&jar);
+
+            let mut account_jars = self.account_jars.get(&jar.account_id).unwrap_or(HashSet::new());
+            account_jars.insert(jar.index);
+            self.account_jars.insert(&jar.account_id, &account_jars);
+
+            total_amount += jar.principal;
+
+            event_data.push(
+                MigrationEventItem {
+                    original_id: ce_fi_jar.id,
+                    index: jar.index,
+                    account_id: jar.account_id,
+                }
+            );
+        }
+
+        assert_eq!(total_received, total_amount, "Total received doesn't match the sum of principals");
+
+        emit(EventKind::Migration(event_data));
+    }
+}

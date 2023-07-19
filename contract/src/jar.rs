@@ -3,7 +3,6 @@ use std::cmp;
 use near_sdk::{AccountId, env, near_bindgen};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::serde_json::json;
 use crate::common::u128_dec_format;
 
 use crate::*;
@@ -13,9 +12,9 @@ use crate::product::{Apy, per_minute_interest_rate, Product, ProductId};
 
 pub type JarIndex = u64;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Jar {
     pub index: JarIndex,
     pub account_id: AccountId,
@@ -31,9 +30,9 @@ pub struct Jar {
     pub is_penalty_applied: bool,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarCache {
     pub updated_at: Timestamp,
     #[serde(with = "u128_dec_format")]
@@ -60,11 +59,11 @@ pub trait JarApi {
     fn get_jar(&self, jar_index: JarIndex) -> Jar;
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar>;
 
-    fn get_total_principal(&self, account_id: AccountId) -> TokenAmount;
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> TokenAmount;
+    fn get_total_principal(&self, account_id: AccountId) -> u128;
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> u128;
 
-    fn get_total_interest(&self, account_id: AccountId) -> TokenAmount;
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> TokenAmount;
+    fn get_total_interest(&self, account_id: AccountId) -> u128;
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> u128;
 }
 
 impl Jar {
@@ -177,7 +176,6 @@ impl Jar {
             (self.created_at, 0)
         };
         let until_date = if let Some(maturity_term) = product.maturity_term {
-            println!("@@ now = {}, maturity at = {}", now, self.created_at + maturity_term);
             cmp::min(now, self.created_at + maturity_term)
         } else {
             now
@@ -215,7 +213,7 @@ impl JarApi for Contract {
         let product = self.get_product(&product_id);
         let cap = product.cap;
 
-        if !self.is_authorized_for_product(account_id.clone(), product_id.clone(), signature) {
+        if !self.is_authorized_for_product(&account_id, &product_id, signature) {
             panic!("Signature is invalid");
         }
 
@@ -247,28 +245,28 @@ impl JarApi for Contract {
             .collect()
     }
 
-    fn get_total_principal(&self, account_id: AccountId) -> TokenAmount {
+    fn get_total_principal(&self, account_id: AccountId) -> u128 {
         let jar_indices = self.account_jar_ids(&account_id);
 
         self.get_principal(jar_indices)
     }
 
     // TODO: tests
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> TokenAmount {
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> u128 {
         jar_indices
             .iter()
-            .map(|index| self.get_jar(*index))
-            .fold(0, |acc, jar| acc + jar.principal)
+            .map(|index| self.get_jar(*index).principal)
+            .sum()
     }
 
-    fn get_total_interest(&self, account_id: AccountId) -> TokenAmount {
+    fn get_total_interest(&self, account_id: AccountId) -> u128 {
         let jar_indices = self.account_jar_ids(&account_id);
 
         self.get_interest(jar_indices)
     }
 
     // TODO: tests
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> TokenAmount {
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> u128 {
         let now = env::block_timestamp_ms();
 
         jar_indices

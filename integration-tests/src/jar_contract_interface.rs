@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use borsh::BorshSerialize;
+use near_sdk::json_types::U128;
 use near_units::parse_near;
-use serde_json::json;
+use serde_json::{json, Value};
 use workspaces::{Account, AccountId, Contract};
 
 #[async_trait]
@@ -26,9 +27,11 @@ pub(crate) trait JarContractInterface {
         ft_contract_id: &AccountId,
     ) -> anyhow::Result<()>;
 
-    async fn get_principal(&self, user: &Account) -> anyhow::Result<serde_json::Value>;
+    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<u128>;
 
-    async fn get_interest(&self, user: &Account) -> anyhow::Result<serde_json::Value>;
+    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<u128>;
+
+    async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value>;
 
     async fn time(&self) -> anyhow::Result<u64>;
 }
@@ -84,8 +87,7 @@ impl JarContractInterface for Contract {
         println!("▶️ Get products");
 
         let products: serde_json::Value = self
-            .call("get_products")
-            .view()
+            .view("get_products")
             .await?
             .json()?;
 
@@ -109,7 +111,8 @@ impl JarContractInterface for Contract {
         );
 
         let msg = json!({
-            "Stake": {
+            "action": "stake",
+            "data": {
                 "product_id": product_id,
             }
         });
@@ -135,36 +138,56 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn get_principal(&self, user: &Account) -> anyhow::Result<serde_json::Value> {
+    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<u128> {
         println!("▶️ Get total principal for user {:?}", user.id());
 
         let args = json!({
             "account_id": user.id(),
         });
 
-        let result: serde_json::Value = self
-            .call("get_total_principal")
+        let result = self
+            .view("get_total_principal")
             .args_json(args)
-            .view()
             .await?
             .json()?;
+
+        println!("   ✅ {:?}", result);
 
         Ok(result)
     }
 
-    async fn get_interest(&self, user: &Account) -> anyhow::Result<serde_json::Value> {
+    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<u128> {
         println!("▶️ Get total interest for user {:?}", user.id());
 
         let args = json!({
             "account_id": user.id(),
         });
 
-        let result: serde_json::Value = self
-            .call("get_total_interest")
+        let result = self
+            .view("get_total_interest")
             .args_json(args)
-            .view()
             .await?
             .json()?;
+
+        println!("   ✅ {:?}", result);
+
+        Ok(result)
+    }
+
+    async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value> {
+        println!("▶️ Get jars for user {:?}", user.id());
+
+        let args = json!({
+            "account_id": user.id(),
+        });
+
+        let result = self
+            .view("get_jars_for_account")
+            .args_json(args)
+            .await?
+            .json()?;
+
+        println!("   ✅ {:?}", result);
 
         Ok(result)
     }
