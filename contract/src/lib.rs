@@ -1,9 +1,11 @@
-// TODO: 5. migration
+// TODO: migration
+// TODO: serde decorator for u64
+// TODO: withdraw fee
 
 use std::str::FromStr;
 
 use ed25519_dalek::{PublicKey, Signature};
-use near_sdk::{AccountId, Balance, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise, PromiseOrValue, serde_json};
+use near_sdk::{AccountId, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise, PromiseOrValue, serde_json};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
@@ -26,6 +28,10 @@ mod jar;
 mod product;
 mod claim;
 mod withdraw;
+mod event;
+
+pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]

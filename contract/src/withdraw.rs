@@ -1,7 +1,8 @@
-use near_sdk::{Balance, ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
+use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
 use crate::*;
 use crate::assert::assert_is_mature;
 use crate::common::TokenAmount;
+use crate::event::{emit, EventKind, WithdrawData, WithdrawEventAction};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::jar::JarIndex;
 
@@ -74,16 +75,7 @@ impl Contract {
         amount: Option<TokenAmount>,
         withdraw_transfer: WithdrawFunction,
     ) -> PromiseOrValue<TokenAmount> {
-        let event = json!({
-                "standard": "sweat_jar",
-                "version": "0.0.1",
-                "event": "withdraw",
-                "data": {
-                    "index": jar.index,
-                    "action": "withdrawn",
-                },
-            });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+        emit(EventKind::Withdraw(WithdrawData { index: jar.index, action: WithdrawEventAction::Withdrawn }));
 
         self.jars.replace(jar.index, &jar.locked());
 
@@ -94,16 +86,7 @@ impl Contract {
 
     #[private]
     fn do_notice(&mut self, jar: &Jar) -> PromiseOrValue<TokenAmount> {
-        let event = json!({
-                    "standard": "sweat_jar",
-                    "version": "0.0.1",
-                    "event": "withdraw",
-                    "data": {
-                        "index": jar.index,
-                        "action": "noticed",
-                    },
-                });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+        emit(EventKind::Withdraw(WithdrawData { index: jar.index, action: WithdrawEventAction::Noticed }));
 
         let noticed_jar = jar.noticed(env::block_timestamp_ms());
         self.jars.replace(noticed_jar.index, &noticed_jar);
@@ -139,8 +122,6 @@ impl Contract {
         withdrawn_amount: TokenAmount,
         is_promise_success: bool,
     ) {
-        println!("@@ after_withdraw");
-
         if is_promise_success {
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();
@@ -154,7 +135,6 @@ impl Contract {
 }
 
 fn after_withdraw_call(jar_before_transfer: Jar, withdrawn_balance: TokenAmount) -> Promise {
-    println!("@@ after_withdraw_call");
     ext_self::ext(env::current_account_id())
         .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
         .after_withdraw(jar_before_transfer, withdrawn_balance)

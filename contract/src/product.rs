@@ -1,11 +1,11 @@
+use near_sdk::near_bindgen;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen};
-use near_sdk::serde_json::json;
 
-use crate::common::u128_dec_format;
-use crate::common::{Duration, MINUTES_IN_YEAR, TokenAmount};
 use crate::*;
+use crate::common::{Duration, MINUTES_IN_YEAR, TokenAmount};
+use crate::common::u128_dec_format;
+use crate::event::{emit, EventKind};
 
 pub type ProductId = String;
 
@@ -84,13 +84,7 @@ impl ProductApi for Contract {
 
         self.products.insert(&product.id, &product);
 
-        let event = json!({
-            "standard": "sweat_jar",
-            "version": "0.0.1",
-            "event": "register_product",
-            "data": product,
-        });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+        emit(EventKind::RegisterProduct(product));
     }
 
     fn get_products(&self) -> Vec<Product> {

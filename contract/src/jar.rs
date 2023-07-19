@@ -8,6 +8,7 @@ use crate::common::u128_dec_format;
 
 use crate::*;
 use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
+use crate::event::{emit, EventKind};
 use crate::product::{Apy, per_minute_interest_rate, Product, ProductId};
 
 pub type JarIndex = u64;
@@ -228,13 +229,7 @@ impl JarApi for Contract {
 
         self.save_jar(&account_id, &jar);
 
-        let event = json!({
-            "standard": "sweat_jar",
-            "version": "0.0.1",
-            "event": "create_jar",
-            "data": jar,
-        });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+        emit(EventKind::CreateJar(jar.clone()));
 
         jar
     }

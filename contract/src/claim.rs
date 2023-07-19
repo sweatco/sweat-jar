@@ -1,8 +1,8 @@
 use std::cmp;
-use near_sdk::{Balance, env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue, serde_json};
-use near_sdk::serde_json::json;
+use near_sdk::{env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue, serde_json};
 use crate::*;
 use crate::common::TokenAmount;
+use crate::event::{ClaimEventItem, emit, EventKind};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::ft_interface::FungibleTokenInterface;
 use crate::jar::{Jar, JarApi, JarIndex};
@@ -52,7 +52,7 @@ impl ClaimApi for Contract {
 
         let mut total_interest_to_claim: TokenAmount = 0;
 
-        let mut event_data: Vec<serde_json::Value> = vec![];
+        let mut event_data: Vec<ClaimEventItem> = vec![];
 
         for jar in unlocked_jars.clone() {
             let product = self.get_product(&jar.product_id);
@@ -67,16 +67,10 @@ impl ClaimApi for Contract {
 
             total_interest_to_claim += interest_to_claim;
 
-            event_data.push(json!({ "index": jar.index, "interest_to_claim": interest_to_claim }));
+            event_data.push(ClaimEventItem { index: jar.index, interest_to_claim });
         }
 
-        let event = json!({
-            "standard": "sweat_jar",
-            "version": "0.0.1",
-            "event": "claim_jars",
-            "data": event_data,
-        });
-        env::log_str(format!("EVENT_JSON: {}", event.to_string().as_str()).as_str());
+        emit(EventKind::Claim(event_data));
 
         if total_interest_to_claim > 0 {
             self.ft_contract()
