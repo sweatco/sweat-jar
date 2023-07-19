@@ -499,9 +499,9 @@ mod tests {
     fn withdraw_transfer(
         contract: &mut Contract,
         _: &AccountId,
-        amount: Balance,
+        amount: TokenAmount,
         jar: &Jar,
-    ) -> PromiseOrValue<Balance> {
+    ) -> PromiseOrValue<TokenAmount> {
         contract.after_withdraw_internal(jar.clone(), amount, true);
 
         PromiseOrValue::Value(amount)

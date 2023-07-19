@@ -1,9 +1,10 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{Balance, env, near_bindgen};
+use near_sdk::{env, near_bindgen};
 use near_sdk::serde_json::json;
 
-use crate::common::{Duration, MINUTES_IN_YEAR};
+use crate::common::u128_dec_format;
+use crate::common::{Duration, MINUTES_IN_YEAR, TokenAmount};
 use crate::*;
 
 pub type ProductId = String;
@@ -28,7 +29,10 @@ pub struct Product {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub enum WithdrawalFee {
-    Fix(Balance),
+    Fix(
+        #[serde(with = "u128_dec_format")]
+        TokenAmount
+    ),
     Percent(f32),
 }
 
@@ -52,14 +56,16 @@ pub struct DowngradableApy {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct Cap {
-    pub min: u128,
-    pub max: u128,
+    #[serde(with = "u128_dec_format")]
+    pub min: TokenAmount,
+    #[serde(with = "u128_dec_format")]
+    pub max: TokenAmount,
 }
 
 impl Product {
     pub(crate) fn is_flexible(&self) -> bool {
         self.maturity_term.is_none()
-    } 
+    }
 }
 
 pub(crate) fn per_minute_interest_rate(rate: f32) -> f32 {

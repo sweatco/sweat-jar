@@ -30,7 +30,7 @@ impl Contract {
         let mut indices = self.account_jars.get(&account_id).unwrap_or_default();
         indices.insert(jar.index);
 
-        self.save_account_jars(&account_id, indices);
+        self.save_account_jars(account_id, indices);
     }
 
     pub(crate) fn save_account_jars(&mut self, account_id: &AccountId, indices: HashSet<JarIndex>) {

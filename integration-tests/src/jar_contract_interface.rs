@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use borsh::BorshSerialize;
 use near_units::parse_near;
 use serde_json::json;
 use workspaces::{Account, AccountId, Contract};
@@ -142,7 +143,7 @@ impl JarContractInterface for Contract {
         });
 
         let result: serde_json::Value = self
-            .call("get_principal")
+            .call("get_total_principal")
             .args_json(args)
             .view()
             .await?
@@ -159,7 +160,7 @@ impl JarContractInterface for Contract {
         });
 
         let result: serde_json::Value = self
-            .call("get_interest")
+            .call("get_total_interest")
             .args_json(args)
             .view()
             .await?

@@ -2,17 +2,18 @@ use std::cmp;
 use near_sdk::{Balance, env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue, serde_json};
 use near_sdk::serde_json::json;
 use crate::*;
+use crate::common::TokenAmount;
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::ft_interface::FungibleTokenInterface;
 use crate::jar::{Jar, JarApi, JarIndex};
 
 pub trait ClaimApi {
-    fn claim_total(&mut self) -> PromiseOrValue<Balance>;
+    fn claim_total(&mut self) -> PromiseOrValue<TokenAmount>;
     fn claim_jars(
         &mut self,
         jar_indices: Vec<JarIndex>,
-        amount: Option<Balance>,
-    ) -> PromiseOrValue<Balance>;
+        amount: Option<TokenAmount>,
+    ) -> PromiseOrValue<TokenAmount>;
 }
 
 #[ext_contract(ext_self)]
@@ -22,7 +23,7 @@ pub trait ClaimCallbacks {
 
 #[near_bindgen]
 impl ClaimApi for Contract {
-    fn claim_total(&mut self) -> PromiseOrValue<Balance> {
+    fn claim_total(&mut self) -> PromiseOrValue<TokenAmount> {
         let account_id = env::predecessor_account_id();
         let jar_indices = self.account_jar_ids(&account_id);
 
@@ -32,12 +33,12 @@ impl ClaimApi for Contract {
     fn claim_jars(
         &mut self,
         jar_indices: Vec<JarIndex>,
-        amount: Option<Balance>,
-    ) -> PromiseOrValue<Balance> {
+        amount: Option<TokenAmount>,
+    ) -> PromiseOrValue<TokenAmount> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
-        let get_interest_to_claim: Box<dyn Fn(Balance, Balance) -> Balance> = match amount {
+        let get_interest_to_claim: Box<dyn Fn(TokenAmount, TokenAmount) -> TokenAmount> = match amount {
             Some(ref a) => Box::new(|available, total| cmp::min(available, *a - total)),
             None => Box::new(|available, _| available),
         };
@@ -49,7 +50,7 @@ impl ClaimApi for Contract {
             .filter(|jar| jar.account_id == account_id)
             .collect();
 
-        let mut total_interest_to_claim: Balance = 0;
+        let mut total_interest_to_claim: TokenAmount = 0;
 
         let mut event_data: Vec<serde_json::Value> = vec![];
 

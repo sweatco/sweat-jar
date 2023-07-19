@@ -1,6 +1,3 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::serde::{Deserialize, Serialize};
-
 pub(crate) const MINUTES_IN_YEAR: Duration = 365 * 24 * 60;
 pub(crate) const MS_IN_MINUTE: u64 = 1000 * 60;
 
@@ -10,10 +7,35 @@ pub type Timestamp = u64;
 /// Duration in milliseconds
 pub type Duration = u64;
 
+/// Amount of fungible tokens
+pub type TokenAmount = u128;
+
+pub mod u128_dec_format {
+    use near_sdk::serde::de;
+    use near_sdk::serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(num: &u128, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        serializer.serialize_str(&num.to_string())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<u128, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(de::Error::custom)
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use near_sdk::{AccountId, testing_env};
     use near_sdk::test_utils::VMContextBuilder;
+
     use crate::Contract;
 
     pub(crate) struct Context {

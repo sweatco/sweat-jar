@@ -1,6 +1,7 @@
 use near_contract_standards::fungible_token::core::ext_ft_core;
 use near_sdk::{json_types::U128, AccountId, Promise, near_bindgen};
 use crate::*;
+use crate::common::TokenAmount;
 
 pub(crate) struct FungibleTokenContract {
     address: AccountId,
@@ -20,11 +21,11 @@ impl Contract {
 }
 
 pub(crate) trait FungibleTokenInterface {
-    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> PromiseOrValue<Balance>;
+    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> PromiseOrValue<TokenAmount>;
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
-    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> PromiseOrValue<Balance> {
+    fn transfer(&self, receiver_id: AccountId, amount: u128, callback: Promise) -> PromiseOrValue<TokenAmount> {
         ext_ft_core::ext(self.address.clone())
             .with_attached_deposit(1)
             .ft_transfer(receiver_id, U128::from(amount), None)

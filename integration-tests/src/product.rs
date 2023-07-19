@@ -3,6 +3,7 @@ use serde_json::{json, Value};
 pub(crate) enum Products {
     Locked12Months12Percents,
     Locked6Months6Percents,
+    Locked6Months6PercentsWithWithdrawFee,
 }
 
 impl Products {
@@ -17,8 +18,8 @@ impl Products {
                     "Constant": 0.12,
                 },
                 "cap": {
-                    "min": 100_000u64,
-                    "max": 100_000_000_000u64,
+                    "min": "100000",
+                    "max": "100000000000",
                 },
                 "is_restakable": false,
             }),
@@ -31,10 +32,27 @@ impl Products {
                     "Constant": 0.12,
                 },
                 "cap": {
-                    "min": 100_000u64,
-                    "max": 100_000_000_000u64,
+                    "min": "100000",
+                    "max": "100000000000",
                 },
                 "is_restakable": false,
+            }),
+            Products::Locked6Months6PercentsWithWithdrawFee => json!({
+                "id": "locked_6_months_6_percents",
+                "lockup_term": 15_778_476_000_u64,
+                "maturity_term": 15_778_476_000_u64,
+                "is_refillable": false,
+                "apy": {
+                    "Constant": 0.12,
+                },
+                "cap": {
+                    "min": "100000",
+                    "max": "100000000000",
+                },
+                "is_restakable": false,
+                "withdrawal_fee": {
+                    "Fix": "1000",
+                }
             }),
         }
     }

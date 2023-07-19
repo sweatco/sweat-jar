@@ -16,6 +16,7 @@ pub(crate) async fn run() -> anyhow::Result<()> {
 
     context.jar_contract.register_product(&manager, Products::Locked12Months12Percents.json()).await?;
     context.jar_contract.register_product(&manager, Products::Locked6Months6Percents.json()).await?;
+    context.jar_contract.register_product(&manager, Products::Locked6Months6PercentsWithWithdrawFee.json()).await?;
 
     let products = context.jar_contract.get_products().await?;
     assert_eq!(2, products.as_array().unwrap().len());

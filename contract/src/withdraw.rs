@@ -1,28 +1,29 @@
 use near_sdk::{Balance, ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
 use crate::*;
 use crate::assert::assert_is_mature;
+use crate::common::TokenAmount;
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::jar::JarIndex;
 
 pub(crate) type WithdrawFunction = fn(
     contract: &mut Contract,
     account_id: &AccountId,
-    amount: Balance,
+    amount: TokenAmount,
     jar: &Jar,
-) -> PromiseOrValue<Balance>;
+) -> PromiseOrValue<TokenAmount>;
 
 pub trait WithdrawApi {
-    fn withdraw(&mut self, jar_id: JarIndex, amount: Option<Balance>) -> PromiseOrValue<Balance>;
+    fn withdraw(&mut self, jar_id: JarIndex, amount: Option<TokenAmount>) -> PromiseOrValue<TokenAmount>;
 }
 
 #[ext_contract(ext_self)]
 pub trait WithdrawCallbacks {
-    fn after_withdraw(&mut self, jar_before_transfer: Jar, withdrawn_amount: Balance);
+    fn after_withdraw(&mut self, jar_before_transfer: Jar, withdrawn_amount: TokenAmount);
 }
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_index: JarIndex, amount: Option<Balance>) -> PromiseOrValue<Balance> {
+    fn withdraw(&mut self, jar_index: JarIndex, amount: Option<TokenAmount>) -> PromiseOrValue<TokenAmount> {
         self.withdraw_internal(jar_index, amount, Self::transfer_withdraw)
     }
 }
@@ -33,9 +34,9 @@ impl Contract {
     pub(crate) fn withdraw_internal(
         &mut self,
         jar_index: JarIndex,
-        amount: Option<Balance>,
+        amount: Option<TokenAmount>,
         withdraw_transfer: WithdrawFunction,
-    ) -> PromiseOrValue<Balance> {
+    ) -> PromiseOrValue<TokenAmount> {
         let jar = self.get_jar(jar_index).locked();
         assert_is_not_empty(&jar);
         assert_is_not_closed(&jar);
@@ -70,9 +71,9 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         jar: &Jar,
-        amount: Option<Balance>,
+        amount: Option<TokenAmount>,
         withdraw_transfer: WithdrawFunction,
-    ) -> PromiseOrValue<Balance> {
+    ) -> PromiseOrValue<TokenAmount> {
         let event = json!({
                 "standard": "sweat_jar",
                 "version": "0.0.1",
@@ -92,7 +93,7 @@ impl Contract {
     }
 
     #[private]
-    fn do_notice(&mut self, jar: &Jar) -> PromiseOrValue<Balance> {
+    fn do_notice(&mut self, jar: &Jar) -> PromiseOrValue<TokenAmount> {
         let event = json!({
                     "standard": "sweat_jar",
                     "version": "0.0.1",
@@ -116,7 +117,7 @@ impl WithdrawCallbacks for Contract {
     fn after_withdraw(
         &mut self,
         jar_before_transfer: Jar,
-        withdrawn_amount: Balance,
+        withdrawn_amount: TokenAmount,
     ) {
         self.after_withdraw_internal(jar_before_transfer, withdrawn_amount, is_promise_success())
     }
@@ -124,7 +125,7 @@ impl WithdrawCallbacks for Contract {
 
 #[near_bindgen]
 impl Contract {
-    fn transfer_withdraw(&mut self, account_id: &AccountId, amount: Balance, jar: &Jar) -> PromiseOrValue<Balance> {
+    fn transfer_withdraw(&mut self, account_id: &AccountId, amount: TokenAmount, jar: &Jar) -> PromiseOrValue<TokenAmount> {
         self.ft_contract().transfer(
             account_id.clone(),
             amount,
@@ -135,7 +136,7 @@ impl Contract {
     pub(crate) fn after_withdraw_internal(
         &mut self,
         jar_before_transfer: Jar,
-        withdrawn_amount: Balance,
+        withdrawn_amount: TokenAmount,
         is_promise_success: bool,
     ) {
         println!("@@ after_withdraw");
@@ -152,7 +153,7 @@ impl Contract {
     }
 }
 
-fn after_withdraw_call(jar_before_transfer: Jar, withdrawn_balance: Balance) -> Promise {
+fn after_withdraw_call(jar_before_transfer: Jar, withdrawn_balance: TokenAmount) -> Promise {
     println!("@@ after_withdraw_call");
     ext_self::ext(env::current_account_id())
         .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))

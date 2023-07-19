@@ -1,12 +1,13 @@
 use std::cmp;
 
-use near_sdk::{AccountId, Balance, env, near_bindgen};
+use near_sdk::{AccountId, env, near_bindgen};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
+use crate::common::u128_dec_format;
 
 use crate::*;
-use crate::common::{MS_IN_MINUTE, Timestamp};
+use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
 use crate::product::{Apy, per_minute_interest_rate, Product, ProductId};
 
 pub type JarIndex = u64;
@@ -19,9 +20,11 @@ pub struct Jar {
     pub account_id: AccountId,
     pub product_id: ProductId,
     pub created_at: Timestamp,
-    pub principal: Balance,
+    #[serde(with = "u128_dec_format")]
+    pub principal: TokenAmount,
     pub cache: Option<JarCache>,
-    pub claimed_balance: Balance,
+    #[serde(with = "u128_dec_format")]
+    pub claimed_balance: TokenAmount,
     pub is_pending_withdraw: bool,
     pub state: JarState,
     pub is_penalty_applied: bool,
@@ -32,12 +35,12 @@ pub struct Jar {
 #[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct JarCache {
     pub updated_at: Timestamp,
-    pub interest: Balance,
+    #[serde(with = "u128_dec_format")]
+    pub interest: TokenAmount,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub enum JarState {
     Active,
     Noticed(Timestamp),
@@ -49,18 +52,18 @@ pub trait JarApi {
         &mut self,
         account_id: AccountId,
         product_id: ProductId,
-        amount: Balance,
+        amount: TokenAmount,
         signature: Option<String>,
     ) -> Jar;
 
     fn get_jar(&self, jar_index: JarIndex) -> Jar;
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar>;
 
-    fn get_total_principal(&self, account_id: AccountId) -> Balance;
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance;
+    fn get_total_principal(&self, account_id: AccountId) -> TokenAmount;
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> TokenAmount;
 
-    fn get_total_interest(&self, account_id: AccountId) -> Balance;
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance;
+    fn get_total_interest(&self, account_id: AccountId) -> TokenAmount;
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> TokenAmount;
 }
 
 impl Jar {
@@ -68,7 +71,7 @@ impl Jar {
         index: JarIndex,
         account_id: AccountId,
         product_id: ProductId,
-        principal: Balance,
+        principal: TokenAmount,
         created_at: Timestamp,
     ) -> Self {
         Self {
@@ -113,7 +116,7 @@ impl Jar {
         }
     }
 
-    pub(crate) fn topped_up(&self, amount: Balance, product: &Product, now: Timestamp) -> Self {
+    pub(crate) fn topped_up(&self, amount: TokenAmount, product: &Product, now: Timestamp) -> Self {
         let current_interest = self.get_interest(product, now);
         Self {
             principal: self.principal + amount,
@@ -127,8 +130,8 @@ impl Jar {
 
     pub(crate) fn claimed(
         &self,
-        available_yield: Balance,
-        claimed_amount: Balance,
+        available_yield: TokenAmount,
+        claimed_amount: TokenAmount,
         now: Timestamp,
     ) -> Self {
         Self {
@@ -145,7 +148,7 @@ impl Jar {
     pub(crate) fn withdrawn(
         &self,
         product: &Product,
-        withdrawn_amount: Balance,
+        withdrawn_amount: TokenAmount,
         now: Timestamp,
     ) -> Self {
         let current_interest = self.get_interest(product, now);
@@ -166,7 +169,7 @@ impl Jar {
         now - self.created_at > product.lockup_term
     }
 
-    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> Balance {
+    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> TokenAmount {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
             (cache.updated_at, cache.interest)
         } else {
@@ -205,7 +208,7 @@ impl JarApi for Contract {
         &mut self,
         account_id: AccountId,
         product_id: ProductId,
-        amount: Balance,
+        amount: TokenAmount,
         signature: Option<String>,
     ) -> Jar {
         let product = self.get_product(&product_id);
@@ -249,28 +252,28 @@ impl JarApi for Contract {
             .collect()
     }
 
-    fn get_total_principal(&self, account_id: AccountId) -> Balance {
+    fn get_total_principal(&self, account_id: AccountId) -> TokenAmount {
         let jar_indices = self.account_jar_ids(&account_id);
 
         self.get_principal(jar_indices)
     }
 
     // TODO: tests
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> Balance {
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> TokenAmount {
         jar_indices
             .iter()
             .map(|index| self.get_jar(*index))
             .fold(0, |acc, jar| acc + jar.principal)
     }
 
-    fn get_total_interest(&self, account_id: AccountId) -> Balance {
+    fn get_total_interest(&self, account_id: AccountId) -> TokenAmount {
         let jar_indices = self.account_jar_ids(&account_id);
 
         self.get_interest(jar_indices)
     }
 
     // TODO: tests
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> Balance {
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> TokenAmount {
         let now = env::block_timestamp_ms();
 
         jar_indices
@@ -281,7 +284,7 @@ impl JarApi for Contract {
     }
 }
 
-fn get_final_state(product: &Product, original_jar: &Jar, withdrawn_amount: Balance) -> JarState {
+fn get_final_state(product: &Product, original_jar: &Jar, withdrawn_amount: TokenAmount) -> JarState {
     if product.is_flexible() || original_jar.principal - withdrawn_amount > 0 {
         JarState::Active
     } else {
