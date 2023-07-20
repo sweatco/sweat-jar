@@ -46,9 +46,9 @@ impl Contract {
         let product = self.get_product(&jar.product_id);
         let account_id = env::predecessor_account_id();
 
-        if let Some(notice_term) = product.notice_term {
+        if product.notice_term > 0 {
             if let JarState::Noticed(noticed_at) = jar.state {
-                if now - noticed_at >= notice_term {
+                if now - noticed_at >= product.notice_term {
                     return self.do_transfer(&account_id, &jar, amount, withdraw_transfer);
                 }
             } else {

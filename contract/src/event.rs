@@ -3,6 +3,7 @@ use near_sdk::serde::Serialize;
 
 use crate::{PACKAGE_NAME, VERSION};
 use crate::common::TokenAmount;
+use crate::common::u128_dec_format;
 use crate::jar::{Jar, JarIndex};
 use crate::product::Product;
 
@@ -32,6 +33,7 @@ struct SweatJarEvent {
 #[serde(crate = "near_sdk::serde")]
 pub(crate) struct ClaimEventItem {
     pub index: JarIndex,
+    #[serde(with = "u128_dec_format")]
     pub interest_to_claim: TokenAmount,
 }
 

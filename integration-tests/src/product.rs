@@ -11,8 +11,9 @@ impl Products {
         match self {
             Products::Locked12Months12Percents => json!({
                 "id": "locked_12_months_12_percents",
-                "lockup_term": 31_556_952_000_u64,
-                "maturity_term": 31_556_952_000_u64,
+                "lockup_term": "31556952000",
+                "maturity_term": "31556952000",
+                "notice_term": "0",
                 "is_refillable": false,
                 "apy": {
                     "Constant": 0.12,
@@ -25,8 +26,9 @@ impl Products {
             }),
             Products::Locked6Months6Percents => json!({
                 "id": "locked_6_months_6_percents",
-                "lockup_term": 15_778_476_000_u64,
-                "maturity_term": 15_778_476_000_u64,
+                "lockup_term": "15778476000",
+                "maturity_term": "15778476000",
+                "notice_term": "0",
                 "is_refillable": false,
                 "apy": {
                     "Constant": 0.12,
@@ -39,8 +41,9 @@ impl Products {
             }),
             Products::Locked6Months6PercentsWithWithdrawFee => json!({
                 "id": "locked_6_months_6_percents_with_withdraw_fee",
-                "lockup_term": 15_778_476_000_u64,
-                "maturity_term": 15_778_476_000_u64,
+                "lockup_term": "15778476000",
+                "maturity_term": "15778476000",
+                "notice_term": "0",
                 "is_refillable": false,
                 "apy": {
                     "Constant": 0.12,

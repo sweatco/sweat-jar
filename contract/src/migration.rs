@@ -1,9 +1,8 @@
 use near_sdk::{AccountId, near_bindgen};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::env::log_str;
 use near_sdk::serde::{Deserialize, Serialize};
 use crate::common::{Timestamp, TokenAmount};
-use crate::common::u128_dec_format;
+use crate::common::{u64_dec_format, u128_dec_format};
 use crate::*;
 use crate::event::{emit, EventKind, MigrationEventItem};
 use crate::jar::JarCache;
@@ -18,10 +17,19 @@ pub struct CeFiJar {
     pub product_id: ProductId,
     #[serde(with = "u128_dec_format")]
     pub principal: TokenAmount,
+    #[serde(with = "u64_dec_format")]
     pub created_at: Timestamp,
+    pub claim: Option<CeFiJarClaim>,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
+pub struct CeFiJarClaim {
     #[serde(with = "u128_dec_format")]
     pub claimed_amount: TokenAmount,
-    pub last_claim_at: Option<Timestamp>,
+    #[serde(with = "u64_dec_format")]
+    pub last_claim_at: Timestamp,
 }
 
 #[near_bindgen]
@@ -33,21 +41,19 @@ impl Contract {
 
         for ce_fi_jar in jars {
             let index = self.jars.len();
+            let cache = ce_fi_jar.claim.map(|claim| JarCache {
+                updated_at: claim.last_claim_at,
+                interest: claim.claimed_amount,
+            });
+
             let jar = Jar {
                 index,
                 account_id: ce_fi_jar.account_id,
                 product_id: ce_fi_jar.product_id,
                 created_at: ce_fi_jar.created_at,
                 principal: ce_fi_jar.principal,
-                cache: if let Some(last_claim_at) = ce_fi_jar.last_claim_at {
-                    Some(JarCache {
-                        updated_at: last_claim_at,
-                        interest: ce_fi_jar.claimed_amount,
-                    })
-                } else {
-                    None
-                },
-                claimed_balance: ce_fi_jar.claimed_amount,
+                cache: cache.clone(),
+                claimed_balance: cache.clone().map_or(0, |value| value.interest),
                 is_pending_withdraw: false,
                 state: JarState::Active,
                 is_penalty_applied: false,

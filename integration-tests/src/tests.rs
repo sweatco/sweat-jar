@@ -7,8 +7,8 @@ mod migration;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    happy_flow::run().await?;
     migration::run().await?;
-    // happy_flow::run().await?;
 
     Ok(())
 }

@@ -3,7 +3,7 @@ use std::cmp;
 use near_sdk::{AccountId, env, near_bindgen};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
-use crate::common::u128_dec_format;
+use crate::common::{u64_dec_format, u128_dec_format};
 
 use crate::*;
 use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
@@ -19,6 +19,7 @@ pub struct Jar {
     pub index: JarIndex,
     pub account_id: AccountId,
     pub product_id: ProductId,
+    #[serde(with = "u64_dec_format")]
     pub created_at: Timestamp,
     #[serde(with = "u128_dec_format")]
     pub principal: TokenAmount,
@@ -34,6 +35,7 @@ pub struct Jar {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarCache {
+    #[serde(with = "u64_dec_format")]
     pub updated_at: Timestamp,
     #[serde(with = "u128_dec_format")]
     pub interest: TokenAmount,
@@ -43,7 +45,7 @@ pub struct JarCache {
 #[serde(crate = "near_sdk::serde")]
 pub enum JarState {
     Active,
-    Noticed(Timestamp),
+    Noticed(#[serde(with = "u64_dec_format")] Timestamp),
     Closed,
 }
 
@@ -175,8 +177,8 @@ impl Jar {
         } else {
             (self.created_at, 0)
         };
-        let until_date = if let Some(maturity_term) = product.maturity_term {
-            cmp::min(now, self.created_at + maturity_term)
+        let until_date = if product.maturity_term > 0 {
+            cmp::min(now, self.created_at + product.maturity_term)
         } else {
             now
         };

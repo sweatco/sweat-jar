@@ -4,7 +4,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::*;
 use crate::common::{Duration, MINUTES_IN_YEAR, TokenAmount};
-use crate::common::u128_dec_format;
+use crate::common::{u64_dec_format, u128_dec_format};
 use crate::event::{emit, EventKind};
 
 pub type ProductId = String;
@@ -14,9 +14,12 @@ pub type ProductId = String;
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Product {
     pub id: ProductId,
+    #[serde(with = "u64_dec_format")]
     pub lockup_term: Duration,
-    pub maturity_term: Option<Duration>,
-    pub notice_term: Option<Duration>,
+    #[serde(with = "u64_dec_format")]
+    pub maturity_term: Duration,
+    #[serde(with = "u64_dec_format")]
+    pub notice_term: Duration,
     pub apy: Apy,
     pub cap: Cap,
     pub is_refillable: bool,
@@ -29,10 +32,7 @@ pub struct Product {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFee {
-    Fix(
-        #[serde(with = "u128_dec_format")]
-        TokenAmount
-    ),
+    Fix(#[serde(with = "u128_dec_format")] TokenAmount),
     Percent(f32),
 }
 
@@ -64,7 +64,7 @@ pub struct Cap {
 
 impl Product {
     pub(crate) fn is_flexible(&self) -> bool {
-        self.maturity_term.is_none()
+        self.maturity_term == 0
     }
 }
 
@@ -100,8 +100,8 @@ pub(crate) mod tests {
         Product {
             id: "product".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: Some(365 * 24 * 60 * 60 * 1000),
-            notice_term: None,
+            maturity_term: 365 * 24 * 60 * 60 * 1000,
+            notice_term: 0,
             is_refillable: false,
             apy: Apy::Constant(0.12),
             cap: Cap {
@@ -118,8 +118,8 @@ pub(crate) mod tests {
         Product {
             id: "product_with_notice".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: Some(365 * 24 * 60 * 60 * 1000),
-            notice_term: Some(48 * 60 * 60 * 1000),
+            maturity_term: 365 * 24 * 60 * 60 * 1000,
+            notice_term: 48 * 60 * 60 * 1000,
             is_refillable: false,
             apy: Apy::Constant(0.12),
             cap: Cap {
@@ -136,8 +136,8 @@ pub(crate) mod tests {
         Product {
             id: "product_premium".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: Some(365 * 24 * 60 * 60 * 1000),
-            notice_term: None,
+            maturity_term: 365 * 24 * 60 * 60 * 1000,
+            notice_term: 0,
             is_refillable: false,
             apy: Apy::Downgradable(DowngradableApy { default: 0.20, fallback: 0.10 }),
             cap: Cap {
