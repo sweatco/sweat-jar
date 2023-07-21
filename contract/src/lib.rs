@@ -1,15 +1,10 @@
-// TODO: migration
-// TODO: serde decorator for u64
-// TODO: withdraw fee
-
 use std::str::FromStr;
 
 use ed25519_dalek::{PublicKey, Signature};
-use near_sdk::{AccountId, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise, PromiseOrValue, serde_json};
+use near_sdk::{AccountId, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
-use near_sdk::serde_json::json;
 
 use ft_interface::FungibleTokenInterface;
 use jar::{Jar, JarIndex};
@@ -38,6 +33,7 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
     pub token_account_id: AccountId,
+    pub fee_account_id: AccountId,
     pub admin_allowlist: UnorderedSet<AccountId>,
 
     pub products: UnorderedMap<ProductId, Product>,
@@ -65,7 +61,6 @@ pub trait AuthApi {
 }
 
 pub trait PenaltyApi {
-    // TODO: naming
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool);
 }
 
@@ -76,12 +71,17 @@ impl Contract {
     }
 
     #[init]
-    pub fn init(token_account_id: AccountId, admin_allowlist: Vec<AccountId>) -> Self {
+    pub fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        admin_allowlist: Vec<AccountId>,
+    ) -> Self {
         let mut admin_allowlist_set = UnorderedSet::new(StorageKey::Administrators);
         admin_allowlist_set.extend(admin_allowlist.into_iter());
 
         Self {
             token_account_id,
+            fee_account_id,
             admin_allowlist: admin_allowlist_set,
             products: UnorderedMap::new(StorageKey::Products),
             jars: Vector::new(StorageKey::Jars),
@@ -167,7 +167,6 @@ mod tests {
     use crate::common::TokenAmount;
     use crate::product::ProductApi;
     use crate::product::tests::{get_premium_product, get_product, get_product_with_notice};
-    use crate::withdraw::WithdrawCallbacks;
 
     use super::*;
 
@@ -510,8 +509,8 @@ mod tests {
         amount: TokenAmount,
         jar: &Jar,
     ) -> PromiseOrValue<TokenAmount> {
-        contract.after_withdraw_internal(jar.clone(), amount, true);
+        let result = contract.after_withdraw_internal(jar.clone(), amount, true);
 
-        PromiseOrValue::Value(amount)
+        PromiseOrValue::Value(result)
     }
 }

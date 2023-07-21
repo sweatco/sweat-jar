@@ -2,13 +2,13 @@ use crate::context::Context;
 use crate::product::Products;
 
 pub(crate) async fn run() -> anyhow::Result<()> {
-    let context = Context::new().await?;
+    let mut context = Context::new().await?;
 
-    let manager = context.account("manager");
-    let alice = context.account("alice");
+    let manager = &context.account("manager").await?;
+    let alice = &context.account("alice").await?;
 
     context.ft_contract.init().await?;
-    context.jar_contract.init(context.ft_contract.account(), vec![context.account("manager").id()]).await?;
+    context.jar_contract.init(context.ft_contract.account(), manager, vec![manager.id()]).await?;
 
     context.ft_contract.storage_deposit(context.jar_contract.account()).await?;
     context.ft_contract.storage_deposit(&alice).await?;
@@ -36,7 +36,6 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     context.fast_forward(1).await?;
 
     alice_interest = context.jar_contract.get_total_interest(alice).await?;
-    println!("@@ Alices interest = {:?}", alice_interest);
 
     Ok(())
 }

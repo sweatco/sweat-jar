@@ -1,10 +1,14 @@
 use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
+use near_sdk::env::log_str;
+use near_sdk::json_types::{U128, U64};
 use crate::*;
 use crate::assert::assert_is_mature;
 use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, WithdrawData, WithdrawEventAction};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
+use crate::ft_interface::Fee;
 use crate::jar::JarIndex;
+use crate::product::WithdrawalFee;
 
 pub(crate) type WithdrawFunction = fn(
     contract: &mut Contract,
@@ -14,18 +18,18 @@ pub(crate) type WithdrawFunction = fn(
 ) -> PromiseOrValue<TokenAmount>;
 
 pub trait WithdrawApi {
-    fn withdraw(&mut self, jar_id: JarIndex, amount: Option<TokenAmount>) -> PromiseOrValue<TokenAmount>;
+    fn withdraw(&mut self, jar_index: U64, amount: Option<U128>) -> PromiseOrValue<TokenAmount>;
 }
 
 #[ext_contract(ext_self)]
 pub trait WithdrawCallbacks {
-    fn after_withdraw(&mut self, jar_before_transfer: Jar, withdrawn_amount: TokenAmount);
+    fn after_withdraw(&mut self, jar_before_transfer: Jar, withdrawn_amount: TokenAmount) -> TokenAmount;
 }
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_index: JarIndex, amount: Option<TokenAmount>) -> PromiseOrValue<TokenAmount> {
-        self.withdraw_internal(jar_index, amount, Self::transfer_withdraw)
+    fn withdraw(&mut self, jar_index: U64, amount: Option<U128>) -> PromiseOrValue<TokenAmount> {
+        self.withdraw_internal(jar_index.0, amount.map(|value| value.0), Self::transfer_withdraw)
     }
 }
 
@@ -101,7 +105,7 @@ impl WithdrawCallbacks for Contract {
         &mut self,
         jar_before_transfer: Jar,
         withdrawn_amount: TokenAmount,
-    ) {
+    ) -> TokenAmount {
         self.after_withdraw_internal(jar_before_transfer, withdrawn_amount, is_promise_success())
     }
 }
@@ -109,11 +113,21 @@ impl WithdrawCallbacks for Contract {
 #[near_bindgen]
 impl Contract {
     fn transfer_withdraw(&mut self, account_id: &AccountId, amount: TokenAmount, jar: &Jar) -> PromiseOrValue<TokenAmount> {
-        self.ft_contract().transfer(
-            account_id.clone(),
-            amount,
-            after_withdraw_call(jar.clone(), amount),
-        )
+        let product = self.get_product(&jar.product_id);
+        let fee = product.withdrawal_fee.map(|fee| {
+            match fee {
+                WithdrawalFee::Fix(amount) => amount,
+                WithdrawalFee::Percent(percent) => (jar.principal as f64 * percent as f64).round() as u128,
+            }
+        }).map(|fee| Fee {
+            amount: fee,
+            beneficiary_id: self.fee_account_id.clone(),
+        });
+
+        self.ft_contract()
+            .transfer(account_id, amount, fee)
+            .then(after_withdraw_call(jar.clone(), amount))
+            .into()
     }
 
     pub(crate) fn after_withdraw_internal(
@@ -121,15 +135,25 @@ impl Contract {
         jar_before_transfer: Jar,
         withdrawn_amount: TokenAmount,
         is_promise_success: bool,
-    ) {
+    ) -> TokenAmount {
+        log_str("@@ after_withdraw_internal");
+
         if is_promise_success {
+            log_str("@@ after_withdraw_internal -> success");
+
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();
             let jar = jar_before_transfer.withdrawn(&product, withdrawn_amount, now);
 
             self.jars.replace(jar_before_transfer.index, &jar.unlocked());
+
+            withdrawn_amount
         } else {
+            log_str("@@ after_withdraw_internal --> FAIL");
+
             self.jars.replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
+
+            0
         }
     }
 }

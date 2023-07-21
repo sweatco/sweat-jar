@@ -12,6 +12,7 @@ pub(crate) trait JarContractInterface {
     async fn init(
         &self,
         token_contract_account: &Account,
+        fee_account: &Account,
         admin_allowlist: Vec<&AccountId>,
     ) -> anyhow::Result<()>;
 
@@ -33,6 +34,8 @@ pub(crate) trait JarContractInterface {
 
     async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value>;
 
+    async fn withdraw(&self, user: &Account, jar_index: String) -> anyhow::Result<()>;
+
     async fn time(&self) -> anyhow::Result<u64>;
 }
 
@@ -45,6 +48,7 @@ impl JarContractInterface for Contract {
     async fn init(
         &self,
         token_contract_account: &Account,
+        fee_account: &Account,
         admin_allowlist: Vec<&AccountId>,
     ) -> anyhow::Result<()> {
         println!("▶️ Init jar contract");
@@ -53,6 +57,7 @@ impl JarContractInterface for Contract {
             .call("init")
             .args_json(json!({
                 "token_account_id": token_contract_account.id(),
+                "fee_account_id": fee_account.id(),
                 "admin_allowlist": admin_allowlist,
             }))
             .max_gas()
@@ -190,6 +195,29 @@ impl JarContractInterface for Contract {
         println!("   ✅ {:?}", result);
 
         Ok(result)
+    }
+
+    async fn withdraw(&self, user: &Account, jar_index: String) -> anyhow::Result<()> {
+        println!("▶️ Withdraw jar #{}", jar_index);
+
+        let args = json!({
+            "jar_index": jar_index,
+        });
+
+        let result = user.call(self.id(), "withdraw")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {:?}", log);
+        }
+
+        println!("   📟 {:?}", result);
+
+        Ok(())
     }
 
     async fn time(&self) -> anyhow::Result<u64> {

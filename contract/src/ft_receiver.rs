@@ -4,7 +4,6 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     serde_json, PromiseOrValue,
 };
-use near_sdk::env::log_str;
 
 use crate::*;
 use crate::migration::CeFiJar;

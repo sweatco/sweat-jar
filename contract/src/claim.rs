@@ -1,5 +1,5 @@
 use std::cmp;
-use near_sdk::{env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue, serde_json};
+use near_sdk::{env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
 use crate::*;
 use crate::common::TokenAmount;
 use crate::event::{ClaimEventItem, emit, EventKind};
@@ -75,10 +75,12 @@ impl ClaimApi for Contract {
         if total_interest_to_claim > 0 {
             self.ft_contract()
                 .transfer(
-                    account_id,
+                    &account_id,
                     total_interest_to_claim,
-                    after_claim_call(unlocked_jars),
+                    None,
                 )
+                .then(after_claim_call(unlocked_jars))
+                .into()
         } else {
             PromiseOrValue::Value(0)
         }

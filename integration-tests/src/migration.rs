@@ -3,14 +3,14 @@ use crate::context::Context;
 use crate::product::Products;
 
 pub(crate) async fn run() -> anyhow::Result<()> {
-    let context = Context::new().await?;
+    let mut context = Context::new().await?;
 
-    let manager = context.account("manager");
-    let alice = context.account("alice");
-    let bob = context.account("bob");
+    let manager = &context.account("manager").await?;
+    let alice = &context.account("alice").await?;
+    let bob = &context.account("bob").await?;
 
     context.ft_contract.init().await?;
-    context.jar_contract.init(context.ft_contract.account(), vec![manager.id()]).await?;
+    context.jar_contract.init(context.ft_contract.account(), manager, vec![manager.id()]).await?;
 
     context.ft_contract.storage_deposit(context.jar_contract.account()).await?;
     context.ft_contract.storage_deposit(manager).await?;

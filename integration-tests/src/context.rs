@@ -12,6 +12,7 @@ const ONE_HOUR_BLOCKS_HEIGHT: u64 = EPOCH_BLOCKS_HEIGHT / HOURS_PER_EPOCH;
 
 pub(crate) struct Context {
     worker: Worker<Sandbox>,
+    root_account: Account,
     pub accounts: HashMap<String, Account>,
     pub ft_contract: Box<dyn FtContractInterface>,
     pub jar_contract: Box<dyn JarContractInterface>,
@@ -19,36 +20,10 @@ pub(crate) struct Context {
 
 impl Context {
     pub(crate) async fn new() -> anyhow::Result<Context> {
-        println!("Initializing context");
+        println!("🏭 Initializing context");
 
         let worker = workspaces::sandbox().await?;
         let account = worker.dev_create_account().await?;
-
-        let mut accounts = HashMap::<String, Account>::new();
-
-        let manager = account
-            .create_subaccount("manager")
-            .initial_balance(parse_near!("3 N"))
-            .transact()
-            .await?
-            .into_result()?;
-        accounts.insert("manager".to_string(), manager);
-
-        let alice = account
-            .create_subaccount("alice")
-            .initial_balance(parse_near!("3 N"))
-            .transact()
-            .await?
-            .into_result()?;
-        accounts.insert("alice".to_string(), alice);
-
-        let bob = account
-            .create_subaccount("bob")
-            .initial_balance(parse_near!("3 N"))
-            .transact()
-            .await?
-            .into_result()?;
-        accounts.insert("bob".to_string(), bob);
 
         let jar_contract = worker
             .dev_deploy(&Self::load_wasm(&(env::args().nth(1).unwrap())))
@@ -57,16 +32,31 @@ impl Context {
             .dev_deploy(&Self::load_wasm(&(env::args().nth(2).unwrap())))
             .await?;
 
+        println!("@@ jar contract deployed to {}", jar_contract.id());
+        println!("@@ ft contract deployed to {}", ft_contract.id());
+
         Result::Ok(Context {
             worker,
-            accounts,
+            root_account: account,
+            accounts: HashMap::<String, Account>::new(),
             ft_contract: Box::new(ft_contract.clone()),
             jar_contract: Box::new(jar_contract.clone()),
         })
     }
 
-    pub(crate) fn account(&self, name: &str) -> &Account {
-        self.accounts.get(name).expect("Account doesn't exist")
+    pub(crate) async fn account(&mut self, name: &str) -> anyhow::Result<Account> {
+        if !self.accounts.contains_key(name) {
+            let account = self.root_account
+                .create_subaccount(name)
+                .initial_balance(parse_near!("3 N"))
+                .transact()
+                .await?
+                .into_result()?;
+
+            self.accounts.insert(name.to_string(), account);
+        }
+
+        Ok(self.accounts.get(name).unwrap().clone())
     }
 
     fn load_wasm(wasm_path: &str) -> Vec<u8> {
