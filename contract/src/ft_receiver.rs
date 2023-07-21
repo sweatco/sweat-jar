@@ -4,6 +4,7 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     serde_json, PromiseOrValue,
 };
+use crate::common::u64_dec_format;
 
 use crate::*;
 use crate::migration::CeFiJar;
@@ -15,6 +16,7 @@ use crate::migration::CeFiJar;
 pub enum FtMessage {
     Stake(StakeMessage),
     Migrate(Vec<CeFiJar>),
+    TopUp(#[serde(with = "u64_dec_format")] JarIndex),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -48,32 +50,11 @@ impl FungibleTokenReceiver for Contract {
             FtMessage::Migrate(jars) => {
                 self.migrate_jars(jars, amount.0);
             }
+            FtMessage::TopUp(jar_index) => {
+                self.top_up(jar_index, amount.0);
+            }
         }
 
         PromiseOrValue::Value(0.into())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use near_sdk::{AccountId, serde_json};
-    use crate::ft_receiver::FtMessage::Migrate;
-    use crate::migration::CeFiJar;
-
-    #[test]
-    fn test() {
-        let data = Migrate(vec![
-            CeFiJar {
-                id: "hello".to_string(),
-                account_id: AccountId::new_unchecked("alice".to_string()),
-                product_id: "product_1".to_string(),
-                principal: 1000000,
-                created_at: 0,
-                claimed_amount: 0,
-                last_claim_at: None,
-            }
-        ]);
-
-        println!("JSON: {}", serde_json::to_string(&data).unwrap());
     }
 }

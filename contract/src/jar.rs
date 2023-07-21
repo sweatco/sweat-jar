@@ -58,6 +58,8 @@ pub trait JarApi {
         signature: Option<String>,
     ) -> Jar;
 
+    fn top_up(&mut self, jar_index: JarIndex, amount: TokenAmount) -> TokenAmount;
+
     fn get_jar(&self, jar_index: JarIndex) -> Jar;
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar>;
 
@@ -232,6 +234,21 @@ impl JarApi for Contract {
         emit(EventKind::CreateJar(jar.clone()));
 
         jar
+    }
+
+    #[private]
+    fn top_up(&mut self, jar_index: JarIndex, amount: TokenAmount) -> TokenAmount {
+        let jar = self.get_jar(jar_index);
+        let product = self.get_product(&jar.product_id);
+
+        assert!(product.is_refillable, "The product doesn't allow top-ups");
+
+        let now = env::block_timestamp_ms();
+        let topped_up_jar = jar.topped_up(amount, &product, now);
+
+        self.jars.replace(jar_index, &topped_up_jar);
+
+        topped_up_jar.principal
     }
 
     fn get_jar(&self, index: JarIndex) -> Jar {
