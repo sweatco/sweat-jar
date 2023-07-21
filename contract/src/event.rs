@@ -41,15 +41,6 @@ pub(crate) struct ClaimEventItem {
 #[serde(crate = "near_sdk::serde")]
 pub(crate) struct WithdrawData {
     pub index: JarIndex,
-    pub action: WithdrawEventAction,
-}
-
-#[derive(Serialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum WithdrawEventAction {
-    Withdrawn,
-    Noticed,
 }
 
 #[derive(Serialize, Debug)]

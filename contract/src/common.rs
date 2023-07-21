@@ -68,6 +68,7 @@ pub(crate) mod tests {
     impl Context {
         pub(crate) fn new(admins: Vec<AccountId>) -> Self {
             let owner = AccountId::new_unchecked("owner".to_string());
+            let fee_account_id = AccountId::new_unchecked("fee".to_string());
             let ft_contract_id = AccountId::new_unchecked("token".to_string());
 
             let builder = VMContextBuilder::new()
@@ -81,6 +82,7 @@ pub(crate) mod tests {
 
             let contract = Contract::init(
                 ft_contract_id,
+                fee_account_id,
                 admins,
             );
 

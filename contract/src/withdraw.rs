@@ -1,10 +1,10 @@
 use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
-use near_sdk::env::log_str;
 use near_sdk::json_types::{U128, U64};
+
 use crate::*;
 use crate::assert::assert_is_mature;
 use crate::common::TokenAmount;
-use crate::event::{emit, EventKind, WithdrawData, WithdrawEventAction};
+use crate::event::{emit, EventKind, WithdrawData};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::ft_interface::Fee;
 use crate::jar::JarIndex;
@@ -65,7 +65,7 @@ impl Contract {
         amount: Option<TokenAmount>,
         withdraw_transfer: WithdrawFunction,
     ) -> PromiseOrValue<TokenAmount> {
-        emit(EventKind::Withdraw(WithdrawData { index: jar.index, action: WithdrawEventAction::Withdrawn }));
+        emit(EventKind::Withdraw(WithdrawData { index: jar.index }));
 
         self.jars.replace(jar.index, &jar.locked());
 
@@ -112,11 +112,7 @@ impl Contract {
         withdrawn_amount: TokenAmount,
         is_promise_success: bool,
     ) -> TokenAmount {
-        log_str("@@ after_withdraw_internal");
-
         if is_promise_success {
-            log_str("@@ after_withdraw_internal -> success");
-
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();
             let jar = jar_before_transfer.withdrawn(&product, withdrawn_amount, now);
@@ -125,8 +121,6 @@ impl Contract {
 
             withdrawn_amount
         } else {
-            log_str("@@ after_withdraw_internal --> FAIL");
-
             self.jars.replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
 
             0

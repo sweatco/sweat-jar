@@ -43,9 +43,9 @@ impl Contract {
 
     fn insert_or_update_jar(&mut self, jar: &Jar) {
         if jar.index < self.jars.len() {
-            self.jars.push(jar);
-        } else {
             self.jars.replace(jar.index, jar);
+        } else {
+            self.jars.push(jar);
         }
     }
 }

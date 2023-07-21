@@ -18,8 +18,6 @@ pub struct Product {
     pub lockup_term: Duration,
     #[serde(with = "u64_dec_format")]
     pub maturity_term: Duration,
-    #[serde(with = "u64_dec_format")]
-    pub notice_term: Duration,
     pub apy: Apy,
     pub cap: Cap,
     pub is_refillable: bool,
@@ -101,25 +99,6 @@ pub(crate) mod tests {
             id: "product".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
             maturity_term: 365 * 24 * 60 * 60 * 1000,
-            notice_term: 0,
-            is_refillable: false,
-            apy: Apy::Constant(0.12),
-            cap: Cap {
-                min: 100,
-                max: 100_000_000_000,
-            },
-            is_restakable: false,
-            withdrawal_fee: None,
-            public_key: None,
-        }
-    }
-
-    pub(crate) fn get_product_with_notice() -> Product {
-        Product {
-            id: "product_with_notice".to_string(),
-            lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: 365 * 24 * 60 * 60 * 1000,
-            notice_term: 48 * 60 * 60 * 1000,
             is_refillable: false,
             apy: Apy::Constant(0.12),
             cap: Cap {
@@ -137,7 +116,6 @@ pub(crate) mod tests {
             id: "product_premium".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
             maturity_term: 365 * 24 * 60 * 60 * 1000,
-            notice_term: 0,
             is_refillable: false,
             apy: Apy::Downgradable(DowngradableApy { default: 0.20, fallback: 0.10 }),
             cap: Cap {

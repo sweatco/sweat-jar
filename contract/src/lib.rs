@@ -148,15 +148,13 @@ impl PenaltyApi for Contract {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::PromiseOrValue;
     use near_sdk::test_utils::accounts;
 
     use common::tests::Context;
 
     use crate::claim::ClaimApi;
-    use crate::common::TokenAmount;
     use crate::product::ProductApi;
-    use crate::product::tests::{get_premium_product, get_product, get_product_with_notice};
+    use crate::product::tests::{get_premium_product, get_product};
 
     use super::*;
 
@@ -239,7 +237,7 @@ mod tests {
     #[should_panic(expected = "Account alice doesn't have jars")]
     fn get_principle_with_no_jars() {
         let alice = accounts(0);
-        let mut context = Context::new(vec![]);
+        let context = Context::new(vec![]);
 
         context.contract.get_total_principal(alice);
     }
@@ -288,7 +286,7 @@ mod tests {
     fn get_total_interest_with_no_jars() {
         let alice = accounts(0);
 
-        let mut context = Context::new(vec![]);
+        let context = Context::new(vec![]);
 
         context.contract.get_total_interest(alice);
     }
@@ -460,16 +458,5 @@ mod tests {
 
         interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 10_000_000);
-    }
-
-    fn withdraw_transfer(
-        contract: &mut Contract,
-        _: &AccountId,
-        amount: TokenAmount,
-        jar: &Jar,
-    ) -> PromiseOrValue<TokenAmount> {
-        let result = contract.after_withdraw_internal(jar.clone(), amount, true);
-
-        PromiseOrValue::Value(result)
     }
 }
