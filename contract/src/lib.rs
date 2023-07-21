@@ -50,10 +50,6 @@ pub(crate) enum StorageKey {
     AccountJars,
 }
 
-pub trait ContractApi {
-    fn restake(&mut self, jar_index: JarIndex) -> Jar;
-}
-
 pub trait AuthApi {
     fn get_admin_allowlist(&self) -> Vec<AccountId>;
     fn add_admin(&mut self, account_id: AccountId);
@@ -114,13 +110,6 @@ impl Contract {
 }
 
 #[near_bindgen]
-impl ContractApi for Contract {
-    fn restake(&mut self, jar_index: JarIndex) -> Jar {
-        todo!("Add implementation and broadcast event");
-    }
-}
-
-#[near_bindgen]
 impl AuthApi for Contract {
     fn get_admin_allowlist(&self) -> Vec<AccountId> {
         self.admin_allowlist.to_vec()
@@ -159,6 +148,7 @@ impl PenaltyApi for Contract {
 
 #[cfg(test)]
 mod tests {
+    use near_sdk::PromiseOrValue;
     use near_sdk::test_utils::accounts;
 
     use common::tests::Context;
@@ -470,37 +460,6 @@ mod tests {
 
         interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(interest, 10_000_000);
-    }
-
-    #[test]
-    fn withdraw_with_notice() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin.clone()]);
-
-        context.switch_account(&admin);
-        let product = get_product_with_notice();
-        context.contract.register_product(product.clone());
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
-
-        context.set_block_timestamp_in_days(366);
-
-        context.switch_account(&alice);
-        context.contract.withdraw_internal(0, None, withdraw_transfer);
-
-        let mut jar = context.contract.get_jar(0);
-        println!("@@ jar after notice = {:?}", jar);
-        assert_eq!(JarState::Noticed(31_622_400_000), jar.state);
-
-        context.set_block_timestamp_in_days(368);
-
-        context.contract.withdraw_internal(0, None, withdraw_transfer);
-
-        jar = context.contract.get_jar(0);
-        assert_eq!(JarState::Closed, jar.state);
     }
 
     fn withdraw_transfer(

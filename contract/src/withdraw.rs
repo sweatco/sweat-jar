@@ -43,6 +43,7 @@ impl Contract {
         withdraw_transfer: WithdrawFunction,
     ) -> PromiseOrValue<TokenAmount> {
         let jar = self.get_jar(jar_index).locked();
+
         assert_is_not_empty(&jar);
         assert_is_not_closed(&jar);
 
@@ -50,25 +51,10 @@ impl Contract {
         let product = self.get_product(&jar.product_id);
         let account_id = env::predecessor_account_id();
 
-        if product.notice_term > 0 {
-            if let JarState::Noticed(noticed_at) = jar.state {
-                if now - noticed_at >= product.notice_term {
-                    return self.do_transfer(&account_id, &jar, amount, withdraw_transfer);
-                }
-            } else {
-                assert_ownership(&jar, &account_id);
-                assert_is_mature(&jar, &product, now);
+        assert_ownership(&jar, &account_id);
+        assert_is_mature(&jar, &product, now);
 
-                return self.do_notice(&jar);
-            }
-        } else {
-            assert_ownership(&jar, &account_id);
-            assert_is_mature(&jar, &product, now);
-
-            return self.do_transfer(&account_id, &jar, amount, withdraw_transfer);
-        }
-
-        PromiseOrValue::Value(0)
+        self.do_transfer(&account_id, &jar, amount, withdraw_transfer)
     }
 
     #[private]
@@ -86,16 +72,6 @@ impl Contract {
         let amount = amount.unwrap_or(jar.principal);
 
         withdraw_transfer(self, &account_id, amount, jar)
-    }
-
-    #[private]
-    fn do_notice(&mut self, jar: &Jar) -> PromiseOrValue<TokenAmount> {
-        emit(EventKind::Withdraw(WithdrawData { index: jar.index, action: WithdrawEventAction::Noticed }));
-
-        let noticed_jar = jar.noticed(env::block_timestamp_ms());
-        self.jars.replace(noticed_jar.index, &noticed_jar);
-
-        PromiseOrValue::Value(0)
     }
 }
 

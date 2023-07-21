@@ -45,7 +45,6 @@ pub struct JarCache {
 #[serde(crate = "near_sdk::serde")]
 pub enum JarState {
     Active,
-    Noticed(#[serde(with = "u64_dec_format")] Timestamp),
     Closed,
 }
 
@@ -57,6 +56,8 @@ pub trait JarApi {
         amount: TokenAmount,
         signature: Option<String>,
     ) -> Jar;
+
+    fn restake(&mut self, jar_index: JarIndex) -> Jar;
 
     fn top_up(&mut self, jar_index: JarIndex, amount: TokenAmount) -> TokenAmount;
 
@@ -102,13 +103,6 @@ impl Jar {
     pub(crate) fn unlocked(&self) -> Self {
         Self {
             is_pending_withdraw: false,
-            ..self.clone()
-        }
-    }
-
-    pub(crate) fn noticed(&self, noticed_at: Timestamp) -> Self {
-        Self {
-            state: JarState::Noticed(noticed_at),
             ..self.clone()
         }
     }
@@ -159,7 +153,7 @@ impl Jar {
         let state = get_final_state(product, self, withdrawn_amount);
 
         Self {
-            principal: self.principal + withdrawn_amount,
+            principal: self.principal - withdrawn_amount,
             cache: Some(JarCache {
                 updated_at: now,
                 interest: current_interest,
@@ -234,6 +228,29 @@ impl JarApi for Contract {
         emit(EventKind::CreateJar(jar.clone()));
 
         jar
+    }
+
+    fn restake(&mut self, jar_index: JarIndex) -> Jar {
+        let jar = self.get_jar(jar_index);
+        let account_id = env::predecessor_account_id();
+
+        assert_ownership(&jar, &account_id);
+
+        let product = self.get_product(&jar.product_id);
+
+        assert!(product.is_restakable, "The product doesn't support restaking");
+
+        let now = env::block_timestamp_ms();
+        assert!(jar.is_mature(&product, now), "The jar is not mature yet");
+
+        let index = self.jars.len() as JarIndex;
+        let new_jar = Jar::create(index, jar.account_id.clone(), jar.product_id.clone(), jar.principal, now);
+        let withdraw_jar = jar.withdrawn(&product, jar.principal, now);
+
+        self.save_jar(&account_id, &withdraw_jar);
+        self.save_jar(&account_id, &new_jar);
+
+        new_jar
     }
 
     #[private]

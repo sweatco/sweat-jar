@@ -25,7 +25,7 @@ impl Contract {
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: &Jar) {
-        self.jars.push(jar);
+        self.insert_or_update_jar(jar);
 
         let mut indices = self.account_jars.get(&account_id).unwrap_or_default();
         indices.insert(jar.index);
@@ -38,6 +38,14 @@ impl Contract {
             self.account_jars.remove(account_id);
         } else {
             self.account_jars.insert(account_id, &indices);
+        }
+    }
+
+    fn insert_or_update_jar(&mut self, jar: &Jar) {
+        if jar.index < self.jars.len() {
+            self.jars.push(jar);
+        } else {
+            self.jars.replace(jar.index, jar);
         }
     }
 }
