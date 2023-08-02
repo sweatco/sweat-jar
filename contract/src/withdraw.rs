@@ -77,6 +77,7 @@ impl Contract {
 
 #[near_bindgen]
 impl WithdrawCallbacks for Contract {
+    #[private]
     fn after_withdraw(
         &mut self,
         jar_before_transfer: Jar,
@@ -88,6 +89,7 @@ impl WithdrawCallbacks for Contract {
 
 #[near_bindgen]
 impl Contract {
+    #[private]
     fn transfer_withdraw(&mut self, account_id: &AccountId, amount: TokenAmount, jar: &Jar) -> PromiseOrValue<TokenAmount> {
         let product = self.get_product(&jar.product_id);
         let fee = product.withdrawal_fee.map(|fee| {
@@ -106,6 +108,7 @@ impl Contract {
             .into()
     }
 
+    #[private]
     pub(crate) fn after_withdraw_internal(
         &mut self,
         jar_before_transfer: Jar,
