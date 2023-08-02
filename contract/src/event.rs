@@ -75,6 +75,6 @@ impl SweatJarEvent {
     }
 
     fn to_json_event_string(&self) -> String {
-        format!("EVENT_JSON: {}", self.to_json_string())
+        format!("EVENT_JSON:{}", self.to_json_string())
     }
 }
