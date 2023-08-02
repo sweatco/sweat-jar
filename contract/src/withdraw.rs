@@ -2,7 +2,7 @@ use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
 use near_sdk::json_types::{U128, U64};
 
 use crate::*;
-use crate::assert::assert_is_mature;
+use crate::assert::{assert_is_mature, assert_sufficient_balance};
 use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, WithdrawData};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
@@ -44,6 +44,7 @@ impl Contract {
     ) -> PromiseOrValue<TokenAmount> {
         let jar = self.get_jar(jar_index).locked();
 
+        assert_sufficient_balance(&jar, amount);
         assert_is_not_empty(&jar);
         assert_is_not_closed(&jar);
 
