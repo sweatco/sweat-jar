@@ -1,9 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{
-    json_types::U128,
-    serde::{Deserialize, Serialize},
-    serde_json, PromiseOrValue,
-};
+use near_sdk::{json_types::U128, serde::{Deserialize, Serialize}, serde_json, PromiseOrValue, require};
 use crate::common::u64_dec_format;
 
 use crate::*;
@@ -35,6 +31,8 @@ impl FungibleTokenReceiver for Contract {
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
+        self.assert_from_ft_contract();
+
         let ft_message: FtMessage = serde_json::from_str(&msg).unwrap();
 
         match ft_message {

@@ -1,3 +1,4 @@
+use near_sdk::require;
 use crate::*;
 
 impl Contract {
@@ -6,6 +7,13 @@ impl Contract {
             self.admin_allowlist
                 .contains(&env::predecessor_account_id()),
             "Can be performed only by admin"
+        );
+    }
+
+    pub(crate) fn assert_from_ft_contract(&self) {
+        require!(
+            env::predecessor_account_id() == self.token_account_id, 
+            format!("Can receive tokens only from {}", self.token_account_id)
         );
     }
 
