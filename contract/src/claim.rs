@@ -89,6 +89,7 @@ impl ClaimApi for Contract {
 
 #[near_bindgen]
 impl ClaimCallbacks for Contract {
+    #[private]
     fn after_claim(&mut self, jars_before_transfer: Vec<Jar>) {
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer.iter() {
