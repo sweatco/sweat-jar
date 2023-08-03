@@ -6,7 +6,6 @@ use crate::common::{Timestamp, TokenAmount};
 use crate::common::{u64_dec_format, u128_dec_format};
 use crate::*;
 use crate::event::{emit, EventKind, MigrationEventItem};
-use crate::jar::JarCache;
 use crate::product::ProductId;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
@@ -20,17 +19,6 @@ pub struct CeFiJar {
     pub principal: TokenAmount,
     #[serde(with = "u64_dec_format")]
     pub created_at: Timestamp,
-    pub claim: Option<CeFiJarClaim>,
-}
-
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
-pub struct CeFiJarClaim {
-    #[serde(with = "u128_dec_format")]
-    pub claimed_amount: TokenAmount,
-    #[serde(with = "u64_dec_format")]
-    pub last_claim_at: Timestamp,
 }
 
 #[near_bindgen]
@@ -49,10 +37,6 @@ impl Contract {
             );
 
             let index = self.jars.len();
-            let cache = ce_fi_jar.claim.map(|claim| JarCache {
-                updated_at: claim.last_claim_at,
-                interest: claim.claimed_amount,
-            });
 
             let jar = Jar {
                 index,
@@ -60,8 +44,8 @@ impl Contract {
                 product_id: ce_fi_jar.product_id,
                 created_at: ce_fi_jar.created_at,
                 principal: ce_fi_jar.principal,
-                cache: cache.clone(),
-                claimed_balance: cache.clone().map_or(0, |value| value.interest),
+                cache: None,
+                claimed_balance: 0,
                 is_pending_withdraw: false,
                 state: JarState::Active,
                 is_penalty_applied: false,
