@@ -16,8 +16,6 @@ pub struct Product {
     pub id: ProductId,
     #[serde(with = "u64_dec_format")]
     pub lockup_term: Duration,
-    #[serde(with = "u64_dec_format")]
-    pub maturity_term: Duration,
     pub apy: Apy,
     pub cap: Cap,
     pub is_refillable: bool,
@@ -62,7 +60,7 @@ pub struct Cap {
 
 impl Product {
     pub(crate) fn is_flexible(&self) -> bool {
-        self.maturity_term == 0
+        self.lockup_term == 0
     }
 }
 
@@ -98,7 +96,6 @@ pub(crate) mod tests {
         Product {
             id: "product".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: 365 * 24 * 60 * 60 * 1000,
             is_refillable: false,
             apy: Apy::Constant(0.12),
             cap: Cap {
@@ -115,7 +112,6 @@ pub(crate) mod tests {
         Product {
             id: "product_premium".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
-            maturity_term: 365 * 24 * 60 * 60 * 1000,
             is_refillable: false,
             apy: Apy::Downgradable(DowngradableApy { default: 0.20, fallback: 0.10 }),
             cap: Cap {

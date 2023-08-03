@@ -3,7 +3,7 @@ use crate::*;
 
 impl Contract {
     pub(crate) fn assert_admin(&self) {
-        assert!(
+        require!(
             self.admin_allowlist
                 .contains(&env::predecessor_account_id()),
             "Can be performed only by admin"

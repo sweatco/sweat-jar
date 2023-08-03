@@ -46,6 +46,7 @@ impl FungibleTokenReceiver for Contract {
                 );
             }
             FtMessage::Migrate(jars) => {
+                self.assert_admin();
                 self.migrate_jars(jars, amount.0);
             }
             FtMessage::TopUp(jar_index) => {

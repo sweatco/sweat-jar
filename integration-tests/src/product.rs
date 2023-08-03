@@ -13,7 +13,6 @@ impl Products {
             Products::Locked12Months12Percents => json!({
                 "id": "locked_12_months_12_percents",
                 "lockup_term": "31556952000",
-                "maturity_term": "31556952000",
                 "is_refillable": false,
                 "apy": {
                     "Constant": 0.12,
@@ -27,7 +26,6 @@ impl Products {
             Products::Locked6Months6Percents => json!({
                 "id": "locked_6_months_6_percents",
                 "lockup_term": "15778476000",
-                "maturity_term": "15778476000",
                 "is_refillable": false,
                 "apy": {
                     "Constant": 0.06,
@@ -41,7 +39,6 @@ impl Products {
             Products::Locked6Months6PercentsWithWithdrawFee => json!({
                 "id": "locked_6_months_6_percents_with_withdraw_fee",
                 "lockup_term": "15778476000",
-                "maturity_term": "15778476000",
                 "is_refillable": false,
                 "apy": {
                     "Constant": 0.06,
@@ -58,7 +55,6 @@ impl Products {
             Products::Locked10Minutes6PercentsWithWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_withdraw_fee",
                 "lockup_term": "600000",
-                "maturity_term": "600000",
                 "is_refillable": false,
                 "apy": {
                     "Constant": 0.06,

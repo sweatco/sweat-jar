@@ -130,6 +130,8 @@ impl AuthApi for Contract {
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
+
+    //TODO: add event
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
         self.assert_admin();
 

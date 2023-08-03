@@ -173,8 +173,8 @@ impl Jar {
         } else {
             (self.created_at, 0)
         };
-        let until_date = if product.maturity_term > 0 {
-            cmp::min(now, self.created_at + product.maturity_term)
+        let until_date = if product.lockup_term > 0 {
+            cmp::min(now, self.created_at + product.lockup_term)
         } else {
             now
         };

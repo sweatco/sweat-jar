@@ -1,4 +1,5 @@
-use near_sdk::{AccountId, near_bindgen};
+use near_sdk::{AccountId, near_bindgen, require};
+use near_sdk::__private::schemars::Set;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use crate::common::{Timestamp, TokenAmount};
@@ -39,7 +40,14 @@ impl Contract {
         let mut event_data: Vec<MigrationEventItem> = vec![];
         let mut total_amount: TokenAmount = 0;
 
+        let product_ids: Set<ProductId> = self.products.keys().collect();
+
         for ce_fi_jar in jars {
+            require!(
+                product_ids.contains(&ce_fi_jar.product_id), 
+                format!("Product {} is not registered", ce_fi_jar.product_id),
+            );
+
             let index = self.jars.len();
             let cache = ce_fi_jar.claim.map(|claim| JarCache {
                 updated_at: claim.last_claim_at,
