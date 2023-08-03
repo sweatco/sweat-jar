@@ -1,8 +1,11 @@
 use std::cmp;
+use std::ops::{Div, Mul};
 
 use near_sdk::{AccountId, env, near_bindgen};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
+use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 use crate::common::{u64_dec_format, u128_dec_format};
 
 use crate::*;
@@ -179,22 +182,24 @@ impl Jar {
             now
         };
 
-        let rate_per_minute = per_minute_interest_rate(self.get_apy(product)) as f64;
-        let term = ((until_date - base_date) / MS_IN_MINUTE) as f64;
-        let interest = (self.principal as f64 * rate_per_minute * term).round() as u128;
+        let rate_per_minute = per_minute_interest_rate(self.get_apy(product));
+        let term = Decimal::from(until_date - base_date).div(Decimal::from(MS_IN_MINUTE));
+        let interest = Decimal::from(self.principal).mul(rate_per_minute).mul(term).round();
 
-        base_interest + interest
+        base_interest + interest.to_u128().unwrap()
     }
 
-    fn get_apy(&self, product: &Product) -> f32 {
-        match product.apy.clone() {
+    fn get_apy(&self, product: &Product) -> Decimal {
+        let result = match product.apy.clone() {
             Apy::Constant(apy) => apy,
             Apy::Downgradable(apy) => if self.is_penalty_applied {
                 apy.fallback
             } else {
                 apy.default
             },
-        }
+        };
+
+        Decimal::from_f32_retain(result).unwrap()
     }
 }
 

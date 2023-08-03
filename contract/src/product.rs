@@ -1,6 +1,8 @@
+use std::ops::Div;
 use near_sdk::near_bindgen;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
+use rust_decimal::Decimal;
 
 use crate::*;
 use crate::common::{Duration, MINUTES_IN_YEAR, TokenAmount};
@@ -64,8 +66,8 @@ impl Product {
     }
 }
 
-pub(crate) fn per_minute_interest_rate(rate: f32) -> f32 {
-    rate / MINUTES_IN_YEAR as f32
+pub(crate) fn per_minute_interest_rate(rate: Decimal) -> Decimal {
+    rate.div(Decimal::from(MINUTES_IN_YEAR))
 }
 
 pub trait ProductApi {
