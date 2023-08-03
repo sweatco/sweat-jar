@@ -1,5 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{json_types::U128, serde::{Deserialize, Serialize}, serde_json, PromiseOrValue, require};
+use near_sdk::{json_types::U128, serde::{Deserialize, Serialize}, serde_json, PromiseOrValue};
 use crate::common::u64_dec_format;
 
 use crate::*;
