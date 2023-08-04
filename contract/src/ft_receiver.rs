@@ -1,6 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, serde::{Deserialize, Serialize}, serde_json, PromiseOrValue};
-use crate::common::u64_dec_format;
 
 use crate::*;
 use crate::migration::CeFiJar;
@@ -12,7 +11,7 @@ use crate::migration::CeFiJar;
 pub enum FtMessage {
     Stake(StakeMessage),
     Migrate(Vec<CeFiJar>),
-    TopUp(#[serde(with = "u64_dec_format")] JarIndex),
+    TopUp(JarIndex),
 }
 
 #[derive(Serialize, Deserialize)]

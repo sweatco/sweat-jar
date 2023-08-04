@@ -74,13 +74,13 @@ impl ProductApi for Contract {
     fn register_product(&mut self, product: Product) {
         self.assert_admin();
 
-        self.products.insert(&product.id, &product);
+        self.products.insert(product.clone().id, product.clone());
 
         emit(EventKind::RegisterProduct(product));
     }
 
     fn get_products(&self) -> Vec<Product> {
-        self.products.values_as_vector().to_vec()
+        self.products.values().cloned().collect()
     }
 }
 

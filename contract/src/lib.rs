@@ -4,7 +4,7 @@ use ed25519_dalek::{PublicKey, Signature};
 use near_sdk::{AccountId, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::borsh::maybestd::collections::HashSet;
-use near_sdk::collections::{LookupMap, UnorderedMap, UnorderedSet, Vector};
+use near_sdk::store::{LookupMap, UnorderedMap, UnorderedSet, Vector};
 
 use ft_interface::FungibleTokenInterface;
 use jar::{Jar, JarIndex};
@@ -113,13 +113,13 @@ impl Contract {
 #[near_bindgen]
 impl AuthApi for Contract {
     fn get_admin_allowlist(&self) -> Vec<AccountId> {
-        self.admin_allowlist.to_vec()
+        self.admin_allowlist.iter().map(|value| value.clone()).collect()
     }
 
     fn add_admin(&mut self, account_id: AccountId) {
         self.assert_admin();
 
-        self.admin_allowlist.insert(&account_id);
+        self.admin_allowlist.insert(account_id);
     }
 
     fn remove_admin(&mut self, account_id: AccountId) {
@@ -131,7 +131,6 @@ impl AuthApi for Contract {
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
-
     //TODO: add event
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
         self.assert_admin();
@@ -142,7 +141,7 @@ impl PenaltyApi for Contract {
         match product.apy {
             Apy::Downgradable(_) => {
                 let updated_jar = jar.with_penalty_applied(value);
-                self.jars.replace(jar.index, &updated_jar);
+                self.jars.replace(jar.index, updated_jar);
             }
             _ => panic!("Penalty is not applicable"),
         };

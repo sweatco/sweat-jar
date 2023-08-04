@@ -10,7 +10,7 @@ use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
 use crate::event::{emit, EventKind};
 use crate::product::{Apy, Product, ProductId};
 
-pub type JarIndex = u64;
+pub type JarIndex = u32;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -266,7 +266,7 @@ impl JarApi for Contract {
         let now = env::block_timestamp_ms();
         let topped_up_jar = jar.topped_up(amount, &product, now);
 
-        self.jars.replace(jar_index, &topped_up_jar);
+        self.jars.replace(jar_index, topped_up_jar.clone());
 
         topped_up_jar.principal
     }
@@ -274,7 +274,10 @@ impl JarApi for Contract {
     fn get_jar(&self, index: JarIndex) -> Jar {
         self.jars
             .get(index)
-            .unwrap_or_else(|| panic!("Jar on index {} doesn't exist", index))
+            .map_or_else(
+                || panic!("Jar on index {} doesn't exist", index),
+                |value| value.clone(),
+            )
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<Jar> {

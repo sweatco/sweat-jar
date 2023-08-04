@@ -64,7 +64,7 @@ impl ClaimApi for Contract {
             let updated_jar = jar
                 .claimed(available_interest, interest_to_claim, now)
                 .locked();
-            self.jars.replace(jar.index, &updated_jar);
+            self.jars.replace(jar.index, updated_jar);
 
             total_interest_to_claim += interest_to_claim;
 
@@ -96,11 +96,11 @@ impl ClaimCallbacks for Contract {
             for jar_before_transfer in jars_before_transfer.iter() {
                 let jar = self.get_jar(jar_before_transfer.index);
 
-                self.jars.replace(jar_before_transfer.index, &jar.unlocked());
+                self.jars.replace(jar_before_transfer.index, jar.unlocked());
             }
         } else {
             for jar_before_transfer in jars_before_transfer.iter() {
-                self.jars.replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
+                self.jars.replace(jar_before_transfer.index, jar_before_transfer.unlocked());
             }
         }
     }

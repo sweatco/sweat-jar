@@ -28,7 +28,9 @@ impl Contract {
         let mut event_data: Vec<MigrationEventItem> = vec![];
         let mut total_amount: TokenAmount = 0;
 
-        let product_ids: Set<ProductId> = self.products.keys().collect();
+        let product_ids: Set<ProductId> = self.products.keys()
+            .cloned()
+            .collect();
 
         for ce_fi_jar in jars {
             require!(
@@ -51,11 +53,15 @@ impl Contract {
                 is_penalty_applied: false,
             };
 
-            self.jars.push(&jar);
+            self.jars.push(jar.clone());
 
-            let mut account_jars = self.account_jars.get(&jar.account_id).unwrap_or(HashSet::new());
+            let mut account_jars = self.account_jars.get(&jar.account_id)
+                .map_or_else(
+                    || HashSet::new(),
+                    |result| result.clone(),
+                );
             account_jars.insert(jar.index);
-            self.account_jars.insert(&jar.account_id, &account_jars);
+            self.account_jars.insert(jar.clone().account_id, account_jars);
 
             total_amount += jar.principal;
 

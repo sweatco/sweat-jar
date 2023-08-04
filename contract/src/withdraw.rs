@@ -1,5 +1,5 @@
 use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
-use near_sdk::json_types::{U128, U64};
+use near_sdk::json_types::{U128};
 
 use crate::*;
 use crate::assert::{assert_is_mature, assert_sufficient_balance};
@@ -18,7 +18,7 @@ pub(crate) type WithdrawFunction = fn(
 ) -> PromiseOrValue<TokenAmount>;
 
 pub trait WithdrawApi {
-    fn withdraw(&mut self, jar_index: U64, amount: Option<U128>) -> PromiseOrValue<TokenAmount>;
+    fn withdraw(&mut self, jar_index: u32, amount: Option<U128>) -> PromiseOrValue<TokenAmount>;
 }
 
 #[ext_contract(ext_self)]
@@ -28,8 +28,8 @@ pub trait WithdrawCallbacks {
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_index: U64, amount: Option<U128>) -> PromiseOrValue<TokenAmount> {
-        self.withdraw_internal(jar_index.0, amount.map(|value| value.0), Self::transfer_withdraw)
+    fn withdraw(&mut self, jar_index: u32, amount: Option<U128>) -> PromiseOrValue<TokenAmount> {
+        self.withdraw_internal(jar_index, amount.map(|value| value.0), Self::transfer_withdraw)
     }
 }
 
@@ -68,7 +68,7 @@ impl Contract {
     ) -> PromiseOrValue<TokenAmount> {
         emit(EventKind::Withdraw(WithdrawData { index: jar.index }));
 
-        self.jars.replace(jar.index, &jar.locked());
+        self.jars.replace(jar.index, jar.locked());
 
         let amount = amount.unwrap_or(jar.principal);
 
@@ -119,11 +119,11 @@ impl Contract {
             let now = env::block_timestamp_ms();
             let jar = jar_before_transfer.withdrawn(&product, withdrawn_amount, now);
 
-            self.jars.replace(jar_before_transfer.index, &jar.unlocked());
+            self.jars.replace(jar_before_transfer.index, jar.unlocked());
 
             withdrawn_amount
         } else {
-            self.jars.replace(jar_before_transfer.index, &jar_before_transfer.unlocked());
+            self.jars.replace(jar_before_transfer.index, jar_before_transfer.unlocked());
 
             0
         }
