@@ -103,7 +103,7 @@ impl Contract {
             PublicKey::from_bytes(pk.clone().as_slice())
                 .expect("Public key is invalid")
                 .verify_strict(account_id.as_bytes(), &signature)
-                .map_or(false, |_| true)
+                .is_ok()
         } else {
             true
         }
