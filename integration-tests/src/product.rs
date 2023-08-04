@@ -15,7 +15,10 @@ impl Products {
                 "lockup_term": "31556952000",
                 "is_refillable": false,
                 "apy": {
-                    "Constant": 0.12,
+                    "Constant": {
+                        "significand": "12",
+                        "exponent": 2,
+                    },
                 },
                 "cap": {
                     "min": "100000",
@@ -28,7 +31,10 @@ impl Products {
                 "lockup_term": "15778476000",
                 "is_refillable": false,
                 "apy": {
-                    "Constant": 0.06,
+                    "Constant": {
+                        "significand": "6",
+                        "exponent": 2,
+                    },
                 },
                 "cap": {
                     "min": "100000",
@@ -41,7 +47,10 @@ impl Products {
                 "lockup_term": "15778476000",
                 "is_refillable": false,
                 "apy": {
-                    "Constant": 0.06,
+                    "Constant": {
+                        "significand": "6",
+                        "exponent": 2,
+                    },
                 },
                 "cap": {
                     "min": "100000",
@@ -57,7 +66,10 @@ impl Products {
                 "lockup_term": "600000",
                 "is_refillable": false,
                 "apy": {
-                    "Constant": 0.06,
+                    "Constant": {
+                        "significand": "6",
+                        "exponent": 2,
+                    },
                 },
                 "cap": {
                     "min": "100000",

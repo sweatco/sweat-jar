@@ -1,8 +1,5 @@
-use std::ops::Mul;
 use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
 use near_sdk::json_types::{U128, U64};
-use rust_decimal::Decimal;
-use rust_decimal::prelude::ToPrimitive;
 
 use crate::*;
 use crate::assert::{assert_is_mature, assert_sufficient_balance};
@@ -98,10 +95,7 @@ impl Contract {
         let product = self.get_product(&jar.product_id);
         let fee = product.withdrawal_fee.map(|fee| match fee {
             WithdrawalFee::Fix(amount) => amount,
-            WithdrawalFee::Percent(percent) => {
-                let fee_dec = Decimal::from(jar.principal).mul(Decimal::from_f32_retain(percent).unwrap());
-                fee_dec.round().to_u128().unwrap()
-            }
+            WithdrawalFee::Percent(percent) => percent.mul(jar.principal)
         }).map(|fee| Fee {
             amount: fee,
             beneficiary_id: self.fee_account_id.clone(),

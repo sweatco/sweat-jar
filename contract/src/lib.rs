@@ -67,6 +67,7 @@ impl Contract {
     }
 
     #[init]
+    #[private]
     pub fn init(
         token_account_id: AccountId,
         fee_account_id: AccountId,
@@ -310,7 +311,7 @@ mod tests {
         context.set_block_timestamp_in_minutes(30);
 
         let interest = context.contract.get_total_interest(alice.clone());
-        assert_eq!(interest, 685);
+        assert_eq!(interest, 684);
     }
 
     #[test]
@@ -370,7 +371,7 @@ mod tests {
         context.set_block_timestamp_in_days(182);
 
         let mut interest = context.contract.get_total_interest(alice.clone());
-        assert_eq!(interest, 5_983_562);
+        assert_eq!(interest, 5_983_561);
 
         context.switch_account(&alice);
         context.contract.claim_total();
@@ -451,7 +452,7 @@ mod tests {
         context.set_block_timestamp_in_days(182);
 
         let mut interest = context.contract.get_total_interest(alice.clone());
-        assert_eq!(interest, 9_972_603);
+        assert_eq!(interest, 9_972_602);
 
         context.switch_account(&admin);
         context.contract.set_penalty(0, true);

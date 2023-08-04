@@ -1,17 +1,14 @@
 use std::cmp;
-use std::ops::{Div, Mul};
 
 use near_sdk::{AccountId, env, near_bindgen};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
-use rust_decimal::Decimal;
-use rust_decimal::prelude::ToPrimitive;
-use crate::common::{u64_dec_format, u128_dec_format};
+use crate::common::{u64_dec_format, u128_dec_format, MINUTES_IN_YEAR, UDecimal};
 
 use crate::*;
 use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
 use crate::event::{emit, EventKind};
-use crate::product::{Apy, per_minute_interest_rate, Product, ProductId};
+use crate::product::{Apy, Product, ProductId};
 
 pub type JarIndex = u64;
 
@@ -182,27 +179,28 @@ impl Jar {
             now
         };
 
-        let rate_per_minute = per_minute_interest_rate(self.get_apy(product));
-        let term = Decimal::from(until_date - base_date).div(Decimal::from(MS_IN_MINUTE));
-        let interest = Decimal::from(self.principal).mul(rate_per_minute).mul(term).round();
+        let term_in_minutes = ((until_date - base_date) / MS_IN_MINUTE) as u128;
+        let apy = self.get_apy(product);
+        let total_interest = apy.mul(self.principal);
 
-        base_interest + interest.to_u128().unwrap()
+        let interest = (term_in_minutes * total_interest) / MINUTES_IN_YEAR as u128;
+
+        base_interest + interest
     }
 
-    fn get_apy(&self, product: &Product) -> Decimal {
-        let result = match product.apy.clone() {
+    fn get_apy(&self, product: &Product) -> UDecimal {
+        match product.apy.clone() {
             Apy::Constant(apy) => apy,
             Apy::Downgradable(apy) => if self.is_penalty_applied {
                 apy.fallback
             } else {
                 apy.default
             },
-        };
-
-        Decimal::from_f32_retain(result).unwrap()
+        }
     }
 }
 
+// TODO: extract private api
 #[near_bindgen]
 impl JarApi for Contract {
     #[private]

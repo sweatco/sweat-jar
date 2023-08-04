@@ -37,6 +37,8 @@ pub(crate) trait JarContractInterface {
     async fn withdraw(&self, user: &Account, jar_index: String) -> anyhow::Result<()>;
 
     async fn time(&self) -> anyhow::Result<u64>;
+
+    async fn claim_total(&self, user: &Account) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -230,5 +232,26 @@ impl JarContractInterface for Contract {
             .json()?;
 
         Ok(result.as_u64().unwrap())
+    }
+
+    async fn claim_total(&self, user: &Account) -> anyhow::Result<()> {
+        println!("▶️ Claim total");
+
+        let args = json!({});
+
+        let result = user.call(self.id(), "claim_total")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {:?}", log);
+        }
+
+        println!("   📟 {:?}", result);
+
+        Ok(())
     }
 }

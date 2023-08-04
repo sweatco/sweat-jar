@@ -1,11 +1,9 @@
-use std::ops::Div;
 use near_sdk::near_bindgen;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
-use rust_decimal::Decimal;
 
 use crate::*;
-use crate::common::{Duration, MINUTES_IN_YEAR, TokenAmount};
+use crate::common::{Duration, TokenAmount, UDecimal};
 use crate::common::{u64_dec_format, u128_dec_format};
 use crate::event::{emit, EventKind};
 
@@ -31,14 +29,14 @@ pub struct Product {
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFee {
     Fix(#[serde(with = "u128_dec_format")] TokenAmount),
-    Percent(f32),
+    Percent(UDecimal),
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum Apy {
-    Constant(f32),
+    Constant(UDecimal),
     Downgradable(DowngradableApy),
 }
 
@@ -46,8 +44,8 @@ pub enum Apy {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct DowngradableApy {
-    pub default: f32,
-    pub fallback: f32,
+    pub default: UDecimal,
+    pub fallback: UDecimal,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
@@ -64,10 +62,6 @@ impl Product {
     pub(crate) fn is_flexible(&self) -> bool {
         self.lockup_term == 0
     }
-}
-
-pub(crate) fn per_minute_interest_rate(rate: Decimal) -> Decimal {
-    rate.div(Decimal::from(MINUTES_IN_YEAR))
 }
 
 pub trait ProductApi {
@@ -92,6 +86,7 @@ impl ProductApi for Contract {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use crate::common::UDecimal;
     use crate::product::{Apy, Cap, DowngradableApy, Product};
 
     pub(crate) fn get_product() -> Product {
@@ -99,7 +94,7 @@ pub(crate) mod tests {
             id: "product".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
             is_refillable: false,
-            apy: Apy::Constant(0.12),
+            apy: Apy::Constant(UDecimal::new(12, 2)),
             cap: Cap {
                 min: 100,
                 max: 100_000_000_000,
@@ -115,7 +110,10 @@ pub(crate) mod tests {
             id: "product_premium".to_string(),
             lockup_term: 365 * 24 * 60 * 60 * 1000,
             is_refillable: false,
-            apy: Apy::Downgradable(DowngradableApy { default: 0.20, fallback: 0.10 }),
+            apy: Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(20, 2),
+                fallback: UDecimal::new(10, 2),
+            }),
             cap: Cap {
                 min: 100,
                 max: 100_000_000_000,

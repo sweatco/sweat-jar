@@ -37,5 +37,8 @@ pub(crate) async fn run() -> anyhow::Result<()> {
 
     alice_interest = context.jar_contract.get_total_interest(alice).await?;
 
+    context.jar_contract.claim_total(alice).await?;
+    context.ft_contract.ft_balance_of(alice).await?;
+
     Ok(())
 }

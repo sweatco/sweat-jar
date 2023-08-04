@@ -33,6 +33,7 @@ impl FungibleTokenInterface for FungibleTokenContract {
     fn transfer(&self, receiver_id: &AccountId, amount: u128, fee: Option<Fee>) -> Promise {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())
+                //TODO: change memo for "claim"
                 .ft_transfer(receiver_id, amount - fee.amount, Some("withdraw".to_string()))
                 .ft_transfer(&fee.beneficiary_id, fee.amount, Some("withdraw fee".to_string()))
         } else {
