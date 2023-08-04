@@ -20,14 +20,14 @@ impl Contract {
     pub(crate) fn get_product(&self, product_id: &ProductId) -> Product {
         self.products
             .get(product_id)
-            .unwrap_or_else(|| panic!("Product {} doesn't exist", product_id))
+            .unwrap_or_else(|| env::panic_str(format!("Product {} doesn't exist", product_id).as_str()))
             .clone()
     }
 
     pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> Vec<JarIndex> {
         self.account_jars
             .get(account_id)
-            .unwrap_or_else(|| panic!("Account {} doesn't have jars", account_id))
+            .unwrap_or_else(|| env::panic_str(format!("Account {} doesn't have jars", account_id).as_str()))
             .iter()
             .cloned()
             .collect()

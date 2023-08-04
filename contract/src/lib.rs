@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use ed25519_dalek::{PublicKey, Signature};
-use near_sdk::{AccountId, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
+use near_sdk::{AccountId, assert_one_yocto, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::store::{LookupMap, UnorderedMap, UnorderedSet, Vector};
@@ -97,7 +97,7 @@ impl Contract {
         if let Some(pk) = product.public_key {
             let signature = match signature {
                 Some(ref s) => Signature::from_str(s).expect("Invalid signature"),
-                None => panic!("Signature is required for private products"),
+                None => env::panic_str("Signature is required for private products"),
             };
 
             PublicKey::from_bytes(pk.clone().as_slice())
@@ -113,16 +113,18 @@ impl Contract {
 #[near_bindgen]
 impl AuthApi for Contract {
     fn get_admin_allowlist(&self) -> Vec<AccountId> {
-        self.admin_allowlist.iter().map(|value| value.clone()).collect()
+        self.admin_allowlist.iter().cloned().collect()
     }
 
     fn add_admin(&mut self, account_id: AccountId) {
+        assert_one_yocto();
         self.assert_admin();
 
         self.admin_allowlist.insert(account_id);
     }
 
     fn remove_admin(&mut self, account_id: AccountId) {
+        assert_one_yocto();
         self.assert_admin();
 
         self.admin_allowlist.remove(&account_id);
@@ -143,7 +145,7 @@ impl PenaltyApi for Contract {
                 let updated_jar = jar.with_penalty_applied(value);
                 self.jars.replace(jar.index, updated_jar);
             }
-            _ => panic!("Penalty is not applicable"),
+            _ => env::panic_str("Penalty is not applicable"),
         };
     }
 }
@@ -167,11 +169,25 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
+        context.with_deposit_yocto(1);
+
         context.contract.add_admin(alice.clone());
         let admins = context.contract.get_admin_allowlist();
 
         assert_eq!(2, admins.len());
         assert!(admins.contains(&alice.clone()));
+    }
+
+    #[test]
+    #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+    fn add_admin_with_no_deposit() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let mut context = Context::new(vec![admin.clone()]);
+        context.switch_account(&alice);
+
+        context.contract.add_admin(alice.clone());
     }
 
     #[test]
@@ -182,6 +198,7 @@ mod tests {
 
         let mut context = Context::new(vec![admin.clone()]);
         context.switch_account(&alice);
+        context.with_deposit_yocto(1);
 
         context.contract.add_admin(alice.clone());
     }
@@ -193,6 +210,7 @@ mod tests {
 
         let mut context = Context::new(vec![admin.clone(), alice.clone()]);
         context.switch_account(&admin);
+        context.with_deposit_yocto(1);
 
         context.contract.remove_admin(alice.clone());
         let admins = context.contract.get_admin_allowlist();
@@ -209,6 +227,7 @@ mod tests {
 
         let mut context = Context::new(vec![admin.clone()]);
         context.switch_account(&alice);
+        context.with_deposit_yocto(1);
 
         context.contract.remove_admin(admin.clone());
     }

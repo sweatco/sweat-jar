@@ -90,7 +90,7 @@ pub mod u64_dec_format {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use near_sdk::{AccountId, testing_env};
+    use near_sdk::{AccountId, Balance, testing_env};
     use near_sdk::test_utils::VMContextBuilder;
 
     use crate::Contract;
@@ -153,6 +153,11 @@ pub(crate) mod tests {
 
         pub(crate) fn switch_account_to_owner(&mut self) {
             self.switch_account(&self.owner.clone());
+        }
+
+        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance) {
+            self.builder = self.builder.clone().attached_deposit(amount).clone();
+            testing_env!(self.builder.build());
         }
     }
 

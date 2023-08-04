@@ -215,11 +215,11 @@ impl JarApi for Contract {
         let cap = product.cap;
 
         if !self.is_authorized_for_product(&account_id, &product_id, signature) {
-            panic!("Signature is invalid");
+            env::panic_str("Signature is invalid");
         }
 
         if cap.min > amount || amount > cap.max {
-            panic!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max);
+            env::panic_str(format!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max).as_str());
         }
 
         let index = self.jars.len() as JarIndex;
@@ -275,7 +275,7 @@ impl JarApi for Contract {
         self.jars
             .get(index)
             .map_or_else(
-                || panic!("Jar on index {} doesn't exist", index),
+                || env::panic_str(format!("Jar on index {} doesn't exist", index).as_str()),
                 |value| value.clone(),
             )
     }
