@@ -15,33 +15,35 @@ pub(crate) type WithdrawFunction = fn(
     account_id: &AccountId,
     amount: TokenAmount,
     jar: &Jar,
-) -> PromiseOrValue<TokenAmount>;
+) -> PromiseOrValue<U128>;
 
 pub trait WithdrawApi {
-    fn withdraw(&mut self, jar_index: u32, amount: Option<U128>) -> PromiseOrValue<TokenAmount>;
+    fn withdraw(&mut self, jar_index: JarIndex, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
 pub trait WithdrawCallbacks {
-    fn after_withdraw(&mut self, jar_before_transfer: Jar, withdrawn_amount: TokenAmount) -> TokenAmount;
+    fn after_withdraw(&mut self, jar_before_transfer: Jar, withdrawn_amount: TokenAmount) -> U128;
 }
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_index: u32, amount: Option<U128>) -> PromiseOrValue<TokenAmount> {
-        self.withdraw_internal(jar_index, amount.map(|value| value.0), Self::transfer_withdraw)
+    fn withdraw(&mut self, jar_index: u32, amount: Option<U128>) -> PromiseOrValue<U128> {
+        self.withdraw_internal(
+            jar_index,
+            amount.map(|value| value.0),
+            Self::transfer_withdraw,
+        )
     }
 }
 
-#[near_bindgen]
 impl Contract {
-    #[private]
     pub(crate) fn withdraw_internal(
         &mut self,
         jar_index: JarIndex,
         amount: Option<TokenAmount>,
         withdraw_transfer: WithdrawFunction,
-    ) -> PromiseOrValue<TokenAmount> {
+    ) -> PromiseOrValue<U128> {
         let jar = self.get_jar_internal(jar_index).locked();
 
         assert_sufficient_balance(&jar, amount);
@@ -58,21 +60,20 @@ impl Contract {
         self.do_transfer(&account_id, &jar, amount, withdraw_transfer)
     }
 
-    #[private]
     fn do_transfer(
         &mut self,
         account_id: &AccountId,
         jar: &Jar,
         amount: Option<TokenAmount>,
         withdraw_transfer: WithdrawFunction,
-    ) -> PromiseOrValue<TokenAmount> {
+    ) -> PromiseOrValue<U128> {
         emit(EventKind::Withdraw(WithdrawData { index: jar.index }));
 
         self.jars.replace(jar.index, jar.locked());
 
         let amount = amount.unwrap_or(jar.principal);
 
-        withdraw_transfer(self, &account_id, amount, jar)
+        withdraw_transfer(self, account_id, amount, jar)
     }
 }
 
@@ -83,7 +84,7 @@ impl WithdrawCallbacks for Contract {
         &mut self,
         jar_before_transfer: Jar,
         withdrawn_amount: TokenAmount,
-    ) -> TokenAmount {
+    ) -> U128 {
         self.after_withdraw_internal(jar_before_transfer, withdrawn_amount, is_promise_success())
     }
 }
@@ -91,7 +92,7 @@ impl WithdrawCallbacks for Contract {
 #[near_bindgen]
 impl Contract {
     #[private]
-    fn transfer_withdraw(&mut self, account_id: &AccountId, amount: TokenAmount, jar: &Jar) -> PromiseOrValue<TokenAmount> {
+    fn transfer_withdraw(&mut self, account_id: &AccountId, amount: TokenAmount, jar: &Jar) -> PromiseOrValue<U128> {
         let product = self.get_product(&jar.product_id);
         let fee = product.withdrawal_fee.map(|fee| match fee {
             WithdrawalFee::Fix(amount) => amount,
@@ -113,8 +114,8 @@ impl Contract {
         jar_before_transfer: Jar,
         withdrawn_amount: TokenAmount,
         is_promise_success: bool,
-    ) -> TokenAmount {
-        if is_promise_success {
+    ) -> U128 {
+        let result = if is_promise_success {
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();
             let jar = jar_before_transfer.withdrawn(&product, withdrawn_amount, now);
@@ -126,7 +127,9 @@ impl Contract {
             self.jars.replace(jar_before_transfer.index, jar_before_transfer.unlocked());
 
             0
-        }
+        };
+
+        U128(result)
     }
 }
 
