@@ -1,5 +1,5 @@
 use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
-use near_sdk::json_types::{U128};
+use near_sdk::json_types::{U128, U64};
 
 use crate::*;
 use crate::assert::{assert_is_mature, assert_sufficient_balance};
@@ -116,7 +116,7 @@ impl Contract {
     ) -> TokenAmount {
         if is_promise_success {
             let product = self.get_product(&jar_before_transfer.product_id);
-            let now = env::block_timestamp_ms();
+            let now = U64(env::block_timestamp_ms());
             let jar = jar_before_transfer.withdrawn(&product, withdrawn_amount, now);
 
             self.jars.replace(jar_before_transfer.index, jar.unlocked());

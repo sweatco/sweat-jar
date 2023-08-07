@@ -1,9 +1,10 @@
 use std::cmp;
 
-use near_sdk::{AccountId, env, near_bindgen};
+use near_sdk::{AccountId, env, near_bindgen, require};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::json_types::U64;
 use near_sdk::serde::{Deserialize, Serialize};
-use crate::common::{u64_dec_format, u128_dec_format, MINUTES_IN_YEAR, UDecimal};
+use crate::common::{u128_dec_format, MINUTES_IN_YEAR, UDecimal};
 
 use crate::*;
 use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
@@ -19,7 +20,6 @@ pub struct Jar {
     pub index: JarIndex,
     pub account_id: AccountId,
     pub product_id: ProductId,
-    #[serde(with = "u64_dec_format")]
     pub created_at: Timestamp,
     #[serde(with = "u128_dec_format")]
     pub principal: TokenAmount,
@@ -35,7 +35,6 @@ pub struct Jar {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarCache {
-    #[serde(with = "u64_dec_format")]
     pub updated_at: Timestamp,
     #[serde(with = "u128_dec_format")]
     pub interest: TokenAmount,
@@ -115,7 +114,7 @@ impl Jar {
     }
 
     pub(crate) fn topped_up(&self, amount: TokenAmount, product: &Product, now: Timestamp) -> Self {
-        let current_interest = self.get_interest(product, now);
+        let current_interest = self.get_interest(product, now.0);
         Self {
             principal: self.principal + amount,
             cache: Some(JarCache {
@@ -149,7 +148,7 @@ impl Jar {
         withdrawn_amount: TokenAmount,
         now: Timestamp,
     ) -> Self {
-        let current_interest = self.get_interest(product, now);
+        let current_interest = self.get_interest(product, now.0);
         let state = get_final_state(product, self, withdrawn_amount);
 
         Self {
@@ -163,20 +162,20 @@ impl Jar {
         }
     }
 
-    pub(crate) fn is_mature(&self, product: &Product, now: Timestamp) -> bool {
-        now - self.created_at > product.lockup_term
+    pub(crate) fn is_mature(&self, product: &Product, now_ms: u64) -> bool {
+        now_ms - self.created_at.0 > product.lockup_term.0
     }
 
-    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> TokenAmount {
+    pub(crate) fn get_interest(&self, product: &Product, now_ms: u64) -> TokenAmount {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
-            (cache.updated_at, cache.interest)
+            (cache.updated_at.0, cache.interest)
         } else {
-            (self.created_at, 0)
+            (self.created_at.0, 0)
         };
-        let until_date = if product.lockup_term > 0 {
-            cmp::min(now, self.created_at + product.lockup_term)
+        let until_date = if product.lockup_term.0 > 0 {
+            cmp::min(now_ms, self.created_at.0 + product.lockup_term.0)
         } else {
-            now
+            now_ms
         };
 
         let term_in_minutes = ((until_date - base_date) / MS_IN_MINUTE) as u128;
@@ -223,7 +222,7 @@ impl JarApi for Contract {
         }
 
         let index = self.jars.len() as JarIndex;
-        let now = env::block_timestamp_ms();
+        let now = U64(env::block_timestamp_ms());
         let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
 
         self.save_jar(&account_id, &jar);
@@ -241,10 +240,10 @@ impl JarApi for Contract {
 
         let product = self.get_product(&jar.product_id);
 
-        assert!(product.is_restakable, "The product doesn't support restaking");
+        require!(product.is_restakable, "The product doesn't support restaking");
 
-        let now = env::block_timestamp_ms();
-        assert!(jar.is_mature(&product, now), "The jar is not mature yet");
+        let now = U64(env::block_timestamp_ms());
+        require!(jar.is_mature(&product, now.0), "The jar is not mature yet");
 
         let index = self.jars.len() as JarIndex;
         let new_jar = Jar::create(index, jar.account_id.clone(), jar.product_id.clone(), jar.principal, now);
@@ -263,7 +262,7 @@ impl JarApi for Contract {
 
         assert!(product.is_refillable, "The product doesn't allow top-ups");
 
-        let now = env::block_timestamp_ms();
+        let now = U64(env::block_timestamp_ms());
         let topped_up_jar = jar.topped_up(amount, &product, now);
 
         self.jars.replace(jar_index, topped_up_jar.clone());
@@ -330,6 +329,7 @@ fn get_final_state(product: &Product, original_jar: &Jar, withdrawn_amount: Toke
 #[cfg(test)]
 mod tests {
     use near_sdk::AccountId;
+    use near_sdk::json_types::U64;
 
     use crate::jar::Jar;
     use crate::product::tests::get_product;
@@ -337,7 +337,13 @@ mod tests {
     #[test]
     fn get_interest_before_maturity() {
         let product = get_product();
-        let jar = Jar::create(0, AccountId::new_unchecked("alice".to_string()), product.clone().id, 100_000_000, 0);
+        let jar = Jar::create(
+            0,
+            AccountId::new_unchecked("alice".to_string()),
+            product.clone().id,
+            100_000_000,
+            U64(0),
+        );
 
         let interest = jar.get_interest(&product, 365 * 24 * 60 * 60 * 1000);
         assert_eq!(12_000_000, interest);
@@ -346,7 +352,13 @@ mod tests {
     #[test]
     fn get_interest_after_maturity() {
         let product = get_product();
-        let jar = Jar::create(0, AccountId::new_unchecked("alice".to_string()), product.clone().id, 100_000_000, 0);
+        let jar = Jar::create(
+            0,
+            AccountId::new_unchecked("alice".to_string()),
+            product.clone().id,
+            100_000_000,
+            U64(0),
+        );
 
         let interest = jar.get_interest(&product, 400 * 24 * 60 * 60 * 1000);
         assert_eq!(12_000_000, interest);

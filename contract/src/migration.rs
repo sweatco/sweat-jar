@@ -3,7 +3,7 @@ use near_sdk::__private::schemars::Set;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
 use crate::common::{Timestamp, TokenAmount};
-use crate::common::{u64_dec_format, u128_dec_format};
+use crate::common::{u128_dec_format};
 use crate::*;
 use crate::event::{emit, EventKind, MigrationEventItem};
 use crate::product::ProductId;
@@ -17,7 +17,6 @@ pub struct CeFiJar {
     pub product_id: ProductId,
     #[serde(with = "u128_dec_format")]
     pub principal: TokenAmount,
-    #[serde(with = "u64_dec_format")]
     pub created_at: Timestamp,
 }
 
