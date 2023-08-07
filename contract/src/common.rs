@@ -34,6 +34,10 @@ impl UDecimal {
     pub(crate) fn mul(&self, value: u128) -> u128 {
         value * self.significand / 10u128.pow(self.exponent)
     }
+
+    pub(crate) fn to_f32(&self) -> f32 {
+        self.significand as f32 / 10u128.pow(self.exponent) as f32
+    }
 }
 
 impl UDecimal {
@@ -49,6 +53,7 @@ impl UDecimal {
 pub(crate) mod tests {
     use near_sdk::{AccountId, Balance, testing_env};
     use near_sdk::test_utils::VMContextBuilder;
+    use crate::common::UDecimal;
 
     use crate::Contract;
 
@@ -124,5 +129,13 @@ pub(crate) mod tests {
 
     fn minutes_to_nano_ms(minutes: u64) -> u64 {
         minutes * 60 * u64::pow(10, 9)
+    }
+
+    #[test]
+    fn udecimal_to_f32() {
+        let udecimal = UDecimal::new(12, 2);
+        let float_value = udecimal.to_f32();
+
+        assert_eq!(0.12, float_value);
     }
 }
