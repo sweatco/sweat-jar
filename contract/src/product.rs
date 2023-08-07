@@ -4,7 +4,6 @@ use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::*;
 use crate::common::{Duration, TokenAmount, UDecimal};
-use crate::common::{u128_dec_format};
 use crate::event::{emit, EventKind};
 
 pub type ProductId = String;
@@ -27,7 +26,7 @@ pub struct Product {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFee {
-    Fix(#[serde(with = "u128_dec_format")] TokenAmount),
+    Fix(TokenAmount),
     Percent(UDecimal),
 }
 
@@ -51,15 +50,13 @@ pub struct DowngradableApy {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Cap {
-    #[serde(with = "u128_dec_format")]
     pub min: TokenAmount,
-    #[serde(with = "u128_dec_format")]
     pub max: TokenAmount,
 }
 
 impl Product {
     pub(crate) fn is_flexible(&self) -> bool {
-        self.lockup_term.0 == 0
+        self.lockup_term == 0
     }
 }
 
@@ -85,14 +82,13 @@ impl ProductApi for Contract {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use near_sdk::json_types::U64;
     use crate::common::UDecimal;
     use crate::product::{Apy, Cap, DowngradableApy, Product};
 
     pub(crate) fn get_product() -> Product {
         Product {
             id: "product".to_string(),
-            lockup_term: U64(365 * 24 * 60 * 60 * 1000),
+            lockup_term: 365 * 24 * 60 * 60 * 1000,
             is_refillable: false,
             apy: Apy::Constant(UDecimal::new(12, 2)),
             cap: Cap {
@@ -108,7 +104,7 @@ pub(crate) mod tests {
     pub(crate) fn get_premium_product() -> Product {
         Product {
             id: "product_premium".to_string(),
-            lockup_term: U64(365 * 24 * 60 * 60 * 1000),
+            lockup_term: 365 * 24 * 60 * 60 * 1000,
             is_refillable: false,
             apy: Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(20, 2),

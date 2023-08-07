@@ -40,16 +40,16 @@ impl FungibleTokenReceiver for Contract {
                 self.create_jar(
                     receiver_id,
                     message.product_id,
-                    amount.0,
+                    amount,
                     message.signature,
                 );
             }
             FtMessage::Migrate(jars) => {
                 self.assert_admin();
-                self.migrate_jars(jars, amount.0);
+                self.migrate_jars(jars, amount);
             }
             FtMessage::TopUp(jar_index) => {
-                self.top_up(jar_index, amount.0);
+                self.top_up(jar_index, amount);
             }
         }
 

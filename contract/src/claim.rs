@@ -1,12 +1,11 @@
 use std::cmp;
 use near_sdk::{env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
-use near_sdk::json_types::U64;
 use crate::*;
 use crate::common::TokenAmount;
 use crate::event::{ClaimEventItem, emit, EventKind};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::ft_interface::FungibleTokenInterface;
-use crate::jar::{Jar, JarApi, JarIndex};
+use crate::jar::{Jar, JarIndex};
 
 pub trait ClaimApi {
     fn claim_total(&mut self) -> PromiseOrValue<TokenAmount>;
@@ -47,7 +46,7 @@ impl ClaimApi for Contract {
 
         let jar_ids_iter = jar_indices.iter();
         let unlocked_jars: Vec<Jar> = jar_ids_iter
-            .map(|index| self.get_jar(*index))
+            .map(|index| self.get_jar_internal(*index))
             .filter(|jar| !jar.is_pending_withdraw)
             .filter(|jar| jar.account_id == account_id)
             .collect();
@@ -63,7 +62,7 @@ impl ClaimApi for Contract {
                 get_interest_to_claim(available_interest, total_interest_to_claim);
 
             let updated_jar = jar
-                .claimed(available_interest, interest_to_claim, U64(now))
+                .claimed(available_interest, interest_to_claim, now)
                 .locked();
             self.jars.replace(jar.index, updated_jar);
 
@@ -95,7 +94,7 @@ impl ClaimCallbacks for Contract {
     fn after_claim(&mut self, jars_before_transfer: Vec<Jar>) {
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer.iter() {
-                let jar = self.get_jar(jar_before_transfer.index);
+                let jar = self.get_jar_internal(jar_before_transfer.index);
 
                 self.jars.replace(jar_before_transfer.index, jar.unlocked());
             }

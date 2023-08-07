@@ -137,7 +137,7 @@ impl PenaltyApi for Contract {
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
         self.assert_admin();
 
-        let jar = self.get_jar(jar_index);
+        let jar = self.get_jar_internal(jar_index);
         let product = self.get_product(&jar.product_id);
 
         match product.apy {
@@ -152,6 +152,7 @@ impl PenaltyApi for Contract {
 
 #[cfg(test)]
 mod tests {
+    use near_sdk::json_types::U128;
     use near_sdk::test_utils::accounts;
 
     use common::tests::Context;
@@ -276,9 +277,9 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, 100, None);
+        context.contract.create_jar(alice.clone(), product.id, U128(100), None);
 
-        let principal = context.contract.get_total_principal(alice.clone());
+        let principal = context.contract.get_total_principal(alice.clone()).0;
         assert_eq!(principal, 100);
     }
 
@@ -294,11 +295,11 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.clone().id, 100, None);
-        context.contract.create_jar(alice.clone(), product.clone().id, 200, None);
-        context.contract.create_jar(alice.clone(), product.clone().id, 400, None);
+        context.contract.create_jar(alice.clone(), product.clone().id, U128(100), None);
+        context.contract.create_jar(alice.clone(), product.clone().id, U128(200), None);
+        context.contract.create_jar(alice.clone(), product.clone().id, U128(400), None);
 
-        let principal = context.contract.get_total_principal(alice.clone());
+        let principal = context.contract.get_total_principal(alice.clone()).0;
         assert_eq!(principal, 700);
     }
 
@@ -324,11 +325,11 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
+        context.contract.create_jar(alice.clone(), product.id, U128(100_000_000), None);
 
         context.set_block_timestamp_in_minutes(30);
 
-        let interest = context.contract.get_total_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 684);
     }
 
@@ -344,11 +345,11 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
+        context.contract.create_jar(alice.clone(), product.id, U128(100_000_000), None);
 
         context.set_block_timestamp_in_days(365);
 
-        let interest = context.contract.get_total_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 12_000_000);
     }
 
@@ -364,11 +365,11 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, 100_000_000, None);
+        context.contract.create_jar(alice.clone(), product.id, U128(100_000_000), None);
 
         context.set_block_timestamp_in_days(400);
 
-        let interest = context.contract.get_total_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 12_000_000);
     }
 
@@ -384,11 +385,11 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.clone().id, 100_000_000, None);
+        context.contract.create_jar(alice.clone(), product.clone().id, U128(100_000_000), None);
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_total_interest(alice.clone());
+        let mut interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 5_983_561);
 
         context.switch_account(&alice);
@@ -396,7 +397,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_total_interest(alice.clone());
+        interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 6_016_438);
     }
 
@@ -463,13 +464,14 @@ mod tests {
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
-            product.id, 100_000_000,
+            product.id,
+            U128(100_000_000),
             Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
         );
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_total_interest(alice.clone());
+        let mut interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 9_972_602);
 
         context.switch_account(&admin);
@@ -477,7 +479,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_total_interest(alice.clone());
+        interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 10_000_000);
     }
 }

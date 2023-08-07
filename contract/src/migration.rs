@@ -1,9 +1,9 @@
 use near_sdk::{AccountId, near_bindgen, require};
 use near_sdk::__private::schemars::Set;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
 use crate::common::{Timestamp, TokenAmount};
-use crate::common::{u128_dec_format};
 use crate::*;
 use crate::event::{emit, EventKind, MigrationEventItem};
 use crate::product::ProductId;
@@ -15,7 +15,6 @@ pub struct CeFiJar {
     pub id: String,
     pub account_id: AccountId,
     pub product_id: ProductId,
-    #[serde(with = "u128_dec_format")]
     pub principal: TokenAmount,
     pub created_at: Timestamp,
 }
@@ -23,7 +22,7 @@ pub struct CeFiJar {
 #[near_bindgen]
 impl Contract {
     #[private]
-    pub fn migrate_jars(&mut self, jars: Vec<CeFiJar>, total_received: TokenAmount) {
+    pub fn migrate_jars(&mut self, jars: Vec<CeFiJar>, total_received: U128) {
         let mut event_data: Vec<MigrationEventItem> = vec![];
         let mut total_amount: TokenAmount = 0;
 
@@ -73,7 +72,7 @@ impl Contract {
             );
         }
 
-        assert_eq!(total_received, total_amount, "Total received doesn't match the sum of principals");
+        assert_eq!(total_received.0, total_amount, "Total received doesn't match the sum of principals");
 
         emit(EventKind::Migration(event_data));
     }

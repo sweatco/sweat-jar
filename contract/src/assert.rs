@@ -26,6 +26,6 @@ pub(crate) fn assert_ownership(jar: &Jar, account_id: &AccountId) {
     );
 }
 
-pub(crate) fn assert_is_mature(jar: &Jar, product: &Product, now_ms: u64) {
-    require!(jar.is_mature(product, now_ms), "The jar is not mature yet");
+pub(crate) fn assert_is_mature(jar: &Jar, product: &Product, now: Timestamp) {
+    require!(jar.is_mature(product, now), "The jar is not mature yet");
 }

@@ -1,15 +1,14 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 
 pub(crate) const MINUTES_IN_YEAR: u64 = 365 * 24 * 60;
 pub(crate) const MS_IN_MINUTE: u64 = 1000 * 60;
 
 /// Milliseconds since the Unix epoch (January 1, 1970 (midnight UTC/GMT))
-pub type Timestamp = U64;
+pub type Timestamp = u64;
 
 /// Duration in milliseconds
-pub type Duration = U64;
+pub type Duration = u64;
 
 /// Amount of fungible tokens
 pub type TokenAmount = u128;
@@ -27,64 +26,22 @@ pub type TokenAmount = u128;
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct UDecimal {
-    pub significand: U128,
+    pub significand: u128,
     pub exponent: u32,
 }
 
 impl UDecimal {
     pub(crate) fn mul(&self, value: u128) -> u128 {
-        value * self.significand.0 / 10u128.pow(self.exponent)
+        value * self.significand / 10u128.pow(self.exponent)
     }
 }
 
 impl UDecimal {
     pub(crate) fn new(significand: u128, exponent: u32) -> Self {
         Self {
-            significand: U128(significand),
+            significand,
             exponent,
         }
-    }
-}
-
-pub mod u128_dec_format {
-    use near_sdk::serde::de;
-    use near_sdk::serde::{Deserialize, Deserializer, Serializer};
-
-    pub fn serialize<S>(num: &u128, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-    {
-        serializer.serialize_str(&num.to_string())
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<u128, D::Error>
-        where
-            D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer)?
-            .parse()
-            .map_err(de::Error::custom)
-    }
-}
-
-pub mod u64_dec_format {
-    use near_sdk::serde::de;
-    use near_sdk::serde::{Deserialize, Deserializer, Serializer};
-
-    pub fn serialize<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-    {
-        serializer.serialize_str(&num.to_string())
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<u64, D::Error>
-        where
-            D: Deserializer<'de>,
-    {
-        String::deserialize(deserializer)?
-            .parse()
-            .map_err(de::Error::custom)
     }
 }
 
