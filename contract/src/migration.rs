@@ -1,7 +1,7 @@
 use near_sdk::{AccountId, near_bindgen, require};
 use near_sdk::__private::schemars::Set;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::U128;
+use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 use crate::common::{Timestamp, TokenAmount};
 use crate::*;
@@ -15,8 +15,8 @@ pub struct CeFiJar {
     pub id: String,
     pub account_id: AccountId,
     pub product_id: ProductId,
-    pub principal: TokenAmount,
-    pub created_at: Timestamp,
+    pub principal: U128,
+    pub created_at: U64,
 }
 
 #[near_bindgen]
@@ -42,8 +42,8 @@ impl Contract {
                 index,
                 account_id: ce_fi_jar.account_id,
                 product_id: ce_fi_jar.product_id,
-                created_at: ce_fi_jar.created_at,
-                principal: ce_fi_jar.principal,
+                created_at: ce_fi_jar.created_at.0,
+                principal: ce_fi_jar.principal.0,
                 cache: None,
                 claimed_balance: 0,
                 is_pending_withdraw: false,
