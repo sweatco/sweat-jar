@@ -256,12 +256,12 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account alice doesn't have jars")]
     fn get_principle_with_no_jars() {
         let alice = accounts(0);
         let context = Context::new(vec![]);
 
-        context.contract.get_total_principal(alice);
+        let principal = context.contract.get_total_principal(alice);
+        assert_eq!(principal.0, 0);
     }
 
     #[test]
@@ -336,13 +336,13 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account alice doesn't have jars")]
     fn get_total_interest_with_no_jars() {
         let alice = accounts(0);
 
         let context = Context::new(vec![]);
 
-        context.contract.get_total_interest(alice);
+        let interest = context.contract.get_total_interest(alice);
+        assert_eq!(interest.0, 0);
     }
 
     #[test]

@@ -276,7 +276,7 @@ impl Contract {
         let product = self.get_product(&ticket.product_id);
         if let Some(pk) = product.public_key {
             let signature = signature.expect("Signature is required");
-            let last_jar_index = self.account_jars.get(&account_id)
+            let last_jar_index = self.account_jars.get(account_id)
                 .map_or_else(
                     || 0,
                     |jars| *jars.iter().max().unwrap(),

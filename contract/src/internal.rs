@@ -27,19 +27,19 @@ impl Contract {
     pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> Vec<JarIndex> {
         self.account_jars
             .get(account_id)
-            .unwrap_or_else(|| env::panic_str(format!("Account {} doesn't have jars", account_id).as_str()))
-            .iter()
-            .cloned()
-            .collect()
+            .map_or_else(
+                Vec::new,
+                |items| items.iter().cloned().collect(),
+            )
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: &Jar) {
         self.insert_or_update_jar(jar);
 
         let mut indices = self.account_jars
-            .get(&account_id)
+            .get(account_id)
             .map_or_else(
-                || HashSet::<JarIndex>::new(),
+                HashSet::new,
                 |value| value.clone(),
             );
         indices.insert(jar.index);
