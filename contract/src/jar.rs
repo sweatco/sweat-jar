@@ -446,9 +446,9 @@ mod signature_tests {
     use near_sdk::test_utils::accounts;
     use crate::common::tests::Context;
     use crate::jar::JarTicket;
-    use crate::product::model::*;
     use crate::product::api::*;
-    use crate::product::tests::{get_premium_product, get_product};
+    use crate::product::command::RegisterProductCommand;
+    use crate::product::tests::{get_register_premium_product_command, get_register_product_command};
 
     // Signature for structure (value -> utf8 bytes):
     // contract_id: "owner" -> [111, 119, 110, 101, 114]
@@ -479,7 +479,7 @@ mod signature_tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        context.contract.register_product(get_premium_product());
+        context.contract.register_product(get_register_premium_product_command());
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -496,7 +496,7 @@ mod signature_tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        context.contract.register_product(get_premium_product());
+        context.contract.register_product(get_register_premium_product_command());
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -516,11 +516,11 @@ mod signature_tests {
 
         context.switch_account(&admin);
 
-        let product = Product {
+        let command = RegisterProductCommand {
             id: "another_product".to_string(),
-            ..get_premium_product()
+            ..get_register_premium_product_command()
         };
-        context.contract.register_product(product);
+        context.contract.register_product(command);
 
         let ticket = JarTicket {
             product_id: "another_product".to_string(),
@@ -545,7 +545,7 @@ mod signature_tests {
 
         context.switch_account(&admin);
         context.set_block_timestamp_in_days(365);
-        context.contract.register_product(get_premium_product());
+        context.contract.register_product(get_register_premium_product_command());
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -578,7 +578,7 @@ mod signature_tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        context.contract.register_product(get_premium_product());
+        context.contract.register_product(get_register_premium_product_command());
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -594,7 +594,7 @@ mod signature_tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        context.contract.register_product(get_product());
+        context.contract.register_product(get_register_product_command());
 
         let ticket = JarTicket {
             product_id: "product".to_string(),

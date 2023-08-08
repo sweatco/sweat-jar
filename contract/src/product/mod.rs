@@ -5,8 +5,17 @@ pub mod view;
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use near_sdk::json_types::{Base64VecU8, U128, U64};
     use crate::common::UDecimal;
+    use crate::product::command::RegisterProductCommand;
     use crate::product::model::{Apy, Cap, DowngradableApy, Product};
+
+    fn get_premium_product_public_key() -> Vec<u8> {
+        vec![
+            33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109,
+            48, 82, 50, 35, 197, 176, 50, 211, 183, 128, 207, 1, 8, 68,
+        ]
+    }
 
     pub(crate) fn get_product() -> Product {
         Product {
@@ -19,6 +28,21 @@ pub(crate) mod tests {
                 max: 100_000_000_000,
             },
             is_restakable: false,
+            withdrawal_fee: None,
+            public_key: None,
+        }
+    }
+
+    pub(crate) fn get_register_product_command() -> RegisterProductCommand {
+        RegisterProductCommand {
+            id: "product".to_string(),
+            lockup_term: U64(365 * 24 * 60 * 60 * 1000),
+            apy_default: (U128(12), 2),
+            apy_fallback: None,
+            cap_min: U128(100),
+            cap_max: U128(100_000_000_000),
+            is_restakable: false,
+            is_refillable: false,
             withdrawal_fee: None,
             public_key: None,
         }
@@ -39,10 +63,22 @@ pub(crate) mod tests {
             },
             is_restakable: false,
             withdrawal_fee: None,
-            public_key: Some(vec![
-                33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109,
-                48, 82, 50, 35, 197, 176, 50, 211, 183, 128, 207, 1, 8, 68,
-            ]),
+            public_key: Some(get_premium_product_public_key()),
+        }
+    }
+
+    pub(crate) fn get_register_premium_product_command() -> RegisterProductCommand {
+        RegisterProductCommand {
+            id: "product_premium".to_string(),
+            lockup_term: U64(365 * 24 * 60 * 60 * 1000),
+            apy_default: (U128(20), 2),
+            apy_fallback: Some((U128(10), 2)),
+            cap_min: U128(100),
+            cap_max: U128(100_000_000_000),
+            is_restakable: false,
+            is_refillable: false,
+            withdrawal_fee: None,
+            public_key: Some(Base64VecU8(get_premium_product_public_key())),
         }
     }
 

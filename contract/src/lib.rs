@@ -158,7 +158,7 @@ mod tests {
 
     use crate::claim::ClaimApi;
     use crate::jar::JarTicket;
-    use crate::product::tests::{get_premium_product, get_product};
+    use crate::product::tests::{get_premium_product, get_product, get_register_premium_product_command, get_register_product_command};
     use crate::product::api::*;
 
     use super::*;
@@ -239,7 +239,7 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        context.contract.register_product(get_product());
+        context.contract.register_product(get_register_product_command());
 
         let products = context.contract.get_products();
         assert_eq!(products.len(), 1);
@@ -252,7 +252,7 @@ mod tests {
         let admin = accounts(0);
         let mut context = Context::new(vec![admin]);
 
-        context.contract.register_product(get_product());
+        context.contract.register_product(get_register_product_command());
     }
 
     #[test]
@@ -273,14 +273,13 @@ mod tests {
 
         context.switch_account(&admin);
 
-        let product = get_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_product_command());
 
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
             JarTicket {
-                product_id: product.id,
+                product_id: get_product().id,
                 valid_until: 0,
             },
             U128(100),
@@ -299,9 +298,9 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
         context.switch_account(&admin);
 
-        let product = get_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_product_command());
 
+        let product = get_product();
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
@@ -324,7 +323,7 @@ mod tests {
         context.contract.create_jar(
             alice.clone(),
             JarTicket {
-                product_id: product.clone().id,
+                product_id: product.id,
                 valid_until: 0,
             },
             U128(400),
@@ -353,14 +352,13 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        let product = get_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_product_command());
 
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
             JarTicket {
-                product_id: product.id,
+                product_id: get_product().id,
                 valid_until: 0,
             },
             U128(100_000_000),
@@ -381,14 +379,13 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        let product = get_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_product_command());
 
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
             JarTicket {
-                product_id: product.id,
+                product_id: get_product().id,
                 valid_until: 0,
             },
             U128(100_000_000),
@@ -409,14 +406,13 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        let product = get_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_product_command());
 
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
             JarTicket {
-                product_id: product.id,
+                product_id: get_product().id,
                 valid_until: 0,
             },
             U128(100_000_000),
@@ -437,14 +433,13 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        let product = get_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_product_command());
 
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
             JarTicket {
-                product_id: product.id,
+                product_id: get_product().id,
                 valid_until: 0,
             },
             U128(100_000_000),
@@ -473,26 +468,24 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        let product = get_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_product_command());
 
-        let result = context.contract.is_authorized_for_product(&alice, &product.id, None);
+        let result = context.contract.is_authorized_for_product(&alice, &get_product().id, None);
         assert!(result);
     }
 
     #[test]
     #[should_panic(expected = "Signature is required for private products")]
-    fn check_authorization_for_private_product_without_signature() {
+    fn check_authorization_for_premium_product_without_signature() {
         let alice = accounts(0);
         let admin = accounts(1);
 
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        let product = get_premium_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_premium_product_command());
 
-        context.contract.is_authorized_for_product(&alice, &product.id, None);
+        context.contract.is_authorized_for_product(&alice, &get_premium_product().id, None);
     }
 
     #[test]
@@ -503,9 +496,9 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         context.switch_account(&admin);
-        let product = get_premium_product();
-        context.contract.register_product(product.clone());
+        context.contract.register_product(get_register_premium_product_command());
 
+        let product = get_premium_product();
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
