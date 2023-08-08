@@ -3,7 +3,7 @@ use near_sdk::__private::schemars::Set;
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
-use crate::common::{Timestamp, TokenAmount};
+use crate::common::TokenAmount;
 use crate::*;
 use crate::event::{emit, EventKind, MigrationEventItem};
 use crate::product::ProductId;
@@ -55,7 +55,7 @@ impl Contract {
 
             let mut account_jars = self.account_jars.get(&jar.account_id)
                 .map_or_else(
-                    || HashSet::new(),
+                    HashSet::new,
                     |result| result.clone(),
                 );
             account_jars.insert(jar.index);

@@ -2,6 +2,7 @@ use std::cmp;
 
 use near_sdk::{AccountId, env, near_bindgen, require};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::env::sha256;
 use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 use crate::common::{MINUTES_IN_YEAR, UDecimal};
@@ -12,6 +13,14 @@ use crate::event::{emit, EventKind};
 use crate::product::{Apy, Product, ProductId};
 
 pub type JarIndex = u32;
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
+pub struct JarTicket {
+    pub product_id: String,
+    pub valid_until: Timestamp,
+}
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -72,14 +81,6 @@ pub enum JarState {
 }
 
 pub trait JarApi {
-    fn create_jar(
-        &mut self,
-        account_id: AccountId,
-        product_id: ProductId,
-        amount: U128,
-        signature: Option<String>,
-    ) -> JarView;
-
     fn restake(&mut self, jar_index: JarIndex) -> JarView;
 
     fn top_up(&mut self, jar_index: JarIndex, amount: U128) -> U128;
@@ -224,34 +225,19 @@ impl Jar {
 }
 
 impl Contract {
-    pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
-        self.jars
-            .get(index)
-            .map_or_else(
-                || env::panic_str(format!("Jar on index {} doesn't exist", index).as_str()),
-                |value| value.clone(),
-            )
-    }
-}
-
-// TODO: extract private api
-#[near_bindgen]
-impl JarApi for Contract {
-    #[private]
-    fn create_jar(
+    pub(crate) fn create_jar(
         &mut self,
         account_id: AccountId,
-        product_id: ProductId,
+        ticket: JarTicket,
         amount: U128,
-        signature: Option<String>,
+        signature: Option<Base64VecU8>,
     ) -> JarView {
         let amount = amount.0;
+        let product_id = ticket.clone().product_id;
         let product = self.get_product(&product_id);
         let cap = product.cap;
 
-        if !self.is_authorized_for_product(&account_id, &product_id, signature) {
-            env::panic_str("Signature is invalid");
-        }
+        self.verify(&ticket, signature);
 
         if cap.min > amount || amount > cap.max {
             env::panic_str(format!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max).as_str());
@@ -268,6 +254,51 @@ impl JarApi for Contract {
         jar.into()
     }
 
+    pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
+        self.jars
+            .get(index)
+            .map_or_else(
+                || env::panic_str(format!("Jar on index {} doesn't exist", index).as_str()),
+                |value| value.clone(),
+            )
+    }
+
+    pub(crate) fn verify(&self, ticket: &JarTicket, signature: Option<Base64VecU8>) {
+        let product = self.get_product(&ticket.product_id);
+        if let Some(pk) = product.public_key {
+            let signature = signature.expect("Signature is required");
+            let account_id = env::predecessor_account_id();
+            let last_jar_index = self.account_jars.get(&account_id)
+                .map_or_else(
+                    || 0,
+                    |jars| *jars.iter().max().unwrap(),
+                );
+
+            let hash = sha256([
+                env::current_account_id().as_bytes(),
+                account_id.as_bytes(),
+                ticket.product_id.as_bytes(),
+                last_jar_index.to_string().as_bytes(),
+                ticket.valid_until.to_string().as_bytes(),
+            ].concat().as_slice());
+
+            let signature = Signature::from_bytes(signature.0.as_slice()).expect("Invalid signature");
+            let is_signature_valid = PublicKey::from_bytes(pk.as_slice())
+                .expect("Public key is invalid")
+                .verify_strict(hash.as_slice(), &signature)
+                .is_ok();
+
+            require!(is_signature_valid, "Not matching signature");
+
+            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until;
+
+            require!(is_time_valid, "Ticket is outdated");
+        }
+    }
+}
+
+#[near_bindgen]
+impl JarApi for Contract {
     fn restake(&mut self, jar_index: JarIndex) -> JarView {
         let jar = self.get_jar_internal(jar_index);
         let account_id = env::predecessor_account_id();
@@ -363,7 +394,6 @@ fn get_final_state(product: &Product, original_jar: &Jar, withdrawn_amount: Toke
 #[cfg(test)]
 mod tests {
     use near_sdk::AccountId;
-
     use crate::jar::Jar;
     use crate::product::tests::get_product;
 
@@ -395,5 +425,170 @@ mod tests {
 
         let interest = jar.get_interest(&product, 400 * 24 * 60 * 60 * 1000);
         assert_eq!(12_000_000, interest);
+    }
+}
+
+#[cfg(test)]
+mod signature_tests {
+
+    use near_sdk::json_types::Base64VecU8;
+    use near_sdk::test_utils::accounts;
+    use crate::common::tests::Context;
+    use crate::jar::JarTicket;
+    use crate::product::{Product, ProductApi};
+    use crate::product::tests::{get_premium_product, get_product};
+
+    // Signature for structure (value -> utf8 bytes):
+    // contract_id: "owner" -> [111, 119, 110, 101, 114]
+    // account_id: "alice" -> [97, 108, 105, 99, 101]
+    // product_id: "product_premium" -> [112, 114, 111, 100, 117, 99, 116, 95, 112, 114, 101, 109, 105, 117, 109]
+    // last_jar_index: "0" -> [48]
+    // valid_until: "100000000" -> [49, 48, 48, 48, 48, 48, 48, 48, 48]
+    // ***
+    // result array: [111, 119, 110, 101, 114, 97, 108, 105, 99, 101, 112, 114, 111, 100, 117, 99, 116, 95, 112, 114, 101, 109, 105, 117, 109, 48, 49, 48, 48, 48, 48, 48, 48, 48, 48]
+    // sha256(result array): [215, 21, 45, 17, 130, 29, 202, 184, 32, 68, 245, 243, 252, 94, 251, 83, 166, 116, 97, 178, 137, 220, 227, 111, 162, 244, 203, 68, 178, 75, 140, 91]
+    // ***
+    // Secret: [87, 86, 114, 129, 25, 247, 248, 94, 16, 119, 169, 202, 195, 11, 187, 107, 195, 182, 205, 70, 189, 120, 214, 228, 208, 115, 234, 0, 244, 21, 218, 113]
+    // Pk: [33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109, 48, 82, 50, 35, 197, 176, 50, 211, 183, 128, 207, 1, 8, 68]
+    // ***
+    // SIGNATURE: [126, 76, 136, 40, 234, 193, 197, 143, 119, 86, 135, 170, 247, 130, 173, 154, 88, 43, 224, 78, 2, 2, 67, 243, 189, 28, 138, 43, 92, 93, 147, 187, 200, 62, 118, 158, 164, 108, 140, 154, 144, 147, 250, 112, 234, 255, 248, 213, 107, 224, 201, 147, 186, 233, 120, 56, 21, 160, 85, 204, 135, 240, 61, 13]
+    fn get_valid_signature() -> Vec<u8> {
+        vec![
+            126, 76, 136, 40, 234, 193, 197, 143, 119, 86, 135, 170, 247, 130, 173, 154, 88, 43,
+            224, 78, 2, 2, 67, 243, 189, 28, 138, 43, 92, 93, 147, 187, 200, 62, 118, 158, 164, 108,
+            140, 154, 144, 147, 250, 112, 234, 255, 248, 213, 107, 224, 201, 147, 186, 233, 120, 56,
+            21, 160, 85, 204, 135, 240, 61, 13,
+        ]
+    }
+
+    #[test]
+    fn verify_ticket_with_valid_signature_and_date() {
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
+        context.contract.register_product(get_premium_product());
+
+        let ticket = JarTicket {
+            product_id: "product_premium".to_string(),
+            valid_until: 100000000,
+        };
+
+        context.contract.verify(&ticket, Some(Base64VecU8(get_valid_signature())));
+    }
+
+    #[test]
+    #[should_panic(expected = "Invalid signature")]
+    fn verify_ticket_with_invalid_signature() {
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
+        context.contract.register_product(get_premium_product());
+
+        let ticket = JarTicket {
+            product_id: "product_premium".to_string(),
+            valid_until: 100000000,
+        };
+
+        let signature: Vec<u8> = vec![0, 1, 2];
+
+        context.contract.verify(&ticket, Some(Base64VecU8(signature)));
+    }
+
+    #[test]
+    #[should_panic(expected = "Not matching signature")]
+    fn verify_ticket_with_not_matching_signature() {
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
+
+        let product = Product {
+            id: "another_product".to_string(),
+            ..get_premium_product()
+        };
+        context.contract.register_product(product);
+
+        let ticket = JarTicket {
+            product_id: "another_product".to_string(),
+            valid_until: 100000000,
+        };
+
+        let signature: Vec<u8> = [
+            68, 119, 102, 0, 228, 169, 156, 208, 85, 165, 203, 130, 184, 28, 97, 129, 46, 72, 145,
+            7, 129, 127, 17, 57, 153, 97, 38, 47, 101, 170, 168, 138, 44, 16, 162, 144, 53, 122,
+            188, 128, 118, 102, 133, 165, 195, 42, 182, 22, 231, 99, 96, 72, 4, 79, 85, 143, 165,
+            10, 200, 44, 160, 90, 120, 14
+        ].to_vec();
+
+        context.contract.verify(&ticket, Some(Base64VecU8(signature)));
+    }
+
+    #[test]
+    #[should_panic(expected = "Ticket is outdated")]
+    fn verify_ticket_with_invalid_date() {
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
+        context.set_block_timestamp_in_days(365);
+        context.contract.register_product(get_premium_product());
+
+        let ticket = JarTicket {
+            product_id: "product_premium".to_string(),
+            valid_until: 100000000,
+        };
+
+        context.contract.verify(&ticket, Some(Base64VecU8(get_valid_signature())));
+    }
+
+    #[test]
+    #[should_panic(expected = "Product product_premium doesn't exist")]
+    fn verify_ticket_with_not_existing_product() {
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
+
+        let ticket = JarTicket {
+            product_id: "product_premium".to_string(),
+            valid_until: 100000000,
+        };
+
+        context.contract.verify(&ticket, Some(Base64VecU8(get_valid_signature())));
+    }
+
+    #[test]
+    #[should_panic(expected = "Signature is required")]
+    fn verify_ticket_without_signature_when_required() {
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
+        context.contract.register_product(get_premium_product());
+
+        let ticket = JarTicket {
+            product_id: "product_premium".to_string(),
+            valid_until: 100000000,
+        };
+
+        context.contract.verify(&ticket, None);
+    }
+
+    #[test]
+    fn verify_ticket_without_signature_when_not_required() {
+        let admin = accounts(0);
+        let mut context = Context::new(vec![admin.clone()]);
+
+        context.switch_account(&admin);
+        context.contract.register_product(get_product());
+
+        let ticket = JarTicket {
+            product_id: "product".to_string(),
+            valid_until: 0,
+        };
+
+        context.contract.verify(&ticket, None);
     }
 }

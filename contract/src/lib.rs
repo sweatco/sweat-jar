@@ -1,9 +1,8 @@
-use std::str::FromStr;
-
 use ed25519_dalek::{PublicKey, Signature};
 use near_sdk::{AccountId, assert_one_yocto, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::borsh::maybestd::collections::HashSet;
+use near_sdk::json_types::Base64VecU8;
 use near_sdk::store::{LookupMap, UnorderedMap, UnorderedSet, Vector};
 
 use ft_interface::FungibleTokenInterface;
@@ -90,17 +89,17 @@ impl Contract {
         &self,
         account_id: &AccountId,
         product_id: &ProductId,
-        signature: Option<String>,
+        signature: Option<Vec<u8>>,
     ) -> bool {
-        let product = self.get_product(&product_id);
+        let product = self.get_product(product_id);
 
         if let Some(pk) = product.public_key {
             let signature = match signature {
-                Some(ref s) => Signature::from_str(s).expect("Invalid signature"),
+                Some(ref s) => Signature::from_bytes(s).expect("Invalid signature"),
                 None => env::panic_str("Signature is required for private products"),
             };
 
-            PublicKey::from_bytes(pk.clone().as_slice())
+            PublicKey::from_bytes(pk.as_slice())
                 .expect("Public key is invalid")
                 .verify_strict(account_id.as_bytes(), &signature)
                 .is_ok()
@@ -158,6 +157,7 @@ mod tests {
     use common::tests::Context;
 
     use crate::claim::ClaimApi;
+    use crate::jar::JarTicket;
     use crate::product::ProductApi;
     use crate::product::tests::{get_premium_product, get_product};
 
@@ -176,7 +176,7 @@ mod tests {
         let admins = context.contract.get_admin_allowlist();
 
         assert_eq!(2, admins.len());
-        assert!(admins.contains(&alice.clone()));
+        assert!(admins.contains(&alice));
     }
 
     #[test]
@@ -185,7 +185,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(vec![admin]);
         context.switch_account(&alice);
 
         context.contract.add_admin(alice.clone());
@@ -197,7 +197,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(vec![admin]);
         context.switch_account(&alice);
         context.with_deposit_yocto(1);
 
@@ -217,7 +217,7 @@ mod tests {
         let admins = context.contract.get_admin_allowlist();
 
         assert_eq!(1, admins.len());
-        assert!(!admins.contains(&alice.clone()));
+        assert!(!admins.contains(&alice));
     }
 
     #[test]
@@ -230,7 +230,7 @@ mod tests {
         context.switch_account(&alice);
         context.with_deposit_yocto(1);
 
-        context.contract.remove_admin(admin.clone());
+        context.contract.remove_admin(admin);
     }
 
     #[test]
@@ -250,7 +250,7 @@ mod tests {
     #[should_panic(expected = "Can be performed only by admin")]
     fn add_product_to_list_by_not_admin() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(vec![admin]);
 
         context.contract.register_product(get_product());
     }
@@ -277,9 +277,17 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, U128(100), None);
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.id,
+                valid_until: 0,
+            },
+            U128(100),
+            None,
+        );
 
-        let principal = context.contract.get_total_principal(alice.clone()).0;
+        let principal = context.contract.get_total_principal(alice).0;
         assert_eq!(principal, 100);
     }
 
@@ -295,11 +303,35 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.clone().id, U128(100), None);
-        context.contract.create_jar(alice.clone(), product.clone().id, U128(200), None);
-        context.contract.create_jar(alice.clone(), product.clone().id, U128(400), None);
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.clone().id,
+                valid_until: 0,
+            },
+            U128(100),
+            None,
+        );
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.clone().id,
+                valid_until: 0,
+            },
+            U128(200),
+            None,
+        );
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.clone().id,
+                valid_until: 0,
+            },
+            U128(400),
+            None,
+        );
 
-        let principal = context.contract.get_total_principal(alice.clone()).0;
+        let principal = context.contract.get_total_principal(alice).0;
         assert_eq!(principal, 700);
     }
 
@@ -325,11 +357,19 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, U128(100_000_000), None);
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.id,
+                valid_until: 0,
+            },
+            U128(100_000_000),
+            None,
+        );
 
         context.set_block_timestamp_in_minutes(30);
 
-        let interest = context.contract.get_total_interest(alice.clone()).0;
+        let interest = context.contract.get_total_interest(alice).0;
         assert_eq!(interest, 684);
     }
 
@@ -345,11 +385,19 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, U128(100_000_000), None);
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.id,
+                valid_until: 0,
+            },
+            U128(100_000_000),
+            None,
+        );
 
         context.set_block_timestamp_in_days(365);
 
-        let interest = context.contract.get_total_interest(alice.clone()).0;
+        let interest = context.contract.get_total_interest(alice).0;
         assert_eq!(interest, 12_000_000);
     }
 
@@ -365,11 +413,19 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.id, U128(100_000_000), None);
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.id,
+                valid_until: 0,
+            },
+            U128(100_000_000),
+            None,
+        );
 
         context.set_block_timestamp_in_days(400);
 
-        let interest = context.contract.get_total_interest(alice.clone()).0;
+        let interest = context.contract.get_total_interest(alice).0;
         assert_eq!(interest, 12_000_000);
     }
 
@@ -385,7 +441,15 @@ mod tests {
         context.contract.register_product(product.clone());
 
         context.switch_account_to_owner();
-        context.contract.create_jar(alice.clone(), product.clone().id, U128(100_000_000), None);
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: product.id,
+                valid_until: 0,
+            },
+            U128(100_000_000),
+            None,
+        );
 
         context.set_block_timestamp_in_days(182);
 
@@ -432,25 +496,6 @@ mod tests {
     }
 
     #[test]
-    fn check_authorization_for_private_product_with_correct_signature() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin.clone()]);
-
-        context.switch_account(&admin);
-        let product = get_premium_product();
-        context.contract.register_product(product.clone());
-
-        let result = context.contract.is_authorized_for_product(
-            &alice,
-            &product.id,
-            Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
-        );
-        assert!(result);
-    }
-
-    #[test]
     fn get_total_interest_for_premium_with_penalty_after_half_term() {
         let alice = accounts(0);
         let admin = accounts(1);
@@ -464,9 +509,21 @@ mod tests {
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
-            product.id,
+            JarTicket {
+                product_id: product.id,
+                valid_until: 1000000,
+            },
             U128(100_000_000),
-            Some("A1CCD226C53E2C445D59B8FC2E078F39DC58B7D9F7C8D6DF45002A7FD700C3FB8569B3F7C85E5FD4B0679CD8261ACF59AFC2A68DE5735CC3221B2A9D29CEF908".to_string()),
+            Some(
+                Base64VecU8(
+                    vec![
+                        126, 76, 136, 40, 234, 193, 197, 143, 119, 86, 135, 170, 247, 130, 173, 154, 88, 43,
+                        224, 78, 2, 2, 67, 243, 189, 28, 138, 43, 92, 93, 147, 187, 200, 62, 118, 158, 164, 108,
+                        140, 154, 144, 147, 250, 112, 234, 255, 248, 213, 107, 224, 201, 147, 186, 233, 120, 56,
+                        21, 160, 85, 204, 135, 240, 61, 13,
+                    ]
+                )
+            ),
         );
 
         context.set_block_timestamp_in_days(182);
@@ -479,7 +536,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_total_interest(alice.clone()).0;
+        interest = context.contract.get_total_interest(alice).0;
         assert_eq!(interest, 10_000_000);
     }
 }

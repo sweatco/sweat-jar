@@ -2,6 +2,7 @@ use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, serde::{Deserialize, Serialize}, serde_json, PromiseOrValue};
 
 use crate::*;
+use crate::jar::JarTicket;
 use crate::migration::CeFiJar;
 
 #[derive(Serialize, Deserialize)]
@@ -17,8 +18,8 @@ pub enum FtMessage {
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct StakeMessage {
-    product_id: ProductId,
-    signature: Option<String>,
+    ticket: JarTicket,
+    signature: Option<Base64VecU8>,
     receiver_id: Option<AccountId>,
 }
 
@@ -39,7 +40,7 @@ impl FungibleTokenReceiver for Contract {
                 let receiver_id = message.receiver_id.unwrap_or_else(|| sender_id.clone());
                 self.create_jar(
                     receiver_id,
-                    message.product_id,
+                    message.ticket,
                     amount,
                     message.signature,
                 );
