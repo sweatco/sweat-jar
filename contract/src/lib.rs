@@ -7,7 +7,7 @@ use near_sdk::store::{LookupMap, UnorderedMap, UnorderedSet, Vector};
 
 use ft_interface::FungibleTokenInterface;
 use jar::{Jar, JarIndex};
-use product::{Apy, Product, ProductId};
+use product::model::{Apy, Product, ProductId};
 
 use crate::assert::{assert_is_not_closed, assert_is_not_empty, assert_ownership};
 use crate::jar::{JarApi, JarState};
@@ -19,11 +19,11 @@ mod ft_interface;
 mod ft_receiver;
 mod internal;
 mod jar;
-mod product;
 mod claim;
 mod withdraw;
 mod event;
 mod migration;
+mod product;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -158,8 +158,8 @@ mod tests {
 
     use crate::claim::ClaimApi;
     use crate::jar::JarTicket;
-    use crate::product::ProductApi;
     use crate::product::tests::{get_premium_product, get_product};
+    use crate::product::api::*;
 
     use super::*;
 

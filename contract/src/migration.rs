@@ -6,7 +6,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 use crate::common::TokenAmount;
 use crate::*;
 use crate::event::{emit, EventKind, MigrationEventItem};
-use crate::product::ProductId;
+use crate::product::model::ProductId;
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
 #[serde(crate = "near_sdk::serde")]

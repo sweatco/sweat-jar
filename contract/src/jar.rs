@@ -10,7 +10,7 @@ use crate::common::{MINUTES_IN_YEAR, UDecimal};
 use crate::*;
 use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
 use crate::event::{emit, EventKind};
-use crate::product::{Apy, Product, ProductId};
+use crate::product::model::{Apy, Product, ProductId};
 
 pub type JarIndex = u32;
 
@@ -446,7 +446,8 @@ mod signature_tests {
     use near_sdk::test_utils::accounts;
     use crate::common::tests::Context;
     use crate::jar::JarTicket;
-    use crate::product::{Product, ProductApi};
+    use crate::product::model::*;
+    use crate::product::api::*;
     use crate::product::tests::{get_premium_product, get_product};
 
     // Signature for structure (value -> utf8 bytes):

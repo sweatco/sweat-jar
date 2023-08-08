@@ -4,7 +4,7 @@ use near_sdk::serde::Serialize;
 use crate::{PACKAGE_NAME, VERSION};
 use crate::common::TokenAmount;
 use crate::jar::{Jar, JarIndex};
-use crate::product::Product;
+use crate::product::model::Product;
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]

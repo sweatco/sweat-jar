@@ -2,7 +2,7 @@ use near_sdk::{AccountId, require};
 use crate::common::{Timestamp, TokenAmount};
 
 use crate::jar::{Jar, JarState};
-use crate::product::Product;
+use crate::product::model::Product;
 
 pub(crate) fn assert_is_not_empty(jar: &Jar) {
     assert!(jar.principal > 0, "Jar is empty");
