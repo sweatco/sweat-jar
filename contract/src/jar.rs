@@ -282,19 +282,8 @@ impl Contract {
                     |jars| *jars.iter().max().unwrap(),
                 );
 
-            let hash = sha256([
-                env::current_account_id().as_bytes(),
-                account_id.as_bytes(),
-                ticket.product_id.as_bytes(),
-                last_jar_index.to_string().as_bytes(),
-                ticket.valid_until.to_string().as_bytes(),
-            ].concat().as_slice());
-
-            let signature = Signature::from_bytes(signature.0.as_slice()).expect("Invalid signature");
-            let is_signature_valid = PublicKey::from_bytes(pk.as_slice())
-                .expect("Public key is invalid")
-                .verify_strict(hash.as_slice(), &signature)
-                .is_ok();
+            let hash = self.get_ticket_hash(account_id, ticket, &last_jar_index);
+            let is_signature_valid = self.verify_signature(&signature.0, &pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
 
@@ -302,6 +291,36 @@ impl Contract {
 
             require!(is_time_valid, "Ticket is outdated");
         }
+    }
+
+    fn get_ticket_hash(
+        &self,
+        account_id: &AccountId,
+        ticket: &JarTicket,
+        last_jar_index: &JarIndex,
+    ) -> Vec<u8> {
+        sha256([
+            env::current_account_id().as_bytes(),
+            account_id.as_bytes(),
+            ticket.product_id.as_bytes(),
+            last_jar_index.to_string().as_bytes(),
+            ticket.valid_until.to_string().as_bytes(),
+        ].concat().as_slice())
+    }
+
+    fn verify_signature(
+        &self,
+        signature: &Vec<u8>,
+        product_public_key: &Vec<u8>,
+        ticket_hash: &Vec<u8>,
+    ) -> bool {
+        let signature = Signature::from_bytes(signature.as_slice())
+            .expect("Invalid signature");
+
+        PublicKey::from_bytes(product_public_key.as_slice())
+            .expect("Public key is invalid")
+            .verify_strict(ticket_hash.as_slice(), &signature)
+            .is_ok()
     }
 }
 
