@@ -83,8 +83,6 @@ pub enum JarState {
 pub trait JarApi {
     fn restake(&mut self, jar_index: JarIndex) -> JarView;
 
-    fn top_up(&mut self, jar_index: JarIndex, amount: U128) -> U128;
-
     fn get_jar(&self, jar_index: JarIndex) -> JarView;
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView>;
 
@@ -235,23 +233,34 @@ impl Contract {
         let amount = amount.0;
         let product_id = ticket.clone().product_id;
         let product = self.get_product(&product_id);
-        let cap = product.cap;
 
-        self.verify(&ticket, signature);
-
-        if cap.min > amount || amount > cap.max {
-            env::panic_str(format!("Amount is out of product bounds: [{}..{}]", cap.min, cap.max).as_str());
-        }
+        product.assert_cap(amount);
+        self.verify(&account_id, &ticket, signature);
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
-        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
+        let jar = Jar::create(index, account_id.clone(), product_id, amount, now);
 
         self.save_jar(&account_id, &jar);
 
         emit(EventKind::CreateJar(jar.clone()));
 
         jar.into()
+    }
+
+    pub(crate) fn top_up(&mut self, jar_index: JarIndex, amount: U128) -> U128 {
+        let jar = self.get_jar_internal(jar_index);
+        let product = self.get_product(&jar.product_id);
+
+        require!(product.is_refillable, "The product doesn't allow top-ups");
+        product.assert_cap(jar.principal + amount.0);
+
+        let now = env::block_timestamp_ms();
+        let topped_up_jar = jar.topped_up(amount.0, &product, now);
+
+        self.jars.replace(jar_index, topped_up_jar.clone());
+
+        U128(topped_up_jar.principal)
     }
 
     pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
@@ -263,11 +272,10 @@ impl Contract {
             )
     }
 
-    pub(crate) fn verify(&self, ticket: &JarTicket, signature: Option<Base64VecU8>) {
+    pub(crate) fn verify(&self, account_id: &AccountId, ticket: &JarTicket, signature: Option<Base64VecU8>) {
         let product = self.get_product(&ticket.product_id);
         if let Some(pk) = product.public_key {
             let signature = signature.expect("Signature is required");
-            let account_id = env::predecessor_account_id();
             let last_jar_index = self.account_jars.get(&account_id)
                 .map_or_else(
                     || 0,
@@ -320,21 +328,6 @@ impl JarApi for Contract {
         self.save_jar(&account_id, &new_jar);
 
         new_jar.into()
-    }
-
-    #[private]
-    fn top_up(&mut self, jar_index: JarIndex, amount: U128) -> U128 {
-        let jar = self.get_jar_internal(jar_index);
-        let product = self.get_product(&jar.product_id);
-
-        assert!(product.is_refillable, "The product doesn't allow top-ups");
-
-        let now = env::block_timestamp_ms();
-        let topped_up_jar = jar.topped_up(amount.0, &product, now);
-
-        self.jars.replace(jar_index, topped_up_jar.clone());
-
-        U128(topped_up_jar.principal)
     }
 
     fn get_jar(&self, index: JarIndex) -> JarView {
@@ -430,7 +423,6 @@ mod tests {
 
 #[cfg(test)]
 mod signature_tests {
-
     use near_sdk::json_types::Base64VecU8;
     use near_sdk::test_utils::accounts;
     use crate::common::tests::Context;
@@ -474,7 +466,7 @@ mod signature_tests {
             valid_until: 100000000,
         };
 
-        context.contract.verify(&ticket, Some(Base64VecU8(get_valid_signature())));
+        context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
     }
 
     #[test]
@@ -493,7 +485,7 @@ mod signature_tests {
 
         let signature: Vec<u8> = vec![0, 1, 2];
 
-        context.contract.verify(&ticket, Some(Base64VecU8(signature)));
+        context.contract.verify(&admin, &ticket, Some(Base64VecU8(signature)));
     }
 
     #[test]
@@ -522,7 +514,7 @@ mod signature_tests {
             10, 200, 44, 160, 90, 120, 14
         ].to_vec();
 
-        context.contract.verify(&ticket, Some(Base64VecU8(signature)));
+        context.contract.verify(&admin, &ticket, Some(Base64VecU8(signature)));
     }
 
     #[test]
@@ -540,7 +532,7 @@ mod signature_tests {
             valid_until: 100000000,
         };
 
-        context.contract.verify(&ticket, Some(Base64VecU8(get_valid_signature())));
+        context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
     }
 
     #[test]
@@ -556,7 +548,7 @@ mod signature_tests {
             valid_until: 100000000,
         };
 
-        context.contract.verify(&ticket, Some(Base64VecU8(get_valid_signature())));
+        context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
     }
 
     #[test]
@@ -573,7 +565,7 @@ mod signature_tests {
             valid_until: 100000000,
         };
 
-        context.contract.verify(&ticket, None);
+        context.contract.verify(&admin, &ticket, None);
     }
 
     #[test]
@@ -589,6 +581,6 @@ mod signature_tests {
             valid_until: 0,
         };
 
-        context.contract.verify(&ticket, None);
+        context.contract.verify(&admin, &ticket, None);
     }
 }

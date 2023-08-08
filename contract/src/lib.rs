@@ -511,7 +511,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: product.id,
-                valid_until: 1000000,
+                valid_until: 100_000_000,
             },
             U128(100_000_000),
             Some(

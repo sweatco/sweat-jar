@@ -154,6 +154,16 @@ impl Product {
     pub(crate) fn is_flexible(&self) -> bool {
         self.lockup_term == 0
     }
+
+    pub(crate) fn assert_cap(&self, amount: TokenAmount) {
+        if self.cap.min > amount || amount > self.cap.max {
+            env::panic_str(format!(
+                "Total amount is out of product bounds: [{}..{}]",
+                self.cap.min,
+                self.cap.max
+            ).as_str());
+        }
+    }
 }
 
 pub trait ProductApi {
@@ -217,5 +227,22 @@ pub(crate) mod tests {
                 48, 82, 50, 35, 197, 176, 50, 211, 183, 128, 207, 1, 8, 68,
             ]),
         }
+    }
+
+    #[test]
+    fn assert_cap_in_bounds() {
+        get_product().assert_cap(200);
+    }
+
+    #[test]
+    #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
+    fn assert_cap_less_than_min() {
+        get_product().assert_cap(10);
+    }
+
+    #[test]
+    #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
+    fn assert_cap_more_than_max() {
+        get_product().assert_cap(500_000_000_000);
     }
 }
