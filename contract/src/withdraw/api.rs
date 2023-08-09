@@ -28,7 +28,7 @@ pub trait WithdrawCallbacks {
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_index: u32, amount: Option<U128>) -> PromiseOrValue<U128> {
+    fn withdraw(&mut self, jar_index: JarIndex, amount: Option<U128>) -> PromiseOrValue<U128> {
         self.withdraw_internal(
             jar_index,
             amount.map(|value| value.0),

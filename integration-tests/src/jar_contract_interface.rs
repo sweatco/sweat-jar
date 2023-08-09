@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use borsh::BorshSerialize;
 use near_sdk::json_types::U128;
 use near_units::parse_near;
 use serde_json::{json, Value};
@@ -16,9 +15,13 @@ pub(crate) trait JarContractInterface {
         admin_allowlist: Vec<&AccountId>,
     ) -> anyhow::Result<()>;
 
-    async fn register_product(&self, user: &Account, product_json: serde_json::Value) -> anyhow::Result<()>;
+    async fn register_product(
+        &self,
+        user: &Account,
+        register_product_command_json: Value,
+    ) -> anyhow::Result<()>;
 
-    async fn get_products(&self) -> anyhow::Result<(serde_json::Value)>;
+    async fn get_products(&self) -> anyhow::Result<(Value)>;
 
     async fn create_jar(
         &self,
@@ -28,13 +31,13 @@ pub(crate) trait JarContractInterface {
         ft_contract_id: &AccountId,
     ) -> anyhow::Result<()>;
 
-    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<u128>;
+    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<U128>;
 
-    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<u128>;
+    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<U128>;
 
     async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value>;
 
-    async fn withdraw(&self, user: &Account, jar_index: String) -> anyhow::Result<()>;
+    async fn withdraw(&self, user: &Account, jar_index: u32) -> anyhow::Result<()>;
 
     async fn time(&self) -> anyhow::Result<u64>;
 
@@ -70,11 +73,15 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn register_product(&self, user: &Account, product_json: serde_json::Value) -> anyhow::Result<()> {
-        println!("▶️ Register product: {:?}", product_json);
+    async fn register_product(
+        &self,
+        user: &Account,
+        register_product_command_json: Value,
+    ) -> anyhow::Result<()> {
+        println!("▶️ Register product: {:?}", register_product_command_json);
 
         let args = json!({
-            "product": product_json,
+            "command": register_product_command_json,
         });
 
         let result = user.call(self.id(), "register_product")
@@ -90,10 +97,10 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn get_products(&self) -> anyhow::Result<(serde_json::Value)> {
+    async fn get_products(&self) -> anyhow::Result<(Value)> {
         println!("▶️ Get products");
 
-        let products: serde_json::Value = self
+        let products: Value = self
             .view("get_products")
             .await?
             .json()?;
@@ -120,7 +127,10 @@ impl JarContractInterface for Contract {
         let msg = json!({
             "action": "stake",
             "data": {
-                "product_id": product_id,
+                "ticket": {
+                    "product_id": product_id,
+                    "valid_until": "0",
+                }
             }
         });
 
@@ -145,7 +155,7 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<u128> {
+    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<U128> {
         println!("▶️ Get total principal for user {:?}", user.id());
 
         let args = json!({
@@ -163,7 +173,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<u128> {
+    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<U128> {
         println!("▶️ Get total interest for user {:?}", user.id());
 
         let args = json!({
@@ -199,7 +209,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn withdraw(&self, user: &Account, jar_index: String) -> anyhow::Result<()> {
+    async fn withdraw(&self, user: &Account, jar_index: u32) -> anyhow::Result<()> {
         println!("▶️ Withdraw jar #{}", jar_index);
 
         let args = json!({
@@ -225,7 +235,7 @@ impl JarContractInterface for Contract {
     async fn time(&self) -> anyhow::Result<u64> {
         println!("▶️ Get current block time");
 
-        let result: serde_json::Value = self
+        let result: Value = self
             .call("time")
             .view()
             .await?

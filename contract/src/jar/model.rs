@@ -3,7 +3,7 @@ use std::cmp;
 use near_sdk::{AccountId, env, require};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::env::sha256;
-use near_sdk::json_types::U128;
+use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::*;
@@ -20,7 +20,7 @@ pub type JarIndex = u32;
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarTicket {
     pub product_id: String,
-    pub valid_until: Timestamp,
+    pub valid_until: U64,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
@@ -256,7 +256,7 @@ impl Contract {
 
             require!(is_signature_valid, "Not matching signature");
 
-            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until;
+            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
 
             require!(is_time_valid, "Ticket is outdated");
         }
@@ -273,7 +273,7 @@ impl Contract {
             account_id.as_bytes(),
             ticket.product_id.as_bytes(),
             last_jar_index.to_string().as_bytes(),
-            ticket.valid_until.to_string().as_bytes(),
+            ticket.valid_until.0.to_string().as_bytes(),
         ].concat().as_slice())
     }
 

@@ -1,7 +1,9 @@
 use crate::context::Context;
-use crate::product::Products;
+use crate::product::RegisterProductCommand;
 
 pub(crate) async fn run() -> anyhow::Result<()> {
+    println!("👷🏽 Run withdraw fee test");
+
     let mut context = Context::new().await?;
 
     let manager = &context.account("manager").await?;
@@ -16,11 +18,11 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     context.ft_contract.storage_deposit(alice).await?;
     context.ft_contract.mint_for_user(alice, 100_000_000).await?;
 
-    context.jar_contract.register_product(manager, Products::Locked10Minutes6PercentsWithWithdrawFee.json()).await?;
+    context.jar_contract.register_product(manager, RegisterProductCommand::Locked10Minutes6PercentsWithWithdrawFee.json()).await?;
 
     context.jar_contract.create_jar(
         alice,
-        Products::Locked10Minutes6PercentsWithWithdrawFee.id(),
+        RegisterProductCommand::Locked10Minutes6PercentsWithWithdrawFee.id(),
         1_000_000,
         context.ft_contract.account().id(),
     ).await?;
@@ -30,7 +32,7 @@ pub(crate) async fn run() -> anyhow::Result<()> {
 
     context.fast_forward(1).await?;
 
-    context.jar_contract.withdraw(alice, "0".to_string()).await?;
+    context.jar_contract.withdraw(alice, 0).await?;
 
     alice_balance = context.ft_contract.ft_balance_of(alice).await?;
     assert_eq!(99_999_000, alice_balance.0);

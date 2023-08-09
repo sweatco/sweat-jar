@@ -41,7 +41,7 @@ mod tests {
 
 #[cfg(test)]
 mod signature_tests {
-    use near_sdk::json_types::Base64VecU8;
+    use near_sdk::json_types::{Base64VecU8, U64};
     use near_sdk::test_utils::accounts;
     use crate::common::tests::Context;
     use crate::jar::model::JarTicket;
@@ -82,7 +82,7 @@ mod signature_tests {
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
-            valid_until: 100000000,
+            valid_until: U64(100000000),
         };
 
         context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
@@ -99,7 +99,7 @@ mod signature_tests {
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
-            valid_until: 100000000,
+            valid_until: U64(100000000),
         };
 
         let signature: Vec<u8> = vec![0, 1, 2];
@@ -123,7 +123,7 @@ mod signature_tests {
 
         let ticket = JarTicket {
             product_id: "another_product".to_string(),
-            valid_until: 100000000,
+            valid_until: U64(100000000),
         };
 
         let signature: Vec<u8> = [
@@ -148,7 +148,7 @@ mod signature_tests {
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
-            valid_until: 100000000,
+            valid_until: U64(100000000),
         };
 
         context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
@@ -164,7 +164,7 @@ mod signature_tests {
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
-            valid_until: 100000000,
+            valid_until: U64(100000000),
         };
 
         context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
@@ -181,7 +181,7 @@ mod signature_tests {
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
-            valid_until: 100000000,
+            valid_until: U64(100000000),
         };
 
         context.contract.verify(&admin, &ticket, None);
@@ -197,7 +197,7 @@ mod signature_tests {
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
-            valid_until: 0,
+            valid_until: U64(0),
         };
 
         context.contract.verify(&admin, &ticket, None);

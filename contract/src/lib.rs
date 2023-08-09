@@ -150,7 +150,7 @@ impl PenaltyApi for Contract {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::json_types::U128;
+    use near_sdk::json_types::{U128, U64};
     use near_sdk::test_utils::accounts;
 
     use common::tests::Context;
@@ -280,7 +280,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: get_product().id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(100),
             None,
@@ -306,7 +306,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: product.clone().id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(100),
             None,
@@ -315,7 +315,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: product.clone().id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(200),
             None,
@@ -324,7 +324,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: product.id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(400),
             None,
@@ -359,7 +359,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: get_product().id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(100_000_000),
             None,
@@ -386,7 +386,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: get_product().id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(100_000_000),
             None,
@@ -413,7 +413,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: get_product().id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(100_000_000),
             None,
@@ -440,7 +440,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: get_product().id,
-                valid_until: 0,
+                valid_until: U64(0),
             },
             U128(100_000_000),
             None,
@@ -504,7 +504,7 @@ mod tests {
             alice.clone(),
             JarTicket {
                 product_id: product.id,
-                valid_until: 100_000_000,
+                valid_until: U64(100_000_000),
             },
             U128(100_000_000),
             Some(

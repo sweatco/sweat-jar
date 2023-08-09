@@ -1,80 +1,52 @@
 use serde_json::{json, Value};
 
-pub(crate) enum Products {
+pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
     Locked10Minutes6PercentsWithWithdrawFee,
 }
 
-impl Products {
+impl RegisterProductCommand {
     pub(crate) fn json(&self) -> Value {
         match self {
-            Products::Locked12Months12Percents => json!({
+            RegisterProductCommand::Locked12Months12Percents => json!({
                 "id": "locked_12_months_12_percents",
                 "lockup_term": "31556952000",
+                "apy_default": ["12", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
                 "is_refillable": false,
-                "apy": {
-                    "Constant": {
-                        "significand": "12",
-                        "exponent": 2,
-                    },
-                },
-                "cap": {
-                    "min": "100000",
-                    "max": "100000000000",
-                },
                 "is_restakable": false,
             }),
-            Products::Locked6Months6Percents => json!({
+            RegisterProductCommand::Locked6Months6Percents => json!({
                 "id": "locked_6_months_6_percents",
                 "lockup_term": "15778476000",
+                "apy_default": ["6", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
                 "is_refillable": false,
-                "apy": {
-                    "Constant": {
-                        "significand": "6",
-                        "exponent": 2,
-                    },
-                },
-                "cap": {
-                    "min": "100000",
-                    "max": "100000000000",
-                },
                 "is_restakable": false,
             }),
-            Products::Locked6Months6PercentsWithWithdrawFee => json!({
+            RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee => json!({
                 "id": "locked_6_months_6_percents_with_withdraw_fee",
                 "lockup_term": "15778476000",
+                "apy_default": ["6", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
                 "is_refillable": false,
-                "apy": {
-                    "Constant": {
-                        "significand": "6",
-                        "exponent": 2,
-                    },
-                },
-                "cap": {
-                    "min": "100000",
-                    "max": "100000000000",
-                },
                 "is_restakable": false,
                 "withdrawal_fee": {
                     "Fix": "1000",
                 }
             }),
-            Products::Locked10Minutes6PercentsWithWithdrawFee => json!({
+            RegisterProductCommand::Locked10Minutes6PercentsWithWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_withdraw_fee",
                 "lockup_term": "600000",
+                "apy_default": ["6", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
                 "is_refillable": false,
-                "apy": {
-                    "Constant": {
-                        "significand": "6",
-                        "exponent": 2,
-                    },
-                },
-                "cap": {
-                    "min": "100000",
-                    "max": "100000000000",
-                },
                 "is_restakable": false,
                 "withdrawal_fee": {
                     "Fix": "1000",

@@ -7,8 +7,8 @@ pub mod view;
 pub(crate) mod tests {
     use near_sdk::json_types::{Base64VecU8, U128, U64};
     use crate::common::UDecimal;
-    use crate::product::command::RegisterProductCommand;
-    use crate::product::model::{Apy, Cap, DowngradableApy, Product};
+    use crate::product::command::{RegisterProductCommand, WithdrawalFeeDto};
+    use crate::product::model::{Apy, Cap, DowngradableApy, Product, WithdrawalFee};
 
     fn get_premium_product_public_key() -> Vec<u8> {
         vec![
