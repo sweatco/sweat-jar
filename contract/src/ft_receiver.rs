@@ -3,7 +3,7 @@ use near_sdk::{json_types::U128, serde::{Deserialize, Serialize}, serde_json, Pr
 
 use crate::*;
 use crate::jar::model::JarTicket;
-use crate::migration::CeFiJar;
+use crate::migration::model::CeFiJar;
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]

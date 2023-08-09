@@ -1,28 +1,15 @@
-use near_sdk::{AccountId, near_bindgen, require};
+use near_sdk::require;
 use near_sdk::__private::schemars::Set;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::{U128, U64};
-use near_sdk::serde::{Deserialize, Serialize};
-use crate::common::TokenAmount;
+use near_sdk::json_types::U128;
+
 use crate::*;
+use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, MigrationEventItem};
+use crate::migration::model::CeFiJar;
 use crate::product::model::ProductId;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
-#[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
-pub struct CeFiJar {
-    pub id: String,
-    pub account_id: AccountId,
-    pub product_id: ProductId,
-    pub principal: U128,
-    pub created_at: U64,
-}
-
-#[near_bindgen]
 impl Contract {
-    #[private]
-    pub fn migrate_jars(&mut self, jars: Vec<CeFiJar>, total_received: U128) {
+    pub(crate) fn migrate_jars(&mut self, jars: Vec<CeFiJar>, total_received: U128) {
         let mut event_data: Vec<MigrationEventItem> = vec![];
         let mut total_amount: TokenAmount = 0;
 
@@ -32,7 +19,7 @@ impl Contract {
 
         for ce_fi_jar in jars {
             require!(
-                product_ids.contains(&ce_fi_jar.product_id), 
+                product_ids.contains(&ce_fi_jar.product_id),
                 format!("Product {} is not registered", ce_fi_jar.product_id),
             );
 
