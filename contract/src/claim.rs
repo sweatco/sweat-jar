@@ -5,7 +5,7 @@ use crate::common::TokenAmount;
 use crate::event::{ClaimEventItem, emit, EventKind};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::ft_interface::FungibleTokenInterface;
-use crate::jar::{Jar, JarIndex};
+use crate::jar::model::{Jar, JarIndex};
 
 pub trait ClaimApi {
     fn claim_total(&mut self) -> PromiseOrValue<TokenAmount>;

@@ -7,7 +7,7 @@ use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, WithdrawData};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::ft_interface::Fee;
-use crate::jar::JarIndex;
+use crate::jar::model::JarIndex;
 use crate::product::model::WithdrawalFee;
 
 pub(crate) type WithdrawFunction = fn(

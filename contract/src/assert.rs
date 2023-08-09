@@ -1,7 +1,7 @@
 use near_sdk::{AccountId, require};
 use crate::common::{Timestamp, TokenAmount};
+use crate::jar::model::{Jar, JarState};
 
-use crate::jar::{Jar, JarState};
 use crate::product::model::Product;
 
 pub(crate) fn assert_is_not_empty(jar: &Jar) {

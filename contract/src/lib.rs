@@ -6,11 +6,10 @@ use near_sdk::json_types::Base64VecU8;
 use near_sdk::store::{LookupMap, UnorderedMap, UnorderedSet, Vector};
 
 use ft_interface::FungibleTokenInterface;
-use jar::{Jar, JarIndex};
 use product::model::{Apy, Product, ProductId};
 
 use crate::assert::{assert_is_not_closed, assert_is_not_empty, assert_ownership};
-use crate::jar::{JarApi, JarState};
+use crate::jar::model::{Jar, JarIndex, JarState};
 
 mod assert;
 mod common;
@@ -157,7 +156,8 @@ mod tests {
     use common::tests::Context;
 
     use crate::claim::ClaimApi;
-    use crate::jar::JarTicket;
+    use crate::jar::api::JarApi;
+    use crate::jar::model::JarTicket;
     use crate::product::tests::{get_premium_product, get_product, get_register_premium_product_command, get_register_product_command};
     use crate::product::api::*;
 

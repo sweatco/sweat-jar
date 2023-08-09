@@ -2,7 +2,7 @@ use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, serde::{Deserialize, Serialize}, serde_json, PromiseOrValue};
 
 use crate::*;
-use crate::jar::JarTicket;
+use crate::jar::model::JarTicket;
 use crate::migration::CeFiJar;
 
 #[derive(Serialize, Deserialize)]
