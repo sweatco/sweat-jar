@@ -154,8 +154,8 @@ mod tests {
     use near_sdk::test_utils::accounts;
 
     use common::tests::Context;
+    use crate::claim::api::ClaimApi;
 
-    use crate::claim::ClaimApi;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
     use crate::product::tests::{get_premium_product, get_product, get_register_premium_product_command, get_register_product_command};
