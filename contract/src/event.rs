@@ -16,7 +16,7 @@ pub(crate) enum EventKind {
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
     Migration(Vec<MigrationEventItem>),
-    Restaked(RestakeData),
+    Restake(RestakeData),
 }
 
 #[derive(Serialize, Debug)]
