@@ -49,6 +49,21 @@ pub(crate) mod tests {
         }
     }
 
+    pub(crate) fn get_register_restakable_product_command() -> RegisterProductCommand {
+        RegisterProductCommand {
+            id: "product_restakable".to_string(),
+            lockup_term: U64(365 * 24 * 60 * 60 * 1000),
+            apy_default: (U128(12), 2),
+            apy_fallback: None,
+            cap_min: U128(100),
+            cap_max: U128(100_000_000_000),
+            is_restakable: true,
+            is_refillable: false,
+            withdrawal_fee: None,
+            public_key: None,
+        }
+    }
+
     pub(crate) fn get_premium_product() -> Product {
         Product {
             id: "product_premium".to_string(),
