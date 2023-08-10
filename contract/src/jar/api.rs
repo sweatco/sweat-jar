@@ -130,10 +130,8 @@ mod tests {
 
 #[cfg(test)]
 mod signature_tests {
-    use near_sdk::env::sha256;
     use near_sdk::json_types::{Base64VecU8, U128, U64};
     use near_sdk::test_utils::accounts;
-    use near_sdk::test_utils::test_env::alice;
     use crate::common::tests::Context;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;

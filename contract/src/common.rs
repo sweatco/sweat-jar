@@ -51,6 +51,7 @@ impl UDecimal {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::time::Duration;
     use near_sdk::{AccountId, Balance, testing_env};
     use near_sdk::test_utils::VMContextBuilder;
     use crate::common::UDecimal;
@@ -91,16 +92,21 @@ pub(crate) mod tests {
             }
         }
 
-        pub(crate) fn set_block_timestamp_in_days(&mut self, hours: u64) {
-            self.builder = self.builder.clone()
-                .block_timestamp(days_to_nano_ms(hours))
-                .clone();
-            testing_env!(self.builder.build());
+        pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {
+            self.set_block_timestamp(Duration::from_secs(days * 24 *  60 * 60));
         }
 
         pub(crate) fn set_block_timestamp_in_minutes(&mut self, hours: u64) {
+            self.set_block_timestamp(Duration::from_secs(hours * 60));
+        }
+
+        pub(crate) fn set_block_timestamp_in_ms(&mut self, ms: u64) {
+            self.set_block_timestamp(Duration::from_millis(ms));
+        }
+
+        pub(crate) fn set_block_timestamp(&mut self, duration: Duration) {
             self.builder = self.builder.clone()
-                .block_timestamp(minutes_to_nano_ms(hours))
+                .block_timestamp(duration.as_nanos() as u64)
                 .clone();
             testing_env!(self.builder.build());
         }
@@ -121,14 +127,6 @@ pub(crate) mod tests {
             self.builder = self.builder.clone().attached_deposit(amount).clone();
             testing_env!(self.builder.build());
         }
-    }
-
-    fn days_to_nano_ms(days: u64) -> u64 {
-        minutes_to_nano_ms(days * 60 * 24)
-    }
-
-    fn minutes_to_nano_ms(minutes: u64) -> u64 {
-        minutes * 60 * u64::pow(10, 9)
     }
 
     #[test]
