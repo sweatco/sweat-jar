@@ -204,7 +204,7 @@ impl Contract {
         let product = self.get_product(&product_id);
 
         product.assert_cap(amount);
-        self.verify(&account_id, &ticket, signature);
+        self.verify(&account_id, 1_000_000, &ticket, signature);
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
@@ -241,7 +241,13 @@ impl Contract {
             )
     }
 
-    pub(crate) fn verify(&self, account_id: &AccountId, ticket: &JarTicket, signature: Option<Base64VecU8>) {
+    pub(crate) fn verify(
+        &self,
+        account_id: &AccountId,
+        amount: TokenAmount,
+        ticket: &JarTicket,
+        signature: Option<Base64VecU8>,
+    ) {
         let product = self.get_product(&ticket.product_id);
         if let Some(pk) = product.public_key {
             let signature = signature.expect("Signature is required");
@@ -251,7 +257,7 @@ impl Contract {
                     |jars| *jars.iter().max().unwrap(),
                 );
 
-            let hash = self.get_ticket_hash(account_id, ticket, &last_jar_index);
+            let hash = self.get_ticket_hash(account_id, amount, ticket, &last_jar_index);
             let is_signature_valid = self.verify_signature(&signature.0, &pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
@@ -265,16 +271,21 @@ impl Contract {
     fn get_ticket_hash(
         &self,
         account_id: &AccountId,
+        amount: TokenAmount,
         ticket: &JarTicket,
         last_jar_index: &JarIndex,
     ) -> Vec<u8> {
-        sha256([
-            env::current_account_id().as_bytes(),
-            account_id.as_bytes(),
-            ticket.product_id.as_bytes(),
-            last_jar_index.to_string().as_bytes(),
-            ticket.valid_until.0.to_string().as_bytes(),
-        ].concat().as_slice())
+        sha256(
+            format!(
+                "{},{},{},{},{},{}",
+                env::current_account_id(),
+                account_id,
+                ticket.product_id,
+                amount,
+                last_jar_index,
+                ticket.valid_until.0
+            ).as_bytes()
+        )
     }
 
     fn verify_signature(

@@ -65,16 +65,3 @@ pub enum WithdrawalFeeDto {
     /// I.e. "0.12" becomes ("12", 2): 12 * 10^-2
     Percent(U128, u32),
 }
-
-#[cfg(test)]
-mod tests {
-    use near_sdk::serde::Serialize;
-    use near_sdk::serde_json;
-    use crate::product::tests::get_register_product_command;
-
-    #[test]
-    fn test_json() {
-        let result = serde_json::to_string(&get_register_product_command()).unwrap();
-        println!("@@ result: {}", result);
-    }
-}

@@ -41,6 +41,7 @@ mod tests {
 
 #[cfg(test)]
 mod signature_tests {
+    use near_sdk::env::sha256;
     use near_sdk::json_types::{Base64VecU8, U64};
     use near_sdk::test_utils::accounts;
     use crate::common::tests::Context;
@@ -53,22 +54,23 @@ mod signature_tests {
     // contract_id: "owner" -> [111, 119, 110, 101, 114]
     // account_id: "alice" -> [97, 108, 105, 99, 101]
     // product_id: "product_premium" -> [112, 114, 111, 100, 117, 99, 116, 95, 112, 114, 101, 109, 105, 117, 109]
+    // amount: "1000000" -> [49, 48, 48, 48, 48, 48, 48]
     // last_jar_index: "0" -> [48]
     // valid_until: "100000000" -> [49, 48, 48, 48, 48, 48, 48, 48, 48]
     // ***
-    // result array: [111, 119, 110, 101, 114, 97, 108, 105, 99, 101, 112, 114, 111, 100, 117, 99, 116, 95, 112, 114, 101, 109, 105, 117, 109, 48, 49, 48, 48, 48, 48, 48, 48, 48, 48]
-    // sha256(result array): [215, 21, 45, 17, 130, 29, 202, 184, 32, 68, 245, 243, 252, 94, 251, 83, 166, 116, 97, 178, 137, 220, 227, 111, 162, 244, 203, 68, 178, 75, 140, 91]
+    // result array: [111, 119, 110, 101, 114, 44, 97, 108, 105, 99, 101, 44, 112, 114, 111, 100, 117, 99, 116, 95, 112, 114, 101, 109, 105, 117, 109, 44, 49, 48, 48, 48, 48, 48, 48, 44, 48, 44, 49, 48, 48, 48, 48, 48, 48, 48, 48]
+    // sha256(result array): [83, 24, 187, 67, 249, 130, 247, 51, 251, 43, 186, 72, 198, 208, 85, 25, 32, 170, 226, 43, 103, 129, 145, 210, 46, 38, 139, 38, 195, 50, 225, 87]
     // ***
     // Secret: [87, 86, 114, 129, 25, 247, 248, 94, 16, 119, 169, 202, 195, 11, 187, 107, 195, 182, 205, 70, 189, 120, 214, 228, 208, 115, 234, 0, 244, 21, 218, 113]
     // Pk: [33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109, 48, 82, 50, 35, 197, 176, 50, 211, 183, 128, 207, 1, 8, 68]
     // ***
-    // SIGNATURE: [126, 76, 136, 40, 234, 193, 197, 143, 119, 86, 135, 170, 247, 130, 173, 154, 88, 43, 224, 78, 2, 2, 67, 243, 189, 28, 138, 43, 92, 93, 147, 187, 200, 62, 118, 158, 164, 108, 140, 154, 144, 147, 250, 112, 234, 255, 248, 213, 107, 224, 201, 147, 186, 233, 120, 56, 21, 160, 85, 204, 135, 240, 61, 13]
+    // SIGNATURE: [106, 169, 28, 95, 190, 177, 11, 212, 73, 215, 174, 31, 143, 61, 191, 107, 132, 100, 38, 8, 90, 248, 246, 79, 84, 216, 122, 215, 182, 136, 134, 160, 3, 10, 118, 74, 123, 31, 91, 121, 192, 142, 25, 97, 54, 231, 253, 26, 239, 15, 24, 201, 110, 243, 6, 134, 246, 17, 148, 178, 251, 68, 57, 13]
     fn get_valid_signature() -> Vec<u8> {
         vec![
-            126, 76, 136, 40, 234, 193, 197, 143, 119, 86, 135, 170, 247, 130, 173, 154, 88, 43,
-            224, 78, 2, 2, 67, 243, 189, 28, 138, 43, 92, 93, 147, 187, 200, 62, 118, 158, 164, 108,
-            140, 154, 144, 147, 250, 112, 234, 255, 248, 213, 107, 224, 201, 147, 186, 233, 120, 56,
-            21, 160, 85, 204, 135, 240, 61, 13,
+            106, 169, 28, 95, 190, 177, 11, 212, 73, 215, 174, 31, 143, 61, 191, 107, 132, 100, 38,
+            8, 90, 248, 246, 79, 84, 216, 122, 215, 182, 136, 134, 160, 3, 10, 118, 74, 123, 31, 91,
+            121, 192, 142, 25, 97, 54, 231, 253, 26, 239, 15, 24, 201, 110, 243, 6, 134, 246, 17,
+            148, 178, 251, 68, 57, 13,
         ]
     }
 
@@ -85,7 +87,7 @@ mod signature_tests {
             valid_until: U64(100000000),
         };
 
-        context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
+        context.contract.verify(&admin, 1_000_000, &ticket, Some(Base64VecU8(get_valid_signature())));
     }
 
     #[test]
@@ -104,7 +106,7 @@ mod signature_tests {
 
         let signature: Vec<u8> = vec![0, 1, 2];
 
-        context.contract.verify(&admin, &ticket, Some(Base64VecU8(signature)));
+        context.contract.verify(&admin, 1_000_000, &ticket, Some(Base64VecU8(signature)));
     }
 
     #[test]
@@ -133,7 +135,7 @@ mod signature_tests {
             10, 200, 44, 160, 90, 120, 14
         ].to_vec();
 
-        context.contract.verify(&admin, &ticket, Some(Base64VecU8(signature)));
+        context.contract.verify(&admin, 1_000_000, &ticket, Some(Base64VecU8(signature)));
     }
 
     #[test]
@@ -151,7 +153,7 @@ mod signature_tests {
             valid_until: U64(100000000),
         };
 
-        context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
+        context.contract.verify(&admin, 1_000_000, &ticket, Some(Base64VecU8(get_valid_signature())));
     }
 
     #[test]
@@ -167,7 +169,7 @@ mod signature_tests {
             valid_until: U64(100000000),
         };
 
-        context.contract.verify(&admin, &ticket, Some(Base64VecU8(get_valid_signature())));
+        context.contract.verify(&admin, 1_000_000, &ticket, Some(Base64VecU8(get_valid_signature())));
     }
 
     #[test]
@@ -184,7 +186,7 @@ mod signature_tests {
             valid_until: U64(100000000),
         };
 
-        context.contract.verify(&admin, &ticket, None);
+        context.contract.verify(&admin, 1_000_000, &ticket, None);
     }
 
     #[test]
@@ -200,6 +202,12 @@ mod signature_tests {
             valid_until: U64(0),
         };
 
-        context.contract.verify(&admin, &ticket, None);
+        context.contract.verify(&admin, 1_000_000, &ticket, None);
+    }
+
+    #[test]
+    fn test() {
+        let array: Vec<u8> = vec![111, 119, 110, 101, 114, 44, 97, 108, 105, 99, 101, 44, 112, 114, 111, 100, 117, 99, 116, 95, 112, 114, 101, 109, 105, 117, 109, 44, 49, 48, 48, 48, 48, 48, 48, 44, 48, 44, 49, 48, 48, 48, 48, 48, 48, 48, 48];
+        println!("SHA256: {:?}", sha256(array.as_slice()));
     }
 }

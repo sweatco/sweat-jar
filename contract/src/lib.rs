@@ -83,29 +83,6 @@ impl Contract {
             account_jars: LookupMap::new(StorageKey::AccountJars),
         }
     }
-
-    pub fn is_authorized_for_product(
-        &self,
-        account_id: &AccountId,
-        product_id: &ProductId,
-        signature: Option<Vec<u8>>,
-    ) -> bool {
-        let product = self.get_product(product_id);
-
-        if let Some(pk) = product.public_key {
-            let signature = match signature {
-                Some(ref s) => Signature::from_bytes(s).expect("Invalid signature"),
-                None => env::panic_str("Signature is required for private products"),
-            };
-
-            PublicKey::from_bytes(pk.as_slice())
-                .expect("Public key is invalid")
-                .verify_strict(account_id.as_bytes(), &signature)
-                .is_ok()
-        } else {
-            true
-        }
-    }
 }
 
 #[near_bindgen]
@@ -458,34 +435,6 @@ mod tests {
 
         interest = context.contract.get_total_interest(alice.clone()).0;
         assert_eq!(interest, 6_016_438);
-    }
-
-    #[test]
-    fn check_authorization_for_public_product() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin.clone()]);
-
-        context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
-
-        let result = context.contract.is_authorized_for_product(&alice, &get_product().id, None);
-        assert!(result);
-    }
-
-    #[test]
-    #[should_panic(expected = "Signature is required for private products")]
-    fn check_authorization_for_premium_product_without_signature() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin.clone()]);
-
-        context.switch_account(&admin);
-        context.contract.register_product(get_register_premium_product_command());
-
-        context.contract.is_authorized_for_product(&alice, &get_premium_product().id, None);
     }
 
     #[test]
