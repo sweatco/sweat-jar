@@ -16,6 +16,7 @@ pub(crate) enum EventKind {
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
     Migration(Vec<MigrationEventItem>),
+    Restaked(RestakeData),
 }
 
 #[derive(Serialize, Debug)]
@@ -47,6 +48,13 @@ pub(crate) struct MigrationEventItem {
     pub original_id: String,
     pub index: JarIndex,
     pub account_id: AccountId,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub(crate) struct RestakeData {
+    pub old_index: JarIndex,
+    pub new_index: JarIndex,
 }
 
 impl From<EventKind> for SweatJarEvent {

@@ -2,6 +2,7 @@ use near_sdk::{AccountId, env, near_bindgen, require};
 use near_sdk::json_types::U128;
 
 use crate::*;
+use crate::event::{emit, EventKind, RestakeData};
 use crate::jar::view::JarView;
 
 pub trait JarApi {
@@ -38,6 +39,8 @@ impl JarApi for Contract {
 
         self.save_jar(&account_id, &withdraw_jar);
         self.save_jar(&account_id, &new_jar);
+
+        emit(EventKind::Restaked(RestakeData { old_index: index, new_index: new_jar.index }));
 
         new_jar.into()
     }
