@@ -11,7 +11,28 @@ use crate::ft_interface::FungibleTokenInterface;
 use crate::jar::model::JarIndex;
 use crate::product::model::WithdrawalFee;
 
+/// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.
 pub trait WithdrawApi {
+    /// Allows the owner of a deposit jar to withdraw a specified amount of tokens from it.
+    ///
+    /// # Arguments
+    ///
+    /// * `jar_index` - The index of the deposit jar from which the withdrawal is being made.
+    /// * `amount` - An optional `U128` value indicating the amount of tokens to withdraw. If `None` is provided,
+    ///              the entire balance of the jar will be withdrawn.
+    ///
+    /// # Returns
+    ///
+    /// A `PromiseOrValue<U128>` which represents the result of the withdrawal. If the withdrawal is successful,
+    /// it returns the withdrawn amount. If there are insufficient funds or other conditions are not met,
+    /// the contract might panic or return 0
+    ///
+    /// # Panics
+    ///
+    /// This function may panic under the following conditions:
+    /// - If the caller is not the owner of the specified jar.
+    /// - If the withdrawal amount exceeds the available balance in the jar.
+    /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(&mut self, jar_index: JarIndex, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 

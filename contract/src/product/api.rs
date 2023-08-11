@@ -7,8 +7,20 @@ use crate::product::command::RegisterProductCommand;
 use crate::product::model::Product;
 use crate::product::view::ProductView;
 
+/// The `ProductApi` trait defines methods for managing products within the smart contract.
 pub trait ProductApi {
+    /// Registers a new product in the contract. This function can only be called by the administrator.
+    ///
+    /// # Arguments
+    ///
+    /// * `command` - A `RegisterProductCommand` struct containing information about the new product.
     fn register_product(&mut self, command: RegisterProductCommand);
+
+    /// Retrieves a list of all registered products in the contract.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec<ProductView>` containing information about all registered products.
     fn get_products(&self) -> Vec<ProductView>;
 }
 
