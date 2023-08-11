@@ -11,7 +11,7 @@ use crate::common::{MINUTES_IN_YEAR, UDecimal};
 use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
 use crate::event::{emit, EventKind};
 use crate::jar::view::JarView;
-use crate::product::model::{Apy, Product, ProductId};
+use crate::product::model::{Apy, Product, ProductId, Terms};
 
 pub type JarIndex = u32;
 
@@ -146,8 +146,14 @@ impl Jar {
         }
     }
 
-    pub(crate) fn is_mature(&self, product: &Product, now: Timestamp) -> bool {
-        now - self.created_at > product.lockup_term
+    /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
+    /// For a Flexible product withdrawal is always possible.
+    /// For Fixed product it's defined by the lockup term.
+    pub(crate) fn is_liquidable(&self, product: &Product, now: Timestamp) -> bool {
+        match product.clone().terms {
+            Terms::Fixed(value) => now - self.created_at > value.lockup_term,
+            Terms::Flexible => true,
+        }
     }
 
     pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> TokenAmount {
@@ -156,11 +162,7 @@ impl Jar {
         } else {
             (self.created_at, 0)
         };
-        let until_date = if product.lockup_term > 0 {
-            cmp::min(now, self.created_at + product.lockup_term)
-        } else {
-            now
-        };
+        let until_date = self.get_interest_until_date(product, now);
 
         let term_in_minutes = ((until_date - base_date) / MS_IN_MINUTE) as u128;
         let apy = self.get_apy(product);
@@ -179,6 +181,13 @@ impl Jar {
             } else {
                 apy.default
             },
+        }
+    }
+
+    fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
+        match product.terms.clone() {
+            Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
+            Terms::Flexible => now
         }
     }
 }
@@ -221,7 +230,7 @@ impl Contract {
         let jar = self.get_jar_internal(jar_index);
         let product = self.get_product(&jar.product_id);
 
-        require!(product.is_refillable, "The product doesn't allow top-ups");
+        require!(product.allows_top_up(), "The product doesn't allow top-ups");
         product.assert_cap(jar.principal + amount.0);
 
         let now = env::block_timestamp_ms();

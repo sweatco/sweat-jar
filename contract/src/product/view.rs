@@ -3,18 +3,16 @@ use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::*;
-use crate::product::model::{Cap, DowngradableApy, WithdrawalFee};
+use crate::product::model::{Cap, DowngradableApy, Terms, WithdrawalFee};
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct ProductView {
     pub id: ProductId,
-    pub lockup_term: U64,
     pub apy: ApyView,
     pub cap: CapView,
-    pub is_refillable: bool,
-    pub is_restakable: bool,
+    pub terms: TermsView,
     pub withdrawal_fee: Option<WithdrawalFeeView>,
 }
 
@@ -22,12 +20,40 @@ impl From<Product> for ProductView {
     fn from(value: Product) -> Self {
         Self {
             id: value.id,
-            lockup_term: U64(value.lockup_term),
             apy: value.apy.into(),
             cap: value.cap.into(),
-            is_refillable: value.is_refillable,
-            is_restakable: value.is_restakable,
+            terms: value.terms.into(),
             withdrawal_fee: value.withdrawal_fee.map(|fee| fee.into()),
+        }
+    }
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
+pub enum TermsView {
+    Fixed(FixedProductTermsView),
+    Flexible,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
+pub struct FixedProductTermsView {
+    pub lockup_term: U64,
+    pub allows_top_up: bool,
+    pub allows_restaking: bool,
+}
+
+impl From<Terms> for TermsView {
+    fn from(value: Terms) -> Self {
+        match value {
+            Terms::Fixed(value) => TermsView::Fixed(FixedProductTermsView {
+                lockup_term: U64(value.lockup_term),
+                allows_top_up: value.allows_top_up,
+                allows_restaking: value.allows_restaking,
+            }),
+            Terms::Flexible => TermsView::Flexible,
         }
     }
 }

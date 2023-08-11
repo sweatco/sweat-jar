@@ -2,7 +2,7 @@ use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
 use near_sdk::json_types::U128;
 
 use crate::*;
-use crate::assert::{assert_is_mature, assert_sufficient_balance};
+use crate::assert::{assert_is_liquidable, assert_sufficient_balance};
 use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, WithdrawData};
 use crate::external::GAS_FOR_AFTER_TRANSFER;
@@ -38,7 +38,7 @@ impl WithdrawApi for Contract {
         let account_id = env::predecessor_account_id();
 
         assert_ownership(&jar, &account_id);
-        assert_is_mature(&jar, &product, now);
+        assert_is_liquidable(&jar, &product, now);
 
         self.do_transfer(&account_id, &jar, amount)
     }
@@ -155,7 +155,7 @@ mod tests {
             product_id: "product".to_string(),
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        context.contract.create_jar(alice, ticket, U128(1_000_000), None);
 
         context.contract.withdraw(0, None);
     }
@@ -188,17 +188,17 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         let register_product_command = get_register_product_command();
-        let product: Product = register_product_command.clone().into();
+        let product: &Product = &register_product_command.clone().into();
         context.switch_account(&admin);
         context.contract.register_product(register_product_command);
 
         let ticket = JarTicket {
-            product_id: product.id,
+            product_id: product.id.clone(),
             valid_until: U64(0),
         };
         context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
-        context.set_block_timestamp_in_ms(product.lockup_term + 1);
+        context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
         context.contract.withdraw(0, None);
     }
@@ -210,17 +210,17 @@ mod tests {
         let mut context = Context::new(vec![admin.clone()]);
 
         let register_product_command = get_register_product_command();
-        let product: Product = register_product_command.clone().into();
+        let product: &Product = &register_product_command.clone().into();
         context.switch_account(&admin);
         context.contract.register_product(register_product_command);
 
         let ticket = JarTicket {
-            product_id: product.id,
+            product_id: product.clone().id,
             valid_until: U64(0),
         };
         context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
-        context.set_block_timestamp_in_ms(product.lockup_term + 1);
+        context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
         context.switch_account(&alice);
         context.contract.withdraw(0, None);

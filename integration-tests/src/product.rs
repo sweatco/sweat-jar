@@ -12,42 +12,62 @@ impl RegisterProductCommand {
         match self {
             RegisterProductCommand::Locked12Months12Percents => json!({
                 "id": "locked_12_months_12_percents",
-                "lockup_term": "31556952000",
                 "apy_default": ["12", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",
-                "is_refillable": false,
-                "is_restakable": false,
+                "terms": {
+                    "type": "Fixed",
+                    "data": {
+                        "lockup_term": "31556952000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
+                    }
+                },
             }),
             RegisterProductCommand::Locked6Months6Percents => json!({
                 "id": "locked_6_months_6_percents",
-                "lockup_term": "15778476000",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",
-                "is_refillable": false,
-                "is_restakable": false,
+                "terms": {
+                    "type": "Fixed",
+                    "data": {
+                        "lockup_term": "15778476000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
+                    }
+                },
             }),
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee => json!({
                 "id": "locked_6_months_6_percents_with_withdraw_fee",
-                "lockup_term": "15778476000",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",
-                "is_refillable": false,
-                "is_restakable": false,
+                "terms": {
+                    "type": "Fixed",
+                    "data": {
+                        "lockup_term": "15778476000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
+                    }
+                },
                 "withdrawal_fee": {
                     "Fix": "1000",
                 }
             }),
             RegisterProductCommand::Locked10Minutes6PercentsWithWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_withdraw_fee",
-                "lockup_term": "600000",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",
-                "is_refillable": false,
-                "is_restakable": false,
+                "terms": {
+                    "type": "Fixed",
+                    "data": {
+                        "lockup_term": "600000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
+                    }
+                },
                 "withdrawal_fee": {
                     "Fix": "1000",
                 }

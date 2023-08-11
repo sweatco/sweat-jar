@@ -11,13 +11,28 @@ pub type ProductId = String;
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Product {
     pub id: ProductId,
-    pub lockup_term: Duration,
     pub apy: Apy,
+    // TODO: check that remaining balance is more than cap.min on partial withdraw
     pub cap: Cap,
-    pub is_refillable: bool,
-    pub is_restakable: bool,
+    pub terms: Terms,
+    // TODO: check that amount to withdraw is more that fee on withdraw
     pub withdrawal_fee: Option<WithdrawalFee>,
     pub public_key: Option<Vec<u8>>,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(crate = "near_sdk::serde")]
+pub enum Terms {
+    Fixed(FixedProductTerms),
+    Flexible,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(crate = "near_sdk::serde")]
+pub struct FixedProductTerms {
+    pub lockup_term: Duration,
+    pub allows_top_up: bool,
+    pub allows_restaking: bool,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
@@ -54,7 +69,21 @@ pub struct Cap {
 
 impl Product {
     pub(crate) fn is_flexible(&self) -> bool {
-        self.lockup_term == 0
+        self.terms == Terms::Flexible
+    }
+
+    pub(crate) fn allows_top_up(&self) -> bool {
+        match self.clone().terms {
+            Terms::Fixed(value) => value.allows_top_up,
+            Terms::Flexible => true
+        }
+    }
+
+    pub(crate) fn allows_restaking(&self) -> bool {
+        match self.clone().terms {
+            Terms::Fixed(value) => value.allows_restaking,
+            Terms::Flexible => false
+        }
     }
 
     pub(crate) fn assert_cap(&self, amount: TokenAmount) {
@@ -64,6 +93,16 @@ impl Product {
                 self.cap.min,
                 self.cap.max
             ).as_str());
+        }
+    }
+}
+
+#[cfg(test)]
+impl Product {
+    pub(crate) fn get_lockup_term(&self) -> Option<Duration> {
+        match self.clone().terms {
+            Terms::Fixed(value) => Some(value.lockup_term),
+            Terms::Flexible => None,
         }
     }
 }
