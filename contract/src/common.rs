@@ -52,10 +52,11 @@ impl UDecimal {
 #[cfg(test)]
 pub(crate) mod tests {
     use std::time::Duration;
+
     use near_sdk::{AccountId, Balance, testing_env};
     use near_sdk::test_utils::VMContextBuilder;
-    use crate::common::UDecimal;
 
+    use crate::common::UDecimal;
     use crate::Contract;
 
     pub(crate) struct Context {

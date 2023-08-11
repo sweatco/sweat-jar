@@ -1,6 +1,6 @@
-use near_sdk::require;
 use near_sdk::__private::schemars::Set;
 use near_sdk::json_types::U128;
+use near_sdk::require;
 
 use crate::*;
 use crate::common::TokenAmount;

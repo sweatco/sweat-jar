@@ -1,4 +1,5 @@
 use serde_json::json;
+
 use crate::context::Context;
 use crate::product::RegisterProductCommand;
 

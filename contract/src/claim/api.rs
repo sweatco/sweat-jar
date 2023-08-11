@@ -1,5 +1,7 @@
 use std::cmp;
+
 use near_sdk::{env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
+
 use crate::*;
 use crate::common::TokenAmount;
 use crate::event::{ClaimEventItem, emit, EventKind};

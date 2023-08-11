@@ -1,5 +1,6 @@
-use near_sdk::{AccountId, Promise, near_bindgen};
+use near_sdk::{AccountId, near_bindgen, Promise};
 use near_sdk::serde_json::json;
+
 use crate::*;
 use crate::common::TokenAmount;
 

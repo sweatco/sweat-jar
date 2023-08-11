@@ -94,6 +94,7 @@ impl JarApi for Contract {
 #[cfg(test)]
 mod tests {
     use near_sdk::AccountId;
+
     use crate::jar::model::Jar;
     use crate::product::tests::get_product;
 
@@ -132,6 +133,7 @@ mod tests {
 mod signature_tests {
     use near_sdk::json_types::{Base64VecU8, U128, U64};
     use near_sdk::test_utils::accounts;
+
     use crate::common::tests::Context;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;

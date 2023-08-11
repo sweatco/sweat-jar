@@ -5,7 +5,6 @@ use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::json_types::Base64VecU8;
 use near_sdk::store::{LookupMap, UnorderedMap, UnorderedSet, Vector};
 
-use ft_interface::FungibleTokenInterface;
 use product::model::{Apy, Product, ProductId};
 
 use crate::assert::{assert_is_not_closed, assert_is_not_empty, assert_ownership};
@@ -131,12 +130,12 @@ mod tests {
     use near_sdk::test_utils::accounts;
 
     use common::tests::Context;
-    use crate::claim::api::ClaimApi;
 
+    use crate::claim::api::ClaimApi;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
-    use crate::product::tests::{get_premium_product, get_product, get_register_premium_product_command, get_register_product_command};
     use crate::product::api::*;
+    use crate::product::tests::{get_premium_product, get_product, get_register_premium_product_command, get_register_product_command};
 
     use super::*;
 
