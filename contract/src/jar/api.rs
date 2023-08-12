@@ -5,46 +5,100 @@ use crate::*;
 use crate::event::{emit, EventKind, RestakeData};
 use crate::jar::view::JarView;
 
+/// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
 pub trait JarApi {
-    fn restake(&mut self, jar_index: JarIndex) -> JarView;
-
+    /// Retrieves information about a specific deposit jar by its index.
+    ///
+    /// # Arguments
+    ///
+    /// * `jar_index` - The index of the deposit jar for which information is being retrieved.
+    ///
+    /// # Returns
+    ///
+    /// A `JarView` struct containing details about the specified deposit jar.
     fn get_jar(&self, jar_index: JarIndex) -> JarView;
+
+    /// Retrieves information about all deposit jars associated with a given account.
+    ///
+    /// # Arguments
+    ///
+    /// * `account_id` - The `AccountId` of the account for which jar information is being retrieved.
+    ///
+    /// # Returns
+    ///
+    /// A `Vec<JarView>` containing details about all deposit jars belonging to the specified account.
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView>;
 
+    /// Retrieves the total principal amount across all deposit jars for a provided account.
+    ///
+    /// # Arguments
+    ///
+    /// * `account_id` - The `AccountId` of the account for which the total principal is being retrieved.
+    ///
+    /// # Returns
+    ///
+    /// An `U128` representing the sum of principal amounts across all deposit jars for the specified account.
+    /// Returns 0 if the account has no associated jars.
     fn get_total_principal(&self, account_id: AccountId) -> U128;
+
+    /// Retrieves the principal amount for a specific set of deposit jars.
+    ///
+    /// # Arguments
+    ///
+    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars for which the
+    ///                   principal is being retrieved.
+    ///
+    /// # Returns
+    ///
+    /// An `U128` representing the sum of principal amounts for the specified deposit jars.
     fn get_principal(&self, jar_indices: Vec<JarIndex>) -> U128;
 
+    /// Retrieves the total interest amount across all deposit jars for a provided account.
+    ///
+    /// # Arguments
+    ///
+    /// * `account_id` - The `AccountId` of the account for which the total interest is being retrieved.
+    ///
+    /// # Returns
+    ///
+    /// An `U128` representing the sum of interest amounts across all deposit jars for the specified account.
+    /// Returns 0 if the account has no associated jars.
     fn get_total_interest(&self, account_id: AccountId) -> U128;
+
+    /// Retrieves the interest amount for a specific set of deposit jars.
+    ///
+    /// # Arguments
+    ///
+    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars for which the
+    ///                   interest is being retrieved.
+    ///
+    /// # Returns
+    ///
+    /// An `U128` representing the sum of interest amounts for the specified deposit jars.
+    ///
     fn get_interest(&self, jar_indices: Vec<JarIndex>) -> U128;
+
+    /// Restakes the contents of a specified deposit jar into a new jar.
+    ///
+    /// # Arguments
+    ///
+    /// * `jar_index` - The index of the deposit jar from which the restaking is being initiated.
+    ///
+    /// # Returns
+    ///
+    /// A `JarView` containing details about the new jar created as a result of the restaking.
+    ///
+    /// # Panics
+    ///
+    /// This function may panic under the following conditions:
+    /// - If the product of the original jar does not support restaking.
+    /// - If the function is called by an account other than the owner of the original jar.
+    /// - If the original jar is not yet mature.
+    fn restake(&mut self, jar_index: JarIndex) -> JarView;
 }
 
 #[near_bindgen]
 impl JarApi for Contract {
-    fn restake(&mut self, jar_index: JarIndex) -> JarView {
-        let jar = self.get_jar_internal(jar_index);
-        let account_id = env::predecessor_account_id();
-
-        assert_ownership(&jar, &account_id);
-
-        let product = self.get_product(&jar.product_id);
-
-        require!(product.allows_restaking(), "The product doesn't support restaking");
-
-        let now = env::block_timestamp_ms();
-        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
-
-        let index = self.jars.len() as JarIndex;
-        let new_jar = Jar::create(index, jar.account_id.clone(), jar.product_id.clone(), jar.principal, now);
-        let withdraw_jar = jar.withdrawn(&product, jar.principal, now);
-
-        self.save_jar(&account_id, &withdraw_jar);
-        self.save_jar(&account_id, &new_jar);
-
-        emit(EventKind::Restake(RestakeData { old_index: index, new_index: new_jar.index }));
-
-        new_jar.into()
-    }
-
     fn get_jar(&self, index: JarIndex) -> JarView {
         self.get_jar_internal(index).into()
     }
@@ -88,6 +142,31 @@ impl JarApi for Contract {
             .sum();
 
         U128(result)
+    }
+
+    fn restake(&mut self, jar_index: JarIndex) -> JarView {
+        let jar = self.get_jar_internal(jar_index);
+        let account_id = env::predecessor_account_id();
+
+        assert_ownership(&jar, &account_id);
+
+        let product = self.get_product(&jar.product_id);
+
+        require!(product.allows_restaking(), "The product doesn't support restaking");
+
+        let now = env::block_timestamp_ms();
+        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
+
+        let index = self.jars.len() as JarIndex;
+        let new_jar = Jar::create(index, jar.account_id.clone(), jar.product_id.clone(), jar.principal, now);
+        let withdraw_jar = jar.withdrawn(&product, jar.principal, now);
+
+        self.save_jar(&account_id, &withdraw_jar);
+        self.save_jar(&account_id, &new_jar);
+
+        emit(EventKind::Restake(RestakeData { old_index: index, new_index: new_jar.index }));
+
+        new_jar.into()
     }
 }
 
