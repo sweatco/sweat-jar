@@ -47,7 +47,6 @@ pub trait ClaimCallbacks {
 
 #[near_bindgen]
 impl ClaimApi for Contract {
-    //TODO: return 0 if a user has no jars
     fn claim_total(&mut self) -> PromiseOrValue<TokenAmount> {
         let account_id = env::predecessor_account_id();
         let jar_indices = self.account_jar_ids(&account_id);

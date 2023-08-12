@@ -23,22 +23,47 @@ pub struct JarTicket {
     pub valid_until: U64,
 }
 
+/// The `Jar` struct represents a deposit jar within the smart contract.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Jar {
+    /// The index of the jar in the `Contracts.jars` vector. Also serves as the unique identifier for the jar.
     pub index: JarIndex,
+
+    /// The account ID of the owner of the jar.
     pub account_id: AccountId,
+
+    /// The product ID that describes the terms of the deposit associated with the jar.
     pub product_id: ProductId,
+
+    /// The timestamp of when the jar was created, measured in milliseconds since Unix epoch.
     pub created_at: Timestamp,
+
+    /// The principal amount of the deposit stored in the jar.
     pub principal: TokenAmount,
+
+    /// A cached value that stores calculated interest based on the current state of the jar.
+    /// This cache is updated whenever properties that impact interest calculation change,
+    /// allowing for efficient interest calculations between state changes.
     pub cache: Option<JarCache>,
+
+    /// The amount of tokens that have been claimed from the jar up to the present moment.
     pub claimed_balance: TokenAmount,
+
+    /// Indicates whether an operation involving cross-contract calls is in progress for this jar.
     pub is_pending_withdraw: bool,
+
+    /// The state of the jar, indicating whether it is active or closed.
     pub state: JarState,
+
+    /// Indicates whether a penalty has been applied to the jar's owner due to violating product terms.
     pub is_penalty_applied: bool,
 }
 
+/// A cached value that stores calculated interest based on the current state of the jar.
+/// This cache is updated whenever properties that impact interest calculation change,
+/// allowing for efficient interest calculations between state changes.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
@@ -47,6 +72,7 @@ pub struct JarCache {
     pub interest: TokenAmount,
 }
 
+/// The state of a jar, indicating whether it is active or closed.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub enum JarState {
