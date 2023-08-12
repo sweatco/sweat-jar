@@ -9,8 +9,30 @@ use crate::external::GAS_FOR_AFTER_TRANSFER;
 use crate::ft_interface::FungibleTokenInterface;
 use crate::jar::model::{Jar, JarIndex};
 
+/// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
 pub trait ClaimApi {
+    /// Claims all available interest from all deposit jars belonging to the calling account.
+    ///
+    /// # Returns
+    ///
+    /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available
+    /// interest across all jars is zero, the returned value will also be zero.
     fn claim_total(&mut self) -> PromiseOrValue<TokenAmount>;
+
+    /// Claims interest from specific deposit jars with provided indices.
+    ///
+    /// # Arguments
+    ///
+    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars from which interest is being claimed.
+    /// * `amount` - An optional `TokenAmount` specifying the desired amount of tokens to claim. If provided, the method
+    ///              will attempt to claim this specific amount of tokens. If not provided or if the specified amount
+    ///              is greater than the total available interest in the provided jars, the method will claim the maximum
+    ///              available amount.
+    ///
+    /// # Returns
+    ///
+    /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
+    /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
     fn claim_jars(
         &mut self,
         jar_indices: Vec<JarIndex>,
