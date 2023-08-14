@@ -12,7 +12,7 @@ pub(crate) trait JarContractInterface {
         &self,
         token_contract_account: &Account,
         fee_account: &Account,
-        admin_allowlist: Vec<&AccountId>,
+        manager: &AccountId,
     ) -> anyhow::Result<()>;
 
     async fn register_product(
@@ -54,7 +54,7 @@ impl JarContractInterface for Contract {
         &self,
         token_contract_account: &Account,
         fee_account: &Account,
-        admin_allowlist: Vec<&AccountId>,
+        manager: &AccountId,
     ) -> anyhow::Result<()> {
         println!("▶️ Init jar contract");
 
@@ -63,7 +63,7 @@ impl JarContractInterface for Contract {
             .args_json(json!({
                 "token_account_id": token_contract_account.id(),
                 "fee_account_id": fee_account.id(),
-                "admin_allowlist": admin_allowlist,
+                "manager": manager,
             }))
             .max_gas()
             .transact()

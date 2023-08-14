@@ -167,7 +167,7 @@ mod tests {
     fn withdraw_locked_jar_before_maturity_by_not_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -186,7 +186,7 @@ mod tests {
     fn withdraw_locked_jar_before_maturity_by_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -206,7 +206,7 @@ mod tests {
     fn withdraw_locked_jar_after_maturity_by_not_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         let register_product_command = get_register_product_command();
         let product: &Product = &register_product_command.clone().into();
@@ -228,7 +228,7 @@ mod tests {
     fn withdraw_locked_jar_after_maturity_by_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         let register_product_command = get_register_product_command();
         let product: &Product = &register_product_command.clone().into();
@@ -252,7 +252,7 @@ mod tests {
     fn withdraw_flexible_jar_by_not_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         let register_product_command = get_register_flexible_product_command();
         let product: Product = register_product_command.clone().into();
@@ -273,7 +273,7 @@ mod tests {
     fn withdraw_flexible_jar_by_owner_full() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         let register_product_command = get_register_flexible_product_command();
         let product: Product = register_product_command.clone().into();
@@ -298,7 +298,7 @@ mod tests {
     fn withdraw_flexible_jar_by_owner_with_sufficient_balance() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         let register_product_command = get_register_flexible_product_command();
         let product: Product = register_product_command.clone().into();
@@ -324,7 +324,7 @@ mod tests {
     fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         let register_product_command = get_register_flexible_product_command();
         let product: Product = register_product_command.clone().into();

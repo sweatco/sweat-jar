@@ -247,7 +247,7 @@ mod signature_tests {
     #[test]
     fn verify_ticket_with_valid_signature_and_date() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_premium_product_command());
@@ -264,7 +264,7 @@ mod signature_tests {
     #[should_panic(expected = "Invalid signature")]
     fn verify_ticket_with_invalid_signature() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_premium_product_command());
@@ -283,7 +283,7 @@ mod signature_tests {
     #[should_panic(expected = "Not matching signature")]
     fn verify_ticket_with_not_matching_signature() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
 
@@ -312,7 +312,7 @@ mod signature_tests {
     #[should_panic(expected = "Ticket is outdated")]
     fn verify_ticket_with_invalid_date() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.set_block_timestamp_in_days(365);
@@ -330,7 +330,7 @@ mod signature_tests {
     #[should_panic(expected = "Product product_premium doesn't exist")]
     fn verify_ticket_with_not_existing_product() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
 
@@ -346,7 +346,7 @@ mod signature_tests {
     #[should_panic(expected = "Signature is required")]
     fn verify_ticket_without_signature_when_required() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_premium_product_command());
@@ -362,7 +362,7 @@ mod signature_tests {
     #[test]
     fn verify_ticket_without_signature_when_not_required() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -380,7 +380,7 @@ mod signature_tests {
     fn restake_by_not_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -399,7 +399,7 @@ mod signature_tests {
     fn restake_when_restaking_is_not_supported() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -419,7 +419,7 @@ mod signature_tests {
     fn restake_before_maturity() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_restakable_product_command());
@@ -438,7 +438,7 @@ mod signature_tests {
     fn restake_after_maturity_for_restakable_product() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_restakable_product_command());
@@ -465,7 +465,7 @@ mod signature_tests {
     fn restake_after_maturity_for_not_restakable_product() {
         let alice = accounts(0);
         let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());

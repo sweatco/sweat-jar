@@ -11,7 +11,7 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     let fee_account = &context.account("fee").await?;
 
     context.ft_contract.init().await?;
-    context.jar_contract.init(context.ft_contract.account(), fee_account, vec![manager.id()]).await?;
+    context.jar_contract.init(context.ft_contract.account(), fee_account, manager.id()).await?;
 
     context.ft_contract.storage_deposit(context.jar_contract.account()).await?;
     context.ft_contract.storage_deposit(fee_account).await?;

@@ -1,9 +1,10 @@
 use ed25519_dalek::{PublicKey, Signature};
-use near_sdk::{AccountId, assert_one_yocto, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
+use near_sdk::{AccountId, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::borsh::maybestd::collections::HashSet;
 use near_sdk::json_types::Base64VecU8;
-use near_sdk::store::{LookupMap, UnorderedMap, UnorderedSet, Vector};
+use near_sdk::store::{LookupMap, UnorderedMap, Vector};
+use near_self_update::SelfUpdate;
 
 use product::model::{Apy, Product, ProductId};
 
@@ -27,11 +28,11 @@ pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, SelfUpdate)]
 pub struct Contract {
     pub token_account_id: AccountId,
     pub fee_account_id: AccountId,
-    pub admin_allowlist: UnorderedSet<AccountId>,
+    pub manager: AccountId,
 
     pub products: UnorderedMap<ProductId, Product>,
 
@@ -41,16 +42,9 @@ pub struct Contract {
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
-    Administrators,
     Products,
     Jars,
     AccountJars,
-}
-
-pub trait AuthApi {
-    fn get_admin_allowlist(&self) -> Vec<AccountId>;
-    fn add_admin(&mut self, account_id: AccountId);
-    fn remove_admin(&mut self, account_id: AccountId);
 }
 
 pub trait PenaltyApi {
@@ -59,24 +53,17 @@ pub trait PenaltyApi {
 
 #[near_bindgen]
 impl Contract {
-    pub fn time() -> u64 {
-        env::block_timestamp_ms()
-    }
-
     #[init]
     #[private]
     pub fn init(
         token_account_id: AccountId,
         fee_account_id: AccountId,
-        admin_allowlist: Vec<AccountId>,
+        manager: AccountId,
     ) -> Self {
-        let mut admin_allowlist_set = UnorderedSet::new(StorageKey::Administrators);
-        admin_allowlist_set.extend(admin_allowlist.into_iter());
-
         Self {
             token_account_id,
             fee_account_id,
-            admin_allowlist: admin_allowlist_set,
+            manager,
             products: UnorderedMap::new(StorageKey::Products),
             jars: Vector::new(StorageKey::Jars),
             account_jars: LookupMap::new(StorageKey::AccountJars),
@@ -85,31 +72,10 @@ impl Contract {
 }
 
 #[near_bindgen]
-impl AuthApi for Contract {
-    fn get_admin_allowlist(&self) -> Vec<AccountId> {
-        self.admin_allowlist.iter().cloned().collect()
-    }
-
-    fn add_admin(&mut self, account_id: AccountId) {
-        assert_one_yocto();
-        self.assert_admin();
-
-        self.admin_allowlist.insert(account_id);
-    }
-
-    fn remove_admin(&mut self, account_id: AccountId) {
-        assert_one_yocto();
-        self.assert_admin();
-
-        self.admin_allowlist.remove(&account_id);
-    }
-}
-
-#[near_bindgen]
 impl PenaltyApi for Contract {
     //TODO: add event
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
-        self.assert_admin();
+        self.assert_manager();
 
         let jar = self.get_jar_internal(jar_index);
         let product = self.get_product(&jar.product_id);
@@ -140,79 +106,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn add_admin_by_admin() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(vec![admin.clone()]);
-
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1);
-
-        context.contract.add_admin(alice.clone());
-        let admins = context.contract.get_admin_allowlist();
-
-        assert_eq!(2, admins.len());
-        assert!(admins.contains(&alice));
-    }
-
-    #[test]
-    #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
-    fn add_admin_with_no_deposit() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin]);
-        context.switch_account(&alice);
-
-        context.contract.add_admin(alice.clone());
-    }
-
-    #[test]
-    #[should_panic(expected = "Can be performed only by admin")]
-    fn add_admin_by_not_admin() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin]);
-        context.switch_account(&alice);
-        context.with_deposit_yocto(1);
-
-        context.contract.add_admin(alice.clone());
-    }
-
-    #[test]
-    fn remove_admin_by_admin() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin.clone(), alice.clone()]);
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1);
-
-        context.contract.remove_admin(alice.clone());
-        let admins = context.contract.get_admin_allowlist();
-
-        assert_eq!(1, admins.len());
-        assert!(!admins.contains(&alice));
-    }
-
-    #[test]
-    #[should_panic(expected = "Can be performed only by admin")]
-    fn remove_admin_by_not_admin() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let mut context = Context::new(vec![admin.clone()]);
-        context.switch_account(&alice);
-        context.with_deposit_yocto(1);
-
-        context.contract.remove_admin(admin);
-    }
-
-    #[test]
     fn add_product_to_list_by_admin() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -226,7 +122,7 @@ mod tests {
     #[should_panic(expected = "Can be performed only by admin")]
     fn add_product_to_list_by_not_admin() {
         let admin = accounts(0);
-        let mut context = Context::new(vec![admin]);
+        let mut context = Context::new(admin);
 
         context.contract.register_product(get_register_product_command());
     }
@@ -234,7 +130,8 @@ mod tests {
     #[test]
     fn get_principle_with_no_jars() {
         let alice = accounts(0);
-        let context = Context::new(vec![]);
+        let admin = accounts(1);
+        let context = Context::new(admin);
 
         let principal = context.contract.get_total_principal(alice);
         assert_eq!(principal.0, 0);
@@ -245,7 +142,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
 
@@ -271,7 +168,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
         context.switch_account(&admin);
 
         context.contract.register_product(get_register_product_command());
@@ -313,8 +210,9 @@ mod tests {
     #[test]
     fn get_total_interest_with_no_jars() {
         let alice = accounts(0);
+        let admin = accounts(1);
 
-        let context = Context::new(vec![]);
+        let context = Context::new(admin);
 
         let interest = context.contract.get_total_interest(alice);
         assert_eq!(interest.0, 0);
@@ -325,7 +223,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -352,7 +250,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -379,7 +277,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -406,7 +304,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_product_command());
@@ -441,7 +339,7 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(vec![admin.clone()]);
+        let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
         context.contract.register_product(get_register_premium_product_command());

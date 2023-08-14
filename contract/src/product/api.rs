@@ -27,7 +27,7 @@ pub trait ProductApi {
 #[near_bindgen]
 impl ProductApi for Contract {
     fn register_product(&mut self, command: RegisterProductCommand) {
-        self.assert_admin();
+        self.assert_manager();
 
         let product: Product = command.into();
         self.products.insert(product.clone().id, product.clone());
