@@ -9,7 +9,7 @@ use crate::migration::model::CeFiJar;
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
-#[serde(tag = "action", content = "data")]
+#[serde(tag = "type", content = "data")]
 #[serde(rename_all = "snake_case")]
 pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.

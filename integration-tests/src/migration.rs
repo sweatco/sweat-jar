@@ -33,7 +33,7 @@ pub(crate) async fn run() -> anyhow::Result<()> {
         context.jar_contract.account().id(),
         3_000_000,
         json!({
-            "action": "migrate",
+            "type": "migrate",
             "data": [
                 {
                     "id": "old_0",

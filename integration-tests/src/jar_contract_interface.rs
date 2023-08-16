@@ -86,6 +86,7 @@ impl JarContractInterface for Contract {
 
         let result = user.call(self.id(), "register_product")
             .args_json(args)
+            .deposit(1)
             .transact()
             .await?
             .into_result()?;
@@ -125,7 +126,7 @@ impl JarContractInterface for Contract {
         );
 
         let msg = json!({
-            "action": "stake",
+            "type": "stake",
             "data": {
                 "ticket": {
                     "product_id": product_id,

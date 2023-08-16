@@ -1,4 +1,4 @@
-use near_sdk::near_bindgen;
+use near_sdk::{assert_one_yocto, near_bindgen};
 
 use crate::*;
 use crate::Contract;
@@ -26,8 +26,10 @@ pub trait ProductApi {
 
 #[near_bindgen]
 impl ProductApi for Contract {
+    #[payable]
     fn register_product(&mut self, command: RegisterProductCommand) {
         self.assert_manager();
+        assert_one_yocto();
 
         let product: Product = command.into();
         self.products.insert(product.clone().id, product.clone());

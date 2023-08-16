@@ -83,6 +83,7 @@ impl From<TermsDto> for Terms {
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
+#[serde(tag = "type", content = "data")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFeeDto {
     /// Fixed amount of tokens which a user will pay on tokens withdraw

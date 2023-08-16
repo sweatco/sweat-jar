@@ -52,7 +52,8 @@ impl RegisterProductCommand {
                     }
                 },
                 "withdrawal_fee": {
-                    "Fix": "1000",
+                    "type": "Fix",
+                    "data": "1000",
                 }
             }),
             RegisterProductCommand::Locked10Minutes6PercentsWithWithdrawFee => json!({
@@ -69,7 +70,8 @@ impl RegisterProductCommand {
                     }
                 },
                 "withdrawal_fee": {
-                    "Fix": "1000",
+                    "type": "Fix",
+                    "data": "1000",
                 }
             }),
         }
