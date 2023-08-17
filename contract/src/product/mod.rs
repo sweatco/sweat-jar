@@ -6,8 +6,11 @@ pub mod view;
 #[cfg(test)]
 pub(crate) mod tests {
     use near_sdk::json_types::{Base64VecU8, U128, U64};
+    use near_sdk::test_utils::accounts;
 
+    use crate::common::tests::Context;
     use crate::common::UDecimal;
+    use crate::product::api::ProductApi;
     use crate::product::command::{FixedProductTermsDto, RegisterProductCommand, TermsDto};
     use crate::product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms};
 
@@ -125,6 +128,50 @@ pub(crate) mod tests {
             public_key: Some(Base64VecU8(get_premium_product_public_key())),
             is_enabled: true,
         }
+    }
+
+    #[test]
+    fn disable_product_when_enabled() {
+        let admin = accounts(0);
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
+
+        let mut product = context.contract.get_product(&"product".to_string());
+        assert!(product.is_enabled);
+
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.set_enabled("product".to_string(), false),
+        );
+
+        product = context.contract.get_product(&"product".to_string());
+        assert!(!product.is_enabled);
+    }
+
+    #[test]
+    #[should_panic(expected = "Status matches")]
+    fn enable_product_when_enabled() {
+        let admin = accounts(0);
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
+
+        let product = context.contract.get_product(&"product".to_string());
+        assert!(product.is_enabled);
+
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.set_enabled("product".to_string(), true),
+        );
     }
 
     #[test]
