@@ -170,7 +170,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
@@ -189,7 +192,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
@@ -208,10 +214,12 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let register_product_command = get_register_product_command();
-        let product: &Product = &register_product_command.clone().into();
+        let product: &Product = &get_register_product_command().into();
         context.switch_account(&admin);
-        context.contract.register_product(register_product_command);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: product.id.clone(),
@@ -230,10 +238,12 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let register_product_command = get_register_product_command();
-        let product: &Product = &register_product_command.clone().into();
+        let product: &Product = &get_register_product_command().into();
         context.switch_account(&admin);
-        context.contract.register_product(register_product_command);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: product.clone().id,
@@ -254,10 +264,12 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let register_product_command = get_register_flexible_product_command();
-        let product: Product = register_product_command.clone().into();
+        let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.contract.register_product(register_product_command);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_flexible_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: product.id,
@@ -275,10 +287,12 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let register_product_command = get_register_flexible_product_command();
-        let product: Product = register_product_command.clone().into();
+        let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.contract.register_product(register_product_command);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_flexible_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: product.id,
@@ -300,10 +314,12 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let register_product_command = get_register_flexible_product_command();
-        let product: Product = register_product_command.clone().into();
+        let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.contract.register_product(register_product_command);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_flexible_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: product.id,
@@ -326,10 +342,12 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let register_product_command = get_register_flexible_product_command();
-        let product: Product = register_product_command.clone().into();
+        let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.contract.register_product(register_product_command);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_flexible_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: product.id,

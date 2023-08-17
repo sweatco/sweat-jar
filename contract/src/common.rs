@@ -94,7 +94,7 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {
-            self.set_block_timestamp(Duration::from_secs(days * 24 *  60 * 60));
+            self.set_block_timestamp(Duration::from_secs(days * 24 * 60 * 60));
         }
 
         pub(crate) fn set_block_timestamp_in_minutes(&mut self, hours: u64) {
@@ -124,7 +124,15 @@ pub(crate) mod tests {
             self.switch_account(&self.owner.clone());
         }
 
-        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance) {
+        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: fn(&mut Context) -> ()) {
+            self.set_deposit_yocto(amount);
+
+            f(self);
+
+            self.set_deposit_yocto(0);
+        }
+
+        fn set_deposit_yocto(&mut self, amount: Balance) {
             self.builder = self.builder.clone().attached_deposit(amount).clone();
             testing_env!(self.builder.build());
         }

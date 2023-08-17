@@ -17,6 +17,7 @@ pub struct RegisterProductCommand {
     pub terms: TermsDto,
     pub withdrawal_fee: Option<WithdrawalFeeDto>,
     pub public_key: Option<Base64VecU8>,
+    pub is_enabled: bool,
 }
 
 impl From<RegisterProductCommand> for Product {
@@ -46,6 +47,7 @@ impl From<RegisterProductCommand> for Product {
             terms: value.terms.into(),
             withdrawal_fee,
             public_key: value.public_key.map(|key| key.0),
+            is_enabled: value.is_enabled,
         }
     }
 }

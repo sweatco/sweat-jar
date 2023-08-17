@@ -23,6 +23,7 @@ impl RegisterProductCommand {
                         "allows_restaking": false,
                     }
                 },
+                "is_enabled": true,
             }),
             RegisterProductCommand::Locked6Months6Percents => json!({
                 "id": "locked_6_months_6_percents",
@@ -37,6 +38,7 @@ impl RegisterProductCommand {
                         "allows_restaking": false,
                     }
                 },
+                "is_enabled": true,
             }),
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee => json!({
                 "id": "locked_6_months_6_percents_with_withdraw_fee",
@@ -54,7 +56,8 @@ impl RegisterProductCommand {
                 "withdrawal_fee": {
                     "type": "Fix",
                     "data": "1000",
-                }
+                },
+                "is_enabled": true,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsWithWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_withdraw_fee",
@@ -72,7 +75,8 @@ impl RegisterProductCommand {
                 "withdrawal_fee": {
                     "type": "Fix",
                     "data": "1000",
-                }
+                },
+                "is_enabled": true,
             }),
         }
     }

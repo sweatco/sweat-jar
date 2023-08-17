@@ -1,4 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::require;
 use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::*;
@@ -30,6 +31,9 @@ pub struct Product {
 
     /// An optional ed25519 public key used for authorization to create a jar for this product.
     pub public_key: Option<Vec<u8>>,
+
+    /// Indicates whether it's possible to create a new jar for this product.
+    pub is_enabled: bool,
 }
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
@@ -133,6 +137,10 @@ impl Product {
                 self.cap.max
             ).as_str());
         }
+    }
+
+    pub(crate) fn assert_enabled(&self) {
+        require!(self.is_enabled, "It's not possible to create new jars for this product");
     }
 }
 

@@ -250,7 +250,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_premium_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_premium_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -267,7 +270,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_premium_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_premium_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -287,11 +293,13 @@ mod signature_tests {
 
         context.switch_account(&admin);
 
-        let command = RegisterProductCommand {
-            id: "another_product".to_string(),
-            ..get_register_premium_product_command()
-        };
-        context.contract.register_product(command);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(RegisterProductCommand {
+                id: "another_product".to_string(),
+                ..get_register_premium_product_command()
+            }),
+        );
 
         let ticket = JarTicket {
             product_id: "another_product".to_string(),
@@ -316,7 +324,10 @@ mod signature_tests {
 
         context.switch_account(&admin);
         context.set_block_timestamp_in_days(365);
-        context.contract.register_product(get_register_premium_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_premium_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -349,7 +360,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_premium_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_premium_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product_premium".to_string(),
@@ -365,7 +379,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
@@ -383,7 +400,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
@@ -402,7 +422,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
@@ -422,7 +445,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_restakable_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_restakable_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product_restakable".to_string(),
@@ -441,7 +467,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_restakable_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_restakable_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product_restakable".to_string(),
@@ -468,7 +497,10 @@ mod signature_tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
@@ -480,5 +512,30 @@ mod signature_tests {
 
         context.switch_account(&alice);
         context.contract.restake(0);
+    }
+
+    #[test]
+    #[should_panic(expected = "It's not possible to create new jars for this product")]
+    fn create_jar_for_disabled_product() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(
+                RegisterProductCommand {
+                    is_enabled: false,
+                    ..get_register_product_command()
+                }
+            ),
+        );
+
+        let ticket = JarTicket {
+            product_id: "product".to_string(),
+            valid_until: U64(0),
+        };
+        context.contract.create_jar(alice, ticket, U128(1_000_000), None);
     }
 }

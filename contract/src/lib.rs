@@ -111,7 +111,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let products = context.contract.get_products();
         assert_eq!(products.len(), 1);
@@ -124,7 +127,10 @@ mod tests {
         let admin = accounts(0);
         let mut context = Context::new(admin);
 
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
     }
 
     #[test]
@@ -146,7 +152,10 @@ mod tests {
 
         context.switch_account(&admin);
 
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -171,7 +180,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
         context.switch_account(&admin);
 
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         let product = get_product();
         context.switch_account_to_owner();
@@ -226,7 +238,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -253,7 +268,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -280,7 +298,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -307,7 +328,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -342,7 +366,10 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.contract.register_product(get_register_premium_product_command());
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_premium_product_command()),
+        );
 
         let product = get_premium_product();
         context.switch_account_to_owner();

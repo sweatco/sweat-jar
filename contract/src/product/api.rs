@@ -1,4 +1,4 @@
-use near_sdk::{assert_one_yocto, near_bindgen};
+use near_sdk::{assert_one_yocto, near_bindgen, require};
 
 use crate::*;
 use crate::Contract;
@@ -15,6 +15,22 @@ pub trait ProductApi {
     ///
     /// * `command` - A `RegisterProductCommand` struct containing information about the new product.
     fn register_product(&mut self, command: RegisterProductCommand);
+
+    /// Sets the enabled status of a specific product.
+    ///
+    /// This method allows modifying the enabled status of a product, which determines whether users can create
+    /// jars for the specified product. If the `is_enabled` parameter is set to `true`, users will be able to create
+    /// jars for the product. If set to `false`, any attempts to create jars for the product will be rejected.
+    ///
+    /// # Arguments
+    ///
+    /// * `product_id` - The ID of the product for which the enabled status is being modified.
+    /// * `is_enabled` - A boolean value indicating whether the product should be enabled (`true`) or disabled (`false`).
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the provided `is_enabled` value matches the current enabled status of the product.
+    fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool);
 
     /// Retrieves a list of all registered products in the contract.
     ///
@@ -35,6 +51,22 @@ impl ProductApi for Contract {
         self.products.insert(product.clone().id, product.clone());
 
         emit(EventKind::RegisterProduct(product));
+    }
+
+    fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool) {
+        self.assert_manager();
+        assert_one_yocto();
+
+        let product = self.get_product(&product_id);
+
+        require!(is_enabled != product.is_enabled, "Status matches");
+
+        let id = &product.id;
+        let updated_product = Product {
+            is_enabled,
+            ..product.clone()
+        };
+        self.products.insert(id.clone(), updated_product);
     }
 
     fn get_products(&self) -> Vec<ProductView> {

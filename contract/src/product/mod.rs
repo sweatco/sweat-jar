@@ -33,6 +33,7 @@ pub(crate) mod tests {
             }),
             withdrawal_fee: None,
             public_key: None,
+            is_enabled: true,
         }
     }
 
@@ -50,6 +51,7 @@ pub(crate) mod tests {
             }),
             withdrawal_fee: None,
             public_key: None,
+            is_enabled: true,
         }
     }
 
@@ -63,6 +65,7 @@ pub(crate) mod tests {
             terms: TermsDto::Flexible,
             withdrawal_fee: None,
             public_key: None,
+            is_enabled: true,
         }
     }
 
@@ -80,6 +83,7 @@ pub(crate) mod tests {
             }),
             withdrawal_fee: None,
             public_key: None,
+            is_enabled: true,
         }
     }
 
@@ -101,6 +105,7 @@ pub(crate) mod tests {
             }),
             withdrawal_fee: None,
             public_key: Some(get_premium_product_public_key()),
+            is_enabled: true,
         }
     }
 
@@ -118,6 +123,7 @@ pub(crate) mod tests {
             }),
             withdrawal_fee: None,
             public_key: Some(Base64VecU8(get_premium_product_public_key())),
+            is_enabled: true,
         }
     }
 

@@ -14,6 +14,7 @@ pub struct ProductView {
     pub cap: CapView,
     pub terms: TermsView,
     pub withdrawal_fee: Option<WithdrawalFeeView>,
+    pub is_enabled: bool,
 }
 
 impl From<Product> for ProductView {
@@ -24,6 +25,7 @@ impl From<Product> for ProductView {
             cap: value.cap.into(),
             terms: value.terms.into(),
             withdrawal_fee: value.withdrawal_fee.map(|fee| fee.into()),
+            is_enabled: value.is_enabled,
         }
     }
 }

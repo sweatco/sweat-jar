@@ -252,6 +252,7 @@ impl Contract {
         let product_id = ticket.clone().product_id;
         let product = self.get_product(&product_id);
 
+        product.assert_enabled();
         product.assert_cap(amount);
         self.verify(&account_id, 1_000_000, &ticket, signature);
 
