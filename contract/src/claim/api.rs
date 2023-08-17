@@ -101,6 +101,7 @@ impl ClaimApi for Contract {
                 .transfer(
                     &account_id,
                     total_interest_to_claim,
+                    "claim",
                     None,
                 )
                 .then(after_claim_call(unlocked_jars))

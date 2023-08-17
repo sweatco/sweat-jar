@@ -116,7 +116,7 @@ impl Contract {
         });
 
         self.ft_contract()
-            .transfer(account_id, amount, fee)
+            .transfer(account_id, amount, "withdraw", fee)
             .then(Self::after_withdraw_call(jar.clone(), amount))
             .into()
     }

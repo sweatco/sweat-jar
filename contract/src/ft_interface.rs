@@ -27,19 +27,30 @@ impl Contract {
 }
 
 pub(crate) trait FungibleTokenInterface {
-    fn transfer(&self, receiver_id: &AccountId, amount: u128, fee: Option<Fee>) -> Promise;
+    fn transfer(
+        &self,
+        receiver_id: &AccountId,
+        amount: u128,
+        memo: &str,
+        fee: Option<Fee>,
+    ) -> Promise;
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
-    fn transfer(&self, receiver_id: &AccountId, amount: u128, fee: Option<Fee>) -> Promise {
+    fn transfer(
+        &self,
+        receiver_id: &AccountId,
+        amount: u128,
+        memo: &str,
+        fee: Option<Fee>,
+    ) -> Promise {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())
-                //TODO: change memo for "claim"
-                .ft_transfer(receiver_id, amount - fee.amount, Some("withdraw".to_string()))
-                .ft_transfer(&fee.beneficiary_id, fee.amount, Some("withdraw fee".to_string()))
+                .ft_transfer(receiver_id, amount - fee.amount, Some(memo.to_string()))
+                .ft_transfer(&fee.beneficiary_id, fee.amount, Some(format!("{} fee", memo)))
         } else {
             Promise::new(self.address.clone())
-                .ft_transfer(receiver_id, amount, Some("withdraw".to_string()))
+                .ft_transfer(receiver_id, amount, Some(memo.to_string()))
         }
     }
 }
