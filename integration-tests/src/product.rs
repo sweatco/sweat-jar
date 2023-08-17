@@ -16,7 +16,7 @@ impl RegisterProductCommand {
                 "cap_min": "100000",
                 "cap_max": "100000000000",
                 "terms": {
-                    "type": "Fixed",
+                    "type": "fixed",
                     "data": {
                         "lockup_term": "31556952000",
                         "allows_top_up": false,
@@ -31,7 +31,7 @@ impl RegisterProductCommand {
                 "cap_min": "100000",
                 "cap_max": "100000000000",
                 "terms": {
-                    "type": "Fixed",
+                    "type": "fixed",
                     "data": {
                         "lockup_term": "15778476000",
                         "allows_top_up": false,
@@ -46,7 +46,7 @@ impl RegisterProductCommand {
                 "cap_min": "100000",
                 "cap_max": "100000000000",
                 "terms": {
-                    "type": "Fixed",
+                    "type": "fixed",
                     "data": {
                         "lockup_term": "15778476000",
                         "allows_top_up": false,
@@ -54,7 +54,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "withdrawal_fee": {
-                    "type": "Fix",
+                    "type": "fix",
                     "data": "1000",
                 },
                 "is_enabled": true,
@@ -65,7 +65,7 @@ impl RegisterProductCommand {
                 "cap_min": "100000",
                 "cap_max": "100000000000",
                 "terms": {
-                    "type": "Fixed",
+                    "type": "fixed",
                     "data": {
                         "lockup_term": "600000",
                         "allows_top_up": false,
@@ -73,7 +73,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "withdrawal_fee": {
-                    "type": "Fix",
+                    "type": "fix",
                     "data": "1000",
                 },
                 "is_enabled": true,

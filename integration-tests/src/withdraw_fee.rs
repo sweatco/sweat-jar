@@ -1,6 +1,7 @@
 use crate::context::Context;
 use crate::product::RegisterProductCommand;
 
+// TODO: test percent fee
 pub(crate) async fn run() -> anyhow::Result<()> {
     println!("👷🏽 Run withdraw fee test");
 
