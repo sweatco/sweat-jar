@@ -116,7 +116,6 @@ impl JarApi for Contract {
         self.get_principal(jar_indices)
     }
 
-    // TODO: tests
     fn get_principal(&self, jar_indices: Vec<JarIndex>) -> U128 {
         let result = jar_indices
             .iter()
@@ -132,7 +131,6 @@ impl JarApi for Contract {
         self.get_interest(jar_indices)
     }
 
-    // TODO: tests
     fn get_interest(&self, jar_indices: Vec<JarIndex>) -> U128 {
         let now = env::block_timestamp_ms();
         let result = jar_indices

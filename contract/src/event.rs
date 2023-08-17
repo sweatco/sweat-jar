@@ -4,7 +4,7 @@ use near_sdk::serde::Serialize;
 use crate::{PACKAGE_NAME, VERSION};
 use crate::common::TokenAmount;
 use crate::jar::model::{Jar, JarIndex};
-use crate::product::model::Product;
+use crate::product::model::{Product, ProductId};
 
 #[derive(Serialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -17,6 +17,8 @@ pub(crate) enum EventKind {
     Withdraw(WithdrawData),
     Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
+    ApplyPenalty(PenaltyData),
+    EnableProduct(EnableProductData),
 }
 
 #[derive(Serialize, Debug)]
@@ -55,6 +57,20 @@ pub(crate) struct MigrationEventItem {
 pub(crate) struct RestakeData {
     pub old_index: JarIndex,
     pub new_index: JarIndex,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub(crate) struct PenaltyData {
+    pub index: JarIndex,
+    pub is_applied: bool,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub(crate) struct EnableProductData {
+    pub id: ProductId,
+    pub is_enabled: bool,
 }
 
 impl From<EventKind> for SweatJarEvent {

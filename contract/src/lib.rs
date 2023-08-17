@@ -9,6 +9,8 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product, ProductId};
 
 use crate::assert::{assert_is_not_closed, assert_is_not_empty, assert_ownership};
+use crate::event::{emit, PenaltyData};
+use crate::event::EventKind::ApplyPenalty;
 use crate::jar::model::{Jar, JarIndex, JarState};
 
 mod assert;
@@ -73,7 +75,6 @@ impl Contract {
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
-    //TODO: add event
     fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
         self.assert_manager();
 
@@ -87,6 +88,8 @@ impl PenaltyApi for Contract {
             }
             _ => env::panic_str("Penalty is not applicable"),
         };
+
+        emit(ApplyPenalty(PenaltyData { index: jar_index, is_applied: value }));
     }
 }
 

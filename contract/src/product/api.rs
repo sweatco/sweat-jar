@@ -2,7 +2,7 @@ use near_sdk::{assert_one_yocto, near_bindgen, require};
 
 use crate::*;
 use crate::Contract;
-use crate::event::{emit, EventKind};
+use crate::event::{emit, EnableProductData, EventKind};
 use crate::product::command::RegisterProductCommand;
 use crate::product::model::Product;
 use crate::product::view::ProductView;
@@ -67,6 +67,8 @@ impl ProductApi for Contract {
             ..product.clone()
         };
         self.products.insert(id.clone(), updated_product);
+
+        emit(EventKind::EnableProduct(EnableProductData { id: product_id, is_enabled }));
     }
 
     fn get_products(&self) -> Vec<ProductView> {
