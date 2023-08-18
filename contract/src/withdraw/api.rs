@@ -5,8 +5,10 @@ use crate::*;
 use crate::assert::{assert_is_liquidable, assert_sufficient_balance};
 use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, WithdrawData};
+#[cfg(not(test))]
 use crate::ft_interface::{Fee, FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER};
 use crate::jar::model::JarIndex;
+#[cfg(not(test))]
 use crate::product::model::WithdrawalFee;
 
 /// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.

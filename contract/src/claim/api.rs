@@ -17,7 +17,7 @@ pub trait ClaimApi {
     ///
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available
     /// interest across all jars is zero, the returned value will also be zero.
-    fn claim_total(&mut self) -> PromiseOrValue<TokenAmount>;
+    fn claim_total(&mut self) -> PromiseOrValue<U128>;
 
     /// Claims interest from specific deposit jars with provided indices.
     ///
@@ -36,8 +36,8 @@ pub trait ClaimApi {
     fn claim_jars(
         &mut self,
         jar_indices: Vec<JarIndex>,
-        amount: Option<TokenAmount>,
-    ) -> PromiseOrValue<TokenAmount>;
+        amount: Option<U128>,
+    ) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
@@ -47,7 +47,7 @@ pub trait ClaimCallbacks {
 
 #[near_bindgen]
 impl ClaimApi for Contract {
-    fn claim_total(&mut self) -> PromiseOrValue<TokenAmount> {
+    fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let jar_indices = self.account_jar_ids(&account_id);
 
@@ -57,13 +57,13 @@ impl ClaimApi for Contract {
     fn claim_jars(
         &mut self,
         jar_indices: Vec<JarIndex>,
-        amount: Option<TokenAmount>,
-    ) -> PromiseOrValue<TokenAmount> {
+        amount: Option<U128>,
+    ) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
         let get_interest_to_claim: Box<dyn Fn(TokenAmount, TokenAmount) -> TokenAmount> = match amount {
-            Some(ref a) => Box::new(|available, total| cmp::min(available, *a - total)),
+            Some(ref amount) => Box::new(|available, total| cmp::min(available, amount.0 - total)),
             None => Box::new(|available, _| available),
         };
 
@@ -107,7 +107,7 @@ impl ClaimApi for Contract {
                 .then(after_claim_call(unlocked_jars))
                 .into()
         } else {
-            PromiseOrValue::Value(0)
+            PromiseOrValue::Value(U128(0))
         }
     }
 }
