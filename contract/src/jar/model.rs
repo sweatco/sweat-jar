@@ -165,7 +165,6 @@ impl Jar {
         }
     }
 
-    // TODO: maybe this mutation should be performed before transfer
     pub(crate) fn withdrawn(
         &self,
         product: &Product,

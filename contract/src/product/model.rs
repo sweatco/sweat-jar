@@ -19,14 +19,12 @@ pub struct Product {
     pub apy: Apy,
 
     /// The capacity boundaries of the deposit jar, specifying the minimum and maximum principal amount.
-    // TODO: check that remaining balance is more than cap.min on partial withdraw
     pub cap: Cap,
 
     /// The terms specific to the product, which can be either Flexible or Fixed.
     pub terms: Terms,
 
     /// Describes whether a withdrawal fee is applicable and, if so, its details.
-    // TODO: check that amount to withdraw is more that fee on withdraw
     pub withdrawal_fee: Option<WithdrawalFee>,
 
     /// An optional ed25519 public key used for authorization to create a jar for this product.
