@@ -38,8 +38,7 @@ pub struct Product {
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 pub enum Terms {
     /// Describes additional terms for Fixed products.
     Fixed(FixedProductTerms),
@@ -65,8 +64,7 @@ pub struct FixedProductTerms {
 
 /// The `WithdrawalFee` enum describes withdrawal fee details, which can be either a fixed amount or a percentage of the withdrawal.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFee {
     /// Describes a fixed amount of tokens that a user must pay as a fee on withdrawal.
@@ -78,8 +76,7 @@ pub enum WithdrawalFee {
 
 /// The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum Apy {
     /// Describes a constant APY, where the interest remains the same throughout the product's term.

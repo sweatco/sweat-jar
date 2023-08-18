@@ -7,9 +7,7 @@ use crate::jar::model::{Jar, JarIndex};
 use crate::product::model::{Product, ProductId};
 
 #[derive(Serialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(tag = "event", content = "data")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", tag = "event", content = "data", rename_all = "snake_case")]
 pub(crate) enum EventKind {
     RegisterProduct(Product),
     CreateJar(Jar),
@@ -23,8 +21,7 @@ pub(crate) enum EventKind {
 }
 
 #[derive(Serialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 struct SweatJarEvent {
     standard: String,
     version: String,

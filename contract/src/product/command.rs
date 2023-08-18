@@ -53,9 +53,7 @@ impl From<RegisterProductCommand> for Product {
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(rename_all = "snake_case")]
-#[serde(tag = "type", content = "data")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum TermsDto {
     Fixed(FixedProductTermsDto),
@@ -85,9 +83,7 @@ impl From<TermsDto> for Terms {
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(rename_all = "snake_case")]
-#[serde(tag = "type", content = "data")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFeeDto {
     /// Fixed amount of tokens which a user will pay on tokens withdraw

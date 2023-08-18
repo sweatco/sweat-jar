@@ -8,9 +8,7 @@ use crate::migration::model::CeFiJar;
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
 #[derive(Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(tag = "type", content = "data")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),

@@ -31,9 +31,7 @@ impl From<Product> for ProductView {
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(tag = "type", content = "data")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum TermsView {
     Fixed(FixedProductTermsView),
@@ -63,9 +61,7 @@ impl From<Terms> for TermsView {
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-#[serde(tag = "type", content = "data")]
-#[serde(rename_all = "snake_case")]
+#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFeeView {
     Fix(U128),
