@@ -58,6 +58,24 @@ pub(crate) mod tests {
         }
     }
 
+    pub(crate) fn get_register_refillable_product_command() -> RegisterProductCommand {
+        RegisterProductCommand {
+            id: "product_refillable".to_string(),
+            apy_default: (U128(12), 2),
+            apy_fallback: None,
+            cap_min: U128(100),
+            cap_max: U128(100_000_000_000),
+            terms: TermsDto::Fixed(FixedProductTermsDto {
+                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
+                allows_restaking: false,
+                allows_top_up: true,
+            }),
+            withdrawal_fee: None,
+            public_key: None,
+            is_enabled: true,
+        }
+    }
+
     pub(crate) fn get_register_flexible_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_flexible".to_string(),

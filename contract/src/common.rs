@@ -61,6 +61,7 @@ pub(crate) mod tests {
 
     pub(crate) struct Context {
         pub contract: Contract,
+        ft_contract_id: AccountId,
         owner: AccountId,
         builder: VMContextBuilder,
     }
@@ -81,13 +82,14 @@ pub(crate) mod tests {
             testing_env!(builder.build());
 
             let contract = Contract::init(
-                ft_contract_id,
+                ft_contract_id.clone(),
                 fee_account_id,
                 manager,
             );
 
             Self {
                 owner,
+                ft_contract_id,
                 builder,
                 contract,
             }
@@ -122,6 +124,10 @@ pub(crate) mod tests {
 
         pub(crate) fn switch_account_to_owner(&mut self) {
             self.switch_account(&self.owner.clone());
+        }
+
+        pub(crate) fn switch_account_to_ft_contract_account(&mut self) {
+            self.switch_account(&self.ft_contract_id.clone());
         }
 
         pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: fn(&mut Context) -> ()) {
