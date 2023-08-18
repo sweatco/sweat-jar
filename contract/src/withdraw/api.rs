@@ -48,15 +48,15 @@ impl WithdrawApi for Contract {
             |value| value.0,
         );
 
+        let account_id = env::predecessor_account_id();
+        assert_ownership(&jar, &account_id);
+
         assert_sufficient_balance(&jar, amount);
-        assert_is_not_empty(&jar);
         assert_is_not_closed(&jar);
 
         let now = env::block_timestamp_ms();
         let product = self.get_product(&jar.product_id);
-        let account_id = env::predecessor_account_id();
 
-        assert_ownership(&jar, &account_id);
         assert_is_liquidable(&jar, &product, now);
 
         self.do_transfer(&account_id, &jar, amount)
