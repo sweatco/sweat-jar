@@ -9,8 +9,6 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product, ProductId};
 
 use crate::assert::{assert_is_not_closed, assert_ownership};
-use crate::event::{emit, PenaltyData};
-use crate::event::EventKind::ApplyPenalty;
 use crate::jar::model::{Jar, JarIndex, JarState};
 
 mod assert;
@@ -24,6 +22,7 @@ mod withdraw;
 mod event;
 mod migration;
 mod product;
+mod penalty;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -48,10 +47,6 @@ pub(crate) enum StorageKey {
     AccountJars,
 }
 
-pub trait PenaltyApi {
-    fn set_penalty(&mut self, jar_index: JarIndex, value: bool);
-}
-
 #[near_bindgen]
 impl Contract {
     #[init]
@@ -72,26 +67,6 @@ impl Contract {
     }
 }
 
-#[near_bindgen]
-impl PenaltyApi for Contract {
-    fn set_penalty(&mut self, jar_index: JarIndex, value: bool) {
-        self.assert_manager();
-
-        let jar = self.get_jar_internal(jar_index);
-        let product = self.get_product(&jar.product_id);
-
-        match product.apy {
-            Apy::Downgradable(_) => {
-                let updated_jar = jar.with_penalty_applied(value);
-                self.jars.replace(jar.index, updated_jar);
-            }
-            _ => env::panic_str("Penalty is not applicable"),
-        };
-
-        emit(ApplyPenalty(PenaltyData { index: jar_index, is_applied: value }));
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use near_sdk::json_types::{U128, U64};
@@ -102,6 +77,7 @@ mod tests {
     use crate::claim::api::ClaimApi;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
+    use crate::penalty::api::PenaltyApi;
     use crate::product::api::*;
     use crate::product::tests::{get_premium_product, get_product, get_register_premium_product_command, get_register_product_command};
 
