@@ -4,7 +4,8 @@ pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
-    Locked10Minutes6PercentsWithWithdrawFee,
+    Locked10Minutes6PercentsWithFixedWithdrawFee,
+    Locked10Minutes6PercentsWithPercentWithdrawFee,
 }
 
 impl RegisterProductCommand {
@@ -59,8 +60,8 @@ impl RegisterProductCommand {
                 },
                 "is_enabled": true,
             }),
-            RegisterProductCommand::Locked10Minutes6PercentsWithWithdrawFee => json!({
-                "id": "locked_10_minutes_6_percents_with_withdraw_fee",
+            RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee => json!({
+                "id": "locked_10_minutes_6_percents_with_fixed_withdraw_fee",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",
@@ -75,6 +76,25 @@ impl RegisterProductCommand {
                 "withdrawal_fee": {
                     "type": "fix",
                     "data": "1000",
+                },
+                "is_enabled": true,
+            }),
+            RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee => json!({
+                "id": "locked_10_minutes_6_percents_with_percent_withdraw_fee",
+                "apy_default": ["6", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
+                "terms": {
+                    "type": "fixed",
+                    "data": {
+                        "lockup_term": "600000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
+                    }
+                },
+                "withdrawal_fee": {
+                    "type": "percent",
+                    "data": ["1", 2],
                 },
                 "is_enabled": true,
             }),

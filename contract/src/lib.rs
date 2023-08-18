@@ -8,7 +8,7 @@ use near_self_update::SelfUpdate;
 
 use product::model::{Apy, Product, ProductId};
 
-use crate::assert::{assert_is_not_closed, assert_is_not_empty, assert_ownership};
+use crate::assert::{assert_is_not_closed, assert_ownership};
 use crate::event::{emit, PenaltyData};
 use crate::event::EventKind::ApplyPenalty;
 use crate::jar::model::{Jar, JarIndex, JarState};
