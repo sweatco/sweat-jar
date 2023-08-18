@@ -29,14 +29,24 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, SelfUpdate)]
+/// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 pub struct Contract {
+    /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
     pub token_account_id: AccountId,
+
+    /// The account ID where fees for applicable operations are directed.
     pub fee_account_id: AccountId,
+
+    /// The account ID authorized to perform sensitive operations on the contract.
     pub manager: AccountId,
 
+    /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
 
+    /// A vector containing information about all deposit jars.
     pub jars: Vector<Jar>,
+
+    /// A lookup map that associates account IDs with sets of jar indexes owned by each account.
     pub account_jars: LookupMap<AccountId, HashSet<JarIndex>>,
 }
 
