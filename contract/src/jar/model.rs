@@ -9,7 +9,7 @@ use near_sdk::serde::{Deserialize, Serialize};
 use crate::*;
 use crate::common::{MINUTES_IN_YEAR, UDecimal};
 use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
-use crate::event::{emit, EventKind};
+use crate::event::{emit, EventKind, TopUpData};
 use crate::jar::view::JarView;
 use crate::product::model::{Apy, Product, ProductId, Terms};
 
@@ -280,6 +280,8 @@ impl Contract {
         let topped_up_jar = jar.topped_up(amount.0, &product, now);
 
         self.jars.replace(jar_index, topped_up_jar.clone());
+
+        emit(EventKind::TopUp(TopUpData { index: jar_index, amount }));
 
         U128(topped_up_jar.principal)
     }

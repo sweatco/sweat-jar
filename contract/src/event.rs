@@ -1,8 +1,8 @@
 use near_sdk::{AccountId, log, serde_json};
+use near_sdk::json_types::U128;
 use near_sdk::serde::Serialize;
 
 use crate::{PACKAGE_NAME, VERSION};
-use crate::common::TokenAmount;
 use crate::jar::model::{Jar, JarIndex};
 use crate::product::model::{Product, ProductId};
 
@@ -19,6 +19,7 @@ pub(crate) enum EventKind {
     Restake(RestakeData),
     ApplyPenalty(PenaltyData),
     EnableProduct(EnableProductData),
+    TopUp(TopUpData),
 }
 
 #[derive(Serialize, Debug)]
@@ -35,7 +36,7 @@ struct SweatJarEvent {
 #[serde(crate = "near_sdk::serde")]
 pub(crate) struct ClaimEventItem {
     pub index: JarIndex,
-    pub interest_to_claim: TokenAmount,
+    pub interest_to_claim: U128,
 }
 
 #[derive(Serialize, Debug)]
@@ -71,6 +72,13 @@ pub(crate) struct PenaltyData {
 pub(crate) struct EnableProductData {
     pub id: ProductId,
     pub is_enabled: bool,
+}
+
+#[derive(Serialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub(crate) struct TopUpData {
+    pub index: JarIndex,
+    pub amount: U128,
 }
 
 impl From<EventKind> for SweatJarEvent {

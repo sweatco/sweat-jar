@@ -1,6 +1,7 @@
 use std::cmp;
 
 use near_sdk::{env, ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
+use near_sdk::json_types::U128;
 
 use crate::*;
 use crate::common::TokenAmount;
@@ -91,7 +92,7 @@ impl ClaimApi for Contract {
 
             total_interest_to_claim += interest_to_claim;
 
-            event_data.push(ClaimEventItem { index: jar.index, interest_to_claim });
+            event_data.push(ClaimEventItem { index: jar.index, interest_to_claim: U128(interest_to_claim) });
         }
 
         emit(EventKind::Claim(event_data));
