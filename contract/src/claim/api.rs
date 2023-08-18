@@ -6,8 +6,7 @@ use near_sdk::json_types::U128;
 use crate::*;
 use crate::common::TokenAmount;
 use crate::event::{ClaimEventItem, emit, EventKind};
-use crate::external::GAS_FOR_AFTER_TRANSFER;
-use crate::ft_interface::FungibleTokenInterface;
+use crate::ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER};
 use crate::jar::model::{Jar, JarIndex};
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.

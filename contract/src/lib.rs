@@ -15,7 +15,6 @@ use crate::jar::model::{Jar, JarIndex, JarState};
 
 mod assert;
 mod common;
-mod external;
 mod ft_interface;
 mod ft_receiver;
 mod internal;

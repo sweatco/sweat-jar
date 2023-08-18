@@ -4,6 +4,8 @@ use near_sdk::serde_json::json;
 use crate::*;
 use crate::common::TokenAmount;
 
+pub(crate) const GAS_FOR_AFTER_TRANSFER: u64 = 20_000_000_000_000;
+
 pub(crate) struct FungibleTokenContract {
     address: AccountId,
 }

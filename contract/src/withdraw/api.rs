@@ -5,9 +5,7 @@ use crate::*;
 use crate::assert::{assert_is_liquidable, assert_sufficient_balance};
 use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, WithdrawData};
-use crate::external::GAS_FOR_AFTER_TRANSFER;
-use crate::ft_interface::Fee;
-use crate::ft_interface::FungibleTokenInterface;
+use crate::ft_interface::{Fee, FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER};
 use crate::jar::model::JarIndex;
 use crate::product::model::WithdrawalFee;
 
