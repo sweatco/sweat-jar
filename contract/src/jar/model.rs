@@ -253,7 +253,7 @@ impl Contract {
 
         product.assert_enabled();
         product.assert_cap(amount);
-        self.verify(&account_id, 1_000_000, &ticket, signature);
+        self.verify(&account_id, amount, &ticket, signature);
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
