@@ -17,6 +17,7 @@ pub(crate) enum EventKind {
     Restake(RestakeData),
     ApplyPenalty(PenaltyData),
     EnableProduct(EnableProductData),
+    ChangeProductPublicKey(ProductId),
     TopUp(TopUpData),
 }
 

@@ -32,6 +32,8 @@ pub trait ProductApi {
     /// This method will panic if the provided `is_enabled` value matches the current enabled status of the product.
     fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool);
 
+    fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8);
+
     /// Retrieves a list of all registered products in the contract.
     ///
     /// # Returns
@@ -47,6 +49,10 @@ impl ProductApi for Contract {
         self.assert_manager();
         assert_one_yocto();
 
+        if self.products.contains_key(command.id.as_str()) {
+            panic!("Product already exists");
+        }
+
         let product: Product = command.into();
         self.products.insert(product.clone().id, product.clone());
 
@@ -61,14 +67,29 @@ impl ProductApi for Contract {
 
         require!(is_enabled != product.is_enabled, "Status matches");
 
-        let id = &product.id;
         let updated_product = Product {
             is_enabled,
-            ..product.clone()
+            ..product
         };
-        self.products.insert(id.clone(), updated_product);
+        self.products.insert(product_id.clone(), updated_product);
 
         emit(EventKind::EnableProduct(EnableProductData { id: product_id, is_enabled }));
+    }
+
+    // TODO: tests
+    fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8) {
+        self.assert_manager();
+        assert_one_yocto();
+
+        let product = self.get_product(&product_id);
+        let updated_product = Product {
+            public_key: Some(public_key.0),
+            ..product
+        };
+
+        self.products.insert(product_id.clone(), updated_product);
+
+        emit(EventKind::ChangeProductPublicKey(product_id));
     }
 
     fn get_products(&self) -> Vec<ProductView> {
