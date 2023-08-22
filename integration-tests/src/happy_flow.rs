@@ -40,8 +40,11 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     alice_interest = context.jar_contract.get_total_interest(alice).await?;
     assert!(alice_interest.0 > 0);
 
-    context.jar_contract.claim_total(alice).await?;
-    context.ft_contract.ft_balance_of(alice).await?;
+    let claimed_amount = context.jar_contract.claim_total(alice).await?;
+    assert!(15 < claimed_amount && claimed_amount < 20);
+
+    let alice_balance = context.ft_contract.ft_balance_of(alice).await?.0;
+    assert_eq!(99_000_000 + claimed_amount, alice_balance);
 
     Ok(())
 }

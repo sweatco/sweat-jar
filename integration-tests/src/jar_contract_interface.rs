@@ -39,9 +39,7 @@ pub(crate) trait JarContractInterface {
 
     async fn withdraw(&self, user: &Account, jar_index: u32) -> anyhow::Result<()>;
 
-    async fn time(&self) -> anyhow::Result<u64>;
-
-    async fn claim_total(&self, user: &Account) -> anyhow::Result<()>;
+    async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
 }
 
 #[async_trait]
@@ -233,19 +231,7 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn time(&self) -> anyhow::Result<u64> {
-        println!("▶️ Get current block time");
-
-        let result: Value = self
-            .call("time")
-            .view()
-            .await?
-            .json()?;
-
-        Ok(result.as_u64().unwrap())
-    }
-
-    async fn claim_total(&self, user: &Account) -> anyhow::Result<()> {
+    async fn claim_total(&self, user: &Account) -> anyhow::Result<u128> {
         println!("▶️ Claim total");
 
         let args = json!({});
@@ -263,6 +249,10 @@ impl JarContractInterface for Contract {
 
         println!("   📟 {:?}", result);
 
-        Ok(())
+        let result_value = result.json::<Value>()?;
+
+        println!("   ✅ {:?}", result_value);
+
+        Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }
 }

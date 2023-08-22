@@ -42,7 +42,12 @@ pub trait ClaimApi {
 
 #[ext_contract(ext_self)]
 pub trait ClaimCallbacks {
-    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>, event: EventKind);
+    fn after_claim(
+        &mut self,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+    ) -> U128;
 }
 
 #[near_bindgen]
@@ -98,7 +103,7 @@ impl ClaimApi for Contract {
         if total_interest_to_claim > 0 {
             self.ft_contract()
                 .transfer(&account_id, total_interest_to_claim, "claim", None)
-                .then(after_claim_call(unlocked_jars, EventKind::Claim(event_data)))
+                .then(after_claim_call(U128(total_interest_to_claim), unlocked_jars, EventKind::Claim(event_data)))
                 .into()
         } else {
             PromiseOrValue::Value(U128(0))
@@ -109,7 +114,12 @@ impl ClaimApi for Contract {
 #[near_bindgen]
 impl ClaimCallbacks for Contract {
     #[private]
-    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>, event: EventKind) {
+    fn after_claim(
+        &mut self,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+    ) -> U128 {
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer.iter() {
                 let jar = self.get_jar_internal(jar_before_transfer.index);
@@ -118,16 +128,24 @@ impl ClaimCallbacks for Contract {
             }
 
             emit(event);
+
+            claimed_amount
         } else {
             for jar_before_transfer in jars_before_transfer.iter() {
                 self.jars.replace(jar_before_transfer.index, jar_before_transfer.unlocked());
             }
+
+            U128(0)
         }
     }
 }
 
-fn after_claim_call(jars_before_transfer: Vec<Jar>, event: EventKind) -> Promise {
+fn after_claim_call(
+    claimed_amount: U128,
+    jars_before_transfer: Vec<Jar>,
+    event: EventKind,
+) -> Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
-        .after_claim(jars_before_transfer, event)
+        .after_claim(claimed_amount, jars_before_transfer, event)
 }
