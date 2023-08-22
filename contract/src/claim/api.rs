@@ -42,7 +42,7 @@ pub trait ClaimApi {
 
 #[ext_contract(ext_self)]
 pub trait ClaimCallbacks {
-    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>);
+    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>, event: EventKind);
 }
 
 #[near_bindgen]
@@ -94,17 +94,11 @@ impl ClaimApi for Contract {
             event_data.push(ClaimEventItem { index: jar.index, interest_to_claim: U128(interest_to_claim) });
         }
 
-        emit(EventKind::Claim(event_data));
 
         if total_interest_to_claim > 0 {
             self.ft_contract()
-                .transfer(
-                    &account_id,
-                    total_interest_to_claim,
-                    "claim",
-                    None,
-                )
-                .then(after_claim_call(unlocked_jars))
+                .transfer(&account_id, total_interest_to_claim, "claim", None)
+                .then(after_claim_call(unlocked_jars, EventKind::Claim(event_data)))
                 .into()
         } else {
             PromiseOrValue::Value(U128(0))
@@ -115,13 +109,15 @@ impl ClaimApi for Contract {
 #[near_bindgen]
 impl ClaimCallbacks for Contract {
     #[private]
-    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>) {
+    fn after_claim(&mut self, jars_before_transfer: Vec<Jar>, event: EventKind) {
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer.iter() {
                 let jar = self.get_jar_internal(jar_before_transfer.index);
 
                 self.jars.replace(jar_before_transfer.index, jar.unlocked());
             }
+
+            emit(event);
         } else {
             for jar_before_transfer in jars_before_transfer.iter() {
                 self.jars.replace(jar_before_transfer.index, jar_before_transfer.unlocked());
@@ -130,8 +126,8 @@ impl ClaimCallbacks for Contract {
     }
 }
 
-fn after_claim_call(jars_before_transfer: Vec<Jar>) -> Promise {
+fn after_claim_call(jars_before_transfer: Vec<Jar>, event: EventKind) -> Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
-        .after_claim(jars_before_transfer)
+        .after_claim(jars_before_transfer, event)
 }
