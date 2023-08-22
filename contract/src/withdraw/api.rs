@@ -79,6 +79,8 @@ impl Contract {
 
             self.jars.replace(jar_before_transfer.index, jar.unlocked());
 
+            emit(EventKind::Withdraw(WithdrawData { index: jar.index }));
+
             withdrawn_amount
         } else {
             self.jars.replace(jar_before_transfer.index, jar_before_transfer.unlocked());
@@ -95,8 +97,6 @@ impl Contract {
         jar: &Jar,
         amount: TokenAmount,
     ) -> PromiseOrValue<U128> {
-        emit(EventKind::Withdraw(WithdrawData { index: jar.index }));
-
         self.jars.replace(jar.index, jar.locked());
 
         self.transfer_withdraw(account_id, amount, jar)
