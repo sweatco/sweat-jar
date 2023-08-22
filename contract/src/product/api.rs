@@ -14,6 +14,9 @@ pub trait ProductApi {
     /// # Arguments
     ///
     /// * `command` - A `RegisterProductCommand` struct containing information about the new product.
+    /// # Panics
+    ///
+    /// This method will panic if a product with the same id already exists.
     fn register_product(&mut self, command: RegisterProductCommand);
 
     /// Sets the enabled status of a specific product.
@@ -76,7 +79,6 @@ impl ProductApi for Contract {
         emit(EventKind::EnableProduct(EnableProductData { id: product_id, is_enabled }));
     }
 
-    // TODO: tests
     fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8) {
         self.assert_manager();
         assert_one_yocto();

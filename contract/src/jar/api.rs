@@ -250,7 +250,7 @@ mod signature_tests {
         context.switch_account(&admin);
         context.with_deposit_yocto(
             1,
-            |context| context.contract.register_product(get_register_premium_product_command()),
+            |context| context.contract.register_product(get_register_premium_product_command(None)),
         );
 
         let ticket = JarTicket {
@@ -270,7 +270,7 @@ mod signature_tests {
         context.switch_account(&admin);
         context.with_deposit_yocto(
             1,
-            |context| context.contract.register_product(get_register_premium_product_command()),
+            |context| context.contract.register_product(get_register_premium_product_command(None)),
         );
 
         let ticket = JarTicket {
@@ -295,7 +295,7 @@ mod signature_tests {
             1,
             |context| context.contract.register_product(RegisterProductCommand {
                 id: "another_product".to_string(),
-                ..get_register_premium_product_command()
+                ..get_register_premium_product_command(None)
             }),
         );
 
@@ -324,7 +324,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(365);
         context.with_deposit_yocto(
             1,
-            |context| context.contract.register_product(get_register_premium_product_command()),
+            |context| context.contract.register_product(get_register_premium_product_command(None)),
         );
 
         let ticket = JarTicket {
@@ -360,7 +360,7 @@ mod signature_tests {
         context.switch_account(&admin);
         context.with_deposit_yocto(
             1,
-            |context| context.contract.register_product(get_register_premium_product_command()),
+            |context| context.contract.register_product(get_register_premium_product_command(None)),
         );
 
         let ticket = JarTicket {

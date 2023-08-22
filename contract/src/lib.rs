@@ -89,7 +89,8 @@ mod tests {
     use crate::jar::model::JarTicket;
     use crate::penalty::api::PenaltyApi;
     use crate::product::api::*;
-    use crate::product::tests::{get_premium_product, get_product, get_register_premium_product_command, get_register_product_command};
+    use crate::product::command::RegisterProductCommand;
+    use crate::product::tests::{get_product, get_register_premium_product_command, get_register_product_command};
 
     use super::*;
 
@@ -353,28 +354,44 @@ mod tests {
 
         let mut context = Context::new(admin.clone());
 
+        fn get_product() -> RegisterProductCommand {
+            // secret: [229, 112, 214, 47, 42, 153, 159, 206, 188, 235, 183, 190, 130, 112, 135, 229, 160, 73, 104, 18, 187, 114, 157, 171, 144, 241, 252, 130, 97, 221, 92, 185]
+            // pk: [172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125, 59, 248, 197, 165, 106, 229, 226, 198, 182, 194, 120, 168, 153, 255, 206, 112]
+            get_register_premium_product_command(
+                Some(
+                    Base64VecU8(
+                        vec![
+                            172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125,
+                            59, 248, 197, 165, 106, 229, 226, 198, 182, 194, 120, 168, 153, 255,
+                            206, 112,
+                        ]
+                    )
+                ),
+            )
+        }
+
         context.switch_account(&admin);
         context.with_deposit_yocto(
             1,
-            |context| context.contract.register_product(get_register_premium_product_command()),
+            |context| context.contract.register_product(get_product()),
         );
 
-        let product = get_premium_product();
+        let product_id = get_product().id;
         context.switch_account_to_owner();
         context.contract.create_jar(
             alice.clone(),
             JarTicket {
-                product_id: product.id,
-                valid_until: U64(100_000_000),
+                product_id,
+                valid_until: U64(4_848_379_977),
             },
             U128(100_000_000),
             Some(
                 Base64VecU8(
                     vec![
-                        106, 169, 28, 95, 190, 177, 11, 212, 73, 215, 174, 31, 143, 61, 191, 107, 132, 100, 38,
-                        8, 90, 248, 246, 79, 84, 216, 122, 215, 182, 136, 134, 160, 3, 10, 118, 74, 123, 31, 91,
-                        121, 192, 142, 25, 97, 54, 231, 253, 26, 239, 15, 24, 201, 110, 243, 6, 134, 246, 17,
-                        148, 178, 251, 68, 57, 13,
+                        154, 135, 89, 49, 205, 151, 7, 221, 202, 42, 143, 86, 97, 37, 12, 79, 100,
+                        141, 15, 232, 105, 219, 142, 84, 86, 11, 13, 207, 147, 143, 2, 208, 70, 21,
+                        5, 145, 127, 117, 173, 43, 97, 190, 182, 80, 136, 45, 158, 19, 19, 143, 104,
+                        136, 117, 61, 51, 176, 46, 105, 110, 104, 95, 222, 165, 5,
                     ]
                 )
             ),

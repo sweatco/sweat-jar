@@ -130,7 +130,7 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn get_register_premium_product_command() -> RegisterProductCommand {
+    pub(crate) fn get_register_premium_product_command(public_key: Option<Base64VecU8>) -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_premium".to_string(),
             apy_default: (U128(20), 2),
@@ -143,7 +143,7 @@ pub(crate) mod tests {
                 allows_restaking: false,
             }),
             withdrawal_fee: None,
-            public_key: Some(Base64VecU8(get_premium_product_public_key())),
+            public_key: public_key.or_else(|| Some(Base64VecU8(get_premium_product_public_key()))),
             is_enabled: true,
         }
     }
@@ -189,6 +189,101 @@ pub(crate) mod tests {
         context.with_deposit_yocto(
             1,
             |context| context.contract.set_enabled("product".to_string(), true),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Product already exists")]
+    fn register_product_with_existing_id() {
+        let admin = accounts(1);
+
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+
+        context.with_deposit_yocto(
+            1,
+            |context| {
+                let first_command = get_register_product_command();
+                context.contract.register_product(first_command)
+            },
+        );
+
+        context.with_deposit_yocto(
+            1,
+            |context| {
+                let second_command = get_register_product_command();
+                context.contract.register_product(second_command)
+            },
+        );
+    }
+
+    #[test]
+    fn set_public_key() {
+        let admin = accounts(1);
+
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
+
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.set_public_key(
+                get_register_product_command().id,
+                Base64VecU8(vec![0, 1, 2]),
+            ),
+        );
+
+        let product = context.contract.products.get(&get_register_product_command().id).unwrap();
+        assert_eq!(vec![0, 1, 2], product.clone().public_key.unwrap());
+    }
+
+    #[test]
+    #[should_panic(expected = "Can be performed only by admin")]
+    fn set_public_key_by_not_admin() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
+
+        context.switch_account(&alice);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.set_public_key(
+                get_register_product_command().id,
+                Base64VecU8(vec![0, 1, 2]),
+            ),
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
+    fn set_public_key_without_deposit() {
+        let admin = accounts(1);
+
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
+
+        context.contract.set_public_key(
+            get_register_product_command().id,
+            Base64VecU8(vec![0, 1, 2]),
         );
     }
 
