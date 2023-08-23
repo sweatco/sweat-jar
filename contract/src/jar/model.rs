@@ -327,14 +327,14 @@ impl Contract {
         last_jar_index: &JarIndex,
     ) -> Vec<u8> {
         println!(
-                "{},{},{},{},{},{}",
-                env::current_account_id(),
-                account_id,
-                ticket.product_id,
-                amount,
-                last_jar_index,
-                ticket.valid_until.0
-            );
+            "{},{},{},{},{},{}",
+            env::current_account_id(),
+            account_id,
+            ticket.product_id,
+            amount,
+            last_jar_index,
+            ticket.valid_until.0
+        );
 
         sha256(
             format!(
@@ -355,13 +355,8 @@ impl Contract {
         product_public_key: &Vec<u8>,
         ticket_hash: &Vec<u8>,
     ) -> bool {
-        println!("@@ signature: {:?}", signature.as_slice());
-        println!("@@ ticket hash: {:?}", ticket_hash.as_slice());
-
         let signature = Signature::from_bytes(signature.as_slice())
             .expect("Invalid signature");
-
-        println!("@@ pk: {:?}", product_public_key.as_slice());
 
         PublicKey::from_bytes(product_public_key.as_slice())
             .expect("Public key is invalid")
