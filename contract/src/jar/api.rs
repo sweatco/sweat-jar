@@ -99,8 +99,8 @@ pub trait JarApi {
 
 #[near_bindgen]
 impl JarApi for Contract {
-    fn get_jar(&self, index: JarIndex) -> JarView {
-        self.get_jar_internal(index).into()
+    fn get_jar(&self, jar_index: JarIndex) -> JarView {
+        self.get_jar_internal(jar_index).into()
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
