@@ -196,7 +196,7 @@ impl Jar {
     }
 
     pub(crate) fn is_empty(&self) -> bool {
-        self.principal > 0
+        self.principal == 0
     }
 
     pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> TokenAmount {
