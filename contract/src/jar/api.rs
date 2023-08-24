@@ -162,7 +162,7 @@ impl JarApi for Contract {
         self.save_jar(&account_id, &withdraw_jar);
         self.save_jar(&account_id, &new_jar);
 
-        emit(EventKind::Restake(RestakeData { old_index: index, new_index: new_jar.index }));
+        emit(EventKind::Restake(RestakeData { old_index: jar_index, new_index: new_jar.index }));
 
         new_jar.into()
     }
