@@ -130,7 +130,7 @@ mod tests {
         let context = Context::new(admin);
 
         let principal = context.contract.get_total_principal(alice);
-        assert_eq!(principal.0, 0);
+        assert_eq!(principal.total.0, 0);
     }
 
     #[test]
@@ -158,7 +158,7 @@ mod tests {
             None,
         );
 
-        let principal = context.contract.get_total_principal(alice).0;
+        let principal = context.contract.get_total_principal(alice).total.0;
         assert_eq!(principal, 100);
     }
 
@@ -205,7 +205,7 @@ mod tests {
             None,
         );
 
-        let principal = context.contract.get_total_principal(alice).0;
+        let principal = context.contract.get_total_principal(alice).total.0;
         assert_eq!(principal, 700);
     }
 
@@ -217,7 +217,7 @@ mod tests {
         let context = Context::new(admin);
 
         let interest = context.contract.get_total_interest(alice);
-        assert_eq!(interest.0, 0);
+        assert_eq!(interest.total.0, 0);
     }
 
     #[test]
@@ -246,7 +246,7 @@ mod tests {
 
         context.set_block_timestamp_in_minutes(30);
 
-        let interest = context.contract.get_total_interest(alice).0;
+        let interest = context.contract.get_total_interest(alice).total.0;
         assert_eq!(interest, 684);
     }
 
@@ -276,7 +276,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        let interest = context.contract.get_total_interest(alice).0;
+        let interest = context.contract.get_total_interest(alice).total.0;
         assert_eq!(interest, 12_000_000);
     }
 
@@ -306,7 +306,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(400);
 
-        let interest = context.contract.get_total_interest(alice).0;
+        let interest = context.contract.get_total_interest(alice).total.0;
         assert_eq!(interest, 12_000_000);
     }
 
@@ -336,7 +336,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_total_interest(alice.clone()).0;
+        let mut interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 5_983_561);
 
         context.switch_account(&alice);
@@ -344,7 +344,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_total_interest(alice.clone()).0;
+        interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 6_016_438);
     }
 
@@ -400,7 +400,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_total_interest(alice.clone()).0;
+        let mut interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 9_972_602);
 
         context.switch_account(&admin);
@@ -408,7 +408,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_total_interest(alice).0;
+        interest = context.contract.get_total_interest(alice).total.0;
         assert_eq!(interest, 10_000_000);
     }
 
@@ -442,6 +442,6 @@ mod tests {
         context.contract.withdraw(0, None);
 
         let interest = context.contract.get_total_interest(alice);
-        assert_eq!(12_000_000, interest.0);
+        assert_eq!(12_000_000, interest.total.0);
     }
 }

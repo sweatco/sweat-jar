@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use near_sdk::AccountId;
 use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
@@ -30,4 +31,12 @@ impl From<Jar> for JarView {
             is_penalty_applied: value.is_penalty_applied,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
+pub struct AggregatedTokenAmountView {
+    pub detailed: HashMap<JarIndex, U128>,
+    pub total: U128,
 }

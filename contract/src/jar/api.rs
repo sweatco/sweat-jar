@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use near_sdk::{AccountId, env, near_bindgen, require};
 use near_sdk::json_types::U128;
 
 use crate::*;
+use crate::common::TokenAmount;
 use crate::event::{emit, EventKind, RestakeData};
-use crate::jar::view::JarView;
+use crate::jar::view::{AggregatedTokenAmountView, JarView};
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
 pub trait JarApi {
@@ -39,7 +41,7 @@ pub trait JarApi {
     ///
     /// An `U128` representing the sum of principal amounts across all deposit jars for the specified account.
     /// Returns 0 if the account has no associated jars.
-    fn get_total_principal(&self, account_id: AccountId) -> U128;
+    fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView;
 
     /// Retrieves the principal amount for a specific set of deposit jars.
     ///
@@ -51,7 +53,7 @@ pub trait JarApi {
     /// # Returns
     ///
     /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> U128;
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -63,7 +65,7 @@ pub trait JarApi {
     ///
     /// An `U128` representing the sum of interest amounts across all deposit jars for the specified account.
     /// Returns 0 if the account has no associated jars.
-    fn get_total_interest(&self, account_id: AccountId) -> U128;
+    fn get_total_interest(&self, account_id: AccountId) -> AggregatedTokenAmountView;
 
     /// Retrieves the interest amount for a specific set of deposit jars.
     ///
@@ -76,7 +78,7 @@ pub trait JarApi {
     ///
     /// An `U128` representing the sum of interest amounts for the specified deposit jars.
     ///
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> U128;
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
@@ -110,36 +112,53 @@ impl JarApi for Contract {
             .collect()
     }
 
-    fn get_total_principal(&self, account_id: AccountId) -> U128 {
+    fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
         let jar_indices = self.account_jar_ids(&account_id);
 
         self.get_principal(jar_indices)
     }
 
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> U128 {
-        let result = jar_indices
-            .iter()
-            .map(|index| self.get_jar_internal(*index).principal)
-            .sum();
+    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView {
+        let mut detailed_amounts: HashMap<JarIndex, U128> = HashMap::new();
+        let mut total_amount: TokenAmount = 0;
 
-        U128(result)
+        for index in jar_indices.iter() {
+            let principal = self.get_jar_internal(*index).principal;
+
+            detailed_amounts.insert(*index, U128(principal));
+            total_amount += principal;
+        }
+
+        AggregatedTokenAmountView {
+            detailed: detailed_amounts,
+            total: U128(total_amount),
+        }
     }
 
-    fn get_total_interest(&self, account_id: AccountId) -> U128 {
+    fn get_total_interest(&self, account_id: AccountId) -> AggregatedTokenAmountView {
         let jar_indices = self.account_jar_ids(&account_id);
 
         self.get_interest(jar_indices)
     }
 
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> U128 {
+    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView {
         let now = env::block_timestamp_ms();
-        let result = jar_indices
-            .iter()
-            .map(|index| self.get_jar_internal(*index))
-            .map(|jar| jar.get_interest(&self.get_product(&jar.product_id), now))
-            .sum();
 
-        U128(result)
+        let mut detailed_amounts: HashMap<JarIndex, U128> = HashMap::new();
+        let mut total_amount: TokenAmount = 0;
+
+        for index in jar_indices.iter() {
+            let jar = self.get_jar_internal(*index);
+            let interest = jar.get_interest(&self.get_product(&jar.product_id), now);
+
+            detailed_amounts.insert(*index, U128(interest));
+            total_amount += interest;
+        }
+
+        AggregatedTokenAmountView {
+            detailed: detailed_amounts,
+            total: U128(total_amount),
+        }
     }
 
     fn restake(&mut self, jar_index: JarIndex) -> JarView {
