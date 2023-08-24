@@ -151,9 +151,11 @@ impl JarApi for Contract {
         let product = self.get_product(&jar.product_id);
 
         require!(product.allows_restaking(), "The product doesn't support restaking");
+        require!(product.is_enabled, "The product is disabled"); // TODO: add test
 
         let now = env::block_timestamp_ms();
         require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
+        require!(!jar.is_empty(), "The jar is empty, nothing to restake"); // TODO: add test
 
         let index = self.jars.len() as JarIndex;
         let new_jar = Jar::create(index, jar.account_id.clone(), jar.product_id.clone(), jar.principal, now);
