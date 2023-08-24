@@ -312,12 +312,9 @@ impl Contract {
         if let Some(pk) = product.public_key {
             let signature = signature.expect("Signature is required");
             let last_jar_index = self.account_jars.get(account_id)
-                .map_or_else(
-                    || 0,
-                    |jars| *jars.iter().max().unwrap(),
-                );
+                .map(|jars| *jars.iter().max().unwrap());
 
-            let hash = self.get_ticket_hash(account_id, amount, ticket, &last_jar_index);
+            let hash = self.get_ticket_hash(account_id, amount, ticket, last_jar_index);
             let is_signature_valid = self.verify_signature(&signature.0, &pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
@@ -333,15 +330,18 @@ impl Contract {
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
-        last_jar_index: &JarIndex,
+        last_jar_index: Option<JarIndex>,
     ) -> Vec<u8> {
         println!(
-            "{},{},{},{},{},{}",
+            "@@ ticket hash material: {},{},{},{},{},{}",
             env::current_account_id(),
             account_id,
             ticket.product_id,
             amount,
-            last_jar_index,
+            last_jar_index.map_or_else(
+                || "".to_string(),
+                |value| value.to_string(),
+            ),
             ticket.valid_until.0
         );
 
@@ -352,7 +352,10 @@ impl Contract {
                 account_id,
                 ticket.product_id,
                 amount,
-                last_jar_index,
+                last_jar_index.map_or_else(
+                    || "".to_string(),
+                    |value| value.to_string(),
+                ),
                 ticket.valid_until.0
             ).as_bytes()
         )

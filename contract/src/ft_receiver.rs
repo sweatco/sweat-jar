@@ -72,7 +72,8 @@ impl FungibleTokenReceiver for Contract {
 #[cfg(test)]
 mod tests {
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-    use near_sdk::json_types::{U128, U64};
+    use near_sdk::json_types::{Base64VecU8, U128, U64};
+    use near_sdk::serde_json;
     use near_sdk::serde_json::json;
     use near_sdk::test_utils::accounts;
 
@@ -80,7 +81,7 @@ mod tests {
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
     use crate::product::api::ProductApi;
-    use crate::product::tests::{get_register_flexible_product_command, get_register_product_command, get_register_refillable_product_command, get_register_restakable_product_command};
+    use crate::product::tests::{get_register_flexible_product_command, get_register_premium_product_command, get_register_product_command, get_register_refillable_product_command, get_register_restakable_product_command};
 
     #[test]
     fn transfer_with_create_jar_message() {
@@ -114,6 +115,48 @@ mod tests {
 
         let jar = context.contract.get_jar(0);
         assert_eq!(jar.index, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Not matching signature")]
+    fn transfer_with_duplicate_create_jar_message() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_premium_product_command(None)),
+        );
+
+        let msg = json!({
+            "type": "stake",
+            "data": {
+                "ticket": {
+                    "product_id": "product_premium",
+                    "valid_until": "100000000",
+                },
+                "signature": "Lj2BWmN3uMMSjOs8pXpq38SW9owJGzGyQWe7NlHYli+JnFuS4FwoYVVvA5E9cYf1ye5bubNOrnCKTUTViIQUAw==",
+            }
+        });
+
+        context.switch_account_to_ft_contract_account();
+        context.contract.ft_on_transfer(
+            alice.clone(),
+            U128(1_000_000),
+            msg.to_string(),
+        );
+
+        let jar = context.contract.get_jar(0);
+        assert_eq!(jar.index, 0);
+
+        context.contract.ft_on_transfer(
+            alice,
+            U128(1_000_000),
+            msg.to_string(),
+        );
     }
 
     #[test]
