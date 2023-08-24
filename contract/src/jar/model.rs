@@ -332,19 +332,6 @@ impl Contract {
         ticket: &JarTicket,
         last_jar_index: Option<JarIndex>,
     ) -> Vec<u8> {
-        println!(
-            "@@ ticket hash material: {},{},{},{},{},{}",
-            env::current_account_id(),
-            account_id,
-            ticket.product_id,
-            amount,
-            last_jar_index.map_or_else(
-                || "".to_string(),
-                |value| value.to_string(),
-            ),
-            ticket.valid_until.0
-        );
-
         sha256(
             format!(
                 "{},{},{},{},{},{}",
