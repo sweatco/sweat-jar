@@ -195,6 +195,10 @@ impl Jar {
         }
     }
 
+    pub(crate) fn is_empty(&self) -> bool {
+        self.principal > 0
+    }
+
     pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> TokenAmount {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
             (cache.updated_at, cache.interest)
@@ -202,8 +206,13 @@ impl Jar {
             (self.created_at, 0)
         };
         let until_date = self.get_interest_until_date(product, now);
+        let effective_term = if until_date > base_date {
+            until_date - base_date
+        } else {
+            0
+        };
 
-        let term_in_minutes = ((until_date - base_date) / MS_IN_MINUTE) as u128;
+        let term_in_minutes = (effective_term / MS_IN_MINUTE) as u128;
         let apy = self.get_apy(product);
         let total_interest = apy.mul(self.principal);
 

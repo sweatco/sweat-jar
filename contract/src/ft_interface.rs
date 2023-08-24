@@ -1,4 +1,5 @@
 use near_sdk::{AccountId, near_bindgen, Promise};
+use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::serde_json::json;
 
 use crate::*;
@@ -10,7 +11,10 @@ pub(crate) struct FungibleTokenContract {
     address: AccountId,
 }
 
-pub(crate) struct Fee {
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
+pub struct Fee {
     pub beneficiary_id: AccountId,
     pub amount: TokenAmount,
 }
@@ -34,7 +38,7 @@ pub(crate) trait FungibleTokenInterface {
         receiver_id: &AccountId,
         amount: u128,
         memo: &str,
-        fee: Option<Fee>,
+        fee: &Option<Fee>,
     ) -> Promise;
 }
 
@@ -44,7 +48,7 @@ impl FungibleTokenInterface for FungibleTokenContract {
         receiver_id: &AccountId,
         amount: u128,
         memo: &str,
-        fee: Option<Fee>,
+        fee: &Option<Fee>,
     ) -> Promise {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())

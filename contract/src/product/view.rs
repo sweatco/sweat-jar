@@ -1,11 +1,10 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::*;
 use crate::product::model::{Cap, DowngradableApy, Terms, WithdrawalFee};
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct ProductView {
@@ -30,7 +29,7 @@ impl From<Product> for ProductView {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum TermsView {
@@ -38,7 +37,7 @@ pub enum TermsView {
     Flexible,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct FixedProductTermsView {
@@ -60,7 +59,7 @@ impl From<Terms> for TermsView {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFeeView {
@@ -77,7 +76,7 @@ impl From<WithdrawalFee> for WithdrawalFeeView {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum ApyView {
@@ -94,7 +93,7 @@ impl From<Apy> for ApyView {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct DowngradableApyView {
@@ -111,7 +110,7 @@ impl From<DowngradableApy> for DowngradableApyView {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct CapView {

@@ -1,3 +1,4 @@
+use serde_json::Value;
 use workspaces::Account;
 
 use crate::context::Context;
@@ -34,7 +35,12 @@ async fn test_fixed_fee() -> anyhow::Result<()> {
 
     context.fast_forward(1).await?;
 
-    context.jar_contract.withdraw(&alice, 0).await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, 0).await?;
+    let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
+    let fee_amount = withdraw_result.get_u128("fee");
+
+    assert_eq!(999_000, withdrawn_amount);
+    assert_eq!(1_000, fee_amount);
 
     alice_balance = context.ft_contract.ft_balance_of(&alice).await?;
     assert_eq!(99_999_000, alice_balance.0);
@@ -67,7 +73,12 @@ async fn test_percent_fee() -> anyhow::Result<()> {
 
     context.fast_forward(1).await?;
 
-    context.jar_contract.withdraw(&alice, 0).await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, 0).await?;
+    let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
+    let fee_amount = withdraw_result.get_u128("fee");
+
+    assert_eq!(990_000, withdrawn_amount);
+    assert_eq!(10_000, fee_amount);
 
     alice_balance = context.ft_contract.ft_balance_of(&alice).await?;
     assert_eq!(99_990_000, alice_balance.0);
@@ -94,4 +105,14 @@ async fn prepare_contract() -> anyhow::Result<(Context, Account, Account, Accoun
     context.ft_contract.mint_for_user(alice, 100_000_000).await?;
 
     Ok((context, alice.clone(), manager.clone(), fee_account.clone()))
+}
+
+trait ValueGetters {
+    fn get_u128(&self, key: &str) -> u128;
+}
+
+impl ValueGetters for Value {
+    fn get_u128(&self, key: &str) -> u128 {
+        self.as_object().unwrap().get(key).unwrap().as_str().unwrap().to_string().parse::<u128>().unwrap()
+    }
 }

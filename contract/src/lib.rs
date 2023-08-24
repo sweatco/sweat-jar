@@ -91,6 +91,7 @@ mod tests {
     use crate::product::api::*;
     use crate::product::command::RegisterProductCommand;
     use crate::product::tests::{get_product, get_register_premium_product_command, get_register_product_command};
+    use crate::withdraw::api::WithdrawApi;
 
     use super::*;
 
@@ -409,5 +410,38 @@ mod tests {
 
         interest = context.contract.get_total_interest(alice).0;
         assert_eq!(interest, 10_000_000);
+    }
+
+    #[test]
+    fn get_interest_after_withdraw() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.register_product(get_register_product_command()),
+        );
+
+        context.switch_account_to_owner();
+        context.contract.create_jar(
+            alice.clone(),
+            JarTicket {
+                product_id: get_product().id,
+                valid_until: U64(0),
+            },
+            U128(100_000_000),
+            None,
+        );
+
+        context.set_block_timestamp_in_days(400);
+
+        context.switch_account(&alice);
+        context.contract.withdraw(0, None);
+
+        let interest = context.contract.get_total_interest(alice);
+        assert_eq!(12_000_000, interest.0);
     }
 }

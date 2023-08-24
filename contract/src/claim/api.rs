@@ -102,7 +102,7 @@ impl ClaimApi for Contract {
 
         if total_interest_to_claim > 0 {
             self.ft_contract()
-                .transfer(&account_id, total_interest_to_claim, "claim", None)
+                .transfer(&account_id, total_interest_to_claim, "claim", &None)
                 .then(after_claim_call(U128(total_interest_to_claim), unlocked_jars, EventKind::Claim(event_data)))
                 .into()
         } else {
