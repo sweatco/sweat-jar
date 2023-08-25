@@ -1,4 +1,5 @@
 use serde_json::json;
+use crate::common::ValueGetters;
 
 use crate::context::Context;
 use crate::product::RegisterProductCommand;
@@ -68,18 +69,18 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     assert_eq!(2, alice_jars.len());
 
     let alice_first_jar = alice_jars.get(0).unwrap();
-    assert_eq!(0, alice_first_jar.get("index").unwrap().as_u64().unwrap());
+    assert_eq!("0", alice_first_jar.get("index").unwrap().as_str().unwrap());
     assert_eq!("2000000", alice_first_jar.get("principal").unwrap().as_str().unwrap());
 
     let alice_second_jar = alice_jars.get(1).unwrap();
-    assert_eq!(1, alice_second_jar.get("index").unwrap().as_u64().unwrap());
+    assert_eq!("1", alice_second_jar.get("index").unwrap().as_str().unwrap());
     assert_eq!("700000", alice_second_jar.get("principal").unwrap().as_str().unwrap());
 
     let alice_principal = context.jar_contract.get_total_principal(alice).await?;
-    assert_eq!(2_700_000, alice_principal.0);
+    assert_eq!(2_700_000, alice_principal.get_u128("total"));
 
     let bob_principal = context.jar_contract.get_total_principal(bob).await?;
-    assert_eq!(300_000, bob_principal.0);
+    assert_eq!(300_000, bob_principal.get_u128("total"));
 
     Ok(())
 }

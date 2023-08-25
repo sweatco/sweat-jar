@@ -1,6 +1,6 @@
-use serde_json::Value;
 use workspaces::Account;
 
+use crate::common::ValueGetters;
 use crate::context::Context;
 use crate::product::RegisterProductCommand;
 
@@ -35,7 +35,7 @@ async fn test_fixed_fee() -> anyhow::Result<()> {
 
     context.fast_forward(1).await?;
 
-    let withdraw_result = context.jar_contract.withdraw(&alice, 0).await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, "0").await?;
     let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
     let fee_amount = withdraw_result.get_u128("fee");
 
@@ -73,7 +73,7 @@ async fn test_percent_fee() -> anyhow::Result<()> {
 
     context.fast_forward(1).await?;
 
-    let withdraw_result = context.jar_contract.withdraw(&alice, 0).await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, "0").await?;
     let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
     let fee_amount = withdraw_result.get_u128("fee");
 
@@ -105,14 +105,4 @@ async fn prepare_contract() -> anyhow::Result<(Context, Account, Account, Accoun
     context.ft_contract.mint_for_user(alice, 100_000_000).await?;
 
     Ok((context, alice.clone(), manager.clone(), fee_account.clone()))
-}
-
-trait ValueGetters {
-    fn get_u128(&self, key: &str) -> u128;
-}
-
-impl ValueGetters for Value {
-    fn get_u128(&self, key: &str) -> u128 {
-        self.as_object().unwrap().get(key).unwrap().as_str().unwrap().to_string().parse::<u128>().unwrap()
-    }
 }

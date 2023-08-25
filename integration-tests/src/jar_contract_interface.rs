@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use near_sdk::json_types::U128;
 use near_units::parse_near;
 use serde_json::{json, Value};
 use workspaces::{Account, AccountId, Contract};
@@ -31,13 +30,13 @@ pub(crate) trait JarContractInterface {
         ft_contract_id: &AccountId,
     ) -> anyhow::Result<()>;
 
-    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<U128>;
+    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value>;
 
-    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<U128>;
+    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<Value>;
 
     async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value>;
 
-    async fn withdraw(&self, user: &Account, jar_index: u32) -> anyhow::Result<Value>;
+    async fn withdraw(&self, user: &Account, jar_index: &str) -> anyhow::Result<Value>;
 
     async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
 }
@@ -154,7 +153,7 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<U128> {
+    async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value> {
         println!("▶️ Get total principal for user {:?}", user.id());
 
         let args = json!({
@@ -172,7 +171,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<U128> {
+    async fn get_total_interest(&self, user: &Account) -> anyhow::Result<Value> {
         println!("▶️ Get total interest for user {:?}", user.id());
 
         let args = json!({
@@ -208,7 +207,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn withdraw(&self, user: &Account, jar_index: u32) -> anyhow::Result<Value> {
+    async fn withdraw(&self, user: &Account, jar_index: &str) -> anyhow::Result<Value> {
         println!("▶️ Withdraw jar #{}", jar_index);
 
         let args = json!({
