@@ -77,6 +77,7 @@ mod tests {
     use near_sdk::test_utils::accounts;
 
     use crate::common::tests::Context;
+    use crate::common::U32;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
     use crate::product::api::ProductApi;
@@ -112,7 +113,7 @@ mod tests {
             msg.to_string(),
         );
 
-        let jar = context.contract.get_jar(0);
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(jar.index.0, 0);
     }
 
@@ -148,7 +149,7 @@ mod tests {
             msg.to_string(),
         );
 
-        let jar = context.contract.get_jar(0);
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(jar.index.0, 0);
 
         context.contract.ft_on_transfer(
@@ -194,7 +195,7 @@ mod tests {
             msg.to_string(),
         );
 
-        let jar = context.contract.get_jar(0);
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(200, jar.principal.0);
     }
 
@@ -272,7 +273,7 @@ mod tests {
             msg.to_string(),
         );
 
-        let jar = context.contract.get_jar(0);
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(200, jar.principal.0);
     }
 

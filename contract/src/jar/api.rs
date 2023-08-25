@@ -4,9 +4,9 @@ use near_sdk::{AccountId, env, near_bindgen, require};
 use near_sdk::json_types::U128;
 
 use crate::*;
-use crate::common::TokenAmount;
+use crate::common::{TokenAmount, U32};
 use crate::event::{emit, EventKind, RestakeData};
-use crate::jar::view::{AggregatedTokenAmountView, JarView};
+use crate::jar::view::{AggregatedTokenAmountView, JarIndexView, JarView};
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
 pub trait JarApi {
@@ -19,7 +19,7 @@ pub trait JarApi {
     /// # Returns
     ///
     /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, jar_index: JarIndex) -> JarView;
+    fn get_jar(&self, jar_index: JarIndexView) -> JarView;
 
     /// Retrieves information about all deposit jars associated with a given account.
     ///
@@ -54,7 +54,7 @@ pub trait JarApi {
     /// # Returns
     ///
     /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView;
+    fn get_principal(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -79,7 +79,7 @@ pub trait JarApi {
     ///
     /// An `U128` representing the sum of interest amounts for the specified deposit jars.
     ///
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView;
+    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
@@ -97,36 +97,39 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, jar_index: JarIndex) -> JarView;
+    fn restake(&mut self, jar_index: JarIndexView) -> JarView;
 }
 
 #[near_bindgen]
 impl JarApi for Contract {
-    fn get_jar(&self, jar_index: JarIndex) -> JarView {
-        self.get_jar_internal(jar_index).into()
+    fn get_jar(&self, jar_index: JarIndexView) -> JarView {
+        self.get_jar_internal(jar_index.0).into()
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
         self.account_jar_ids(&account_id)
             .iter()
-            .map(|index| self.get_jar(*index))
+            .map(|index| self.get_jar(U32(*index)))
             .collect()
     }
 
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        let jar_indices = self.account_jar_ids(&account_id);
+        let jar_indices = self.account_jar_ids(&account_id)
+            .iter().map(|value| U32(*value))
+            .collect();
 
         self.get_principal(jar_indices)
     }
 
-    fn get_principal(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView {
-        let mut detailed_amounts: HashMap<JarIndex, U128> = HashMap::new();
+    fn get_principal(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView {
+        let mut detailed_amounts: HashMap<JarIndexView, U128> = HashMap::new();
         let mut total_amount: TokenAmount = 0;
 
         for index in jar_indices.iter() {
-            let principal = self.get_jar_internal(*index).principal;
+            let index = index.0;
+            let principal = self.get_jar_internal(index).principal;
 
-            detailed_amounts.insert(*index, U128(principal));
+            detailed_amounts.insert(U32(index), U128(principal));
             total_amount += principal;
         }
 
@@ -137,22 +140,25 @@ impl JarApi for Contract {
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        let jar_indices = self.account_jar_ids(&account_id);
+        let jar_indices = self.account_jar_ids(&account_id)
+            .iter().map(|value| U32(*value))
+            .collect();
 
         self.get_interest(jar_indices)
     }
 
-    fn get_interest(&self, jar_indices: Vec<JarIndex>) -> AggregatedTokenAmountView {
+    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView {
         let now = env::block_timestamp_ms();
 
-        let mut detailed_amounts: HashMap<JarIndex, U128> = HashMap::new();
+        let mut detailed_amounts: HashMap<JarIndexView, U128> = HashMap::new();
         let mut total_amount: TokenAmount = 0;
 
         for index in jar_indices.iter() {
-            let jar = self.get_jar_internal(*index);
+            let index = index.0;
+            let jar = self.get_jar_internal(index);
             let interest = jar.get_interest(&self.get_product(&jar.product_id), now);
 
-            detailed_amounts.insert(*index, U128(interest));
+            detailed_amounts.insert(U32(index), U128(interest));
             total_amount += interest;
         }
 
@@ -162,7 +168,8 @@ impl JarApi for Contract {
         }
     }
 
-    fn restake(&mut self, jar_index: JarIndex) -> JarView {
+    fn restake(&mut self, jar_index: JarIndexView) -> JarView {
+        let jar_index = jar_index.0;
         let jar = self.get_jar_internal(jar_index);
         let account_id = env::predecessor_account_id();
 
@@ -234,6 +241,7 @@ mod signature_tests {
     use near_sdk::test_utils::accounts;
 
     use crate::common::tests::Context;
+    use crate::common::U32;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
     use crate::product::api::*;
@@ -432,7 +440,7 @@ mod signature_tests {
         };
         context.contract.create_jar(alice, ticket, U128(1_000_000), None);
 
-        context.contract.restake(0);
+        context.contract.restake(U32(0));
     }
 
     #[test]
@@ -455,7 +463,7 @@ mod signature_tests {
         context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.switch_account(&alice);
-        context.contract.restake(0);
+        context.contract.restake(U32(0));
     }
 
     #[test]
@@ -478,7 +486,7 @@ mod signature_tests {
         context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.switch_account(&alice);
-        context.contract.restake(0);
+        context.contract.restake(U32(0));
     }
 
     #[test]
@@ -502,7 +510,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(0);
+        context.contract.restake(U32(0));
 
         let alice_jars = context.contract.get_jars_for_account(alice);
         assert_eq!(2, alice_jars.len());
@@ -532,7 +540,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(0);
+        context.contract.restake(U32(0));
     }
 
     #[test]

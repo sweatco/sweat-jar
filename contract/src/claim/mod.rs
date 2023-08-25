@@ -7,6 +7,7 @@ mod tests {
     use near_sdk::test_utils::accounts;
     use crate::claim::api::ClaimApi;
     use crate::common::tests::Context;
+    use crate::common::U32;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
     use crate::product::api::ProductApi;
@@ -75,7 +76,7 @@ mod tests {
         context.switch_account(&alice.clone());
         context.contract.claim_jars(vec![0], Some(U128(100)));
 
-        let jar = context.contract.get_jar(0);
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(100, jar.claimed_balance.0);
     }
 }

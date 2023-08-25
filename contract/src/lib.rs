@@ -85,6 +85,7 @@ mod tests {
     use common::tests::Context;
 
     use crate::claim::api::ClaimApi;
+    use crate::common::U32;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
     use crate::penalty::api::PenaltyApi;
@@ -364,7 +365,7 @@ mod tests {
                         vec![
                             172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10,
                             125, 59, 248, 197, 165, 106, 229, 226, 198, 182, 194, 120, 168, 153,
-                            255, 206, 112
+                            255, 206, 112,
                         ]
                     )
                 ),
@@ -393,7 +394,7 @@ mod tests {
                         108, 93, 78, 140, 19, 235, 203, 31, 65, 246, 152, 160, 248, 135, 19,
                         152, 201, 202, 196, 131, 233, 138, 42, 240, 231, 40, 39, 177, 88, 214,
                         51, 148, 56, 60, 125, 224, 162, 60, 93, 254, 231, 218, 90, 140, 68, 146,
-                        181, 183, 11
+                        181, 183, 11,
                     ]
                 )
             ),
@@ -440,7 +441,7 @@ mod tests {
         context.set_block_timestamp_in_days(400);
 
         context.switch_account(&alice);
-        context.contract.withdraw(0, None);
+        context.contract.withdraw(U32(0), None);
 
         let interest = context.contract.get_total_interest(alice);
         assert_eq!(12_000_000, interest.total.0);

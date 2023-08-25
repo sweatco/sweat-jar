@@ -7,11 +7,13 @@ use crate::*;
 use crate::common::U32;
 use crate::product::model::ProductId;
 
+pub type JarIndexView = U32;
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarView {
-    pub index: U32,
+    pub index: JarIndexView,
     pub account_id: AccountId,
     pub product_id: ProductId,
     pub created_at: U64,
@@ -38,6 +40,6 @@ impl From<Jar> for JarView {
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct AggregatedTokenAmountView {
-    pub detailed: HashMap<JarIndex, U128>,
+    pub detailed: HashMap<JarIndexView, U128>,
     pub total: U128,
 }

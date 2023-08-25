@@ -49,9 +49,7 @@ impl UDecimal {
     }
 }
 
-#[derive(
-Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, BorshDeserialize, BorshSerialize,
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, BorshDeserialize, BorshSerialize, Hash)]
 pub struct U32(pub u32);
 
 impl From<u32> for U32 {

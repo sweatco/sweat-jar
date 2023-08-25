@@ -8,7 +8,7 @@ use crate::event::{emit, EventKind, WithdrawData};
 #[cfg(not(test))]
 use crate::ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER};
 use crate::ft_interface::Fee;
-use crate::jar::model::JarIndex;
+use crate::jar::view::JarIndexView;
 use crate::product::model::WithdrawalFee;
 use crate::withdraw::view::WithdrawView;
 
@@ -35,7 +35,7 @@ pub trait WithdrawApi {
     /// - If the caller is not the owner of the specified jar.
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(&mut self, jar_index: JarIndex, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
+    fn withdraw(&mut self, jar_index: JarIndexView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
 }
 
 #[ext_contract(ext_self)]
@@ -50,8 +50,8 @@ pub trait WithdrawCallbacks {
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_index: JarIndex, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
-        let jar = self.get_jar_internal(jar_index).locked();
+    fn withdraw(&mut self, jar_index: JarIndexView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
+        let jar = self.get_jar_internal(jar_index.0).locked();
         let amount = amount.map_or_else(
             || jar.principal,
             |value| value.0,
@@ -171,6 +171,7 @@ mod tests {
     use near_sdk::test_utils::accounts;
 
     use crate::common::tests::Context;
+    use crate::common::U32;
     use crate::jar::api::JarApi;
     use crate::jar::model::JarTicket;
     use crate::product::api::ProductApi;
@@ -197,7 +198,7 @@ mod tests {
         };
         context.contract.create_jar(alice, ticket, U128(1_000_000), None);
 
-        context.contract.withdraw(0, None);
+        context.contract.withdraw(U32(0), None);
     }
 
     #[test]
@@ -220,7 +221,7 @@ mod tests {
         context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.switch_account(&alice);
-        context.contract.withdraw(0, None);
+        context.contract.withdraw(U32(0), None);
     }
 
     #[test]
@@ -245,7 +246,7 @@ mod tests {
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
-        context.contract.withdraw(0, None);
+        context.contract.withdraw(U32(0), None);
     }
 
     #[test]
@@ -270,7 +271,7 @@ mod tests {
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
         context.switch_account(&alice);
-        context.contract.withdraw(0, None);
+        context.contract.withdraw(U32(0), None);
     }
 
     #[test]
@@ -294,7 +295,7 @@ mod tests {
         context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.set_block_timestamp_in_days(1);
-        context.contract.withdraw(0, None);
+        context.contract.withdraw(U32(0), None);
     }
 
     #[test]
@@ -319,8 +320,8 @@ mod tests {
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
 
-        context.contract.withdraw(0, None);
-        let jar = context.contract.get_jar(0);
+        context.contract.withdraw(U32(0), None);
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(0, jar.principal.0);
     }
 
@@ -346,8 +347,8 @@ mod tests {
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
 
-        context.contract.withdraw(0, Some(U128(100_000)));
-        let jar = context.contract.get_jar(0);
+        context.contract.withdraw(U32(0), Some(U128(100_000)));
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(900_000, jar.principal.0);
     }
 
@@ -374,6 +375,6 @@ mod tests {
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
 
-        context.contract.withdraw(0, Some(U128(2_000_000)));
+        context.contract.withdraw(U32(0), Some(U128(2_000_000)));
     }
 }
