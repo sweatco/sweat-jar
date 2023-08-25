@@ -72,8 +72,7 @@ impl FungibleTokenReceiver for Contract {
 #[cfg(test)]
 mod tests {
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-    use near_sdk::json_types::{Base64VecU8, U128, U64};
-    use near_sdk::serde_json;
+    use near_sdk::json_types::{U128, U64};
     use near_sdk::serde_json::json;
     use near_sdk::test_utils::accounts;
 
@@ -114,7 +113,7 @@ mod tests {
         );
 
         let jar = context.contract.get_jar(0);
-        assert_eq!(jar.index, 0);
+        assert_eq!(jar.index.0, 0);
     }
 
     #[test]
@@ -150,7 +149,7 @@ mod tests {
         );
 
         let jar = context.contract.get_jar(0);
-        assert_eq!(jar.index, 0);
+        assert_eq!(jar.index.0, 0);
 
         context.contract.ft_on_transfer(
             alice,

@@ -4,13 +4,14 @@ use near_sdk::json_types::{U128, U64};
 use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::*;
+use crate::common::U32;
 use crate::product::model::ProductId;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 #[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarView {
-    pub index: JarIndex,
+    pub index: U32,
     pub account_id: AccountId,
     pub product_id: ProductId,
     pub created_at: U64,
@@ -22,7 +23,7 @@ pub struct JarView {
 impl From<Jar> for JarView {
     fn from(value: Jar) -> Self {
         Self {
-            index: value.index,
+            index: U32(value.index),
             account_id: value.account_id,
             product_id: value.product_id,
             created_at: U64(value.created_at),

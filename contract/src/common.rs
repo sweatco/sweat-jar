@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::serde::{self, Deserialize, Deserializer, Serialize, Serializer};
 
 pub(crate) const MINUTES_IN_YEAR: u64 = 365 * 24 * 60;
 pub(crate) const MS_IN_MINUTE: u64 = 1000 * 60;
@@ -46,6 +46,48 @@ impl UDecimal {
             significand,
             exponent,
         }
+    }
+}
+
+#[derive(
+Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, BorshDeserialize, BorshSerialize,
+)]
+pub struct U32(pub u32);
+
+impl From<u32> for U32 {
+    fn from(v: u32) -> Self {
+        Self(v)
+    }
+}
+
+impl From<U32> for u32 {
+    fn from(v: U32) -> u32 {
+        v.0
+    }
+}
+
+impl Serialize for U32 {
+    fn serialize<S>(
+        &self,
+        serializer: S,
+    ) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+        where
+            S: Serializer,
+    {
+        serializer.serialize_str(&self.0.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for U32 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        Ok(Self(
+            str::parse::<u32>(&s)
+                .map_err(|err| serde::de::Error::custom(err.to_string()))?,
+        ))
     }
 }
 

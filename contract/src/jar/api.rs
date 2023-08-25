@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+
 use near_sdk::{AccountId, env, near_bindgen, require};
 use near_sdk::json_types::U128;
 
@@ -230,7 +231,6 @@ mod tests {
 #[cfg(test)]
 mod signature_tests {
     use near_sdk::json_types::{Base64VecU8, U128, U64};
-    use near_sdk::serde_json;
     use near_sdk::test_utils::accounts;
 
     use crate::common::tests::Context;
@@ -261,7 +261,7 @@ mod signature_tests {
             46, 61, 129, 90, 99, 119, 184, 195, 18, 140, 235, 60, 165, 122, 106, 223, 196, 150, 246,
             140, 9, 27, 49, 178, 65, 103, 187, 54, 81, 216, 150, 47, 137, 156, 91, 146, 224, 92, 40,
             97, 85, 111, 3, 145, 61, 113, 135, 245, 201, 238, 91, 185, 179, 78, 174, 112, 138, 77,
-            68, 213, 136, 132, 20, 3
+            68, 213, 136, 132, 20, 3,
         ]
     }
 
@@ -506,8 +506,8 @@ mod signature_tests {
 
         let alice_jars = context.contract.get_jars_for_account(alice);
         assert_eq!(2, alice_jars.len());
-        assert_eq!(0, alice_jars.iter().find(|item| item.index == 0).unwrap().principal.0);
-        assert_eq!(1_000_000, alice_jars.iter().find(|item| item.index == 1).unwrap().principal.0);
+        assert_eq!(0, alice_jars.iter().find(|item| item.index.0 == 0).unwrap().principal.0);
+        assert_eq!(1_000_000, alice_jars.iter().find(|item| item.index.0 == 1).unwrap().principal.0);
     }
 
     #[test]
