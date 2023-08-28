@@ -2,7 +2,7 @@ use near_sdk::{assert_one_yocto, near_bindgen, require};
 
 use crate::*;
 use crate::Contract;
-use crate::event::{emit, EnableProductData, EventKind};
+use crate::event::{ChangeProductPublicKeyData, emit, EnableProductData, EventKind};
 use crate::product::command::RegisterProductCommand;
 use crate::product::model::Product;
 use crate::product::view::ProductView;
@@ -85,13 +85,16 @@ impl ProductApi for Contract {
 
         let product = self.get_product(&product_id);
         let updated_product = Product {
-            public_key: Some(public_key.0),
+            public_key: Some(public_key.clone().0),
             ..product
         };
 
         self.products.insert(product_id.clone(), updated_product);
 
-        emit(EventKind::ChangeProductPublicKey(product_id));
+        emit(EventKind::ChangeProductPublicKey(ChangeProductPublicKeyData {
+            product_id,
+            pk: public_key,
+        }));
     }
 
     fn get_products(&self) -> Vec<ProductView> {

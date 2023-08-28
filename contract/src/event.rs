@@ -1,5 +1,5 @@
 use near_sdk::{AccountId, log, serde_json};
-use near_sdk::json_types::U128;
+use near_sdk::json_types::{Base64VecU8, U128};
 use near_sdk::serde::{Deserialize, Serialize};
 
 use crate::{PACKAGE_NAME, VERSION};
@@ -17,7 +17,7 @@ pub enum EventKind {
     Restake(RestakeData),
     ApplyPenalty(PenaltyData),
     EnableProduct(EnableProductData),
-    ChangeProductPublicKey(ProductId),
+    ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
 }
 
@@ -70,6 +70,13 @@ pub struct PenaltyData {
 pub struct EnableProductData {
     pub id: ProductId,
     pub is_enabled: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ChangeProductPublicKeyData {
+    pub product_id: ProductId,
+    pub pk: Base64VecU8,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
