@@ -115,11 +115,7 @@ impl JarApi for Contract {
     }
 
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        let jar_indices = self
-            .account_jar_ids(&account_id)
-            .into_iter()
-            .map(|value| U32(value))
-            .collect();
+        let jar_indices = self.account_jar_ids(&account_id).into_iter().map(U32).collect();
 
         self.get_principal(jar_indices)
     }
@@ -143,11 +139,7 @@ impl JarApi for Contract {
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        let jar_indices = self
-            .account_jar_ids(&account_id)
-            .into_iter()
-            .map(|value| U32(value))
-            .collect();
+        let jar_indices = self.account_jar_ids(&account_id).into_iter().map(U32).collect();
 
         self.get_interest(jar_indices)
     }
