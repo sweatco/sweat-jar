@@ -20,7 +20,7 @@ impl Contract {
     pub(crate) fn get_product(&self, product_id: &ProductId) -> Product {
         self.products
             .get(product_id)
-            .unwrap_or_else(|| env::panic_str(format!("Product {} doesn't exist", product_id).as_str()))
+            .unwrap_or_else(|| env::panic_str(&format!("Product {product_id} doesn't exist")))
             .clone()
     }
 

@@ -6,6 +6,7 @@ use near_sdk::{
 };
 
 use crate::{
+    env,
     jar::model::{Jar, JarIndex},
     product::model::{Product, ProductId},
     PACKAGE_NAME, VERSION,
@@ -34,8 +35,8 @@ pub enum EventKind {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 struct SweatJarEvent {
-    standard: String,
-    version: String,
+    standard: &'static str,
+    version: &'static str,
     #[serde(flatten)]
     event_kind: EventKind,
 }
@@ -99,8 +100,8 @@ pub struct TopUpData {
 impl From<EventKind> for SweatJarEvent {
     fn from(event_kind: EventKind) -> Self {
         Self {
-            standard: PACKAGE_NAME.into(),
-            version: VERSION.into(),
+            standard: PACKAGE_NAME,
+            version: VERSION,
             event_kind,
         }
     }
@@ -116,7 +117,8 @@ impl SweatJarEvent {
     }
 
     fn to_json_string(&self) -> String {
-        serde_json::to_string(self).unwrap()
+        serde_json::to_string(self)
+            .unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")))
     }
 
     fn to_json_event_string(&self) -> String {

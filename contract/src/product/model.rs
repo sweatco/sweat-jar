@@ -133,13 +133,10 @@ impl Product {
 
     pub(crate) fn assert_cap(&self, amount: TokenAmount) {
         if self.cap.min > amount || amount > self.cap.max {
-            env::panic_str(
-                format!(
-                    "Total amount is out of product bounds: [{}..{}]",
-                    self.cap.min, self.cap.max
-                )
-                .as_str(),
-            );
+            env::panic_str(&format!(
+                "Total amount is out of product bounds: [{}..{}]",
+                self.cap.min, self.cap.max
+            ));
         }
     }
 

@@ -105,12 +105,12 @@ pub(crate) mod tests {
             let fee_account_id = AccountId::new_unchecked("fee".to_string());
             let ft_contract_id = AccountId::new_unchecked("token".to_string());
 
-            let builder = VMContextBuilder::new()
+            let mut builder = VMContextBuilder::new();
+            builder
                 .current_account_id(owner.clone())
                 .signer_account_id(owner.clone())
                 .predecessor_account_id(owner.clone())
-                .block_timestamp(0)
-                .clone();
+                .block_timestamp(0);
 
             testing_env!(builder.build());
 

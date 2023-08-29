@@ -53,7 +53,7 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_index: JarIndexView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let jar = self.get_jar_internal(jar_index.0).locked();
-        let amount = amount.map_or_else(|| jar.principal, |value| value.0);
+        let amount = amount.map_or(jar.principal, |value| value.0);
 
         let account_id = env::predecessor_account_id();
         assert_ownership(&jar, &account_id);
@@ -263,14 +263,14 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let product: &Product = &get_register_product_command().into();
+        let product: Product = get_register_product_command().into();
         context.switch_account(&admin);
         context.with_deposit_yocto(1, |context| {
             context.contract.register_product(get_register_product_command())
         });
 
         let ticket = JarTicket {
-            product_id: product.clone().id,
+            product_id: product.id.clone(),
             valid_until: U64(0),
         };
         context

@@ -51,7 +51,7 @@ impl ProductApi for Contract {
         self.assert_manager();
         assert_one_yocto();
 
-        if self.products.contains_key(command.id.as_str()) {
+        if self.products.contains_key(&command.id) {
             panic!("Product already exists");
         }
 

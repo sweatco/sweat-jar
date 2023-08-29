@@ -1,5 +1,6 @@
 use ed25519_dalek::{PublicKey, Signature};
 use near_sdk::{
+    assert_one_yocto,
     borsh::{self, maybestd::collections::HashSet, BorshDeserialize, BorshSerialize},
     env,
     json_types::Base64VecU8,

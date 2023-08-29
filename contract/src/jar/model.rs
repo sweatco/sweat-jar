@@ -294,7 +294,7 @@ impl Contract {
 
     pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
         self.jars.get(index).map_or_else(
-            || env::panic_str(format!("Jar on index {} doesn't exist", index).as_str()),
+            || env::panic_str(&format!("Jar on index {index} doesn't exist")),
             |value| value.clone(),
         )
     }
@@ -312,7 +312,7 @@ impl Contract {
             let last_jar_index = self
                 .account_jars
                 .get(account_id)
-                .map(|jars| *jars.iter().max().unwrap());
+                .map(|jars| *jars.iter().max().unwrap_or_else(|| env::panic_str("Jar is empty.")));
 
             let hash = self.get_ticket_hash(account_id, amount, ticket, last_jar_index);
             let is_signature_valid = self.verify_signature(&signature.0, &pk, &hash);

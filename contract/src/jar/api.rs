@@ -109,26 +109,26 @@ impl JarApi for Contract {
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
         self.account_jar_ids(&account_id)
-            .iter()
-            .map(|index| self.get_jar(U32(*index)))
+            .into_iter()
+            .map(|index| self.get_jar(U32(index)))
             .collect()
     }
 
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
         let jar_indices = self
             .account_jar_ids(&account_id)
-            .iter()
-            .map(|value| U32(*value))
+            .into_iter()
+            .map(|value| U32(value))
             .collect();
 
         self.get_principal(jar_indices)
     }
 
     fn get_principal(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView {
-        let mut detailed_amounts: HashMap<JarIndexView, U128> = HashMap::new();
+        let mut detailed_amounts = HashMap::<JarIndexView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for index in jar_indices.iter() {
+        for index in jar_indices {
             let index = index.0;
             let principal = self.get_jar_internal(index).principal;
 
@@ -145,8 +145,8 @@ impl JarApi for Contract {
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedTokenAmountView {
         let jar_indices = self
             .account_jar_ids(&account_id)
-            .iter()
-            .map(|value| U32(*value))
+            .into_iter()
+            .map(|value| U32(value))
             .collect();
 
         self.get_interest(jar_indices)
@@ -155,10 +155,10 @@ impl JarApi for Contract {
     fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView {
         let now = env::block_timestamp_ms();
 
-        let mut detailed_amounts: HashMap<JarIndexView, U128> = HashMap::new();
+        let mut detailed_amounts = HashMap::<JarIndexView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for index in jar_indices.iter() {
+        for index in jar_indices {
             let index = index.0;
             let jar = self.get_jar_internal(index);
             let interest = jar.get_interest(&self.get_product(&jar.product_id), now);

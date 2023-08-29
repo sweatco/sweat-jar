@@ -55,26 +55,22 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
-        let get_interest_to_claim: Box<dyn Fn(TokenAmount, TokenAmount) -> TokenAmount> = match amount {
-            Some(ref amount) => Box::new(|available, total| cmp::min(available, amount.0 - total)),
-            None => Box::new(|available, _| available),
-        };
-
-        let jar_ids_iter = jar_indices.iter();
-        let unlocked_jars: Vec<Jar> = jar_ids_iter
-            .map(|index| self.get_jar_internal(*index))
-            .filter(|jar| !jar.is_pending_withdraw)
-            .filter(|jar| jar.account_id == account_id)
+        let unlocked_jars: Vec<Jar> = jar_indices
+            .into_iter()
+            .map(|index| self.get_jar_internal(index))
+            .filter(|jar| !jar.is_pending_withdraw && jar.account_id == account_id)
             .collect();
 
         let mut total_interest_to_claim: TokenAmount = 0;
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
-        for jar in unlocked_jars.clone() {
+        for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
             let available_interest = jar.get_interest(&product, now);
-            let interest_to_claim = get_interest_to_claim(available_interest, total_interest_to_claim);
+            let interest_to_claim = amount.map_or(available_interest, |amount| {
+                cmp::min(available_interest, amount.0 - total_interest_to_claim)
+            });
 
             let updated_jar = jar.claimed(available_interest, interest_to_claim, now).locked();
             self.jars.replace(jar.index, updated_jar);

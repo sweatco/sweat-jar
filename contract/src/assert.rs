@@ -15,7 +15,7 @@ pub(crate) fn assert_sufficient_balance(jar: &Jar, amount: TokenAmount) {
 }
 
 pub(crate) fn assert_ownership(jar: &Jar, account_id: &AccountId) {
-    assert_eq!(jar.account_id, account_id.clone(), "Account doesn't own this jar");
+    assert_eq!(&jar.account_id, account_id, "Account doesn't own this jar");
 }
 
 pub(crate) fn assert_is_liquidable(jar: &Jar, product: &Product, now: Timestamp) {
