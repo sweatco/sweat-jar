@@ -5,19 +5,24 @@ pub mod view;
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use near_sdk::json_types::{Base64VecU8, U128, U64};
-    use near_sdk::test_utils::accounts;
+    use near_sdk::{
+        json_types::{Base64VecU8, U128, U64},
+        test_utils::accounts,
+    };
 
-    use crate::common::tests::Context;
-    use crate::common::UDecimal;
-    use crate::product::api::ProductApi;
-    use crate::product::command::{FixedProductTermsDto, RegisterProductCommand, TermsDto};
-    use crate::product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms};
+    use crate::{
+        common::{tests::Context, UDecimal},
+        product::{
+            api::ProductApi,
+            command::{FixedProductTermsDto, RegisterProductCommand, TermsDto},
+            model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms},
+        },
+    };
 
     fn get_premium_product_public_key() -> Vec<u8> {
         vec![
-            33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109,
-            48, 82, 50, 35, 197, 176, 50, 211, 183, 128, 207, 1, 8, 68,
+            33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109, 48, 82, 50, 35, 197,
+            176, 50, 211, 183, 128, 207, 1, 8, 68,
         ]
     }
 
@@ -154,18 +159,14 @@ pub(crate) mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let mut product = context.contract.get_product(&"product".to_string());
         assert!(product.is_enabled);
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.set_enabled("product".to_string(), false),
-        );
+        context.with_deposit_yocto(1, |context| context.contract.set_enabled("product".to_string(), false));
 
         product = context.contract.get_product(&"product".to_string());
         assert!(!product.is_enabled);
@@ -178,18 +179,14 @@ pub(crate) mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let product = context.contract.get_product(&"product".to_string());
         assert!(product.is_enabled);
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.set_enabled("product".to_string(), true),
-        );
+        context.with_deposit_yocto(1, |context| context.contract.set_enabled("product".to_string(), true));
     }
 
     #[test]
@@ -201,21 +198,15 @@ pub(crate) mod tests {
 
         context.switch_account(&admin);
 
-        context.with_deposit_yocto(
-            1,
-            |context| {
-                let first_command = get_register_product_command();
-                context.contract.register_product(first_command)
-            },
-        );
+        context.with_deposit_yocto(1, |context| {
+            let first_command = get_register_product_command();
+            context.contract.register_product(first_command)
+        });
 
-        context.with_deposit_yocto(
-            1,
-            |context| {
-                let second_command = get_register_product_command();
-                context.contract.register_product(second_command)
-            },
-        );
+        context.with_deposit_yocto(1, |context| {
+            let second_command = get_register_product_command();
+            context.contract.register_product(second_command)
+        });
     }
 
     #[test]
@@ -226,20 +217,21 @@ pub(crate) mod tests {
 
         context.switch_account(&admin);
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.set_public_key(
-                get_register_product_command().id,
-                Base64VecU8(vec![0, 1, 2]),
-            ),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]))
+        });
 
-        let product = context.contract.products.get(&get_register_product_command().id).unwrap();
+        let product = context
+            .contract
+            .products
+            .get(&get_register_product_command().id)
+            .unwrap();
         assert_eq!(vec![0, 1, 2], product.clone().public_key.unwrap());
     }
 
@@ -252,19 +244,16 @@ pub(crate) mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account(&alice);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.set_public_key(
-                get_register_product_command().id,
-                Base64VecU8(vec![0, 1, 2]),
-            ),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]))
+        });
     }
 
     #[test]
@@ -276,15 +265,13 @@ pub(crate) mod tests {
 
         context.switch_account(&admin);
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
-        context.contract.set_public_key(
-            get_register_product_command().id,
-            Base64VecU8(vec![0, 1, 2]),
-        );
+        context
+            .contract
+            .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]));
     }
 
     #[test]

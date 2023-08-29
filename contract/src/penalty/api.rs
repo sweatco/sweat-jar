@@ -1,9 +1,11 @@
 use near_sdk::{env, near_bindgen};
-use crate::*;
-use crate::event::{emit, PenaltyData};
-use crate::event::EventKind::ApplyPenalty;
-use crate::jar::model::JarIndex;
-use crate::product::model::Apy;
+
+use crate::{
+    event::{emit, EventKind::ApplyPenalty, PenaltyData},
+    jar::model::JarIndex,
+    product::model::Apy,
+    *,
+};
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
 pub trait PenaltyApi {
@@ -40,6 +42,9 @@ impl PenaltyApi for Contract {
             _ => env::panic_str("Penalty is not applicable"),
         };
 
-        emit(ApplyPenalty(PenaltyData { index: jar_index, is_applied: value }));
+        emit(ApplyPenalty(PenaltyData {
+            index: jar_index,
+            is_applied: value,
+        }));
     }
 }

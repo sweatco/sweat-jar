@@ -1,9 +1,13 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::require;
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{
+    borsh::{self, BorshDeserialize, BorshSerialize},
+    require,
+    serde::{Deserialize, Serialize},
+};
 
-use crate::*;
-use crate::common::{Duration, TokenAmount, UDecimal};
+use crate::{
+    common::{Duration, TokenAmount, UDecimal},
+    *,
+};
 
 pub type ProductId = String;
 
@@ -116,24 +120,26 @@ impl Product {
     pub(crate) fn allows_top_up(&self) -> bool {
         match self.clone().terms {
             Terms::Fixed(value) => value.allows_top_up,
-            Terms::Flexible => true
+            Terms::Flexible => true,
         }
     }
 
     pub(crate) fn allows_restaking(&self) -> bool {
         match self.clone().terms {
             Terms::Fixed(value) => value.allows_restaking,
-            Terms::Flexible => false
+            Terms::Flexible => false,
         }
     }
 
     pub(crate) fn assert_cap(&self, amount: TokenAmount) {
         if self.cap.min > amount || amount > self.cap.max {
-            env::panic_str(format!(
-                "Total amount is out of product bounds: [{}..{}]",
-                self.cap.min,
-                self.cap.max
-            ).as_str());
+            env::panic_str(
+                format!(
+                    "Total amount is out of product bounds: [{}..{}]",
+                    self.cap.min, self.cap.max
+                )
+                .as_str(),
+            );
         }
     }
 

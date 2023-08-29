@@ -1,13 +1,23 @@
-use near_sdk::{AccountId, log, serde_json};
-use near_sdk::json_types::{Base64VecU8, U128};
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{
+    json_types::{Base64VecU8, U128},
+    log,
+    serde::{Deserialize, Serialize},
+    serde_json, AccountId,
+};
 
-use crate::{PACKAGE_NAME, VERSION};
-use crate::jar::model::{Jar, JarIndex};
-use crate::product::model::{Product, ProductId};
+use crate::{
+    jar::model::{Jar, JarIndex},
+    product::model::{Product, ProductId},
+    PACKAGE_NAME, VERSION,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde", tag = "event", content = "data", rename_all = "snake_case")]
+#[serde(
+    crate = "near_sdk::serde",
+    tag = "event",
+    content = "data",
+    rename_all = "snake_case"
+)]
 pub enum EventKind {
     RegisterProduct(Product),
     CreateJar(Jar),

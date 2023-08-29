@@ -1,9 +1,13 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::json_types::{Base64VecU8, U128, U64};
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{
+    borsh::{self, BorshDeserialize, BorshSerialize},
+    json_types::{Base64VecU8, U128, U64},
+    serde::{Deserialize, Serialize},
+};
 
-use crate::common::UDecimal;
-use crate::product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, ProductId, Terms, WithdrawalFee};
+use crate::{
+    common::UDecimal,
+    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, ProductId, Terms, WithdrawalFee},
+};
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -24,17 +28,17 @@ impl From<RegisterProductCommand> for Product {
     fn from(value: RegisterProductCommand) -> Self {
         let apy = if let Some(apy_fallback) = value.apy_fallback {
             Apy::Downgradable(DowngradableApy {
-                default: UDecimal::new(value.apy_default.0.0, value.apy_default.1),
-                fallback: UDecimal::new(apy_fallback.0.0, apy_fallback.1),
+                default: UDecimal::new(value.apy_default.0 .0, value.apy_default.1),
+                fallback: UDecimal::new(apy_fallback.0 .0, apy_fallback.1),
             })
         } else {
-            Apy::Constant(UDecimal::new(value.apy_default.0.0, value.apy_default.1))
+            Apy::Constant(UDecimal::new(value.apy_default.0 .0, value.apy_default.1))
         };
         let withdrawal_fee = value.withdrawal_fee.map(|dto| match dto {
             WithdrawalFeeDto::Fix(value) => WithdrawalFee::Fix(value.0),
-            WithdrawalFeeDto::Percent(significand, exponent) => WithdrawalFee::Percent(
-                UDecimal::new(significand.0, exponent)
-            ),
+            WithdrawalFeeDto::Percent(significand, exponent) => {
+                WithdrawalFee::Percent(UDecimal::new(significand.0, exponent))
+            }
         });
 
         Self {
