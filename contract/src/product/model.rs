@@ -6,7 +6,7 @@ use near_sdk::{
 
 use crate::{
     common::{Duration, TokenAmount, UDecimal},
-    *,
+    env,
 };
 
 pub type ProductId = String;

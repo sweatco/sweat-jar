@@ -7,7 +7,7 @@ use crate::{
     event::{emit, ClaimEventItem, EventKind},
     ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER},
     jar::model::{Jar, JarIndex},
-    *,
+    Contract, ContractExt, Gas, Promise,
 };
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.

@@ -5,7 +5,7 @@ use near_sdk::{
     AccountId, Promise,
 };
 
-use crate::{common::TokenAmount, *};
+use crate::{common::TokenAmount, Contract, ContractExt, Gas};
 
 pub(crate) const GAS_FOR_AFTER_TRANSFER: u64 = 20_000_000_000_000;
 

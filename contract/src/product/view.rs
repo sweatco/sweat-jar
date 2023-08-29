@@ -5,7 +5,7 @@ use near_sdk::{
 
 use crate::{
     product::model::{Cap, DowngradableApy, Terms, WithdrawalFee},
-    *,
+    Apy, Product, ProductId,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

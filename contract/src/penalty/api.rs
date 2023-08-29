@@ -4,7 +4,7 @@ use crate::{
     event::{emit, EventKind::ApplyPenalty, PenaltyData},
     jar::model::JarIndex,
     product::model::Apy,
-    *,
+    Contract, ContractExt,
 };
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
