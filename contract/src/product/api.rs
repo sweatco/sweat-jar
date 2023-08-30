@@ -13,6 +13,7 @@ pub trait ProductApi {
     /// # Arguments
     ///
     /// * `command` - A `RegisterProductCommand` struct containing information about the new product.
+    ///
     /// # Panics
     ///
     /// This method will panic if a product with the same id already exists.
@@ -34,6 +35,15 @@ pub trait ProductApi {
     /// This method will panic if the provided `is_enabled` value matches the current enabled status of the product.
     fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool);
 
+    /// Sets a new public key for the specified product.
+    ///
+    /// This method allows replacing the existing public key associated with a product. This might be necessary
+    /// in cases where a key pair is compromised, and an oracle needs to update the public key for security reasons.
+    ///
+    /// # Arguments
+    ///
+    /// * `product_id` - The ID of the product for which the public key is being replaced.
+    /// * `public_key` - The new public key represented as a base64-encoded byte array.
     fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8);
 
     /// Retrieves a list of all registered products in the contract.
