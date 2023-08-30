@@ -78,7 +78,10 @@ impl ClaimApi for Contract {
             if interest_to_claim > 0 {
                 total_interest_to_claim += interest_to_claim;
 
-                event_data.push(ClaimEventItem { index: jar.index, interest_to_claim: U128(interest_to_claim) });
+                event_data.push(ClaimEventItem {
+                    index: jar.index,
+                    interest_to_claim: U128(interest_to_claim),
+                });
             }
         }
 
