@@ -1,9 +1,11 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{json_types::U128, PromiseOrValue, serde::{Deserialize, Serialize}, serde_json};
+use near_sdk::{
+    json_types::U128,
+    serde::{Deserialize, Serialize},
+    serde_json, PromiseOrValue,
+};
 
-use crate::*;
-use crate::jar::model::JarTicket;
-use crate::migration::model::CeFiJar;
+use crate::{jar::model::JarTicket, migration::model::CeFiJar, *};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -36,26 +38,15 @@ pub struct StakeMessage {
 
 #[near_bindgen]
 impl FungibleTokenReceiver for Contract {
-    fn ft_on_transfer(
-        &mut self,
-        sender_id: AccountId,
-        amount: U128,
-        msg: String,
-    ) -> PromiseOrValue<U128> {
+    fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> PromiseOrValue<U128> {
         self.assert_from_ft_contract();
 
-        let ft_message: FtMessage = serde_json::from_str(&msg)
-            .expect("Unable to deserialize msg");
+        let ft_message: FtMessage = serde_json::from_str(&msg).expect("Unable to deserialize msg");
 
         match ft_message {
             FtMessage::Stake(message) => {
                 let receiver_id = message.receiver_id.unwrap_or_else(|| sender_id.clone());
-                self.create_jar(
-                    receiver_id,
-                    message.ticket,
-                    amount,
-                    message.signature,
-                );
+                self.create_jar(receiver_id, message.ticket, amount, message.signature);
             }
             FtMessage::Migrate(jars) => {
                 self.migrate_jars(jars, amount);
@@ -72,16 +63,24 @@ impl FungibleTokenReceiver for Contract {
 #[cfg(test)]
 mod tests {
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-    use near_sdk::json_types::{U128, U64};
-    use near_sdk::serde_json::json;
-    use near_sdk::test_utils::accounts;
+    use near_sdk::{
+        json_types::{U128, U64},
+        serde_json::json,
+        test_utils::accounts,
+    };
 
-    use crate::common::tests::Context;
-    use crate::common::U32;
-    use crate::jar::api::JarApi;
-    use crate::jar::model::JarTicket;
-    use crate::product::api::ProductApi;
-    use crate::product::tests::{get_register_flexible_product_command, get_register_premium_product_command, get_register_product_command, get_register_refillable_product_command, get_register_restakable_product_command};
+    use crate::{
+        common::{tests::Context, U32},
+        jar::{api::JarApi, model::JarTicket},
+        product::{
+            api::ProductApi,
+            tests::{
+                get_register_flexible_product_command, get_register_premium_product_command,
+                get_register_product_command, get_register_refillable_product_command,
+                get_register_restakable_product_command,
+            },
+        },
+    };
 
     #[test]
     fn transfer_with_create_jar_message() {
@@ -91,10 +90,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let msg = json!({
             "type": "stake",
@@ -107,11 +105,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(
-            alice,
-            U128(1_000_000),
-            msg.to_string(),
-        );
+        context.contract.ft_on_transfer(alice, U128(1_000_000), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(jar.index.0, 0);
@@ -126,10 +120,11 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_premium_product_command(None)),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_premium_product_command(None))
+        });
 
         let msg = json!({
             "type": "stake",
@@ -143,20 +138,14 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(
-            alice.clone(),
-            U128(1_000_000),
-            msg.to_string(),
-        );
+        context
+            .contract
+            .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(jar.index.0, 0);
 
-        context.contract.ft_on_transfer(
-            alice,
-            U128(1_000_000),
-            msg.to_string(),
-        );
+        context.contract.ft_on_transfer(alice, U128(1_000_000), msg.to_string());
     }
 
     #[test]
@@ -167,10 +156,11 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_refillable_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_refillable_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -189,11 +179,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(
-            alice,
-            U128(100),
-            msg.to_string(),
-        );
+        context.contract.ft_on_transfer(alice, U128(100), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(200, jar.principal.0);
@@ -208,10 +194,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -230,11 +215,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(
-            alice,
-            U128(100),
-            msg.to_string(),
-        );
+        context.contract.ft_on_transfer(alice, U128(100), msg.to_string());
     }
 
     #[test]
@@ -245,10 +226,11 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_flexible_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_flexible_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -267,11 +249,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(
-            alice,
-            U128(100),
-            msg.to_string(),
-        );
+        context.contract.ft_on_transfer(alice, U128(100), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(200, jar.principal.0);
@@ -286,14 +264,14 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_restakable_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_restakable_product_command())
+        });
 
         let msg = json!({
             "type": "migrate",
@@ -316,11 +294,9 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(
-            alice.clone(),
-            U128(300),
-            msg.to_string(),
-        );
+        context
+            .contract
+            .ft_on_transfer(alice.clone(), U128(300), msg.to_string());
 
         let alice_jars = context.contract.get_jars_for_account(alice.clone());
         assert_eq!(alice_jars.len(), 1);
@@ -340,11 +316,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(
-            alice.clone(),
-            U128(300),
-            "something".to_string(),
-        );
+        context
+            .contract
+            .ft_on_transfer(alice.clone(), U128(300), "something".to_string());
     }
 
     #[test]
@@ -356,10 +330,8 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&alice.clone());
-        context.contract.ft_on_transfer(
-            alice.clone(),
-            U128(300),
-            "something".to_string(),
-        );
+        context
+            .contract
+            .ft_on_transfer(alice.clone(), U128(300), "something".to_string());
     }
 }

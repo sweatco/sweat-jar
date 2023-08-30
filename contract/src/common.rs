@@ -1,5 +1,7 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::serde::{self, Deserialize, Deserializer, Serialize, Serializer};
+use near_sdk::{
+    borsh::{self, BorshDeserialize, BorshSerialize},
+    serde::{self, Deserialize, Deserializer, Serialize, Serializer},
+};
 
 pub(crate) const MINUTES_IN_YEAR: u64 = 365 * 24 * 60;
 pub(crate) const MS_IN_MINUTE: u64 = 1000 * 60;
@@ -42,10 +44,7 @@ impl UDecimal {
 
 impl UDecimal {
     pub(crate) fn new(significand: u128, exponent: u32) -> Self {
-        Self {
-            significand,
-            exponent,
-        }
+        Self { significand, exponent }
     }
 }
 
@@ -65,12 +64,9 @@ impl From<U32> for u32 {
 }
 
 impl Serialize for U32 {
-    fn serialize<S>(
-        &self,
-        serializer: S,
-    ) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
-        where
-            S: Serializer,
+    fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
+    where
+        S: Serializer,
     {
         serializer.serialize_str(&self.0.to_string())
     }
@@ -78,13 +74,12 @@ impl Serialize for U32 {
 
 impl<'de> Deserialize<'de> for U32 {
     fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         let s: String = Deserialize::deserialize(deserializer)?;
         Ok(Self(
-            str::parse::<u32>(&s)
-                .map_err(|err| serde::de::Error::custom(err.to_string()))?,
+            str::parse::<u32>(&s).map_err(|err| serde::de::Error::custom(err.to_string()))?,
         ))
     }
 }
@@ -93,11 +88,9 @@ impl<'de> Deserialize<'de> for U32 {
 pub(crate) mod tests {
     use std::time::Duration;
 
-    use near_sdk::{AccountId, Balance, testing_env};
-    use near_sdk::test_utils::VMContextBuilder;
+    use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 
-    use crate::common::UDecimal;
-    use crate::Contract;
+    use crate::{common::UDecimal, Contract};
 
     pub(crate) struct Context {
         pub contract: Contract,
@@ -112,20 +105,16 @@ pub(crate) mod tests {
             let fee_account_id = AccountId::new_unchecked("fee".to_string());
             let ft_contract_id = AccountId::new_unchecked("token".to_string());
 
-            let builder = VMContextBuilder::new()
+            let mut builder = VMContextBuilder::new();
+            builder
                 .current_account_id(owner.clone())
                 .signer_account_id(owner.clone())
                 .predecessor_account_id(owner.clone())
-                .block_timestamp(0)
-                .clone();
+                .block_timestamp(0);
 
             testing_env!(builder.build());
 
-            let contract = Contract::init(
-                ft_contract_id.clone(),
-                fee_account_id,
-                manager,
-            );
+            let contract = Contract::init(ft_contract_id.clone(), fee_account_id, manager);
 
             Self {
                 owner,
@@ -148,17 +137,14 @@ pub(crate) mod tests {
         }
 
         pub(crate) fn set_block_timestamp(&mut self, duration: Duration) {
-            self.builder = self.builder.clone()
-                .block_timestamp(duration.as_nanos() as u64)
-                .clone();
+            self.builder.block_timestamp(duration.as_nanos() as u64);
             testing_env!(self.builder.build());
         }
 
         pub(crate) fn switch_account(&mut self, account_id: &AccountId) {
-            self.builder = self.builder.clone()
+            self.builder
                 .predecessor_account_id(account_id.clone())
-                .signer_account_id(account_id.clone())
-                .clone();
+                .signer_account_id(account_id.clone());
             testing_env!(self.builder.build());
         }
 
@@ -179,7 +165,7 @@ pub(crate) mod tests {
         }
 
         fn set_deposit_yocto(&mut self, amount: Balance) {
-            self.builder = self.builder.clone().attached_deposit(amount).clone();
+            self.builder.attached_deposit(amount);
             testing_env!(self.builder.build());
         }
     }

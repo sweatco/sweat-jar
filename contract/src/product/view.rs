@@ -1,8 +1,12 @@
-use near_sdk::json_types::{U128, U64};
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{
+    json_types::{U128, U64},
+    serde::{Deserialize, Serialize},
+};
 
-use crate::*;
-use crate::product::model::{Cap, DowngradableApy, Terms, WithdrawalFee};
+use crate::{
+    product::model::{Cap, DowngradableApy, Terms, WithdrawalFee},
+    Apy, Product, ProductId,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -71,7 +75,7 @@ impl From<WithdrawalFee> for WithdrawalFeeView {
     fn from(value: WithdrawalFee) -> Self {
         match value {
             WithdrawalFee::Fix(value) => WithdrawalFeeView::Fix(U128(value)),
-            WithdrawalFee::Percent(value) => WithdrawalFeeView::Percent(value.to_f32())
+            WithdrawalFee::Percent(value) => WithdrawalFeeView::Percent(value.to_f32()),
         }
     }
 }
@@ -88,7 +92,7 @@ impl From<Apy> for ApyView {
     fn from(value: Apy) -> Self {
         match value {
             Apy::Constant(value) => ApyView::Constant(value.to_f32()),
-            Apy::Downgradable(value) => ApyView::Downgradable(value.into())
+            Apy::Downgradable(value) => ApyView::Downgradable(value.into()),
         }
     }
 }

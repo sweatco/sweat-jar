@@ -1,28 +1,33 @@
 use ed25519_dalek::{PublicKey, Signature};
-use near_sdk::{AccountId, BorshStorageKey, env, Gas, near_bindgen, PanicOnDefault, Promise};
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::borsh::maybestd::collections::HashSet;
-use near_sdk::json_types::Base64VecU8;
-use near_sdk::store::{LookupMap, UnorderedMap, Vector};
+use near_sdk::{
+    assert_one_yocto,
+    borsh::{self, maybestd::collections::HashSet, BorshDeserialize, BorshSerialize},
+    env,
+    json_types::Base64VecU8,
+    near_bindgen,
+    store::{LookupMap, UnorderedMap, Vector},
+    AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise,
+};
 use near_self_update::SelfUpdate;
-
 use product::model::{Apy, Product, ProductId};
 
-use crate::assert::{assert_is_not_closed, assert_ownership};
-use crate::jar::model::{Jar, JarIndex, JarState};
+use crate::{
+    assert::{assert_is_not_closed, assert_ownership},
+    jar::model::{Jar, JarIndex, JarState},
+};
 
 mod assert;
+mod claim;
 mod common;
+mod event;
 mod ft_interface;
 mod ft_receiver;
 mod internal;
 mod jar;
-mod claim;
-mod withdraw;
-mod event;
 mod migration;
-mod product;
 mod penalty;
+mod product;
+mod withdraw;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -61,11 +66,7 @@ pub(crate) enum StorageKey {
 impl Contract {
     #[init]
     #[private]
-    pub fn init(
-        token_account_id: AccountId,
-        fee_account_id: AccountId,
-        manager: AccountId,
-    ) -> Self {
+    pub fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
         Self {
             token_account_id,
             fee_account_id,
@@ -79,22 +80,25 @@ impl Contract {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::json_types::{U128, U64};
-    use near_sdk::test_utils::accounts;
-
     use common::tests::Context;
-
-    use crate::claim::api::ClaimApi;
-    use crate::common::U32;
-    use crate::jar::api::JarApi;
-    use crate::jar::model::JarTicket;
-    use crate::penalty::api::PenaltyApi;
-    use crate::product::api::*;
-    use crate::product::command::RegisterProductCommand;
-    use crate::product::tests::{get_product, get_register_premium_product_command, get_register_product_command};
-    use crate::withdraw::api::WithdrawApi;
+    use near_sdk::{
+        json_types::{U128, U64},
+        test_utils::accounts,
+    };
 
     use super::*;
+    use crate::{
+        claim::api::ClaimApi,
+        common::U32,
+        jar::{api::JarApi, model::JarTicket},
+        penalty::api::PenaltyApi,
+        product::{
+            api::*,
+            command::RegisterProductCommand,
+            tests::{get_product, get_register_premium_product_command, get_register_product_command},
+        },
+        withdraw::api::WithdrawApi,
+    };
 
     #[test]
     fn add_product_to_list_by_admin() {
@@ -102,10 +106,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let products = context.contract.get_products();
         assert_eq!(products.len(), 1);
@@ -118,10 +121,9 @@ mod tests {
         let admin = accounts(0);
         let mut context = Context::new(admin);
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
     }
 
     #[test]
@@ -143,10 +145,9 @@ mod tests {
 
         context.switch_account(&admin);
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -171,10 +172,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
         context.switch_account(&admin);
 
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let product = get_product();
         context.switch_account_to_owner();
@@ -229,10 +229,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -259,10 +258,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -289,10 +287,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -319,10 +316,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -359,24 +355,14 @@ mod tests {
         fn get_product() -> RegisterProductCommand {
             // secret: [229, 112, 214, 47, 42, 153, 159, 206, 188, 235, 183, 190, 130, 112, 135, 229, 160, 73, 104, 18, 187, 114, 157, 171, 144, 241, 252, 130, 97, 221, 92, 185]
             // pk: [172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125, 59, 248, 197, 165, 106, 229, 226, 198, 182, 194, 120, 168, 153, 255, 206, 112]
-            get_register_premium_product_command(
-                Some(
-                    Base64VecU8(
-                        vec![
-                            172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10,
-                            125, 59, 248, 197, 165, 106, 229, 226, 198, 182, 194, 120, 168, 153,
-                            255, 206, 112,
-                        ]
-                    )
-                ),
-            )
+            get_register_premium_product_command(Some(Base64VecU8(vec![
+                172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125, 59, 248, 197, 165, 106, 229,
+                226, 198, 182, 194, 120, 168, 153, 255, 206, 112,
+            ])))
         }
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_product()),
-        );
+        context.with_deposit_yocto(1, |context| context.contract.register_product(get_product()));
 
         let product_id = get_product().id;
         context.switch_account_to_owner();
@@ -387,17 +373,11 @@ mod tests {
                 valid_until: U64(4_848_379_977),
             },
             U128(100_000_000),
-            Some(
-                Base64VecU8(
-                    vec![
-                        221, 123, 23, 222, 212, 222, 238, 203, 202, 132, 132, 32, 21, 255, 140,
-                        108, 93, 78, 140, 19, 235, 203, 31, 65, 246, 152, 160, 248, 135, 19,
-                        152, 201, 202, 196, 131, 233, 138, 42, 240, 231, 40, 39, 177, 88, 214,
-                        51, 148, 56, 60, 125, 224, 162, 60, 93, 254, 231, 218, 90, 140, 68, 146,
-                        181, 183, 11,
-                    ]
-                )
-            ),
+            Some(Base64VecU8(vec![
+                221, 123, 23, 222, 212, 222, 238, 203, 202, 132, 132, 32, 21, 255, 140, 108, 93, 78, 140, 19, 235, 203,
+                31, 65, 246, 152, 160, 248, 135, 19, 152, 201, 202, 196, 131, 233, 138, 42, 240, 231, 40, 39, 177, 88,
+                214, 51, 148, 56, 60, 125, 224, 162, 60, 93, 254, 231, 218, 90, 140, 68, 146, 181, 183, 11,
+            ])),
         );
 
         context.set_block_timestamp_in_days(182);
@@ -422,10 +402,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(

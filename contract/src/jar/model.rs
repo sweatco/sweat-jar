@@ -1,17 +1,22 @@
 use std::cmp;
 
-use near_sdk::{AccountId, env, require};
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::env::sha256;
-use near_sdk::json_types::{U128, U64};
-use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{
+    borsh::{self, BorshDeserialize, BorshSerialize},
+    env,
+    env::sha256,
+    json_types::{U128, U64},
+    require,
+    serde::{Deserialize, Serialize},
+    AccountId,
+};
 
-use crate::*;
-use crate::common::{MINUTES_IN_YEAR, UDecimal};
-use crate::common::{MS_IN_MINUTE, Timestamp, TokenAmount};
-use crate::event::{emit, EventKind, TopUpData};
-use crate::jar::view::JarView;
-use crate::product::model::{Apy, Product, ProductId, Terms};
+use crate::{
+    common::{Timestamp, TokenAmount, UDecimal, MINUTES_IN_YEAR, MS_IN_MINUTE},
+    event::{emit, EventKind, TopUpData},
+    jar::view::JarView,
+    product::model::{Apy, Product, ProductId, Terms},
+    *,
+};
 
 pub type JarIndex = u32;
 
@@ -149,12 +154,7 @@ impl Jar {
         }
     }
 
-    pub(crate) fn claimed(
-        &self,
-        available_yield: TokenAmount,
-        claimed_amount: TokenAmount,
-        now: Timestamp,
-    ) -> Self {
+    pub(crate) fn claimed(&self, available_yield: TokenAmount, claimed_amount: TokenAmount, now: Timestamp) -> Self {
         Self {
             claimed_balance: self.claimed_balance + claimed_amount,
             cache: Some(JarCache {
@@ -165,12 +165,7 @@ impl Jar {
         }
     }
 
-    pub(crate) fn withdrawn(
-        &self,
-        product: &Product,
-        withdrawn_amount: TokenAmount,
-        now: Timestamp,
-    ) -> Self {
+    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
         let current_interest = self.get_interest(product, now);
         let state = get_final_state(product, self, withdrawn_amount);
 
@@ -224,18 +219,20 @@ impl Jar {
     fn get_apy(&self, product: &Product) -> UDecimal {
         match product.apy.clone() {
             Apy::Constant(apy) => apy,
-            Apy::Downgradable(apy) => if self.is_penalty_applied {
-                apy.fallback
-            } else {
-                apy.default
-            },
+            Apy::Downgradable(apy) => {
+                if self.is_penalty_applied {
+                    apy.fallback
+                } else {
+                    apy.default
+                }
+            }
         }
     }
 
     fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
         match product.terms.clone() {
             Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
-            Terms::Flexible => now
+            Terms::Flexible => now,
         }
     }
 }
@@ -287,18 +284,19 @@ impl Contract {
 
         self.jars.replace(jar_index, topped_up_jar.clone());
 
-        emit(EventKind::TopUp(TopUpData { index: jar_index, amount }));
+        emit(EventKind::TopUp(TopUpData {
+            index: jar_index,
+            amount,
+        }));
 
         U128(topped_up_jar.principal)
     }
 
     pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
-        self.jars
-            .get(index)
-            .map_or_else(
-                || env::panic_str(format!("Jar on index {} doesn't exist", index).as_str()),
-                |value| value.clone(),
-            )
+        self.jars.get(index).map_or_else(
+            || env::panic_str(&format!("Jar on index {index} doesn't exist")),
+            |value| value.clone(),
+        )
     }
 
     pub(crate) fn verify(
@@ -311,8 +309,10 @@ impl Contract {
         let product = self.get_product(&ticket.product_id);
         if let Some(pk) = product.public_key {
             let signature = signature.expect("Signature is required");
-            let last_jar_index = self.account_jars.get(account_id)
-                .map(|jars| *jars.iter().max().unwrap());
+            let last_jar_index = self
+                .account_jars
+                .get(account_id)
+                .map(|jars| *jars.iter().max().unwrap_or_else(|| env::panic_str("Jar is empty.")));
 
             let hash = self.get_ticket_hash(account_id, amount, ticket, last_jar_index);
             let is_signature_valid = self.verify_signature(&signature.0, &pk, &hash);
@@ -339,23 +339,15 @@ impl Contract {
                 account_id,
                 ticket.product_id,
                 amount,
-                last_jar_index.map_or_else(
-                    || "".to_string(),
-                    |value| value.to_string(),
-                ),
+                last_jar_index.map_or_else(|| "".to_string(), |value| value.to_string(),),
                 ticket.valid_until.0
-            ).as_bytes()
+            )
+            .as_bytes(),
         )
     }
 
-    fn verify_signature(
-        &self,
-        signature: &Vec<u8>,
-        product_public_key: &Vec<u8>,
-        ticket_hash: &Vec<u8>,
-    ) -> bool {
-        let signature = Signature::from_bytes(signature.as_slice())
-            .expect("Invalid signature");
+    fn verify_signature(&self, signature: &Vec<u8>, product_public_key: &Vec<u8>, ticket_hash: &Vec<u8>) -> bool {
+        let signature = Signature::from_bytes(signature.as_slice()).expect("Invalid signature");
 
         PublicKey::from_bytes(product_public_key.as_slice())
             .expect("Public key is invalid")

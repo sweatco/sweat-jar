@@ -1,11 +1,10 @@
 use near_sdk::{assert_one_yocto, near_bindgen, require};
 
-use crate::*;
-use crate::Contract;
-use crate::event::{ChangeProductPublicKeyData, emit, EnableProductData, EventKind};
-use crate::product::command::RegisterProductCommand;
-use crate::product::model::Product;
-use crate::product::view::ProductView;
+use crate::{
+    event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
+    product::{command::RegisterProductCommand, model::Product, view::ProductView},
+    Base64VecU8, Contract, ContractExt, ProductId,
+};
 
 /// The `ProductApi` trait defines methods for managing products within the smart contract.
 pub trait ProductApi {
@@ -52,7 +51,7 @@ impl ProductApi for Contract {
         self.assert_manager();
         assert_one_yocto();
 
-        if self.products.contains_key(command.id.as_str()) {
+        if self.products.contains_key(&command.id) {
             panic!("Product already exists");
         }
 
@@ -70,13 +69,13 @@ impl ProductApi for Contract {
 
         require!(is_enabled != product.is_enabled, "Status matches");
 
-        let updated_product = Product {
-            is_enabled,
-            ..product
-        };
+        let updated_product = Product { is_enabled, ..product };
         self.products.insert(product_id.clone(), updated_product);
 
-        emit(EventKind::EnableProduct(EnableProductData { id: product_id, is_enabled }));
+        emit(EventKind::EnableProduct(EnableProductData {
+            id: product_id,
+            is_enabled,
+        }));
     }
 
     fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8) {

@@ -1,11 +1,12 @@
 use std::collections::HashMap;
-use near_sdk::AccountId;
-use near_sdk::json_types::{U128, U64};
-use near_sdk::serde::{Deserialize, Serialize};
 
-use crate::*;
-use crate::common::U32;
-use crate::product::model::ProductId;
+use near_sdk::{
+    json_types::{U128, U64},
+    serde::{Deserialize, Serialize},
+    AccountId,
+};
+
+use crate::{common::U32, product::model::ProductId, *};
 
 pub type JarIndexView = U32;
 

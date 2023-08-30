@@ -2,16 +2,18 @@ pub mod api;
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::json_types::{U128, U64};
-    use near_sdk::PromiseOrValue;
-    use near_sdk::test_utils::accounts;
-    use crate::claim::api::ClaimApi;
-    use crate::common::tests::Context;
-    use crate::common::U32;
-    use crate::jar::api::JarApi;
-    use crate::jar::model::JarTicket;
-    use crate::product::api::ProductApi;
-    use crate::product::tests::get_register_product_command;
+    use near_sdk::{
+        json_types::{U128, U64},
+        test_utils::accounts,
+        PromiseOrValue,
+    };
+
+    use crate::{
+        claim::api::ClaimApi,
+        common::{tests::Context, U32},
+        jar::{api::JarApi, model::JarTicket},
+        product::{api::ProductApi, tests::get_register_product_command},
+    };
 
     #[test]
     fn claim_total_when_nothing_to_claim() {
@@ -21,10 +23,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(
@@ -55,10 +56,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         context.switch_account_to_owner();
         context.contract.create_jar(

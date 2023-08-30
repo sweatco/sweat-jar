@@ -1,16 +1,22 @@
-use near_sdk::{ext_contract, is_promise_success, near_bindgen, PromiseOrValue};
-use near_sdk::json_types::U128;
+use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
-use crate::*;
-use crate::assert::{assert_is_liquidable, assert_sufficient_balance};
-use crate::common::TokenAmount;
-use crate::event::{emit, EventKind, WithdrawData};
+use crate::{
+    assert::{assert_is_liquidable, assert_sufficient_balance},
+    assert_is_not_closed, assert_ownership,
+    common::TokenAmount,
+    env,
+    event::{emit, EventKind, WithdrawData},
+    ft_interface::Fee,
+    jar::view::JarIndexView,
+    product::model::WithdrawalFee,
+    withdraw::view::WithdrawView,
+    AccountId, Contract, ContractExt, Jar, Product,
+};
 #[cfg(not(test))]
-use crate::ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER};
-use crate::ft_interface::Fee;
-use crate::jar::view::JarIndexView;
-use crate::product::model::WithdrawalFee;
-use crate::withdraw::view::WithdrawView;
+use crate::{
+    ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER},
+    Gas, Promise,
+};
 
 /// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.
 pub trait WithdrawApi {
@@ -52,10 +58,7 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_index: JarIndexView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let jar = self.get_jar_internal(jar_index.0).locked();
-        let amount = amount.map_or_else(
-            || jar.principal,
-            |value| value.0,
-        );
+        let amount = amount.map_or(jar.principal, |value| value.0);
 
         let account_id = env::predecessor_account_id();
         assert_ownership(&jar, &account_id);
@@ -80,7 +83,7 @@ impl Contract {
         fee: Option<Fee>,
         is_promise_success: bool,
     ) -> WithdrawView {
-        let result = if is_promise_success {
+        if is_promise_success {
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();
             let jar = jar_before_transfer.withdrawn(&product, withdrawn_amount, now);
@@ -91,39 +94,42 @@ impl Contract {
 
             WithdrawView::new(withdrawn_amount, fee)
         } else {
-            self.jars.replace(jar_before_transfer.index, jar_before_transfer.unlocked());
+            self.jars
+                .replace(jar_before_transfer.index, jar_before_transfer.unlocked());
 
             WithdrawView::new(0, None)
-        };
-
-        result
+        }
     }
 
-    fn do_transfer(
-        &mut self,
-        account_id: &AccountId,
-        jar: &Jar,
-        amount: TokenAmount,
-    ) -> PromiseOrValue<WithdrawView> {
+    fn do_transfer(&mut self, account_id: &AccountId, jar: &Jar, amount: TokenAmount) -> PromiseOrValue<WithdrawView> {
         self.jars.replace(jar.index, jar.locked());
 
         self.transfer_withdraw(account_id, amount, jar)
     }
 
     fn get_fee(&self, product: &Product, jar: &Jar) -> Option<Fee> {
-        product.withdrawal_fee.clone().map(|fee| match fee {
-            WithdrawalFee::Fix(amount) => amount,
-            WithdrawalFee::Percent(percent) => percent.mul(jar.principal)
-        }).map(|fee| Fee {
-            amount: fee,
-            beneficiary_id: self.fee_account_id.clone(),
-        })
+        product
+            .withdrawal_fee
+            .clone()
+            .map(|fee| match fee {
+                WithdrawalFee::Fix(amount) => amount,
+                WithdrawalFee::Percent(percent) => percent.mul(jar.principal),
+            })
+            .map(|fee| Fee {
+                amount: fee,
+                beneficiary_id: self.fee_account_id.clone(),
+            })
     }
 }
 
 #[cfg(not(test))]
 impl Contract {
-    fn transfer_withdraw(&mut self, account_id: &AccountId, amount: TokenAmount, jar: &Jar) -> PromiseOrValue<WithdrawView> {
+    fn transfer_withdraw(
+        &mut self,
+        account_id: &AccountId,
+        amount: TokenAmount,
+        jar: &Jar,
+    ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
         let fee = self.get_fee(&product, jar);
 
@@ -167,17 +173,21 @@ impl WithdrawCallbacks for Contract {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::json_types::{U128, U64};
-    use near_sdk::test_utils::accounts;
+    use near_sdk::{
+        json_types::{U128, U64},
+        test_utils::accounts,
+    };
 
-    use crate::common::tests::Context;
-    use crate::common::U32;
-    use crate::jar::api::JarApi;
-    use crate::jar::model::JarTicket;
-    use crate::product::api::ProductApi;
-    use crate::product::model::Product;
-    use crate::product::tests::{get_register_flexible_product_command, get_register_product_command};
-    use crate::withdraw::api::WithdrawApi;
+    use crate::{
+        common::{tests::Context, U32},
+        jar::{api::JarApi, model::JarTicket},
+        product::{
+            api::ProductApi,
+            model::Product,
+            tests::{get_register_flexible_product_command, get_register_product_command},
+        },
+        withdraw::api::WithdrawApi,
+    };
 
     #[test]
     #[should_panic(expected = "Account doesn't own this jar")]
@@ -187,10 +197,9 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
@@ -209,16 +218,19 @@ mod tests {
         let mut context = Context::new(admin.clone());
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let ticket = JarTicket {
             product_id: "product".to_string(),
+
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.switch_account(&alice);
         context.contract.withdraw(U32(0), None);
@@ -233,16 +245,17 @@ mod tests {
 
         let product: &Product = &get_register_product_command().into();
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let ticket = JarTicket {
             product_id: product.id.clone(),
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
@@ -255,18 +268,19 @@ mod tests {
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        let product: &Product = &get_register_product_command().into();
+        let product: Product = get_register_product_command().into();
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context.contract.register_product(get_register_product_command())
+        });
 
         let ticket = JarTicket {
-            product_id: product.clone().id,
+            product_id: product.id.clone(),
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
@@ -283,16 +297,19 @@ mod tests {
 
         let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_flexible_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_flexible_product_command())
+        });
 
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.set_block_timestamp_in_days(1);
         context.contract.withdraw(U32(0), None);
@@ -306,16 +323,19 @@ mod tests {
 
         let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_flexible_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_flexible_product_command())
+        });
 
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
@@ -333,16 +353,19 @@ mod tests {
 
         let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_flexible_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_flexible_product_command())
+        });
 
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
@@ -361,16 +384,19 @@ mod tests {
 
         let product: Product = get_register_flexible_product_command().into();
         context.switch_account(&admin);
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.register_product(get_register_flexible_product_command()),
-        );
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_flexible_product_command())
+        });
 
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
