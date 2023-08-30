@@ -175,11 +175,11 @@ impl JarApi for Contract {
         let product = self.get_product(&jar.product_id);
 
         require!(product.allows_restaking(), "The product doesn't support restaking");
-        require!(product.is_enabled, "The product is disabled"); // TODO: add test
+        require!(product.is_enabled, "The product is disabled");
 
         let now = env::block_timestamp_ms();
         require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
-        require!(!jar.is_empty(), "The jar is empty, nothing to restake"); // TODO: add test
+        require!(!jar.is_empty(), "The jar is empty, nothing to restake");
 
         let index = self.jars.len() as JarIndex;
         let new_jar = Jar::create(
@@ -259,6 +259,7 @@ mod signature_tests {
             },
         },
     };
+    use crate::withdraw::api::WithdrawApi;
 
     // Signature for structure (value -> utf8 bytes):
     // contract_id: "owner" -> [111, 119, 110, 101, 114]
@@ -512,6 +513,69 @@ mod signature_tests {
             .create_jar(alice.clone(), ticket, U128(1_000_000), None);
 
         context.switch_account(&alice);
+        context.contract.restake(U32(0));
+    }
+
+    #[test]
+    #[should_panic(expected = "The product is disabled")]
+    fn restake_with_disabled_product() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_restakable_product_command())
+        });
+
+        let ticket = JarTicket {
+            product_id: "product_restakable".to_string(),
+            valid_until: U64(0),
+        };
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .set_enabled(get_register_restakable_product_command().id, false)
+        });
+
+        context.set_block_timestamp_in_days(366);
+
+        context.switch_account(&alice);
+        context.contract.restake(U32(0));
+    }
+
+    #[test]
+    #[should_panic(expected = "The jar is empty, nothing to restake")]
+    fn restake_empty_jar() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+        let mut context = Context::new(admin.clone());
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(1, |context| {
+            context
+                .contract
+                .register_product(get_register_restakable_product_command())
+        });
+
+        let ticket = JarTicket {
+            product_id: "product_restakable".to_string(),
+            valid_until: U64(0),
+        };
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+
+        context.set_block_timestamp_in_days(366);
+
+        context.switch_account(&alice);
+        context.contract.withdraw(U32(0), None);
         context.contract.restake(U32(0));
     }
 
