@@ -94,9 +94,11 @@ impl ClaimApi for Contract {
                 .locked();
             self.jars.replace(jar.index, updated_jar);
 
-            total_interest_to_claim += interest_to_claim;
+            if interest_to_claim > 0 {
+                total_interest_to_claim += interest_to_claim;
 
-            event_data.push(ClaimEventItem { index: jar.index, interest_to_claim: U128(interest_to_claim) });
+                event_data.push(ClaimEventItem { index: jar.index, interest_to_claim: U128(interest_to_claim) });
+            }
         }
 
 
