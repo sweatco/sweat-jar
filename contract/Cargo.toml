@@ -12,7 +12,7 @@ near-sdk = "4.1.1"
 near-contract-standards = "4.1.1"
 uint = { version = "0.9.3", default-features = false }
 ed25519-dalek = "1.0.1"
-near-self-update = { git = "https://github.com/sweatco/near-self-update.git" }
+near-self-update = { git = "https://github.com/sweatco/near-self-update.git", rev = "7064db3cdd924efc7fa7c00664920a2b482e7bcf" }
 
 [profile.release]
 codegen-units = 1

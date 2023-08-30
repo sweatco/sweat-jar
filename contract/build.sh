@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -eox pipefail
 
 echo ">> Building contract"
 
