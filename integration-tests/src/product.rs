@@ -102,6 +102,13 @@ impl RegisterProductCommand {
     }
 
     pub(crate) fn id(&self) -> String {
-        self.json().as_object().unwrap().get("id").unwrap().as_str().unwrap().to_string()
+        self.json()
+            .as_object()
+            .unwrap()
+            .get("id")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string()
     }
 }
