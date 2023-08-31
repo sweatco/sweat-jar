@@ -22,19 +22,15 @@ jobs:
     runs-on: ${{ matrix.target.runner }}
     steps:
       - uses: actions/checkout@v3
+
       - name: Unit tests
-        run: |
-          cd contract
-          cargo test --all
+        run: cargo test --all
+
       - name: Integration tests
-        run: |
-          cd integration-tests
-          cargo run --example integration-tests
+        run: cargo run -p integration-tests
+
       - name: Build simple
-        run: |
-          cd contract
-          ./build.sh
+        run: ./build.sh
+
       - name: Build in docker
-        run: |
-          cd contract
-          ./build-in-docker.sh
+        run: ./build-in-docker.sh
