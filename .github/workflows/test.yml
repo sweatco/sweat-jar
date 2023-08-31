@@ -47,7 +47,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sweat-jar
-          path: res/sweat_jar.wasm
+          path: res/
 
       - name: Integration tests
         run: cargo run -p integration-tests
@@ -63,7 +63,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: sweat-jar
-          path: res/sweat_jar.wasm
+          path: res/
 
       - name: Commit & Push changes
         uses: actions-js/push@master
