@@ -23,7 +23,3 @@ jobs:
 
       - name: Build in docker
         run: ./build-in-docker.sh
-
-      - uses: stefanzweifel/git-auto-commit-action@v4
-          with:
-            commit_message: Update binary

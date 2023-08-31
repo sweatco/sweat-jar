@@ -12,22 +12,28 @@ env:
 
 jobs:
 
-  test:
-    strategy:
-      fail-fast: true
-      matrix:
-        target: [
-          { runner: ubuntu-latest, os: linux },
-        ]
-    runs-on: ${{ matrix.target.runner }}
+  build:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
       - name: Build
         run: cargo build --all
 
+  unit-tests:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
       - name: Unit tests
         run: cargo test --all
+
+  integration-tests:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Integration tests
         run: cargo run -p integration-tests
