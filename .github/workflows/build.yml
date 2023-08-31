@@ -16,8 +16,14 @@ jobs:
           { runner: ubuntu-latest, os: linux },
         ]
     runs-on: ${{ matrix.target.runner }}
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
 
       - name: Build in docker
         run: ./build-in-docker.sh
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
+          with:
+            commit_message: Update binary
