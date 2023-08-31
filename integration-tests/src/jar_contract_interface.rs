@@ -20,7 +20,7 @@ pub(crate) trait JarContractInterface {
         register_product_command_json: Value,
     ) -> anyhow::Result<()>;
 
-    async fn get_products(&self) -> anyhow::Result<(Value)>;
+    async fn get_products(&self) -> anyhow::Result<Value>;
 
     async fn create_jar(
         &self,
@@ -95,7 +95,7 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn get_products(&self) -> anyhow::Result<(Value)> {
+    async fn get_products(&self) -> anyhow::Result<Value> {
         println!("▶️ Get products");
 
         let products: Value = self

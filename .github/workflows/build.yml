@@ -1,11 +1,6 @@
 name: Build in docker
 
-on:
-  workflow_dispatch:
-#  push:
-#    branches: [ ci ]
-#  pull_request:
-#    branches: [ ci ]
+on: workflow_dispatch
 
 env:
   CARGO_TERM_COLOR: always
