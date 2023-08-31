@@ -25,24 +25,23 @@ impl Context {
         println!("🏭 Initializing context");
 
         let worker = workspaces::sandbox().await?;
-        let account = worker.dev_create_account().await?;
+        let root_account = worker.dev_create_account().await?;
 
-        let jar_contract = worker
-            .dev_deploy(&Self::load_wasm(&(env::args().nth(1).unwrap())))
-            .await?;
-        let ft_contract = worker
-            .dev_deploy(&Self::load_wasm(&(env::args().nth(2).unwrap())))
-            .await?;
+        let jar_contract_path = env::args().nth(1).unwrap_or("../res/sweat_jar.wasm".to_string());
+        let ft_contract_path = env::args().nth(2).unwrap_or("../res/sweat.wasm".to_string());
+
+        let jar_contract = worker.dev_deploy(&Self::load_wasm(&jar_contract_path)).await?;
+        let ft_contract = worker.dev_deploy(&Self::load_wasm(&ft_contract_path)).await?;
 
         println!("@@ jar contract deployed to {}", jar_contract.id());
         println!("@@ ft contract deployed to {}", ft_contract.id());
 
-        Result::Ok(Context {
+        Ok(Context {
             worker,
-            root_account: account,
-            accounts: HashMap::<String, Account>::new(),
-            ft_contract: Box::new(ft_contract.clone()),
-            jar_contract: Box::new(jar_contract.clone()),
+            root_account,
+            accounts: HashMap::new(),
+            ft_contract: Box::new(ft_contract),
+            jar_contract: Box::new(jar_contract),
         })
     }
 

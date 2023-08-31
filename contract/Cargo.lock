@@ -728,7 +728,7 @@ dependencies = [
 [[package]]
 name = "near-self-update"
 version = "0.0.1"
-source = "git+https://github.com/sweatco/near-self-update.git#7064db3cdd924efc7fa7c00664920a2b482e7bcf"
+source = "git+https://github.com/sweatco/near-self-update.git?rev=7064db3cdd924efc7fa7c00664920a2b482e7bcf#7064db3cdd924efc7fa7c00664920a2b482e7bcf"
 dependencies = [
  "near-sdk",
  "proc-macro2",
