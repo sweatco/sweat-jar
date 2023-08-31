@@ -1,6 +1,8 @@
-name: Test
+name: Push
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -10,7 +12,7 @@ env:
 
 jobs:
 
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -49,3 +51,21 @@ jobs:
 
       - name: Integration tests
         run: cargo run -p integration-tests
+
+  push:
+    needs: [ unit-tests, integration-tests ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download binary
+        uses: actions/download-artifact@v3
+        with:
+          name: sweat-jar
+          path: res/
+
+      - name: Commit & Push changes
+        uses: actions-js/push@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
