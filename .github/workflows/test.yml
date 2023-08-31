@@ -15,10 +15,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Build
         run: ./build-in-docker.sh
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: sweat-jar
+          path: res/sweat_jar.wasm
 
   unit-tests:
     needs: [ build ]
@@ -33,8 +40,15 @@ jobs:
     needs: [ build ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-        
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download binary
+        uses: actions/download-artifact@v3
+        with:
+          name: sweat-jar
+          path: res/sweat_jar.wasm
+
       - name: Integration tests
         run: cargo run -p integration-tests
 
@@ -42,6 +56,15 @@ jobs:
     needs: [ unit-tests, integration-tests ]
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download binary
+        uses: actions/download-artifact@v3
+        with:
+          name: sweat-jar
+          path: res/sweat_jar.wasm
+
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
