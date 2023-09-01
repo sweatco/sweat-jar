@@ -1,8 +1,6 @@
 use serde_json::json;
-use crate::common::ValueGetters;
 
-use crate::context::Context;
-use crate::product::RegisterProductCommand;
+use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
 pub(crate) async fn run() -> anyhow::Result<()> {
     println!("👷🏽 Run migration test");
@@ -14,9 +12,15 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     let bob = &context.account("bob").await?;
 
     context.ft_contract.init().await?;
-    context.jar_contract.init(context.ft_contract.account(), manager, manager.id()).await?;
+    context
+        .jar_contract
+        .init(context.ft_contract.account(), manager, manager.id())
+        .await?;
 
-    context.ft_contract.storage_deposit(context.jar_contract.account()).await?;
+    context
+        .ft_contract
+        .storage_deposit(context.jar_contract.account())
+        .await?;
     context.ft_contract.storage_deposit(manager).await?;
     context.ft_contract.storage_deposit(alice).await?;
     context.ft_contract.storage_deposit(bob).await?;
@@ -25,41 +29,48 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     context.ft_contract.mint_for_user(alice, 100_000_000).await?;
     context.ft_contract.mint_for_user(bob, 100_000_000_000).await?;
 
-    context.jar_contract.register_product(manager, RegisterProductCommand::Locked12Months12Percents.json()).await?;
+    context
+        .jar_contract
+        .register_product(manager, RegisterProductCommand::Locked12Months12Percents.json())
+        .await?;
 
     context.fast_forward(1).await?;
 
-    context.ft_contract.ft_transfer_call(
-        manager,
-        context.jar_contract.account().id(),
-        3_000_000,
-        json!({
-            "type": "migrate",
-            "data": [
-                {
-                    "id": "old_0",
-                    "account_id": alice.id(),
-                    "product_id": RegisterProductCommand::Locked12Months12Percents.id(),
-                    "principal": "2000000",
-                    "created_at": "0",
-                },
-                {
-                    "id": "old_1",
-                    "account_id": alice.id(),
-                    "product_id": RegisterProductCommand::Locked12Months12Percents.id(),
-                    "principal": "700000",
-                    "created_at": "100",
-                },
-                {
-                    "id": "old_2",
-                    "account_id": bob.id(),
-                    "product_id": RegisterProductCommand::Locked12Months12Percents.id(),
-                    "principal": "300000",
-                    "created_at": "0",
-                },
-        ]
-        }).to_string(),
-    ).await?;
+    context
+        .ft_contract
+        .ft_transfer_call(
+            manager,
+            context.jar_contract.account().id(),
+            3_000_000,
+            json!({
+                "type": "migrate",
+                "data": [
+                    {
+                        "id": "old_0",
+                        "account_id": alice.id(),
+                        "product_id": RegisterProductCommand::Locked12Months12Percents.id(),
+                        "principal": "2000000",
+                        "created_at": "0",
+                    },
+                    {
+                        "id": "old_1",
+                        "account_id": alice.id(),
+                        "product_id": RegisterProductCommand::Locked12Months12Percents.id(),
+                        "principal": "700000",
+                        "created_at": "100",
+                    },
+                    {
+                        "id": "old_2",
+                        "account_id": bob.id(),
+                        "product_id": RegisterProductCommand::Locked12Months12Percents.id(),
+                        "principal": "300000",
+                        "created_at": "0",
+                    },
+            ]
+            })
+            .to_string(),
+        )
+        .await?;
 
     let manager_balance = context.ft_contract.ft_balance_of(manager).await?;
     assert_eq!(0, manager_balance.0);

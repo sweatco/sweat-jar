@@ -1,11 +1,11 @@
-mod product;
-mod ft_contract_interface;
-mod jar_contract_interface;
-mod context;
-mod happy_flow;
-mod migration;
-mod withdraw_fee;
 mod common;
+mod context;
+mod ft_contract_interface;
+mod happy_flow;
+mod jar_contract_interface;
+mod migration;
+mod product;
+mod withdraw_fee;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

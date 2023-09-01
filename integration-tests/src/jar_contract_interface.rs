@@ -14,11 +14,7 @@ pub(crate) trait JarContractInterface {
         manager: &AccountId,
     ) -> anyhow::Result<()>;
 
-    async fn register_product(
-        &self,
-        user: &Account,
-        register_product_command_json: Value,
-    ) -> anyhow::Result<()>;
+    async fn register_product(&self, user: &Account, register_product_command_json: Value) -> anyhow::Result<()>;
 
     async fn get_products(&self) -> anyhow::Result<Value>;
 
@@ -55,8 +51,7 @@ impl JarContractInterface for Contract {
     ) -> anyhow::Result<()> {
         println!("▶️ Init jar contract");
 
-        self
-            .call("init")
+        self.call("init")
             .args_json(json!({
                 "token_account_id": token_contract_account.id(),
                 "fee_account_id": fee_account.id(),
@@ -70,18 +65,15 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn register_product(
-        &self,
-        user: &Account,
-        register_product_command_json: Value,
-    ) -> anyhow::Result<()> {
-        println!("▶️ Register product: {:?}", register_product_command_json);
+    async fn register_product(&self, user: &Account, register_product_command_json: Value) -> anyhow::Result<()> {
+        println!("▶️ Register product: {register_product_command_json:?}");
 
         let args = json!({
             "command": register_product_command_json,
         });
 
-        let result = user.call(self.id(), "register_product")
+        let result = user
+            .call(self.id(), "register_product")
             .args_json(args)
             .deposit(1)
             .transact()
@@ -98,10 +90,7 @@ impl JarContractInterface for Contract {
     async fn get_products(&self) -> anyhow::Result<Value> {
         println!("▶️ Get products");
 
-        let products: Value = self
-            .view("get_products")
-            .await?
-            .json()?;
+        let products: Value = self.view("get_products").await?.json()?;
 
         println!("   ✅ {:?}", products);
 
@@ -138,7 +127,8 @@ impl JarContractInterface for Contract {
             "msg": msg.to_string(),
         });
 
-        let result = user.call(ft_contract_id, "ft_transfer_call")
+        let result = user
+            .call(ft_contract_id, "ft_transfer_call")
             .args_json(args)
             .max_gas()
             .deposit(parse_near!("1 yocto"))
@@ -147,7 +137,7 @@ impl JarContractInterface for Contract {
             .into_result()?;
 
         for log in result.logs() {
-            println!("   📖 {:?}", log);
+            println!("   📖 {log}");
         }
 
         Ok(())
@@ -160,11 +150,7 @@ impl JarContractInterface for Contract {
             "account_id": user.id(),
         });
 
-        let result = self
-            .view("get_total_principal")
-            .args_json(args)
-            .await?
-            .json()?;
+        let result = self.view("get_total_principal").args_json(args).await?.json()?;
 
         println!("   ✅ {:?}", result);
 
@@ -178,11 +164,7 @@ impl JarContractInterface for Contract {
             "account_id": user.id(),
         });
 
-        let result = self
-            .view("get_total_interest")
-            .args_json(args)
-            .await?
-            .json()?;
+        let result = self.view("get_total_interest").args_json(args).await?.json()?;
 
         println!("   ✅ {:?}", result);
 
@@ -196,25 +178,22 @@ impl JarContractInterface for Contract {
             "account_id": user.id(),
         });
 
-        let result = self
-            .view("get_jars_for_account")
-            .args_json(args)
-            .await?
-            .json()?;
+        let result = self.view("get_jars_for_account").args_json(args).await?.json()?;
 
-        println!("   ✅ {:?}", result);
+        println!("   ✅ {result:?}");
 
         Ok(result)
     }
 
     async fn withdraw(&self, user: &Account, jar_index: &str) -> anyhow::Result<Value> {
-        println!("▶️ Withdraw jar #{}", jar_index);
+        println!("▶️ Withdraw jar #{jar_index}");
 
         let args = json!({
             "jar_index": jar_index,
         });
 
-        let result = user.call(self.id(), "withdraw")
+        let result = user
+            .call(self.id(), "withdraw")
             .args_json(args)
             .max_gas()
             .transact()
@@ -222,14 +201,14 @@ impl JarContractInterface for Contract {
             .into_result()?;
 
         for log in result.logs() {
-            println!("   📖 {:?}", log);
+            println!("   📖 {log}");
         }
 
-        println!("   📟 {:?}", result);
+        println!("   📟 {result:?}");
 
         let result_value = result.json::<Value>()?;
 
-        println!("   ✅ {:?}", result_value);
+        println!("   ✅ {result_value:?}");
 
         Ok(result_value)
     }
@@ -239,7 +218,8 @@ impl JarContractInterface for Contract {
 
         let args = json!({});
 
-        let result = user.call(self.id(), "claim_total")
+        let result = user
+            .call(self.id(), "claim_total")
             .args_json(args)
             .max_gas()
             .transact()
@@ -247,14 +227,14 @@ impl JarContractInterface for Contract {
             .into_result()?;
 
         for log in result.logs() {
-            println!("   📖 {:?}", log);
+            println!("   📖 {log}");
         }
 
-        println!("   📟 {:?}", result);
+        println!("   📟 {result:?}");
 
         let result_value = result.json::<Value>()?;
 
-        println!("   ✅ {:?}", result_value);
+        println!("   ✅ {result_value:?}");
 
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }

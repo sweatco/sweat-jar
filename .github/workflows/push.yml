@@ -6,7 +6,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  GITHUB_ACTIONS: true
 
 jobs:
 

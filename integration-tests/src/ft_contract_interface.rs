@@ -12,11 +12,7 @@ pub(crate) trait FtContractInterface {
 
     async fn ft_balance_of(&self, user: &Account) -> anyhow::Result<U128>;
 
-    async fn mint_for_user(
-        &self,
-        user: &Account,
-        amount: u128,
-    ) -> anyhow::Result<()>;
+    async fn mint_for_user(&self, user: &Account, amount: u128) -> anyhow::Result<()>;
 
     async fn storage_deposit(&self, user: &Account) -> anyhow::Result<()>;
 
@@ -38,8 +34,7 @@ impl FtContractInterface for Contract {
     async fn init(&self) -> anyhow::Result<()> {
         println!("▶️ Init ft contract");
 
-        self
-            .call("new")
+        self.call("new")
             .args_json(json!({
                 "postfix": ".u.sweat.testnet",
             }))
@@ -58,31 +53,22 @@ impl FtContractInterface for Contract {
             "account_id": user.id(),
         });
 
-        let result = self
-            .view("ft_balance_of")
-            .args_json(args)
-            .await?
-            .json()?;
+        let result = self.view("ft_balance_of").args_json(args).await?.json()?;
 
         println!("   ✅ {:?}", result);
 
         Ok(result)
     }
 
-    async fn mint_for_user(
-        &self,
-        user: &Account,
-        amount: u128,
-    ) -> anyhow::Result<()> {
-        println!("▶️ Mint {:?} tokens for user {:?}", amount, user.id());
+    async fn mint_for_user(&self, user: &Account, amount: u128) -> anyhow::Result<()> {
+        println!("▶️ Mint {amount} tokens for user {}", user.id());
 
         let args = json!({
             "account_id": user.id(),
             "amount": amount.to_string(),
         });
 
-        self
-            .as_account()
+        self.as_account()
             .call(self.id(), "tge_mint")
             .args_json(args)
             .max_gas()
@@ -117,7 +103,7 @@ impl FtContractInterface for Contract {
         amount: u128,
         msg: String,
     ) -> anyhow::Result<()> {
-        println!("▶️ Transfer {} fungible tokens to {} with message: {}", amount, receiver_id, msg);
+        println!("▶️ Transfer {amount} fungible tokens to {receiver_id} with message: {msg}");
 
         let args = json!({
             "receiver_id": receiver_id,
@@ -125,7 +111,8 @@ impl FtContractInterface for Contract {
             "msg": msg.to_string(),
         });
 
-        let result = user.call(self.id(), "ft_transfer_call")
+        let result = user
+            .call(self.id(), "ft_transfer_call")
             .args_json(args)
             .max_gas()
             .deposit(parse_near!("1 yocto"))
@@ -134,7 +121,7 @@ impl FtContractInterface for Contract {
             .into_result()?;
 
         for log in result.logs() {
-            println!("   📖 {:?}", log);
+            println!("   📖 {log}");
         }
 
         Ok(())

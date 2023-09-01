@@ -1,12 +1,9 @@
-use std::{env, fs};
-use std::collections::HashMap;
+use std::{collections::HashMap, env, fs};
 
 use near_units::parse_near;
-use workspaces::{Account, Worker};
-use workspaces::network::Sandbox;
+use workspaces::{network::Sandbox, Account, Worker};
 
-use crate::ft_contract_interface::FtContractInterface;
-use crate::jar_contract_interface::JarContractInterface;
+use crate::{ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface};
 
 const EPOCH_BLOCKS_HEIGHT: u64 = 43_200;
 const HOURS_PER_EPOCH: u64 = 12;
@@ -47,7 +44,8 @@ impl Context {
 
     pub(crate) async fn account(&mut self, name: &str) -> anyhow::Result<Account> {
         if !self.accounts.contains_key(name) {
-            let account = self.root_account
+            let account = self
+                .root_account
                 .create_subaccount(name)
                 .initial_balance(parse_near!("3 N"))
                 .transact()
@@ -62,15 +60,14 @@ impl Context {
 
     fn load_wasm(wasm_path: &str) -> Vec<u8> {
         let current_dir = env::current_dir().expect("Failed to get current dir");
-        let wasm_filepath =
-            fs::canonicalize(current_dir.join(wasm_path)).expect("Failed to get wasm file path");
-        std::fs::read(wasm_filepath).expect("Failed to load wasm")
+        let wasm_filepath = fs::canonicalize(current_dir.join(wasm_path)).expect("Failed to get wasm file path");
+        fs::read(wasm_filepath).expect("Failed to load wasm")
     }
 
     pub(crate) async fn fast_forward(&self, hours: u64) -> anyhow::Result<()> {
         let blocks_to_advance = ONE_HOUR_BLOCKS_HEIGHT * hours;
 
-        println!("⏳ Fast forward to {} hours ({} blocks)...", hours, blocks_to_advance);
+        println!("⏳ Fast forward to {hours} hours ({blocks_to_advance} blocks)...");
 
         self.worker.fast_forward(blocks_to_advance).await?;
 
