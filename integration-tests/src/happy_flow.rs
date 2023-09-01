@@ -1,6 +1,4 @@
-use crate::common::ValueGetters;
-use crate::context::Context;
-use crate::product::RegisterProductCommand;
+use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
 pub(crate) async fn run() -> anyhow::Result<()> {
     println!("👷🏽 Run happy flow test");
@@ -11,25 +9,46 @@ pub(crate) async fn run() -> anyhow::Result<()> {
     let alice = &context.account("alice").await?;
 
     context.ft_contract.init().await?;
-    context.jar_contract.init(context.ft_contract.account(), manager, manager.id()).await?;
+    context
+        .jar_contract
+        .init(context.ft_contract.account(), manager, manager.id())
+        .await?;
 
-    context.ft_contract.storage_deposit(context.jar_contract.account()).await?;
+    context
+        .ft_contract
+        .storage_deposit(context.jar_contract.account())
+        .await?;
     context.ft_contract.storage_deposit(alice).await?;
     context.ft_contract.mint_for_user(alice, 100_000_000).await?;
 
-    context.jar_contract.register_product(manager, RegisterProductCommand::Locked12Months12Percents.json()).await?;
-    context.jar_contract.register_product(manager, RegisterProductCommand::Locked6Months6Percents.json()).await?;
-    context.jar_contract.register_product(manager, RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee.json()).await?;
+    context
+        .jar_contract
+        .register_product(manager, RegisterProductCommand::Locked12Months12Percents.json())
+        .await?;
+    context
+        .jar_contract
+        .register_product(manager, RegisterProductCommand::Locked6Months6Percents.json())
+        .await?;
+    context
+        .jar_contract
+        .register_product(
+            manager,
+            RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee.json(),
+        )
+        .await?;
 
     let products = context.jar_contract.get_products().await?;
     assert_eq!(3, products.as_array().unwrap().len());
 
-    context.jar_contract.create_jar(
-        alice,
-        RegisterProductCommand::Locked12Months12Percents.id(),
-        1_000_000,
-        context.ft_contract.account().id(),
-    ).await?;
+    context
+        .jar_contract
+        .create_jar(
+            alice,
+            RegisterProductCommand::Locked12Months12Percents.id(),
+            1_000_000,
+            context.ft_contract.account().id(),
+        )
+        .await?;
 
     let alice_principal = context.jar_contract.get_total_principal(alice).await?;
     let mut alice_interest = context.jar_contract.get_total_interest(alice).await?;

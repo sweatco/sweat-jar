@@ -1,12 +1,9 @@
-use std::{env, fs};
-use std::collections::HashMap;
+use std::{collections::HashMap, env, fs};
 
 use near_units::parse_near;
-use workspaces::{Account, Worker};
-use workspaces::network::Sandbox;
+use workspaces::{network::Sandbox, Account, Worker};
 
-use crate::ft_contract_interface::FtContractInterface;
-use crate::jar_contract_interface::JarContractInterface;
+use crate::{ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface};
 
 const EPOCH_BLOCKS_HEIGHT: u64 = 43_200;
 const HOURS_PER_EPOCH: u64 = 12;
@@ -25,30 +22,30 @@ impl Context {
         println!("🏭 Initializing context");
 
         let worker = workspaces::sandbox().await?;
-        let account = worker.dev_create_account().await?;
+        let root_account = worker.dev_create_account().await?;
 
-        let jar_contract = worker
-            .dev_deploy(&Self::load_wasm(&(env::args().nth(1).unwrap())))
-            .await?;
-        let ft_contract = worker
-            .dev_deploy(&Self::load_wasm(&(env::args().nth(2).unwrap())))
-            .await?;
+        let jar_contract_path = env::args().nth(1).unwrap_or("../res/sweat_jar.wasm".to_string());
+        let ft_contract_path = env::args().nth(2).unwrap_or("../res/sweat.wasm".to_string());
+
+        let jar_contract = worker.dev_deploy(&Self::load_wasm(&jar_contract_path)).await?;
+        let ft_contract = worker.dev_deploy(&Self::load_wasm(&ft_contract_path)).await?;
 
         println!("@@ jar contract deployed to {}", jar_contract.id());
         println!("@@ ft contract deployed to {}", ft_contract.id());
 
-        Result::Ok(Context {
+        Ok(Context {
             worker,
-            root_account: account,
-            accounts: HashMap::<String, Account>::new(),
-            ft_contract: Box::new(ft_contract.clone()),
-            jar_contract: Box::new(jar_contract.clone()),
+            root_account,
+            accounts: HashMap::new(),
+            ft_contract: Box::new(ft_contract),
+            jar_contract: Box::new(jar_contract),
         })
     }
 
     pub(crate) async fn account(&mut self, name: &str) -> anyhow::Result<Account> {
         if !self.accounts.contains_key(name) {
-            let account = self.root_account
+            let account = self
+                .root_account
                 .create_subaccount(name)
                 .initial_balance(parse_near!("3 N"))
                 .transact()
@@ -63,15 +60,14 @@ impl Context {
 
     fn load_wasm(wasm_path: &str) -> Vec<u8> {
         let current_dir = env::current_dir().expect("Failed to get current dir");
-        let wasm_filepath =
-            fs::canonicalize(current_dir.join(wasm_path)).expect("Failed to get wasm file path");
-        std::fs::read(wasm_filepath).expect("Failed to load wasm")
+        let wasm_filepath = fs::canonicalize(current_dir.join(wasm_path)).expect("Failed to get wasm file path");
+        fs::read(wasm_filepath).expect("Failed to load wasm")
     }
 
     pub(crate) async fn fast_forward(&self, hours: u64) -> anyhow::Result<()> {
         let blocks_to_advance = ONE_HOUR_BLOCKS_HEIGHT * hours;
 
-        println!("⏳ Fast forward to {} hours ({} blocks)...", hours, blocks_to_advance);
+        println!("⏳ Fast forward to {hours} hours ({blocks_to_advance} blocks)...");
 
         self.worker.fast_forward(blocks_to_advance).await?;
 
