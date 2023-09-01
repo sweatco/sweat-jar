@@ -29,7 +29,6 @@ pub type JarIndex = u32;
 /// to verify the authenticity of the data against an Ed25519 signature provided in the ft_transfer_call data.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarTicket {
     /// The unique identifier of the product for which the jar is intended to be created.
     /// This product_id links the request to the specific terms and conditions of the product that will govern the behavior of the jar.
@@ -45,7 +44,6 @@ pub struct JarTicket {
 /// The `Jar` struct represents a deposit jar within the smart contract.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Jar {
     /// The index of the jar in the `Contracts.jars` vector. Also serves as the unique identifier for the jar.
     pub index: JarIndex,
@@ -85,7 +83,6 @@ pub struct Jar {
 /// allowing for efficient interest calculations between state changes.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarCache {
     pub updated_at: Timestamp,
     pub interest: TokenAmount,

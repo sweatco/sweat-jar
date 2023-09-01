@@ -1,8 +1,11 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Formatter},
+};
 
 use near_sdk::{
     json_types::{U128, U64},
-    serde::{Deserialize, Serialize},
+    serde::Serialize,
     AccountId,
 };
 
@@ -10,9 +13,8 @@ use crate::{common::U32, product::model::ProductId, *};
 
 pub type JarIndexView = U32;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarView {
     pub index: JarIndexView,
     pub account_id: AccountId,
@@ -37,10 +39,57 @@ impl From<Jar> for JarView {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct AggregatedTokenAmountView {
     pub detailed: HashMap<JarIndexView, U128>,
     pub total: U128,
+}
+
+#[cfg(test)]
+mod test {
+    use near_sdk::{
+        json_types::{U128, U64},
+        serde_json::to_string,
+        AccountId,
+    };
+
+    use crate::{
+        common::U32,
+        jar::view::{AggregatedTokenAmountView, JarView},
+    };
+
+    #[test]
+    fn serialize_jar_views() {
+        let jar_vew = JarView {
+            index: U32(1),
+            account_id: AccountId::new_unchecked("aaa".to_string()),
+            product_id: "aaa".to_string(),
+            created_at: U64(2),
+            principal: U128(3),
+            claimed_balance: U128(4),
+            is_penalty_applied: false,
+        };
+
+        dbg!(&jar_vew);
+
+        assert_eq!(
+            to_string(&jar_vew).unwrap(),
+            r#"{"index":"1","account_id":"aaa","product_id":"aaa","created_at":"2","principal":"3","claimed_balance":"4","is_penalty_applied":false}"#
+        );
+
+        let amount_view = AggregatedTokenAmountView {
+            detailed: [(U32(0), U128(1_000_000))].into(),
+            total: U128(1_000_000),
+        };
+
+        println!("{}", to_string(&amount_view).unwrap());
+
+        dbg!(&amount_view);
+
+        assert_eq!(
+            to_string(&amount_view).unwrap(),
+            r#"{"detailed":{"0":"1000000"},"total":"1000000"}"#
+        );
+    }
 }
