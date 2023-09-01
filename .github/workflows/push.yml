@@ -70,5 +70,5 @@ jobs:
         uses: actions-js/push@master
         with:
           message: Updated binary
-          branch: ci
+          branch: main
           github_token: ${{ secrets.GITHUB_TOKEN }}
