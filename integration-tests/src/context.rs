@@ -24,8 +24,8 @@ impl Context {
         let worker = workspaces::sandbox().await?;
         let root_account = worker.dev_create_account().await?;
 
-        let jar_contract_path = env::args().nth(1).unwrap_or("../res/sweat_jar.wasm".to_string());
-        let ft_contract_path = env::args().nth(2).unwrap_or("../res/sweat.wasm".to_string());
+        let jar_contract_path = env::args().nth(1).unwrap_or("res/sweat_jar.wasm".to_string());
+        let ft_contract_path = env::args().nth(2).unwrap_or("res/sweat.wasm".to_string());
 
         let jar_contract = worker.dev_deploy(&Self::load_wasm(&jar_contract_path)).await?;
         let ft_contract = worker.dev_deploy(&Self::load_wasm(&ft_contract_path)).await?;

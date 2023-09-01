@@ -1,0 +1,50 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Build
+        run: ./build-in-docker.sh
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: sweat-jar
+          path: res/sweat_jar.wasm
+
+  unit-tests:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Unit tests
+        run: cargo test --all
+
+  integration-tests:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download binary
+        uses: actions/download-artifact@v3
+        with:
+          name: sweat-jar
+          path: res/
+
+      - name: Integration tests
+        run: cargo run -p integration-tests
