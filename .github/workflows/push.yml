@@ -68,6 +68,7 @@ jobs:
       - name: Create file
         run: |
           echo a > file.txt
+          git pull
           git checkout ci
 
       - name: Commit & Push changes
