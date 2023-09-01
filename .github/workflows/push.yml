@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build
-        run: ./build-in-docker.sh
+        run: make build
 
       - name: Upload binary
         uses: actions/upload-artifact@v3
@@ -31,7 +31,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Unit tests
-        run: cargo test --all
+        run: make test
 
   integration-tests:
     needs: [ build ]
@@ -47,7 +47,7 @@ jobs:
           path: res/
 
       - name: Integration tests
-        run: cargo run -p integration-tests
+        run: make integration
 
   push:
     needs: [ unit-tests, integration-tests ]

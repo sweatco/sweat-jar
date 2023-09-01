@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fmt::{Debug, Formatter},
+    fmt::{Debug},
 };
 
 use near_sdk::{

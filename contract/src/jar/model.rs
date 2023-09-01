@@ -27,7 +27,7 @@ pub type JarIndex = u32;
 /// and the ID of the last jar created for the recipient. The concatenation of this data
 /// forms a message that is then hashed using the SHA-256 algorithm. This resulting hash is used
 /// to verify the authenticity of the data against an Ed25519 signature provided in the ft_transfer_call data.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarTicket {
     /// The unique identifier of the product for which the jar is intended to be created.
