@@ -66,7 +66,9 @@ jobs:
 #          path: res/
 
       - name: Create file
-        run: echo a > file.txt
+        run: |
+          echo a > file.txt
+          git checkout ci
 
       - name: Commit & Push changes
         uses: actions-js/push@master
