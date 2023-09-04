@@ -90,8 +90,7 @@ pub(crate) mod tests {
 
     use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 
-    use crate::{common::UDecimal, Contract};
-    use crate::product::model::Product;
+    use crate::{common::UDecimal, product::model::Product, Contract};
 
     pub(crate) struct Context {
         pub contract: Contract,
@@ -124,7 +123,7 @@ pub(crate) mod tests {
                 contract,
             }
         }
-        
+
         pub(crate) fn with_products(mut self, products: Vec<&Product>) -> Self {
             for product in products {
                 self.contract.products.insert(product.clone().id, product.clone());
@@ -165,7 +164,7 @@ pub(crate) mod tests {
             self.switch_account(&self.ft_contract_id.clone());
         }
 
-        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: fn(&mut Context) -> ()) {
+        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl Fn(&mut Context) -> ()) {
             self.set_deposit_yocto(amount);
 
             f(self);
