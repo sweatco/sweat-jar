@@ -352,3 +352,39 @@ impl Contract {
             .is_ok()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use near_sdk::{json_types::U64, AccountId};
+
+    use crate::{
+        common::tests::{test_borsh, test_derived_macros},
+        jar::model::{Jar, JarCache, JarState, JarTicket},
+    };
+
+    #[test]
+    fn jar_model_macros() {
+        test_derived_macros(&JarTicket {
+            product_id: "product".to_string(),
+            valid_until: U64(1693823824),
+        });
+
+        let jar = Jar {
+            index: 0,
+            account_id: AccountId::new_unchecked("account_id".to_string()),
+            product_id: "product_id".to_string(),
+            created_at: 0,
+            principal: 0,
+            cache: Some(JarCache {
+                updated_at: 1693823824,
+                interest: 10,
+            }),
+            claimed_balance: 0,
+            is_pending_withdraw: false,
+            state: JarState::Closed,
+            is_penalty_applied: false,
+        };
+        test_derived_macros(&jar);
+        test_borsh(&jar);
+    }
+}
