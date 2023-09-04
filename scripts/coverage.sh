@@ -1,3 +1,3 @@
 #!/bin/bash
 
-cargo llvm-cov --open
+cargo llvm-cov --hide-instantiations --open

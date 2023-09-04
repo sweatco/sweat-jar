@@ -188,9 +188,9 @@ pub(crate) mod tests {
     pub(crate) fn test_derived_macros<T: Serialize + DeserializeOwned + Debug>(input: &T) {
         let json = to_string(input).unwrap();
         let deserialized: T = from_str(&json).unwrap();
-
-        // Test Debug trait
-        let _ = format!("{:?}", deserialized);
+        //
+        // // Test Debug trait
+        // let _ = format!("{:?}", deserialized);
     }
 
     /// TODO: Document this

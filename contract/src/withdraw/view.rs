@@ -6,9 +6,8 @@ use near_sdk::{
 use crate::{common::TokenAmount, ft_interface::Fee};
 
 /// The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct WithdrawView {
     /// The amount of tokens that has been transferred to the user's account as part of the withdrawal.
     withdrawn_amount: U128,
@@ -25,5 +24,38 @@ impl WithdrawView {
             withdrawn_amount: U128(withdrawn_amount),
             fee: U128(fee),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use near_sdk::{json_types::U128, AccountId};
+
+    use crate::{common::tests::test_derived_macros, ft_interface::Fee, withdraw::view::WithdrawView};
+
+    #[test]
+    fn withdrawal_view() {
+        let fee = WithdrawView::new(
+            1_000_000,
+            Some(Fee {
+                beneficiary_id: AccountId::new_unchecked("account_id".to_string()),
+                amount: 100,
+            }),
+        );
+
+        assert_eq!(
+            fee,
+            WithdrawView {
+                withdrawn_amount: U128(1_000_000 - 100),
+                fee: U128(100),
+            }
+        );
+
+        let fee = WithdrawView::new(1_000_000, None);
+
+        test_derived_macros(&WithdrawView {
+            withdrawn_amount: U128(1_000_000),
+            fee: U128(100),
+        });
     }
 }
