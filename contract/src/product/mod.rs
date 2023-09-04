@@ -5,6 +5,7 @@ pub mod view;
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use crypto_hash::{Algorithm, digest};
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         test_utils::accounts,
@@ -18,6 +19,9 @@ pub(crate) mod tests {
             model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms},
         },
     };
+
+    use rand::rngs::OsRng;
+    use ed25519_dalek::{Keypair, Signature, Signer};
 
     fn get_premium_product_public_key() -> Vec<u8> {
         vec![
@@ -156,19 +160,22 @@ pub(crate) mod tests {
     #[test]
     fn disable_product_when_enabled() {
         let admin = accounts(0);
-        let mut context = Context::new(admin.clone());
+        let reference_product = Product::generate("product").enabled(true);
+        let reference_product_id = &reference_product.id;
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let mut context = Context::new(admin)
+            .with_products(vec![&reference_product]);
 
-        let mut product = context.contract.get_product(&"product".to_string());
+        let mut product = context.contract.get_product(reference_product_id);
         assert!(product.is_enabled);
 
-        context.with_deposit_yocto(1, |context| context.contract.set_enabled("product".to_string(), false));
+        context.switch_account_to_owner();
+        context.with_deposit_yocto(
+            1,
+            |context| context.contract.set_enabled(reference_product_id.to_string(), false),
+        );
 
-        product = context.contract.get_product(&"product".to_string());
+        product = context.contract.get_product(reference_product_id);
         assert!(!product.is_enabled);
     }
 
@@ -289,5 +296,50 @@ pub(crate) mod tests {
     #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
     fn assert_cap_more_than_max() {
         get_product().assert_cap(500_000_000_000);
+    }
+
+    fn generate_keypair() -> Keypair {
+        let mut csprng = OsRng {};
+        Keypair::generate(&mut csprng)
+    }
+
+    fn sign(message: &str, keypair: &Keypair) -> Signature {
+        let message_hash = digest(Algorithm::SHA256, message.as_bytes());
+        keypair.sign(message_hash.as_slice())
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod helpers {
+    use fake::{Fake, Faker};
+    use crate::common::UDecimal;
+    use crate::product::model::{Apy, Cap, FixedProductTerms, Product, Terms};
+
+    impl Product {
+        pub(crate) fn generate(id: &str) -> Self {
+            Self {
+                id: id.to_string(),
+                apy: Apy::Constant(UDecimal::new((1..20).fake(), (1..2).fake()),),
+                cap: Cap { min: (0..1_000).fake(), max: (1_000_000..1_000_000_000).fake() },
+                terms: Terms::Fixed(FixedProductTerms {
+                    lockup_term: (1..3).fake::<u64>() * 31_536_000,
+                    allows_top_up: Faker.fake(),
+                    allows_restaking: Faker.fake(),
+                }),
+                withdrawal_fee: None,
+                public_key: None,
+                is_enabled: true,
+            }
+        }
+
+        pub(crate) fn public_key(mut self, pk: Vec<u8>) -> Self {
+            self.public_key = Some(pk);
+            self
+        }
+
+        pub(crate) fn enabled(mut self, enabled: bool) -> Self {
+            self.is_enabled = enabled;
+            self
+        }
     }
 }

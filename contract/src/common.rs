@@ -91,6 +91,7 @@ pub(crate) mod tests {
     use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 
     use crate::{common::UDecimal, Contract};
+    use crate::product::model::Product;
 
     pub(crate) struct Context {
         pub contract: Contract,
@@ -122,6 +123,14 @@ pub(crate) mod tests {
                 builder,
                 contract,
             }
+        }
+        
+        pub(crate) fn with_products(mut self, products: Vec<&Product>) -> Self {
+            for product in products {
+                self.contract.products.insert(product.clone().id, product.clone());
+            }
+
+            self
         }
 
         pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {
