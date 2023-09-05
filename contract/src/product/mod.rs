@@ -5,11 +5,13 @@ pub mod view;
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crypto_hash::{Algorithm, digest};
+    use crypto_hash::{digest, Algorithm};
+    use ed25519_dalek::{Keypair, Signature, Signer};
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         test_utils::accounts,
     };
+    use rand::rngs::OsRng;
 
     use crate::{
         common::{tests::Context, UDecimal},
@@ -19,9 +21,6 @@ pub(crate) mod tests {
             model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms},
         },
     };
-
-    use rand::rngs::OsRng;
-    use ed25519_dalek::{Keypair, Signature, Signer};
 
     fn get_premium_product_public_key() -> Vec<u8> {
         vec![
@@ -159,51 +158,48 @@ pub(crate) mod tests {
 
     #[test]
     fn disable_product_when_enabled() {
-        let admin = accounts(0);
-        let reference_product = Product::generate("product").enabled(true);
-        let reference_product_id = &reference_product.id;
+        let admin = &accounts(0);
+        let reference_product = &Product::generate("product").enabled(true);
 
-        let mut context = Context::new(admin)
-            .with_products(vec![&reference_product]);
+        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
 
-        let mut product = context.contract.get_product(reference_product_id);
+        let mut product = context.contract.get_product(&reference_product.id);
         assert!(product.is_enabled);
 
-        context.switch_account_to_owner();
-        context.with_deposit_yocto(
-            1,
-            |context| context.contract.set_enabled(reference_product_id.to_string(), false),
-        );
+        context.switch_account(admin);
+        context.with_deposit_yocto(1, |context| {
+            context.contract.set_enabled(reference_product.id.to_string(), false)
+        });
 
-        product = context.contract.get_product(reference_product_id);
+        product = context.contract.get_product(&reference_product.id);
         assert!(!product.is_enabled);
     }
 
     #[test]
     #[should_panic(expected = "Status matches")]
     fn enable_product_when_enabled() {
-        let admin = accounts(0);
-        let mut context = Context::new(admin.clone());
+        let admin = &accounts(0);
+        let reference_product = &Product::generate("product").enabled(true);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
 
-        let product = context.contract.get_product(&"product".to_string());
+        let product = context.contract.get_product(&reference_product.id);
         assert!(product.is_enabled);
 
-        context.with_deposit_yocto(1, |context| context.contract.set_enabled("product".to_string(), true));
+        context.switch_account(admin);
+        context.with_deposit_yocto(1, |context| {
+            context.contract.set_enabled(reference_product.id.to_string(), true)
+        });
     }
 
     #[test]
     #[should_panic(expected = "Product already exists")]
     fn register_product_with_existing_id() {
-        let admin = accounts(1);
+        let admin = &accounts(1);
 
         let mut context = Context::new(admin.clone());
 
-        context.switch_account(&admin);
+        context.switch_account(admin);
 
         context.with_deposit_yocto(1, |context| {
             let first_command = get_register_product_command();
@@ -218,7 +214,7 @@ pub(crate) mod tests {
 
     #[test]
     fn set_public_key() {
-        let admin = accounts(1);
+        let admin = &accounts(1);
 
         let mut context = Context::new(admin.clone());
 
@@ -245,8 +241,8 @@ pub(crate) mod tests {
     #[test]
     #[should_panic(expected = "Can be performed only by admin")]
     fn set_public_key_by_not_admin() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
         let mut context = Context::new(admin.clone());
 
@@ -266,11 +262,11 @@ pub(crate) mod tests {
     #[test]
     #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
     fn set_public_key_without_deposit() {
-        let admin = accounts(1);
+        let admin = &accounts(1);
 
         let mut context = Context::new(admin.clone());
 
-        context.switch_account(&admin);
+        context.switch_account(admin);
 
         context.with_deposit_yocto(1, |context| {
             context.contract.register_product(get_register_product_command())
@@ -312,17 +308,25 @@ pub(crate) mod tests {
 #[cfg(test)]
 pub(crate) mod helpers {
     use fake::{Fake, Faker};
-    use crate::common::UDecimal;
-    use crate::product::model::{Apy, Cap, FixedProductTerms, Product, Terms};
+
+    use crate::{
+        common::{Duration, UDecimal},
+        product::model::{Apy, Cap, FixedProductTerms, Product, Terms},
+    };
+
+    pub(crate) struct Signer {}
 
     impl Product {
         pub(crate) fn generate(id: &str) -> Self {
             Self {
                 id: id.to_string(),
-                apy: Apy::Constant(UDecimal::new((1..20).fake(), (1..2).fake()),),
-                cap: Cap { min: (0..1_000).fake(), max: (1_000_000..1_000_000_000).fake() },
+                apy: Apy::Constant(UDecimal::new((1..20).fake(), (1..2).fake())),
+                cap: Cap {
+                    min: (0..1_000).fake(),
+                    max: (1_000_000..1_000_000_000).fake(),
+                },
                 terms: Terms::Fixed(FixedProductTerms {
-                    lockup_term: (1..3).fake::<u64>() * 31_536_000,
+                    lockup_term: (1..3).fake::<u64>() * 31_536_000_000,
                     allows_top_up: Faker.fake(),
                     allows_restaking: Faker.fake(),
                 }),
@@ -339,6 +343,27 @@ pub(crate) mod helpers {
 
         pub(crate) fn enabled(mut self, enabled: bool) -> Self {
             self.is_enabled = enabled;
+            self
+        }
+
+        pub(crate) fn lockup_term(mut self, term: Duration) -> Self {
+            self.terms = match self.terms {
+                Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
+                    lockup_term: term,
+                    ..terms
+                }),
+                Terms::Flexible => Terms::Fixed(FixedProductTerms {
+                    lockup_term: term,
+                    allows_top_up: false,
+                    allows_restaking: false,
+                }),
+            };
+
+            self
+        }
+
+        pub(crate) fn apy(mut self, apy: Apy) -> Self {
+            self.apy = apy;
             self
         }
     }

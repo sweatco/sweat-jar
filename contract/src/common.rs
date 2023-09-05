@@ -86,11 +86,13 @@ impl<'de> Deserialize<'de> for U32 {
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::collections::HashSet;
     use std::time::Duration;
 
     use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 
     use crate::{common::UDecimal, product::model::Product, Contract};
+    use crate::jar::model::Jar;
 
     pub(crate) struct Context {
         pub contract: Contract,
@@ -124,9 +126,24 @@ pub(crate) mod tests {
             }
         }
 
-        pub(crate) fn with_products(mut self, products: Vec<&Product>) -> Self {
+        pub(crate) fn with_products(mut self, products: &[Product]) -> Self {
             for product in products {
                 self.contract.products.insert(product.clone().id, product.clone());
+            }
+
+            self
+        }
+
+        pub(crate) fn with_jars(mut self, jars: &[Jar]) -> Self {
+            for jar in jars {
+                self.contract.jars.push(jar.clone());
+
+                let account_id = &jar.account_id;
+                if !self.contract.account_jars.contains_key(account_id) {
+                    self.contract.account_jars.insert(account_id.clone(), HashSet::new());
+                }
+
+                self.contract.account_jars.get_mut(account_id).unwrap().insert(jar.index);
             }
 
             self
@@ -164,7 +181,7 @@ pub(crate) mod tests {
             self.switch_account(&self.ft_contract_id.clone());
         }
 
-        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl Fn(&mut Context) -> ()) {
+        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
             self.set_deposit_yocto(amount);
 
             f(self);

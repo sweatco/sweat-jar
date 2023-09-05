@@ -89,13 +89,13 @@ mod tests {
     use super::*;
     use crate::{
         claim::api::ClaimApi,
-        common::U32,
+        common::{UDecimal, U32},
         jar::{api::JarApi, model::JarTicket},
         penalty::api::PenaltyApi,
         product::{
             api::*,
             command::RegisterProductCommand,
-            tests::{get_product, get_register_premium_product_command, get_register_product_command},
+            tests::{get_register_premium_product_command, get_register_product_command},
         },
         withdraw::api::WithdrawApi,
     };
@@ -138,75 +138,36 @@ mod tests {
 
     #[test]
     fn get_principal_with_single_jar() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
+        let reference_jar = Jar::generate(0, alice, &reference_product.id).principal(100);
+        let context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar]);
 
-        context.switch_account(&admin);
-
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100),
-            None,
-        );
-
-        let principal = context.contract.get_total_principal(alice).total.0;
+        let principal = context.contract.get_total_principal(alice.clone()).total.0;
         assert_eq!(principal, 100);
     }
 
     #[test]
     fn get_principal_with_multiple_jars() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
-        context.switch_account(&admin);
+        let reference_product = generate_product();
+        let jars = &[
+            Jar::generate(0, alice, &reference_product.id).principal(100),
+            Jar::generate(1, alice, &reference_product.id).principal(200),
+            Jar::generate(2, alice, &reference_product.id).principal(400),
+        ];
 
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(jars);
 
-        let product = get_product();
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: product.clone().id,
-                valid_until: U64(0),
-            },
-            U128(100),
-            None,
-        );
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: product.clone().id,
-                valid_until: U64(0),
-            },
-            U128(200),
-            None,
-        );
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: product.id,
-                valid_until: U64(0),
-            },
-            U128(400),
-            None,
-        );
-
-        let principal = context.contract.get_total_principal(alice).total.0;
+        let principal = context.contract.get_total_principal(alice.clone()).total.0;
         assert_eq!(principal, 700);
     }
 
@@ -223,120 +184,72 @@ mod tests {
 
     #[test]
     fn get_total_interest_with_single_jar_after_30_minutes() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product.clone()])
+            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
 
         context.set_block_timestamp_in_minutes(30);
 
-        let interest = context.contract.get_total_interest(alice).total.0;
+        let interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 684);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_on_maturity() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product.clone()])
+            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
 
         context.set_block_timestamp_in_days(365);
 
-        let interest = context.contract.get_total_interest(alice).total.0;
+        let interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 12_000_000);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_after_maturity() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product.clone()])
+            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
 
         context.set_block_timestamp_in_days(400);
 
-        let interest = context.contract.get_total_interest(alice).total.0;
+        let interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 12_000_000);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product.clone()])
+            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
 
         context.set_block_timestamp_in_days(182);
 
         let mut interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 5_983_561);
 
-        context.switch_account(&alice);
+        context.switch_account(alice);
         context.contract.claim_total();
 
         context.set_block_timestamp_in_days(365);
@@ -396,33 +309,29 @@ mod tests {
 
     #[test]
     fn get_interest_after_withdraw() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
+        let reference_jar = &Jar::generate(0, alice, &reference_product.id).principal(100_000_000);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar.clone()]);
 
         context.set_block_timestamp_in_days(400);
 
-        context.switch_account(&alice);
-        context.contract.withdraw(U32(0), None);
+        context.switch_account(alice);
+        context.contract.withdraw(U32(reference_jar.index), None);
 
-        let interest = context.contract.get_total_interest(alice);
+        let interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(12_000_000, interest.total.0);
+    }
+
+    fn generate_product() -> Product {
+        Product::generate("product")
+            .enabled(true)
+            .lockup_term(365 * 24 * 60 * 60 * 1000)
+            .apy(Apy::Constant(UDecimal::new(12, 2)))
     }
 }

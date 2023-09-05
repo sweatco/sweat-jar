@@ -173,10 +173,7 @@ impl WithdrawCallbacks for Contract {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::{
-        json_types::{U128, U64},
-        test_utils::accounts,
-    };
+    use near_sdk::{Duration, json_types::{U128, U64}, test_utils::accounts};
 
     use crate::{
         common::{tests::Context, U32},
