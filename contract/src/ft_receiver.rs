@@ -62,6 +62,8 @@ impl FungibleTokenReceiver for Contract {
 
 #[cfg(test)]
 mod tests {
+    use std::panic::catch_unwind;
+
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
     use near_sdk::{
         json_types::{U128, U64},
@@ -70,16 +72,18 @@ mod tests {
     };
 
     use crate::{
-        common::{tests::Context, U32},
+        common::{tests::Context, UDecimal, U32},
         jar::{api::JarApi, model::JarTicket},
         product::{
             api::ProductApi,
+            helpers::MessageSigner,
+            model::{Apy, DowngradableApy, Product},
             tests::{
-                get_register_flexible_product_command, get_register_premium_product_command,
-                get_register_product_command, get_register_refillable_product_command,
-                get_register_restakable_product_command,
+                get_register_flexible_product_command, get_register_product_command,
+                get_register_refillable_product_command, get_register_restakable_product_command,
             },
         },
+        Contract,
     };
 
     #[test]
@@ -112,40 +116,60 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Not matching signature")]
     fn transfer_with_duplicate_create_jar_message() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = &accounts(0);
+        let admin = &accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let reference_product = Product::generate("premium")
+            .public_key(signer.public_key().to_vec())
+            .lockup_term(365 * 24 * 60 * 60 * 1000)
+            .apy(Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(20, 2),
+                fallback: UDecimal::new(10, 2),
+            }));
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_premium_product_command(None))
-        });
+        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+
+        let ticket_amount = 1_000_000u128;
+        let ticket_valid_until = 100_000_000u64;
+        let signature = signer.sign(
+            Contract::get_signature_material(
+                &context.owner,
+                alice,
+                &reference_product.id,
+                ticket_amount,
+                ticket_valid_until,
+                None,
+            )
+            .as_str(),
+        );
 
         let msg = json!({
             "type": "stake",
             "data": {
                 "ticket": {
-                    "product_id": "product_premium",
-                    "valid_until": "100000000",
+                    "product_id": reference_product.id,
+                    "valid_until": ticket_valid_until.to_string(),
                 },
-                "signature": "Lj2BWmN3uMMSjOs8pXpq38SW9owJGzGyQWe7NlHYli+JnFuS4FwoYVVvA5E9cYf1ye5bubNOrnCKTUTViIQUAw==",
+                "signature": signature,
             }
         });
 
         context.switch_account_to_ft_contract_account();
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
+            .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(jar.index.0, 0);
 
-        context.contract.ft_on_transfer(alice, U128(1_000_000), msg.to_string());
+        let result = catch_unwind(move || {
+            context
+                .contract
+                .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string())
+        });
+        assert!(result.is_err());
     }
 
     #[test]

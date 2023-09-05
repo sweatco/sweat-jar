@@ -86,18 +86,16 @@ impl<'de> Deserialize<'de> for U32 {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::collections::HashSet;
-    use std::time::Duration;
+    use std::{collections::HashSet, time::Duration};
 
     use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 
-    use crate::{common::UDecimal, product::model::Product, Contract};
-    use crate::jar::model::Jar;
+    use crate::{common::UDecimal, jar::model::Jar, product::model::Product, Contract};
 
     pub(crate) struct Context {
         pub contract: Contract,
+        pub owner: AccountId,
         ft_contract_id: AccountId,
-        owner: AccountId,
         builder: VMContextBuilder,
     }
 
@@ -143,7 +141,11 @@ pub(crate) mod tests {
                     self.contract.account_jars.insert(account_id.clone(), HashSet::new());
                 }
 
-                self.contract.account_jars.get_mut(account_id).unwrap().insert(jar.index);
+                self.contract
+                    .account_jars
+                    .get_mut(account_id)
+                    .unwrap()
+                    .insert(jar.index);
             }
 
             self

@@ -333,16 +333,34 @@ impl Contract {
         last_jar_index: Option<JarIndex>,
     ) -> Vec<u8> {
         sha256(
-            format!(
-                "{},{},{},{},{},{}",
-                env::current_account_id(),
+            Self::get_signature_material(
+                &env::current_account_id(),
                 account_id,
-                ticket.product_id,
+                &ticket.product_id,
                 amount,
-                last_jar_index.map_or_else(|| "".to_string(), |value| value.to_string(),),
-                ticket.valid_until.0
+                ticket.valid_until.0,
+                last_jar_index,
             )
             .as_bytes(),
+        )
+    }
+
+    pub(crate) fn get_signature_material(
+        contract_account_id: &AccountId,
+        receiver_account_id: &AccountId,
+        product_id: &ProductId,
+        amount: TokenAmount,
+        valid_until: Timestamp,
+        last_jar_index: Option<JarIndex>,
+    ) -> String {
+        format!(
+            "{},{},{},{},{},{}",
+            contract_account_id,
+            receiver_account_id,
+            product_id,
+            amount,
+            last_jar_index.map_or_else(|| "".to_string(), |value| value.to_string(),),
+            valid_until,
         )
     }
 

@@ -5,13 +5,10 @@ pub mod view;
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crypto_hash::{digest, Algorithm};
-    use ed25519_dalek::{Keypair, Signature, Signer};
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         test_utils::accounts,
     };
-    use rand::rngs::OsRng;
 
     use crate::{
         common::{tests::Context, UDecimal},
@@ -293,28 +290,46 @@ pub(crate) mod tests {
     fn assert_cap_more_than_max() {
         get_product().assert_cap(500_000_000_000);
     }
-
-    fn generate_keypair() -> Keypair {
-        let mut csprng = OsRng {};
-        Keypair::generate(&mut csprng)
-    }
-
-    fn sign(message: &str, keypair: &Keypair) -> Signature {
-        let message_hash = digest(Algorithm::SHA256, message.as_bytes());
-        keypair.sign(message_hash.as_slice())
-    }
 }
 
 #[cfg(test)]
 pub(crate) mod helpers {
+    use base64::{engine::general_purpose, Engine};
+    use crypto_hash::{digest, Algorithm};
+    use ed25519_dalek::{Keypair, Signer};
     use fake::{Fake, Faker};
+    use general_purpose::STANDARD;
+    use rand::rngs::OsRng;
 
     use crate::{
         common::{Duration, UDecimal},
         product::model::{Apy, Cap, FixedProductTerms, Product, Terms},
     };
 
-    pub(crate) struct Signer {}
+    pub(crate) struct MessageSigner {
+        keypair: Keypair,
+    }
+
+    impl MessageSigner {
+        pub(crate) fn new() -> Self {
+            let mut csprng = OsRng {};
+            let keypair = Keypair::generate(&mut csprng);
+
+            Self { keypair }
+        }
+
+        pub(crate) fn sign(&self, message: &str) -> String {
+            let message_hash = digest(Algorithm::SHA256, message.as_bytes());
+            let signature = self.keypair.sign(message_hash.as_slice());
+            let signature_bytes = signature.to_bytes().to_vec();
+
+            STANDARD.encode(signature_bytes)
+        }
+
+        pub(crate) fn public_key(&self) -> &[u8; 32] {
+            self.keypair.public.as_bytes()
+        }
+    }
 
     impl Product {
         pub(crate) fn generate(id: &str) -> Self {
