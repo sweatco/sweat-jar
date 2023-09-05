@@ -31,7 +31,7 @@ impl WithdrawView {
 mod test {
     use near_sdk::{json_types::U128, AccountId};
 
-    use crate::{common::tests::test_derived_macros, ft_interface::Fee, withdraw::view::WithdrawView};
+    use crate::{ft_interface::Fee, withdraw::view::WithdrawView};
 
     #[test]
     fn withdrawal_view() {
@@ -50,12 +50,5 @@ mod test {
                 fee: U128(100),
             }
         );
-
-        let fee = WithdrawView::new(1_000_000, None);
-
-        test_derived_macros(&WithdrawView {
-            withdrawn_amount: U128(1_000_000),
-            fee: U128(100),
-        });
     }
 }

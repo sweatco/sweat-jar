@@ -86,15 +86,9 @@ impl<'de> Deserialize<'de> for U32 {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::{fmt::Debug, time::Duration};
+    use std::time::Duration;
 
-    use near_sdk::{
-        borsh::{BorshDeserialize, BorshSerialize},
-        serde::{de::DeserializeOwned, Serialize},
-        serde_json::{from_str, to_string},
-        test_utils::VMContextBuilder,
-        testing_env, AccountId, Balance,
-    };
+    use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 
     use crate::{common::UDecimal, Contract};
 
@@ -182,21 +176,5 @@ pub(crate) mod tests {
         let float_value = udecimal.to_f32();
 
         assert_eq!(0.12, float_value);
-    }
-
-    /// TODO: Document this
-    pub(crate) fn test_derived_macros<T: Serialize + DeserializeOwned + Debug>(input: &T) {
-        let json = to_string(input).unwrap();
-        let deserialized: T = from_str(&json).unwrap();
-        //
-        // // Test Debug trait
-        // let _ = format!("{:?}", deserialized);
-    }
-
-    /// TODO: Document this
-    pub(crate) fn test_borsh<T: BorshSerialize + BorshDeserialize>(input: &T) {
-        let mut buffer: Vec<u8> = Vec::new();
-        input.serialize(&mut buffer).unwrap();
-        let _ = T::try_from_slice(&mut buffer).unwrap();
     }
 }

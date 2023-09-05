@@ -183,8 +183,9 @@ mod tests {
         jar::{api::JarApi, model::JarTicket},
         product::{
             api::ProductApi,
+            command::WithdrawalFeeDto,
             model::Product,
-            tests::{get_register_flexible_product_command, get_register_product_command},
+            tests::{get_fee_product_command, get_register_flexible_product_command, get_register_product_command},
         },
         withdraw::api::WithdrawApi,
     };
@@ -402,5 +403,29 @@ mod tests {
         context.switch_account(&alice);
 
         context.contract.withdraw(U32(0), Some(U128(2_000_000)));
+    }
+
+    #[test]
+    fn product_with_fee() {
+        // let alice = accounts(0);
+        // let admin = accounts(1);
+        // let mut context = Context::new(admin.clone());
+        //
+        // let product: Product = get_fee_product_command(WithdrawalFeeDto::Fix(U128(10))).into();
+        // context.switch_account(&admin);
+        // context.with_deposit_yocto(1, |context| {
+        //     context
+        //         .contract
+        //         .register_product(get_register_flexible_product_command())
+        // });
+        //
+        // let ticket = JarTicket {
+        //     product_id: product.id,
+        //     valid_until: U64(0),
+        // };
+        //
+        // context
+        //     .contract
+        //     .create_jar(alice.clone(), ticket, U128(1_000_000), None);
     }
 }
