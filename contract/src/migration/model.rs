@@ -7,7 +7,7 @@ use near_sdk::{
 
 use crate::product::model::ProductId;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct CeFiJar {
     pub id: String,

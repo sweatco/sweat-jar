@@ -47,10 +47,10 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn _get_fee_product_command(fee: WithdrawalFeeDto) -> RegisterProductCommand {
+    pub(crate) fn get_product_with_fee_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_with_fee".to_string(),
-            withdrawal_fee: Some(fee),
+            withdrawal_fee: Some(WithdrawalFeeDto::Fix(U128(10))),
             ..Default::default()
         }
     }

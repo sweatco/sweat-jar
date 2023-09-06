@@ -156,7 +156,7 @@ pub(crate) mod tests {
             self.switch_account(&self.ft_contract_id.clone());
         }
 
-        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: fn(&mut Context) -> ()) {
+        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context) -> ()) {
             self.set_deposit_yocto(amount);
 
             f(self);
