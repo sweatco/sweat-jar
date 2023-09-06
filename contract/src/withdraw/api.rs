@@ -292,7 +292,7 @@ mod tests {
     }
 
     #[test]
-    fn product_with_fee() {
+    fn product_with_fixed_fee() {
         let (alice, product, mut context) = prepare_jar(get_product_with_fee_command(WithdrawalFeeDto::Fix(U128(10))));
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
@@ -308,5 +308,39 @@ mod tests {
         let jar = context.contract.get_jar(U32(0));
 
         assert_eq!(jar.principal, U128(900000));
+    }
+
+    #[test]
+    fn product_with_percent_fee() {
+        let (alice, product, mut context) =
+            prepare_jar(get_product_with_fee_command(WithdrawalFeeDto::Percent(U128(5), 4)));
+
+        context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+        context.switch_account(&alice);
+
+        let PromiseOrValue::Value(withdraw) = context.contract.withdraw(U32(0), Some(U128(100_000))) else {
+            panic!("Invalid promise type");
+        };
+
+        assert_eq!(withdraw.withdrawn_amount, U128(99500));
+        assert_eq!(withdraw.fee, U128(500));
+
+        let jar = context.contract.get_jar(U32(0));
+
+        assert_eq!(jar.principal, U128(900000));
+    }
+
+    #[test]
+    fn test_failed_withdraw() {
+        let (_, _, mut context) = prepare_jar(get_register_product_command());
+
+        let jar_view = context.contract.get_jar(U32(0));
+        let jar = context.contract.jars[0].clone();
+        let withdraw = context.contract.after_withdraw_internal(jar, 1234, None, false);
+
+        assert_eq!(withdraw.withdrawn_amount, U128(0));
+        assert_eq!(withdraw.fee, U128(0));
+
+        assert_eq!(jar_view, context.contract.get_jar(U32(0)));
     }
 }
