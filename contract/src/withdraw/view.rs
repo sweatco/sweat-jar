@@ -10,10 +10,10 @@ use crate::{common::TokenAmount, ft_interface::Fee};
 #[serde(crate = "near_sdk::serde")]
 pub struct WithdrawView {
     /// The amount of tokens that has been transferred to the user's account as part of the withdrawal.
-    withdrawn_amount: U128,
+    pub withdrawn_amount: U128,
 
     /// The possible fee that a user must pay for withdrawal, if it's defined by the associated Product.
-    fee: U128,
+    pub fee: U128,
 }
 
 impl WithdrawView {

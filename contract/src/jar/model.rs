@@ -206,7 +206,7 @@ impl Jar {
 
         let term_in_minutes = (effective_term / MS_IN_MINUTE) as u128;
         let apy = self.get_apy(product);
-        let total_interest = apy.mul(self.principal);
+        let total_interest = apy * self.principal;
 
         let interest = (term_in_minutes * total_interest) / MINUTES_IN_YEAR as u128;
 

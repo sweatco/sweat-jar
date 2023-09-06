@@ -110,10 +110,10 @@ impl Contract {
     fn get_fee(&self, product: &Product, jar: &Jar) -> Option<Fee> {
         product
             .withdrawal_fee
-            .clone()
+            .as_ref()
             .map(|fee| match fee {
-                WithdrawalFee::Fix(amount) => amount,
-                WithdrawalFee::Percent(percent) => percent.mul(jar.principal),
+                WithdrawalFee::Fix(amount) => *amount,
+                WithdrawalFee::Percent(percent) => percent * jar.principal,
             })
             .map(|fee| Fee {
                 amount: fee,
@@ -176,7 +176,7 @@ mod tests {
     use near_sdk::{
         json_types::{U128, U64},
         test_utils::accounts,
-        AccountId,
+        AccountId, PromiseOrValue,
     };
 
     use crate::{
@@ -184,7 +184,7 @@ mod tests {
         jar::{api::JarApi, model::JarTicket},
         product::{
             api::ProductApi,
-            command::RegisterProductCommand,
+            command::{RegisterProductCommand, WithdrawalFeeDto},
             model::Product,
             tests::{
                 get_product_with_fee_command, get_register_flexible_product_command, get_register_product_command,
@@ -293,6 +293,20 @@ mod tests {
 
     #[test]
     fn product_with_fee() {
-        let (_alice, _, mut _context) = prepare_jar(get_product_with_fee_command());
+        let (alice, product, mut context) = prepare_jar(get_product_with_fee_command(WithdrawalFeeDto::Fix(U128(10))));
+
+        context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+        context.switch_account(&alice);
+
+        let PromiseOrValue::Value(withdraw) = context.contract.withdraw(U32(0), Some(U128(100_000))) else {
+            panic!("Invalid promise type");
+        };
+
+        assert_eq!(withdraw.withdrawn_amount, U128(99990));
+        assert_eq!(withdraw.fee, U128(10));
+
+        let jar = context.contract.get_jar(U32(0));
+
+        assert_eq!(jar.principal, U128(900000));
     }
 }

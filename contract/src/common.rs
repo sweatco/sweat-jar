@@ -1,3 +1,5 @@
+use std::ops::Mul;
+
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     serde::{self, Deserialize, Deserializer, Serialize, Serializer},
@@ -33,12 +35,24 @@ pub struct UDecimal {
 }
 
 impl UDecimal {
-    pub(crate) fn mul(&self, value: u128) -> u128 {
-        value * self.significand / 10u128.pow(self.exponent)
-    }
-
     pub(crate) fn to_f32(&self) -> f32 {
         self.significand as f32 / 10u128.pow(self.exponent) as f32
+    }
+}
+
+impl Mul<u128> for UDecimal {
+    type Output = u128;
+
+    fn mul(self, value: u128) -> Self::Output {
+        value * self.significand / 10u128.pow(self.exponent)
+    }
+}
+
+impl Mul<u128> for &UDecimal {
+    type Output = u128;
+
+    fn mul(self, value: u128) -> Self::Output {
+        value * self.significand / 10u128.pow(self.exponent)
     }
 }
 
@@ -156,7 +170,7 @@ pub(crate) mod tests {
             self.switch_account(&self.ft_contract_id.clone());
         }
 
-        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context) -> ()) {
+        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
             self.set_deposit_yocto(amount);
 
             f(self);
