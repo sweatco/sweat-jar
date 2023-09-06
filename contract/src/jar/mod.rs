@@ -25,8 +25,8 @@ mod helpers {
             }
         }
 
-        pub(crate) fn principal(mut self, princiapl: TokenAmount) -> Jar {
-            self.principal = princiapl;
+        pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {
+            self.principal = principal;
             self
         }
 

@@ -63,24 +63,6 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn get_register_refillable_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_refillable".to_string(),
-            apy_default: (U128(12), 2),
-            apy_fallback: None,
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
-                allows_restaking: false,
-                allows_top_up: true,
-            }),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
-        }
-    }
-
     pub(crate) fn get_register_flexible_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_flexible".to_string(),
@@ -109,28 +91,6 @@ pub(crate) mod tests {
             }),
             withdrawal_fee: None,
             public_key: None,
-            is_enabled: true,
-        }
-    }
-
-    pub(crate) fn get_premium_product() -> Product {
-        Product {
-            id: "product_premium".to_string(),
-            apy: Apy::Downgradable(DowngradableApy {
-                default: UDecimal::new(20, 2),
-                fallback: UDecimal::new(10, 2),
-            }),
-            cap: Cap {
-                min: 100,
-                max: 100_000_000_000,
-            },
-            terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: 365 * 24 * 60 * 60 * 1000,
-                allows_top_up: false,
-                allows_restaking: false,
-            }),
-            withdrawal_fee: None,
-            public_key: Some(get_premium_product_public_key()),
             is_enabled: true,
         }
     }
@@ -302,7 +262,7 @@ pub(crate) mod helpers {
     use rand::rngs::OsRng;
 
     use crate::{
-        common::{Duration, UDecimal},
+        common::{Duration, TokenAmount, UDecimal},
         product::model::{Apy, Cap, FixedProductTerms, Product, Terms},
     };
 
@@ -361,6 +321,16 @@ pub(crate) mod helpers {
             self
         }
 
+        pub(crate) fn cap(mut self, min: TokenAmount, max: TokenAmount) -> Self {
+            self.cap = Cap { min, max };
+            self
+        }
+
+        pub(crate) fn flexible(mut self) -> Self {
+            self.terms = Terms::Flexible;
+            self
+        }
+
         pub(crate) fn lockup_term(mut self, term: Duration) -> Self {
             self.terms = match self.terms {
                 Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
@@ -370,6 +340,19 @@ pub(crate) mod helpers {
                 Terms::Flexible => Terms::Fixed(FixedProductTerms {
                     lockup_term: term,
                     allows_top_up: false,
+                    allows_restaking: false,
+                }),
+            };
+
+            self
+        }
+
+        pub(crate) fn with_allows_top_up(mut self, allows_top_up: bool) -> Self {
+            self.terms = match self.terms {
+                Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms { allows_top_up, ..terms }),
+                Terms::Flexible => Terms::Fixed(FixedProductTerms {
+                    allows_top_up,
+                    lockup_term: 365 * 24 * 60 * 60 * 1_000,
                     allows_restaking: false,
                 }),
             };
