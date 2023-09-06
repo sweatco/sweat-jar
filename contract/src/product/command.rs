@@ -23,6 +23,23 @@ pub struct RegisterProductCommand {
     pub is_enabled: bool,
 }
 
+#[cfg(test)]
+impl Default for RegisterProductCommand {
+    fn default() -> Self {
+        Self {
+            id: "default_product".to_string(),
+            apy_default: (U128(12), 2),
+            apy_fallback: None,
+            cap_min: U128(100),
+            cap_max: U128(100_000_000_000),
+            terms: TermsDto::default(),
+            withdrawal_fee: None,
+            public_key: None,
+            is_enabled: true,
+        }
+    }
+}
+
 impl From<RegisterProductCommand> for Product {
     fn from(value: RegisterProductCommand) -> Self {
         let apy = if let Some(apy_fallback) = value.apy_fallback {
@@ -62,12 +79,30 @@ pub enum TermsDto {
     Flexible,
 }
 
+#[cfg(test)]
+impl Default for TermsDto {
+    fn default() -> Self {
+        Self::Fixed(Default::default())
+    }
+}
+
 #[derive(BorshDeserialize, BorshSerialize, Serialize, PartialEq, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct FixedProductTermsDto {
     pub lockup_term: U64,
     pub allows_top_up: bool,
     pub allows_restaking: bool,
+}
+
+#[cfg(test)]
+impl Default for FixedProductTermsDto {
+    fn default() -> Self {
+        Self {
+            lockup_term: U64(crate::product::tests::YEAR_LOCKUP_TERM),
+            allows_restaking: false,
+            allows_top_up: false,
+        }
+    }
 }
 
 impl From<TermsDto> for Terms {

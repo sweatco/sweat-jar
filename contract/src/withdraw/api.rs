@@ -183,9 +183,8 @@ mod tests {
         jar::{api::JarApi, model::JarTicket},
         product::{
             api::ProductApi,
-            command::WithdrawalFeeDto,
             model::Product,
-            tests::{get_fee_product_command, get_register_flexible_product_command, get_register_product_command},
+            tests::{get_register_flexible_product_command, get_register_product_command},
         },
         withdraw::api::WithdrawApi,
     };
