@@ -15,7 +15,7 @@ pub(crate) mod tests {
         product::{
             api::ProductApi,
             command::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
-            model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms},
+            model::{Apy, Cap, FixedProductTerms, Product, Terms},
         },
     };
 
@@ -133,7 +133,7 @@ pub(crate) mod tests {
 
     #[test]
     fn disable_product_when_enabled() {
-        let admin = &accounts(0);
+        let admin = accounts(0);
         let reference_product = &Product::generate("product").enabled(true);
 
         let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
@@ -141,7 +141,7 @@ pub(crate) mod tests {
         let mut product = context.contract.get_product(&reference_product.id);
         assert!(product.is_enabled);
 
-        context.switch_account(admin);
+        context.switch_account(&admin);
         context.with_deposit_yocto(1, |context| {
             context.contract.set_enabled(reference_product.id.to_string(), false)
         });
@@ -153,7 +153,7 @@ pub(crate) mod tests {
     #[test]
     #[should_panic(expected = "Status matches")]
     fn enable_product_when_enabled() {
-        let admin = &accounts(0);
+        let admin = accounts(0);
         let reference_product = &Product::generate("product").enabled(true);
 
         let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
@@ -161,7 +161,7 @@ pub(crate) mod tests {
         let product = context.contract.get_product(&reference_product.id);
         assert!(product.is_enabled);
 
-        context.switch_account(admin);
+        context.switch_account(&admin);
         context.with_deposit_yocto(1, |context| {
             context.contract.set_enabled(reference_product.id.to_string(), true)
         });
@@ -170,11 +170,11 @@ pub(crate) mod tests {
     #[test]
     #[should_panic(expected = "Product already exists")]
     fn register_product_with_existing_id() {
-        let admin = &accounts(1);
+        let admin = accounts(1);
 
         let mut context = Context::new(admin.clone());
 
-        context.switch_account(admin);
+        context.switch_account(&admin);
 
         context.with_deposit_yocto(1, |context| {
             let first_command = get_register_product_command();
@@ -189,7 +189,7 @@ pub(crate) mod tests {
 
     #[test]
     fn set_public_key() {
-        let admin = &accounts(1);
+        let admin = accounts(1);
 
         let mut context = Context::new(admin.clone());
 
@@ -216,8 +216,8 @@ pub(crate) mod tests {
     #[test]
     #[should_panic(expected = "Can be performed only by admin")]
     fn set_public_key_by_not_admin() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let mut context = Context::new(admin.clone());
 
@@ -237,11 +237,11 @@ pub(crate) mod tests {
     #[test]
     #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
     fn set_public_key_without_deposit() {
-        let admin = &accounts(1);
+        let admin = accounts(1);
 
         let mut context = Context::new(admin.clone());
 
-        context.switch_account(admin);
+        context.switch_account(&admin);
 
         context.with_deposit_yocto(1, |context| {
             context.contract.register_product(get_register_product_command())

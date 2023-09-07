@@ -83,10 +83,7 @@ mod tests {
     use std::collections::HashMap;
 
     use common::tests::Context;
-    use near_sdk::{
-        json_types::{U128, U64},
-        test_utils::accounts,
-    };
+    use near_sdk::{json_types::U128, test_utils::accounts};
 
     use super::*;
     use crate::{
@@ -94,17 +91,10 @@ mod tests {
         common::{UDecimal, U32},
         jar::{
             api::JarApi,
-            model::JarTicket,
             view::{AggregatedTokenAmountView, JarView},
         },
         penalty::api::PenaltyApi,
-        product::{
-            api::*,
-            command::RegisterProductCommand,
-            helpers::MessageSigner,
-            model::DowngradableApy,
-            tests::{get_register_premium_product_command, get_register_product_command},
-        },
+        product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
         withdraw::api::WithdrawApi,
     };
 
@@ -146,36 +136,34 @@ mod tests {
 
     #[test]
     fn get_principal_with_single_jar() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = generate_product();
-        let reference_jar = Jar::generate(0, alice, &reference_product.id).principal(100);
-        let context = Context::new(admin.clone())
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
+        let context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[reference_jar]);
 
-        let principal = context.contract.get_total_principal(alice.clone()).total.0;
+        let principal = context.contract.get_total_principal(alice).total.0;
         assert_eq!(principal, 100);
     }
 
     #[test]
     fn get_principal_with_multiple_jars() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = generate_product();
         let jars = &[
-            Jar::generate(0, alice, &reference_product.id).principal(100),
-            Jar::generate(1, alice, &reference_product.id).principal(200),
-            Jar::generate(2, alice, &reference_product.id).principal(400),
+            Jar::generate(0, &alice, &reference_product.id).principal(100),
+            Jar::generate(1, &alice, &reference_product.id).principal(200),
+            Jar::generate(2, &alice, &reference_product.id).principal(400),
         ];
 
-        let context = Context::new(admin.clone())
-            .with_products(&[reference_product])
-            .with_jars(jars);
+        let context = Context::new(admin).with_products(&[reference_product]).with_jars(jars);
 
-        let principal = context.contract.get_total_principal(alice.clone()).total.0;
+        let principal = context.contract.get_total_principal(alice).total.0;
         assert_eq!(principal, 700);
     }
 
@@ -194,14 +182,14 @@ mod tests {
 
     #[test]
     fn get_total_interest_with_single_jar_after_30_minutes() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = generate_product();
 
         let jar_index = 0;
-        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin.clone())
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[jar.clone()]);
 
@@ -210,7 +198,7 @@ mod tests {
 
         context.set_block_timestamp_in_minutes(30);
 
-        let interest = context.contract.get_total_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice);
 
         assert_eq!(interest.total.0, 684);
         assert_eq!(interest.detailed, HashMap::from([(U32(0), U128(684))]))
@@ -218,15 +206,15 @@ mod tests {
 
     #[test]
     fn get_total_interest_with_single_jar_on_maturity() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = generate_product();
 
         let jar_index = 0;
-        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin.clone())
-            .with_products(&[reference_product.clone()])
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
             .with_jars(&[jar.clone()]);
 
         let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
@@ -234,7 +222,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        let interest = context.contract.get_total_interest(alice.clone());
+        let interest = context.contract.get_total_interest(alice);
 
         assert_eq!(
             interest,
@@ -247,15 +235,15 @@ mod tests {
 
     #[test]
     fn get_total_interest_with_single_jar_after_maturity() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = generate_product();
 
         let jar_index = 0;
-        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin.clone())
-            .with_products(&[reference_product.clone()])
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
             .with_jars(&[jar.clone()]);
 
         let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
@@ -263,21 +251,21 @@ mod tests {
 
         context.set_block_timestamp_in_days(400);
 
-        let interest = context.contract.get_total_interest(alice.clone()).total.0;
+        let interest = context.contract.get_total_interest(alice).total.0;
         assert_eq!(interest, 12_000_000);
     }
 
     #[test]
     fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = generate_product();
 
         let jar_index = 0;
-        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin.clone())
-            .with_products(&[reference_product.clone()])
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
             .with_jars(&[jar.clone()]);
 
         let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
@@ -288,7 +276,7 @@ mod tests {
         let mut interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 5_983_561);
 
-        context.switch_account(alice);
+        context.switch_account(&alice);
         context.contract.claim_total();
 
         context.set_block_timestamp_in_days(365);
@@ -332,19 +320,19 @@ mod tests {
 
     #[test]
     fn get_interest_after_withdraw() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = generate_product();
-        let reference_jar = &Jar::generate(0, alice, &reference_product.id).principal(100_000_000);
+        let reference_jar = &Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
 
-        let mut context = Context::new(admin.clone())
+        let mut context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[reference_jar.clone()]);
 
         context.set_block_timestamp_in_days(400);
 
-        context.switch_account(alice);
+        context.switch_account(&alice);
         context.contract.withdraw(U32(reference_jar.index), None);
 
         let interest = context.contract.get_total_interest(alice.clone());

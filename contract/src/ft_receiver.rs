@@ -69,26 +69,21 @@ mod tests {
 
     use crate::{
         common::{tests::Context, UDecimal, U32},
-        jar::{
-            api::JarApi,
-            model::{Jar, JarState},
-        },
+        jar::{api::JarApi, model::Jar},
         product::{
-            api::ProductApi,
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
-            tests::{get_register_product_command, get_register_restakable_product_command},
         },
         Contract,
     };
 
     #[test]
     fn transfer_with_create_jar_message() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = Product::generate("test_product").enabled(true);
-        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
 
         let msg = json!({
             "type": "stake",
@@ -101,9 +96,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context
-            .contract
-            .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
+        context.contract.ft_on_transfer(alice, U128(1_000_000), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(jar.index.0, 0);
@@ -111,19 +104,19 @@ mod tests {
 
     #[test]
     fn transfer_with_duplicate_create_jar_message() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let (signer, reference_product) = generate_premium_product_context();
 
-        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
 
         let ticket_amount = 1_000_000u128;
         let ticket_valid_until = 100_000_000u64;
         let signature = signer.sign(
             Contract::get_signature_material(
                 &context.owner,
-                alice,
+                &alice,
                 &reference_product.id,
                 ticket_amount,
                 ticket_valid_until,
@@ -161,8 +154,8 @@ mod tests {
 
     #[test]
     fn transfer_with_top_up_message_for_refillable_product() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = Product::generate("refillable_product")
             .enabled(true)
@@ -170,9 +163,9 @@ mod tests {
             .cap(0, 1_000_000);
 
         let initial_jar_principal = 100;
-        let reference_jar = Jar::generate(0, alice, &reference_product.clone().id).principal(initial_jar_principal);
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
 
-        let mut context = Context::new(admin.clone())
+        let mut context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[reference_jar.clone()]);
 
@@ -185,7 +178,7 @@ mod tests {
         let top_up_amount = 700;
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
+            .ft_on_transfer(alice, U128(top_up_amount), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
@@ -194,15 +187,15 @@ mod tests {
     #[test]
     #[should_panic(expected = "The product doesn't allow top-ups")]
     fn transfer_with_top_up_message_for_not_refillable_product() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = Product::generate("not_refillable_product")
             .enabled(true)
             .with_allows_top_up(false)
             .cap(0, 1_000_000);
 
-        let reference_jar = Jar::generate(0, alice, &reference_product.id).principal(500);
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(500);
 
         let mut context = Context::new(admin.clone())
             .with_products(&[reference_product])
@@ -214,15 +207,13 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context
-            .contract
-            .ft_on_transfer(alice.clone(), U128(100), msg.to_string());
+        context.contract.ft_on_transfer(alice, U128(100), msg.to_string());
     }
 
     #[test]
     fn transfer_with_top_up_message_for_flexible_product() {
-        let alice = &accounts(0);
-        let admin = &accounts(1);
+        let alice = accounts(0);
+        let admin = accounts(1);
 
         let reference_product = Product::generate("flexible_product")
             .enabled(true)
@@ -230,7 +221,7 @@ mod tests {
             .cap(0, 1_000_000);
 
         let initial_jar_principal = 100_000;
-        let reference_jar = Jar::generate(0, alice, &reference_product.clone().id).principal(initial_jar_principal);
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
 
         let mut context = Context::new(admin.clone())
             .with_products(&[reference_product])
@@ -246,7 +237,7 @@ mod tests {
         let top_up_amount = 1_000;
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
+            .ft_on_transfer(alice, U128(top_up_amount), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
@@ -311,7 +302,7 @@ mod tests {
         context.switch_account_to_ft_contract_account();
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(300), "something".to_string());
+            .ft_on_transfer(alice, U128(300), "something".to_string());
     }
 
     #[test]
