@@ -97,11 +97,11 @@ pub(crate) mod tests {
         context.with_deposit_yocto(1, |context| {
             context
                 .contract
-                .set_public_key(product.clone().id, Base64VecU8(new_pk.clone()))
+                .set_public_key(product.id.clone(), Base64VecU8(new_pk.clone()))
         });
 
         let product = context.contract.products.get(&product.id).unwrap();
-        assert_eq!(new_pk, product.clone().public_key.unwrap());
+        assert_eq!(&new_pk, product.public_key.as_ref().unwrap());
     }
 
     #[test]
@@ -119,7 +119,7 @@ pub(crate) mod tests {
 
         context.switch_account(&alice);
         context.with_deposit_yocto(1, |context| {
-            context.contract.set_public_key(product.clone().id, Base64VecU8(new_pk))
+            context.contract.set_public_key(product.id, Base64VecU8(new_pk))
         });
     }
 
