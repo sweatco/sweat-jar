@@ -5,26 +5,16 @@ pub mod view;
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use near_sdk::{
-        json_types::{Base64VecU8, U128},
-        test_utils::accounts,
-    };
+    use near_sdk::{json_types::Base64VecU8, test_utils::accounts};
 
     use crate::{
         common::{tests::Context, Duration, UDecimal},
         product::{
             api::ProductApi,
-            command::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
+            command::{RegisterProductCommand, TermsDto, WithdrawalFeeDto},
             model::{Apy, Cap, FixedProductTerms, Product, Terms},
         },
     };
-
-    fn get_premium_product_public_key() -> Vec<u8> {
-        vec![
-            33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109, 48, 82, 50, 35, 197,
-            176, 50, 211, 183, 128, 207, 1, 8, 68,
-        ]
-    }
 
     pub(crate) const YEAR_IN_MS: Duration = 365 * 24 * 60 * 60 * 1000;
 
@@ -62,42 +52,10 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn get_register_refillable_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_refillable".to_string(),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                allows_top_up: true,
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-    }
-
     pub(crate) fn get_register_flexible_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_flexible".to_string(),
             terms: TermsDto::Flexible,
-            ..Default::default()
-        }
-    }
-
-    pub(crate) fn get_register_restakable_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_restakable".to_string(),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                allows_restaking: true,
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-    }
-
-    pub(crate) fn get_register_premium_product_command(public_key: Option<Base64VecU8>) -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_premium".to_string(),
-            apy_default: (U128(20), 2),
-            apy_fallback: Some((U128(10), 2)),
-            public_key: public_key.or_else(|| Some(Base64VecU8(get_premium_product_public_key()))),
             ..Default::default()
         }
     }
@@ -248,11 +206,17 @@ pub(crate) mod helpers {
     use ed25519_dalek::{Keypair, Signer};
     use fake::{Fake, Faker};
     use general_purpose::STANDARD;
+    use near_sdk::AccountId;
     use rand::rngs::OsRng;
 
     use crate::{
-        common::{Duration, TokenAmount, UDecimal},
-        product::model::{Apy, Cap, FixedProductTerms, Product, Terms},
+        common::{tests::Context, Duration, TokenAmount, UDecimal},
+        jar::model::JarTicket,
+        product::{
+            model::{Apy, Cap, FixedProductTerms, Product, Terms},
+            tests::YEAR_IN_MS,
+        },
+        Contract,
     };
 
     pub(crate) struct MessageSigner {
@@ -267,12 +231,14 @@ pub(crate) mod helpers {
             Self { keypair }
         }
 
-        pub(crate) fn sign(&self, message: &str) -> String {
+        pub(crate) fn sign(&self, message: &str) -> Vec<u8> {
             let message_hash = digest(Algorithm::SHA256, message.as_bytes());
             let signature = self.keypair.sign(message_hash.as_slice());
-            let signature_bytes = signature.to_bytes().to_vec();
+            signature.to_bytes().to_vec()
+        }
 
-            STANDARD.encode(signature_bytes)
+        pub(crate) fn sign_base64(&self, message: &str) -> String {
+            STANDARD.encode(self.sign(message))
         }
 
         pub(crate) fn public_key(&self) -> &[u8; 32] {
@@ -341,8 +307,24 @@ pub(crate) mod helpers {
                 Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms { allows_top_up, ..terms }),
                 Terms::Flexible => Terms::Fixed(FixedProductTerms {
                     allows_top_up,
-                    lockup_term: 365 * 24 * 60 * 60 * 1_000,
+                    lockup_term: YEAR_IN_MS,
                     allows_restaking: false,
+                }),
+            };
+
+            self
+        }
+
+        pub(crate) fn with_allows_restaking(mut self, allows_restaking: bool) -> Self {
+            self.terms = match self.terms {
+                Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
+                    allows_restaking,
+                    ..terms
+                }),
+                Terms::Flexible => Terms::Fixed(FixedProductTerms {
+                    allows_restaking,
+                    lockup_term: YEAR_IN_MS,
+                    allows_top_up: false,
                 }),
             };
 
@@ -352,6 +334,24 @@ pub(crate) mod helpers {
         pub(crate) fn apy(mut self, apy: Apy) -> Self {
             self.apy = apy;
             self
+        }
+    }
+
+    impl Context {
+        pub(crate) fn get_signature_material(
+            &self,
+            receiver_id: &AccountId,
+            ticket: &JarTicket,
+            amount: TokenAmount,
+        ) -> String {
+            Contract::get_signature_material(
+                &self.owner,
+                receiver_id,
+                &ticket.product_id,
+                amount,
+                ticket.valid_until.0,
+                None,
+            )
         }
     }
 }
