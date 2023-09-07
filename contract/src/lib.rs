@@ -95,6 +95,8 @@ mod tests {
         product::{
             api::*,
             command::RegisterProductCommand,
+            helpers::MessageSigner,
+            model::DowngradableApy,
             tests::{get_register_premium_product_command, get_register_product_command},
         },
         withdraw::api::WithdrawApi,
@@ -263,35 +265,19 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let reference_product = Product::generate("premium_product")
+            .enabled(true)
+            .apy(Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(20, 2),
+                fallback: UDecimal::new(10, 2),
+            }))
+            .public_key(signer.public_key().to_vec());
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
 
-        fn get_product() -> RegisterProductCommand {
-            // secret: [229, 112, 214, 47, 42, 153, 159, 206, 188, 235, 183, 190, 130, 112, 135, 229, 160, 73, 104, 18, 187, 114, 157, 171, 144, 241, 252, 130, 97, 221, 92, 185]
-            // pk: [172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125, 59, 248, 197, 165, 106, 229, 226, 198, 182, 194, 120, 168, 153, 255, 206, 112]
-            get_register_premium_product_command(Some(Base64VecU8(vec![
-                172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125, 59, 248, 197, 165, 106, 229,
-                226, 198, 182, 194, 120, 168, 153, 255, 206, 112,
-            ])))
-        }
-
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| context.contract.register_product(get_product()));
-
-        let product_id = get_product().id;
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id,
-                valid_until: U64(4_848_379_977),
-            },
-            U128(100_000_000),
-            Some(Base64VecU8(vec![
-                221, 123, 23, 222, 212, 222, 238, 203, 202, 132, 132, 32, 21, 255, 140, 108, 93, 78, 140, 19, 235, 203,
-                31, 65, 246, 152, 160, 248, 135, 19, 152, 201, 202, 196, 131, 233, 138, 42, 240, 231, 40, 39, 177, 88,
-                214, 51, 148, 56, 60, 125, 224, 162, 60, 93, 254, 231, 218, 90, 140, 68, 146, 181, 183, 11,
-            ])),
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar]);
 
         context.set_block_timestamp_in_days(182);
 
