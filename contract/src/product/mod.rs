@@ -15,7 +15,7 @@ pub(crate) mod tests {
         product::{
             api::ProductApi,
             command::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
-            model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms},
+            model::{Apy, Cap, FixedProductTerms, Product, Terms},
         },
     };
 
@@ -81,24 +81,6 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn get_register_refillable_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_refillable".to_string(),
-            apy_default: (U128(12), 2),
-            apy_fallback: None,
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
-                allows_restaking: false,
-                allows_top_up: true,
-            }),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
-        }
-    }
-
     pub(crate) fn get_register_flexible_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_flexible".to_string(),
@@ -131,28 +113,6 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn get_premium_product() -> Product {
-        Product {
-            id: "product_premium".to_string(),
-            apy: Apy::Downgradable(DowngradableApy {
-                default: UDecimal::new(20, 2),
-                fallback: UDecimal::new(10, 2),
-            }),
-            cap: Cap {
-                min: 100,
-                max: 100_000_000_000,
-            },
-            terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: 365 * 24 * 60 * 60 * 1000,
-                allows_top_up: false,
-                allows_restaking: false,
-            }),
-            withdrawal_fee: None,
-            public_key: Some(get_premium_product_public_key()),
-            is_enabled: true,
-        }
-    }
-
     pub(crate) fn get_register_premium_product_command(public_key: Option<Base64VecU8>) -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_premium".to_string(),
@@ -174,19 +134,19 @@ pub(crate) mod tests {
     #[test]
     fn disable_product_when_enabled() {
         let admin = accounts(0);
-        let mut context = Context::new(admin.clone());
+        let reference_product = &Product::generate("product").enabled(true);
+
+        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+
+        let mut product = context.contract.get_product(&reference_product.id);
+        assert!(product.is_enabled);
 
         context.switch_account(&admin);
         context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
+            context.contract.set_enabled(reference_product.id.to_string(), false)
         });
 
-        let mut product = context.contract.get_product(&"product".to_string());
-        assert!(product.is_enabled);
-
-        context.with_deposit_yocto(1, |context| context.contract.set_enabled("product".to_string(), false));
-
-        product = context.contract.get_product(&"product".to_string());
+        product = context.contract.get_product(&reference_product.id);
         assert!(!product.is_enabled);
     }
 
@@ -194,17 +154,17 @@ pub(crate) mod tests {
     #[should_panic(expected = "Status matches")]
     fn enable_product_when_enabled() {
         let admin = accounts(0);
-        let mut context = Context::new(admin.clone());
+        let reference_product = &Product::generate("product").enabled(true);
+
+        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+
+        let product = context.contract.get_product(&reference_product.id);
+        assert!(product.is_enabled);
 
         context.switch_account(&admin);
         context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
+            context.contract.set_enabled(reference_product.id.to_string(), true)
         });
-
-        let product = context.contract.get_product(&"product".to_string());
-        assert!(product.is_enabled);
-
-        context.with_deposit_yocto(1, |context| context.contract.set_enabled("product".to_string(), true));
     }
 
     #[test]
@@ -307,5 +267,120 @@ pub(crate) mod tests {
     #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
     fn assert_cap_more_than_max() {
         get_product().assert_cap(500_000_000_000);
+    }
+}
+
+#[cfg(test)]
+pub(crate) mod helpers {
+    use base64::{engine::general_purpose, Engine};
+    use crypto_hash::{digest, Algorithm};
+    use ed25519_dalek::{Keypair, Signer};
+    use fake::{Fake, Faker};
+    use general_purpose::STANDARD;
+    use rand::rngs::OsRng;
+
+    use crate::{
+        common::{Duration, TokenAmount, UDecimal},
+        product::model::{Apy, Cap, FixedProductTerms, Product, Terms},
+    };
+
+    pub(crate) struct MessageSigner {
+        keypair: Keypair,
+    }
+
+    impl MessageSigner {
+        pub(crate) fn new() -> Self {
+            let mut csprng = OsRng {};
+            let keypair = Keypair::generate(&mut csprng);
+
+            Self { keypair }
+        }
+
+        pub(crate) fn sign(&self, message: &str) -> String {
+            let message_hash = digest(Algorithm::SHA256, message.as_bytes());
+            let signature = self.keypair.sign(message_hash.as_slice());
+            let signature_bytes = signature.to_bytes().to_vec();
+
+            STANDARD.encode(signature_bytes)
+        }
+
+        pub(crate) fn public_key(&self) -> &[u8; 32] {
+            self.keypair.public.as_bytes()
+        }
+    }
+
+    impl Product {
+        pub(crate) fn generate(id: &str) -> Self {
+            Self {
+                id: id.to_string(),
+                apy: Apy::Constant(UDecimal::new((1..20).fake(), (1..2).fake())),
+                cap: Cap {
+                    min: (0..1_000).fake(),
+                    max: (1_000_000..1_000_000_000).fake(),
+                },
+                terms: Terms::Fixed(FixedProductTerms {
+                    lockup_term: (1..3).fake::<u64>() * 31_536_000_000,
+                    allows_top_up: Faker.fake(),
+                    allows_restaking: Faker.fake(),
+                }),
+                withdrawal_fee: None,
+                public_key: None,
+                is_enabled: true,
+            }
+        }
+
+        pub(crate) fn public_key(mut self, pk: Vec<u8>) -> Self {
+            self.public_key = Some(pk);
+            self
+        }
+
+        pub(crate) fn enabled(mut self, enabled: bool) -> Self {
+            self.is_enabled = enabled;
+            self
+        }
+
+        pub(crate) fn cap(mut self, min: TokenAmount, max: TokenAmount) -> Self {
+            self.cap = Cap { min, max };
+            self
+        }
+
+        pub(crate) fn flexible(mut self) -> Self {
+            self.terms = Terms::Flexible;
+            self
+        }
+
+        pub(crate) fn lockup_term(mut self, term: Duration) -> Self {
+            self.terms = match self.terms {
+                Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
+                    lockup_term: term,
+                    ..terms
+                }),
+                Terms::Flexible => Terms::Fixed(FixedProductTerms {
+                    lockup_term: term,
+                    allows_top_up: false,
+                    allows_restaking: false,
+                }),
+            };
+
+            self
+        }
+
+        pub(crate) fn with_allows_top_up(mut self, allows_top_up: bool) -> Self {
+            self.terms = match self.terms {
+                Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms { allows_top_up, ..terms }),
+                Terms::Flexible => Terms::Fixed(FixedProductTerms {
+                    allows_top_up,
+                    lockup_term: 365 * 24 * 60 * 60 * 1_000,
+                    allows_restaking: false,
+                }),
+            };
+
+            self
+        }
+
+        pub(crate) fn apy(mut self, apy: Apy) -> Self {
+            self.apy = apy;
+            self
+        }
     }
 }

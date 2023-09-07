@@ -86,16 +86,16 @@ impl<'de> Deserialize<'de> for U32 {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::time::Duration;
+    use std::{collections::HashSet, time::Duration};
 
     use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 
-    use crate::{common::UDecimal, Contract};
+    use crate::{common::UDecimal, jar::model::Jar, product::model::Product, Contract};
 
     pub(crate) struct Context {
         pub contract: Contract,
+        pub owner: AccountId,
         ft_contract_id: AccountId,
-        owner: AccountId,
         builder: VMContextBuilder,
     }
 
@@ -122,6 +122,33 @@ pub(crate) mod tests {
                 builder,
                 contract,
             }
+        }
+
+        pub(crate) fn with_products(mut self, products: &[Product]) -> Self {
+            for product in products {
+                self.contract.products.insert(product.id.clone(), product.clone());
+            }
+
+            self
+        }
+
+        pub(crate) fn with_jars(mut self, jars: &[Jar]) -> Self {
+            for jar in jars {
+                self.contract.jars.push(jar.clone());
+
+                let account_id = &jar.account_id;
+                if !self.contract.account_jars.contains_key(account_id) {
+                    self.contract.account_jars.insert(account_id.clone(), HashSet::new());
+                }
+
+                self.contract
+                    .account_jars
+                    .get_mut(account_id)
+                    .unwrap()
+                    .insert(jar.index);
+            }
+
+            self
         }
 
         pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {
@@ -156,7 +183,7 @@ pub(crate) mod tests {
             self.switch_account(&self.ft_contract_id.clone());
         }
 
-        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: fn(&mut Context) -> ()) {
+        pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
             self.set_deposit_yocto(amount);
 
             f(self);

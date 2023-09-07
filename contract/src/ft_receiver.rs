@@ -62,24 +62,19 @@ impl FungibleTokenReceiver for Contract {
 
 #[cfg(test)]
 mod tests {
+    use std::panic::catch_unwind;
+
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-    use near_sdk::{
-        json_types::{U128, U64},
-        serde_json::json,
-        test_utils::accounts,
-    };
+    use near_sdk::{json_types::U128, serde_json::json, test_utils::accounts};
 
     use crate::{
-        common::{tests::Context, U32},
-        jar::{api::JarApi, model::JarTicket},
+        common::{tests::Context, UDecimal, U32},
+        jar::{api::JarApi, model::Jar},
         product::{
-            api::ProductApi,
-            tests::{
-                get_register_flexible_product_command, get_register_premium_product_command,
-                get_register_product_command, get_register_refillable_product_command,
-                get_register_restakable_product_command,
-            },
+            helpers::MessageSigner,
+            model::{Apy, DowngradableApy, Product},
         },
+        Contract,
     };
 
     #[test]
@@ -87,18 +82,14 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
-
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let reference_product = Product::generate("test_product").enabled(true);
+        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
 
         let msg = json!({
             "type": "stake",
             "data": {
                 "ticket": {
-                    "product_id": "product",
+                    "product_id": reference_product.id,
                     "valid_until": "0",
                 }
             }
@@ -112,40 +103,53 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Not matching signature")]
     fn transfer_with_duplicate_create_jar_message() {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let (signer, reference_product) = generate_premium_product_context();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_premium_product_command(None))
-        });
+        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
+
+        let ticket_amount = 1_000_000u128;
+        let ticket_valid_until = 100_000_000u64;
+        let signature = signer.sign(
+            Contract::get_signature_material(
+                &context.owner,
+                &alice,
+                &reference_product.id,
+                ticket_amount,
+                ticket_valid_until,
+                None,
+            )
+            .as_str(),
+        );
 
         let msg = json!({
             "type": "stake",
             "data": {
                 "ticket": {
-                    "product_id": "product_premium",
-                    "valid_until": "100000000",
+                    "product_id": reference_product.id,
+                    "valid_until": ticket_valid_until.to_string(),
                 },
-                "signature": "Lj2BWmN3uMMSjOs8pXpq38SW9owJGzGyQWe7NlHYli+JnFuS4FwoYVVvA5E9cYf1ye5bubNOrnCKTUTViIQUAw==",
+                "signature": signature,
             }
         });
 
         context.switch_account_to_ft_contract_account();
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
+            .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
         assert_eq!(jar.index.0, 0);
 
-        context.contract.ft_on_transfer(alice, U128(1_000_000), msg.to_string());
+        let result = catch_unwind(move || {
+            context
+                .contract
+                .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string())
+        });
+        assert!(result.is_err());
     }
 
     #[test]
@@ -153,36 +157,31 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = Product::generate("refillable_product")
+            .enabled(true)
+            .with_allows_top_up(true)
+            .cap(0, 1_000_000);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_refillable_product_command())
-        });
+        let initial_jar_principal = 100;
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
 
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_register_refillable_product_command().id,
-                valid_until: U64(0),
-            },
-            U128(100),
-            None,
-        );
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar.clone()]);
 
         let msg = json!({
             "type": "top_up",
-            "data": 0,
+            "data": reference_jar.index,
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(alice, U128(100), msg.to_string());
+        let top_up_amount = 700;
+        context
+            .contract
+            .ft_on_transfer(alice, U128(top_up_amount), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
-        assert_eq!(200, jar.principal.0);
+        assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 
     #[test]
@@ -191,27 +190,20 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = Product::generate("not_refillable_product")
+            .enabled(true)
+            .with_allows_top_up(false)
+            .cap(0, 1_000_000);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(500);
 
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_register_product_command().id,
-                valid_until: U64(0),
-            },
-            U128(100),
-            None,
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar.clone()]);
 
         let msg = json!({
             "type": "top_up",
-            "data": 0,
+            "data": reference_jar.index,
         });
 
         context.switch_account_to_ft_contract_account();
@@ -223,36 +215,32 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = Product::generate("flexible_product")
+            .enabled(true)
+            .flexible()
+            .cap(0, 1_000_000);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_flexible_product_command())
-        });
+        let initial_jar_principal = 100_000;
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
 
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_register_flexible_product_command().id,
-                valid_until: U64(0),
-            },
-            U128(100),
-            None,
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar.clone()]);
 
         let msg = json!({
             "type": "top_up",
-            "data": 0,
+            "data": reference_jar.index,
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(alice, U128(100), msg.to_string());
+
+        let top_up_amount = 1_000;
+        context
+            .contract
+            .ft_on_transfer(alice, U128(top_up_amount), msg.to_string());
 
         let jar = context.contract.get_jar(U32(0));
-        assert_eq!(200, jar.principal.0);
+        assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 
     #[test]
@@ -261,33 +249,29 @@ mod tests {
         let bob = accounts(1);
         let admin = accounts(2);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
+        let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_restakable_product_command())
-        });
+        let mut context =
+            Context::new(admin).with_products(&[reference_product.clone(), reference_restakable_product.clone()]);
 
+        let amount_alice = 100;
+        let amount_bob = 200;
         let msg = json!({
             "type": "migrate",
             "data": [
                 {
-                    "id": "old_1",
-                    "account_id": "alice",
-                    "product_id": "product",
-                    "principal": "100",
+                    "id": "cefi_product_1",
+                    "account_id": alice,
+                    "product_id": reference_product.id,
+                    "principal": amount_alice.to_string(),
                     "created_at": "0",
                 },
                 {
-                    "id": "old_2",
-                    "account_id": "bob",
-                    "product_id": "product_restakable",
-                    "principal": "200",
+                    "id": "cefi_product_2",
+                    "account_id": bob,
+                    "product_id": reference_restakable_product.id,
+                    "principal": amount_bob.to_string(),
                     "created_at": "0",
                 },
             ]
@@ -296,15 +280,15 @@ mod tests {
         context.switch_account_to_ft_contract_account();
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(300), msg.to_string());
+            .ft_on_transfer(alice.clone(), U128(amount_alice + amount_bob), msg.to_string());
 
-        let alice_jars = context.contract.get_jars_for_account(alice.clone());
+        let alice_jars = context.contract.get_jars_for_account(alice);
         assert_eq!(alice_jars.len(), 1);
-        assert_eq!(alice_jars.first().unwrap().principal.0, 100);
+        assert_eq!(alice_jars.first().unwrap().principal.0, amount_alice);
 
-        let bob_jars = context.contract.get_jars_for_account(bob.clone());
+        let bob_jars = context.contract.get_jars_for_account(bob);
         assert_eq!(bob_jars.len(), 1);
-        assert_eq!(bob_jars.first().unwrap().principal.0, 200);
+        assert_eq!(bob_jars.first().unwrap().principal.0, amount_bob);
     }
 
     #[test]
@@ -313,12 +297,12 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let mut context = Context::new(admin);
 
         context.switch_account_to_ft_contract_account();
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(300), "something".to_string());
+            .ft_on_transfer(alice, U128(300), "something".to_string());
     }
 
     #[test]
@@ -327,11 +311,24 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let mut context = Context::new(admin);
 
-        context.switch_account(&alice.clone());
+        context.switch_account(&alice);
         context
             .contract
             .ft_on_transfer(alice.clone(), U128(300), "something".to_string());
+    }
+
+    fn generate_premium_product_context() -> (MessageSigner, Product) {
+        let signer = MessageSigner::new();
+        let reference_product = Product::generate("premium")
+            .public_key(signer.public_key().to_vec())
+            .lockup_term(365 * 24 * 60 * 60 * 1000)
+            .apy(Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(20, 2),
+                fallback: UDecimal::new(10, 2),
+            }));
+
+        (signer, reference_product)
     }
 }

@@ -83,26 +83,18 @@ mod tests {
     use std::collections::HashMap;
 
     use common::tests::Context;
-    use near_sdk::{
-        json_types::{U128, U64},
-        test_utils::accounts,
-    };
+    use near_sdk::{json_types::U128, test_utils::accounts};
 
     use super::*;
     use crate::{
         claim::api::ClaimApi,
-        common::U32,
+        common::{UDecimal, U32},
         jar::{
             api::JarApi,
-            model::JarTicket,
             view::{AggregatedTokenAmountView, JarView},
         },
         penalty::api::PenaltyApi,
-        product::{
-            api::*,
-            command::RegisterProductCommand,
-            tests::{get_product, get_register_premium_product_command, get_register_product_command},
-        },
+        product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
         withdraw::api::WithdrawApi,
     };
 
@@ -147,24 +139,11 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
-
-        context.switch_account(&admin);
-
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100),
-            None,
-        );
+        let reference_product = generate_product();
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
+        let context = Context::new(admin)
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar]);
 
         let principal = context.contract.get_total_principal(alice).total.0;
         assert_eq!(principal, 100);
@@ -175,42 +154,14 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
-        context.switch_account(&admin);
+        let reference_product = generate_product();
+        let jars = &[
+            Jar::generate(0, &alice, &reference_product.id).principal(100),
+            Jar::generate(1, &alice, &reference_product.id).principal(200),
+            Jar::generate(2, &alice, &reference_product.id).principal(400),
+        ];
 
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        let product = get_product();
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: product.clone().id,
-                valid_until: U64(0),
-            },
-            U128(100),
-            None,
-        );
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: product.clone().id,
-                valid_until: U64(0),
-            },
-            U128(200),
-            None,
-        );
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: product.id,
-                valid_until: U64(0),
-            },
-            U128(400),
-            None,
-        );
+        let context = Context::new(admin).with_products(&[reference_product]).with_jars(jars);
 
         let principal = context.contract.get_total_principal(alice).total.0;
         assert_eq!(principal, 700);
@@ -234,26 +185,16 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
+            .with_jars(&[jar.clone()]);
 
-        context.switch_account_to_owner();
-        let jar = context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
-
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_minutes(30);
 
@@ -268,26 +209,16 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
+            .with_jars(&[jar.clone()]);
 
-        context.switch_account_to_owner();
-        let jar = context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
-
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_days(365);
 
@@ -307,26 +238,16 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
+            .with_jars(&[jar.clone()]);
 
-        context.switch_account_to_owner();
-        let jar = context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
-
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_days(400);
 
@@ -339,26 +260,16 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
+            .with_jars(&[jar.clone()]);
 
-        context.switch_account_to_owner();
-        let jar = context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
-
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_days(182);
 
@@ -379,35 +290,19 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let reference_product = Product::generate("premium_product")
+            .enabled(true)
+            .apy(Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(20, 2),
+                fallback: UDecimal::new(10, 2),
+            }))
+            .public_key(signer.public_key().to_vec());
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
 
-        fn get_product() -> RegisterProductCommand {
-            // secret: [229, 112, 214, 47, 42, 153, 159, 206, 188, 235, 183, 190, 130, 112, 135, 229, 160, 73, 104, 18, 187, 114, 157, 171, 144, 241, 252, 130, 97, 221, 92, 185]
-            // pk: [172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125, 59, 248, 197, 165, 106, 229, 226, 198, 182, 194, 120, 168, 153, 255, 206, 112]
-            get_register_premium_product_command(Some(Base64VecU8(vec![
-                172, 10, 143, 66, 139, 118, 109, 28, 106, 47, 25, 194, 177, 91, 10, 125, 59, 248, 197, 165, 106, 229,
-                226, 198, 182, 194, 120, 168, 153, 255, 206, 112,
-            ])))
-        }
-
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| context.contract.register_product(get_product()));
-
-        let product_id = get_product().id;
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id,
-                valid_until: U64(4_848_379_977),
-            },
-            U128(100_000_000),
-            Some(Base64VecU8(vec![
-                221, 123, 23, 222, 212, 222, 238, 203, 202, 132, 132, 32, 21, 255, 140, 108, 93, 78, 140, 19, 235, 203,
-                31, 65, 246, 152, 160, 248, 135, 19, 152, 201, 202, 196, 131, 233, 138, 42, 240, 231, 40, 39, 177, 88,
-                214, 51, 148, 56, 60, 125, 224, 162, 60, 93, 254, 231, 218, 90, 140, 68, 146, 181, 183, 11,
-            ])),
-        );
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar]);
 
         context.set_block_timestamp_in_days(182);
 
@@ -428,30 +323,26 @@ mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let reference_product = generate_product();
+        let reference_jar = &Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context.switch_account_to_owner();
-        context.contract.create_jar(
-            alice.clone(),
-            JarTicket {
-                product_id: get_product().id,
-                valid_until: U64(0),
-            },
-            U128(100_000_000),
-            None,
-        );
+        let mut context = Context::new(admin)
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar.clone()]);
 
         context.set_block_timestamp_in_days(400);
 
         context.switch_account(&alice);
-        context.contract.withdraw(U32(0), None);
+        context.contract.withdraw(U32(reference_jar.index), None);
 
-        let interest = context.contract.get_total_interest(alice);
+        let interest = context.contract.get_total_interest(alice.clone());
         assert_eq!(12_000_000, interest.total.0);
+    }
+
+    fn generate_product() -> Product {
+        Product::generate("product")
+            .enabled(true)
+            .lockup_term(365 * 24 * 60 * 60 * 1000)
+            .apy(Apy::Constant(UDecimal::new(12, 2)))
     }
 }
