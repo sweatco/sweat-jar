@@ -98,7 +98,7 @@ pub struct FixedProductTermsDto {
 impl Default for FixedProductTermsDto {
     fn default() -> Self {
         Self {
-            lockup_term: U64(crate::product::tests::YEAR_LOCKUP_TERM),
+            lockup_term: U64(crate::product::tests::YEAR_IN_MS),
             allows_restaking: false,
             allows_top_up: false,
         }

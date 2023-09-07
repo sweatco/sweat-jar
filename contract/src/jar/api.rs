@@ -209,7 +209,7 @@ mod tests {
 
     use crate::{
         jar::model::Jar,
-        product::tests::{get_product, YEAR_LOCKUP_TERM},
+        product::tests::{get_product, YEAR_IN_MS},
     };
 
     #[test]
@@ -223,7 +223,7 @@ mod tests {
             0,
         );
 
-        let interest = jar.get_interest(&product, YEAR_LOCKUP_TERM);
+        let interest = jar.get_interest(&product, YEAR_IN_MS);
         assert_eq!(12_000_000, interest);
     }
 

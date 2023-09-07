@@ -11,7 +11,7 @@ pub(crate) mod tests {
     };
 
     use crate::{
-        common::{tests::Context, UDecimal},
+        common::{tests::Context, Duration, UDecimal},
         product::{
             api::ProductApi,
             command::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
@@ -26,7 +26,7 @@ pub(crate) mod tests {
         ]
     }
 
-    pub(crate) const YEAR_LOCKUP_TERM: u64 = 365 * 24 * 60 * 60 * 1000;
+    pub(crate) const YEAR_IN_MS: Duration = 365 * 24 * 60 * 60 * 1000;
 
     pub(crate) fn get_product() -> Product {
         Product {
@@ -37,7 +37,7 @@ pub(crate) mod tests {
                 max: 100_000_000_000,
             },
             terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: YEAR_LOCKUP_TERM,
+                lockup_term: YEAR_IN_MS,
                 allows_top_up: false,
                 allows_restaking: false,
             }),
