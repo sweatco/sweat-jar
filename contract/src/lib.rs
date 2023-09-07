@@ -199,12 +199,14 @@ mod tests {
 
         let reference_product = generate_product();
 
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
         let mut context = Context::new(admin.clone())
-            .with_products(&[reference_product.clone()])
-            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
+            .with_products(&[reference_product])
+            .with_jars(&[jar.clone()]);
 
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_minutes(30);
 
@@ -221,12 +223,14 @@ mod tests {
 
         let reference_product = generate_product();
 
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
         let mut context = Context::new(admin.clone())
             .with_products(&[reference_product.clone()])
-            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
+            .with_jars(&[jar.clone()]);
 
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_days(365);
 
@@ -248,12 +252,14 @@ mod tests {
 
         let reference_product = generate_product();
 
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
         let mut context = Context::new(admin.clone())
             .with_products(&[reference_product.clone()])
-            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
+            .with_jars(&[jar.clone()]);
 
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_days(400);
 
@@ -268,12 +274,14 @@ mod tests {
 
         let reference_product = generate_product();
 
+        let jar_index = 0;
+        let jar = Jar::generate(jar_index, alice, &reference_product.id).principal(100_000_000);
         let mut context = Context::new(admin.clone())
             .with_products(&[reference_product.clone()])
-            .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
+            .with_jars(&[jar.clone()]);
 
-        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
-        assert_eq!(jar, contract_jar);
+        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
+        assert_eq!(JarView::from(jar), contract_jar);
 
         context.set_block_timestamp_in_days(182);
 
