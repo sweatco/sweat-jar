@@ -126,7 +126,7 @@ pub(crate) mod tests {
 
         pub(crate) fn with_products(mut self, products: &[Product]) -> Self {
             for product in products {
-                self.contract.products.insert(product.clone().id, product.clone());
+                self.contract.products.insert(product.id.clone(), product.clone());
             }
 
             self
