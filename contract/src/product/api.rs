@@ -79,7 +79,10 @@ impl ProductApi for Contract {
 
         require!(is_enabled != product.is_enabled, "Status matches");
 
-        let updated_product = Product { is_enabled, ..product };
+        let updated_product = Product {
+            is_enabled,
+            ..product
+        };
         self.products.insert(product_id.clone(), updated_product);
 
         emit(EventKind::EnableProduct(EnableProductData {
@@ -100,13 +103,18 @@ impl ProductApi for Contract {
 
         self.products.insert(product_id.clone(), updated_product);
 
-        emit(EventKind::ChangeProductPublicKey(ChangeProductPublicKeyData {
-            product_id,
-            pk: public_key,
-        }));
+        emit(EventKind::ChangeProductPublicKey(
+            ChangeProductPublicKeyData {
+                product_id,
+                pk: public_key,
+            },
+        ));
     }
 
     fn get_products(&self) -> Vec<ProductView> {
-        self.products.values().map(|product| product.clone().into()).collect()
+        self.products
+            .values()
+            .map(|product| product.clone().into())
+            .collect()
     }
 }

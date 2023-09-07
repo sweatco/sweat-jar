@@ -1,9 +1,9 @@
-use std::{env, fs};
 use std::collections::HashMap;
+use std::{env, fs};
 
 use near_units::parse_near;
-use workspaces::{Account, Worker};
 use workspaces::network::Sandbox;
+use workspaces::{Account, Worker};
 
 use crate::ft_contract_interface::FtContractInterface;
 use crate::jar_contract_interface::JarContractInterface;
@@ -28,10 +28,10 @@ impl Context {
         let account = worker.dev_create_account().await?;
 
         let jar_contract = worker
-            .dev_deploy(&Self::load_wasm(&(env::args().nth(1).unwrap())))
+            .dev_deploy(&Self::load_wasm("../res/sweat_jar.wasm"))
             .await?;
         let ft_contract = worker
-            .dev_deploy(&Self::load_wasm(&(env::args().nth(2).unwrap())))
+            .dev_deploy(&Self::load_wasm("../res/sweat.wasm"))
             .await?;
 
         println!("@@ jar contract deployed to {}", jar_contract.id());
@@ -48,7 +48,8 @@ impl Context {
 
     pub(crate) async fn account(&mut self, name: &str) -> anyhow::Result<Account> {
         if !self.accounts.contains_key(name) {
-            let account = self.root_account
+            let account = self
+                .root_account
                 .create_subaccount(name)
                 .initial_balance(parse_near!("3 N"))
                 .transact()
@@ -71,7 +72,10 @@ impl Context {
     pub(crate) async fn fast_forward(&self, hours: u64) -> anyhow::Result<()> {
         let blocks_to_advance = ONE_HOUR_BLOCKS_HEIGHT * hours;
 
-        println!("⏳ Fast forward to {} hours ({} blocks)...", hours, blocks_to_advance);
+        println!(
+            "⏳ Fast forward to {} hours ({} blocks)...",
+            hours, blocks_to_advance
+        );
 
         self.worker.fast_forward(blocks_to_advance).await?;
 

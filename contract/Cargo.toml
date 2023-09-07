@@ -14,6 +14,22 @@ uint = { version = "0.9.3", default-features = false }
 ed25519-dalek = "1.0.1"
 near-self-update = { git = "https://github.com/sweatco/near-self-update.git" }
 
+[dev-dependencies]
+anyhow = "1.0"
+borsh = "0.9"
+maplit = "1.0"
+near-units = "0.2.0"
+near-sdk = "4.1.1"
+# arbitrary_precision enabled for u128 types that workspaces requires for Balance types
+serde_json = { version = "1.0", features = ["arbitrary_precision"] }
+tokio = { version = "1.18.1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3.11", features = ["env-filter"] }
+workspaces = "0.7.0"
+pkg-config = "0.3.1"
+async-trait = "0.1.71"
+
+
 [profile.release]
 codegen-units = 1
 opt-level = "z"
@@ -22,5 +38,3 @@ debug = false
 panic = "abort"
 overflow-checks = true
 
-[workspace]
-members = []

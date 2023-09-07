@@ -4,7 +4,7 @@ version = "1.0.0"
 publish = false
 edition = "2018"
 
-[dev-dependencies]
+[dependencies]
 anyhow = "1.0"
 borsh = "0.9"
 maplit = "1.0"
@@ -18,7 +18,3 @@ tracing-subscriber = { version = "0.3.11", features = ["env-filter"] }
 workspaces = "0.7.0"
 pkg-config = "0.3.1"
 async-trait = "0.1.71"
-
-[[example]]
-name = "integration-tests"
-path = "src/tests.rs"
