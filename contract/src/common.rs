@@ -189,10 +189,6 @@ pub(crate) mod tests {
             testing_env!(self.builder.build());
         }
 
-        pub(crate) fn switch_account_to_owner(&mut self) {
-            self.switch_account(&self.owner.clone());
-        }
-
         pub(crate) fn switch_account_to_ft_contract_account(&mut self) {
             self.switch_account(&self.ft_contract_id.clone());
         }

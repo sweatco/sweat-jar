@@ -11,51 +11,17 @@ pub(crate) mod tests {
         common::{tests::Context, Duration, UDecimal},
         product::{
             api::ProductApi,
-            command::{RegisterProductCommand, TermsDto, WithdrawalFeeDto},
-            model::{Apy, Cap, FixedProductTerms, Product, Terms},
+            command::RegisterProductCommand,
+            helpers::MessageSigner,
+            model::{Apy, Product},
         },
     };
 
     pub(crate) const YEAR_IN_MS: Duration = 365 * 24 * 60 * 60 * 1000;
 
-    pub(crate) fn get_product() -> Product {
-        Product {
-            id: "product".to_string(),
-            apy: Apy::Constant(UDecimal::new(12, 2)),
-            cap: Cap {
-                min: 100,
-                max: 100_000_000_000,
-            },
-            terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: YEAR_IN_MS,
-                allows_top_up: false,
-                allows_restaking: false,
-            }),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
-        }
-    }
-
-    pub(crate) fn get_product_with_fee_command(fee: WithdrawalFeeDto) -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_with_fee".to_string(),
-            withdrawal_fee: Some(fee),
-            ..Default::default()
-        }
-    }
-
     pub(crate) fn get_register_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product".to_string(),
-            ..Default::default()
-        }
-    }
-
-    pub(crate) fn get_register_flexible_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_flexible".to_string(),
-            terms: TermsDto::Flexible,
             ..Default::default()
         }
     }
@@ -120,26 +86,22 @@ pub(crate) mod tests {
     fn set_public_key() {
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let product = generate_product().public_key(signer.public_key().to_vec());
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let new_signer = MessageSigner::new();
+        let new_pk = new_signer.public_key().to_vec();
 
         context.switch_account(&admin);
-
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
         context.with_deposit_yocto(1, |context| {
             context
                 .contract
-                .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]))
+                .set_public_key(product.clone().id, Base64VecU8(new_pk.clone()))
         });
 
-        let product = context
-            .contract
-            .products
-            .get(&get_register_product_command().id)
-            .unwrap();
-        assert_eq!(vec![0, 1, 2], product.clone().public_key.unwrap());
+        let product = context.contract.products.get(&product.id).unwrap();
+        assert_eq!(new_pk, product.clone().public_key.unwrap());
     }
 
     #[test]
@@ -148,18 +110,16 @@ pub(crate) mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let product = generate_product().public_key(signer.public_key().to_vec());
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let new_signer = MessageSigner::new();
+        let new_pk = new_signer.public_key().to_vec();
 
         context.switch_account(&alice);
         context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]))
+            context.contract.set_public_key(product.clone().id, Base64VecU8(new_pk))
         });
     }
 
@@ -168,34 +128,43 @@ pub(crate) mod tests {
     fn set_public_key_without_deposit() {
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let product = generate_product().public_key(signer.public_key().to_vec());
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let new_signer = MessageSigner::new();
+        let new_pk = new_signer.public_key().to_vec();
 
         context.switch_account(&admin);
 
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context
-            .contract
-            .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]));
+        context.contract.set_public_key(product.id, Base64VecU8(new_pk));
     }
 
     #[test]
     fn assert_cap_in_bounds() {
-        get_product().assert_cap(200);
+        generate_product().assert_cap(200);
     }
 
     #[test]
     #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
     fn assert_cap_less_than_min() {
-        get_product().assert_cap(10);
+        generate_product().assert_cap(10);
     }
 
     #[test]
     #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
     fn assert_cap_more_than_max() {
-        get_product().assert_cap(500_000_000_000);
+        generate_product().assert_cap(500_000_000_000);
+    }
+
+    fn generate_product() -> Product {
+        Product::generate("product")
+            .enabled(true)
+            .lockup_term(YEAR_IN_MS)
+            .apy(Apy::Constant(UDecimal::new(12, 2)))
+            .cap(100, 100_000_000_000)
+            .with_allows_top_up(false)
+            .with_allows_restaking(false)
     }
 }
 
@@ -213,7 +182,7 @@ pub(crate) mod helpers {
         common::{tests::Context, Duration, TokenAmount, UDecimal},
         jar::model::JarTicket,
         product::{
-            model::{Apy, Cap, FixedProductTerms, Product, Terms},
+            model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
             tests::YEAR_IN_MS,
         },
         Contract,
@@ -283,6 +252,11 @@ pub(crate) mod helpers {
 
         pub(crate) fn flexible(mut self) -> Self {
             self.terms = Terms::Flexible;
+            self
+        }
+
+        pub(crate) fn with_withdrawal_fee(mut self, fee: WithdrawalFee) -> Self {
+            self.withdrawal_fee = Some(fee);
             self
         }
 
