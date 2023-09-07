@@ -6,12 +6,12 @@ pub mod view;
 #[cfg(test)]
 pub(crate) mod tests {
     use near_sdk::{
-        json_types::{Base64VecU8, U128, U64},
+        json_types::{Base64VecU8, U128},
         test_utils::accounts,
     };
 
     use crate::{
-        common::{tests::Context, UDecimal},
+        common::{tests::Context, Duration, UDecimal},
         product::{
             api::ProductApi,
             command::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
@@ -26,6 +26,8 @@ pub(crate) mod tests {
         ]
     }
 
+    pub(crate) const YEAR_IN_MS: Duration = 365 * 24 * 60 * 60 * 1000;
+
     pub(crate) fn get_product() -> Product {
         Product {
             id: "product".to_string(),
@@ -35,7 +37,7 @@ pub(crate) mod tests {
                 max: 100_000_000_000,
             },
             terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: 365 * 24 * 60 * 60 * 1000,
+                lockup_term: YEAR_IN_MS,
                 allows_top_up: false,
                 allows_restaking: false,
             }),
@@ -45,71 +47,48 @@ pub(crate) mod tests {
         }
     }
 
-    pub(crate) fn get_fee_product_command(fee: WithdrawalFeeDto) -> RegisterProductCommand {
+    pub(crate) fn get_product_with_fee_command(fee: WithdrawalFeeDto) -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_with_fee".to_string(),
-            apy_default: (U128(12), 2),
-            apy_fallback: None,
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
-                allows_restaking: false,
-                allows_top_up: false,
-            }),
             withdrawal_fee: Some(fee),
-            public_key: None,
-            is_enabled: true,
+            ..Default::default()
         }
     }
 
     pub(crate) fn get_register_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product".to_string(),
-            apy_default: (U128(12), 2),
-            apy_fallback: None,
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
+            ..Default::default()
+        }
+    }
+
+    pub(crate) fn get_register_refillable_product_command() -> RegisterProductCommand {
+        RegisterProductCommand {
+            id: "product_refillable".to_string(),
             terms: TermsDto::Fixed(FixedProductTermsDto {
-                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
-                allows_restaking: false,
-                allows_top_up: false,
+                allows_top_up: true,
+                ..Default::default()
             }),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
+            ..Default::default()
         }
     }
 
     pub(crate) fn get_register_flexible_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_flexible".to_string(),
-            apy_default: (U128(12), 2),
-            apy_fallback: None,
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
             terms: TermsDto::Flexible,
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
+            ..Default::default()
         }
     }
 
     pub(crate) fn get_register_restakable_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product_restakable".to_string(),
-            apy_default: (U128(12), 2),
-            apy_fallback: None,
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
             terms: TermsDto::Fixed(FixedProductTermsDto {
-                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
                 allows_restaking: true,
-                allows_top_up: false,
+                ..Default::default()
             }),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
+            ..Default::default()
         }
     }
 
@@ -118,16 +97,8 @@ pub(crate) mod tests {
             id: "product_premium".to_string(),
             apy_default: (U128(20), 2),
             apy_fallback: Some((U128(10), 2)),
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
-                allows_top_up: false,
-                allows_restaking: false,
-            }),
-            withdrawal_fee: None,
             public_key: public_key.or_else(|| Some(Base64VecU8(get_premium_product_public_key()))),
-            is_enabled: true,
+            ..Default::default()
         }
     }
 

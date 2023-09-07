@@ -207,7 +207,10 @@ impl JarApi for Contract {
 mod tests {
     use near_sdk::AccountId;
 
-    use crate::{jar::model::Jar, product::tests::get_product};
+    use crate::{
+        jar::model::Jar,
+        product::tests::{get_product, YEAR_IN_MS},
+    };
 
     #[test]
     fn get_interest_before_maturity() {
@@ -220,7 +223,7 @@ mod tests {
             0,
         );
 
-        let interest = jar.get_interest(&product, 365 * 24 * 60 * 60 * 1000);
+        let interest = jar.get_interest(&product, YEAR_IN_MS);
         assert_eq!(12_000_000, interest);
     }
 

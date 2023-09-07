@@ -110,10 +110,10 @@ impl Contract {
     fn get_fee(&self, product: &Product, jar: &Jar) -> Option<Fee> {
         product
             .withdrawal_fee
-            .clone()
+            .as_ref()
             .map(|fee| match fee {
-                WithdrawalFee::Fix(amount) => amount,
-                WithdrawalFee::Percent(percent) => percent.mul(jar.principal),
+                WithdrawalFee::Fix(amount) => *amount,
+                WithdrawalFee::Percent(percent) => percent * jar.principal,
             })
             .map(|fee| Fee {
                 amount: fee,
@@ -173,37 +173,50 @@ impl WithdrawCallbacks for Contract {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::{Duration, json_types::{U128, U64}, test_utils::accounts};
+    use near_sdk::{
+        json_types::{U128, U64},
+        test_utils::accounts,
+        AccountId, PromiseOrValue,
+    };
 
     use crate::{
         common::{tests::Context, U32},
         jar::{api::JarApi, model::JarTicket},
         product::{
             api::ProductApi,
-            command::WithdrawalFeeDto,
+            command::{RegisterProductCommand, WithdrawalFeeDto},
             model::Product,
-            tests::{get_fee_product_command, get_register_flexible_product_command, get_register_product_command},
+            tests::{
+                get_product_with_fee_command, get_register_flexible_product_command, get_register_product_command,
+            },
         },
         withdraw::api::WithdrawApi,
     };
 
-    #[test]
-    #[should_panic(expected = "Account doesn't own this jar")]
-    fn withdraw_locked_jar_before_maturity_by_not_owner() {
+    fn prepare_jar(product: RegisterProductCommand) -> (AccountId, Product, Context) {
         let alice = accounts(0);
         let admin = accounts(1);
         let mut context = Context::new(admin.clone());
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
         let ticket = JarTicket {
-            product_id: "product".to_string(),
+            product_id: product.id.clone(),
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice, ticket, U128(1_000_000), None);
+
+        context.switch_account(&admin);
+        context.with_deposit_yocto(1, |context| context.contract.register_product(product.clone()));
+
+        context
+            .contract
+            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+
+        (alice, product.into(), context)
+    }
+
+    #[test]
+    #[should_panic(expected = "Account doesn't own this jar")]
+    fn withdraw_locked_jar_before_maturity_by_not_owner() {
+        let (_, _, mut context) = prepare_jar(get_register_product_command());
 
         context.contract.withdraw(U32(0), None);
     }
@@ -211,24 +224,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "The jar is not mature yet")]
     fn withdraw_locked_jar_before_maturity_by_owner() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(admin.clone());
-
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        let ticket = JarTicket {
-            product_id: "product".to_string(),
-
-            valid_until: U64(0),
-        };
-
-        context
-            .contract
-            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        let (alice, _, mut context) = prepare_jar(get_register_product_command());
 
         context.switch_account(&alice);
         context.contract.withdraw(U32(0), None);
@@ -237,51 +233,17 @@ mod tests {
     #[test]
     #[should_panic(expected = "Account doesn't own this jar")]
     fn withdraw_locked_jar_after_maturity_by_not_owner() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(admin.clone());
-
-        let product: &Product = &get_register_product_command().into();
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        let ticket = JarTicket {
-            product_id: product.id.clone(),
-            valid_until: U64(0),
-        };
-        context
-            .contract
-            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        let (_, product, mut context) = prepare_jar(get_register_product_command());
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
-
         context.contract.withdraw(U32(0), None);
     }
 
     #[test]
     fn withdraw_locked_jar_after_maturity_by_owner() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(admin.clone());
-
-        let product: Product = get_register_product_command().into();
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        let ticket = JarTicket {
-            product_id: product.id.clone(),
-            valid_until: U64(0),
-        };
-        context
-            .contract
-            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        let (alice, product, mut context) = prepare_jar(get_register_product_command());
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
-
         context.switch_account(&alice);
         context.contract.withdraw(U32(0), None);
     }
@@ -289,25 +251,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Account doesn't own this jar")]
     fn withdraw_flexible_jar_by_not_owner() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(admin.clone());
-
-        let product: Product = get_register_flexible_product_command().into();
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_flexible_product_command())
-        });
-
-        let ticket = JarTicket {
-            product_id: product.id,
-            valid_until: U64(0),
-        };
-        context
-            .contract
-            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        let (_, _, mut context) = prepare_jar(get_register_flexible_product_command());
 
         context.set_block_timestamp_in_days(1);
         context.contract.withdraw(U32(0), None);
@@ -315,25 +259,7 @@ mod tests {
 
     #[test]
     fn withdraw_flexible_jar_by_owner_full() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(admin.clone());
-
-        let product: Product = get_register_flexible_product_command().into();
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_flexible_product_command())
-        });
-
-        let ticket = JarTicket {
-            product_id: product.id,
-            valid_until: U64(0),
-        };
-        context
-            .contract
-            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        let (alice, _, mut context) = prepare_jar(get_register_flexible_product_command());
 
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
@@ -345,25 +271,7 @@ mod tests {
 
     #[test]
     fn withdraw_flexible_jar_by_owner_with_sufficient_balance() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(admin.clone());
-
-        let product: Product = get_register_flexible_product_command().into();
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_flexible_product_command())
-        });
-
-        let ticket = JarTicket {
-            product_id: product.id,
-            valid_until: U64(0),
-        };
-        context
-            .contract
-            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        let (alice, _, mut context) = prepare_jar(get_register_flexible_product_command());
 
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
@@ -376,53 +284,63 @@ mod tests {
     #[test]
     #[should_panic(expected = "Insufficient balance")]
     fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let mut context = Context::new(admin.clone());
-
-        let product: Product = get_register_flexible_product_command().into();
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .register_product(get_register_flexible_product_command())
-        });
-
-        let ticket = JarTicket {
-            product_id: product.id,
-            valid_until: U64(0),
-        };
-        context
-            .contract
-            .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+        let (alice, _, mut context) = prepare_jar(get_register_flexible_product_command());
 
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
-
         context.contract.withdraw(U32(0), Some(U128(2_000_000)));
     }
 
     #[test]
-    fn product_with_fee() {
-        // let alice = accounts(0);
-        // let admin = accounts(1);
-        // let mut context = Context::new(admin.clone());
-        //
-        // let product: Product = get_fee_product_command(WithdrawalFeeDto::Fix(U128(10))).into();
-        // context.switch_account(&admin);
-        // context.with_deposit_yocto(1, |context| {
-        //     context
-        //         .contract
-        //         .register_product(get_register_flexible_product_command())
-        // });
-        //
-        // let ticket = JarTicket {
-        //     product_id: product.id,
-        //     valid_until: U64(0),
-        // };
-        //
-        // context
-        //     .contract
-        //     .create_jar(alice.clone(), ticket, U128(1_000_000), None);
+    fn product_with_fixed_fee() {
+        let (alice, product, mut context) = prepare_jar(get_product_with_fee_command(WithdrawalFeeDto::Fix(U128(10))));
+
+        context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+        context.switch_account(&alice);
+
+        let PromiseOrValue::Value(withdraw) = context.contract.withdraw(U32(0), Some(U128(100_000))) else {
+            panic!("Invalid promise type");
+        };
+
+        assert_eq!(withdraw.withdrawn_amount, U128(99990));
+        assert_eq!(withdraw.fee, U128(10));
+
+        let jar = context.contract.get_jar(U32(0));
+
+        assert_eq!(jar.principal, U128(900000));
+    }
+
+    #[test]
+    fn product_with_percent_fee() {
+        let (alice, product, mut context) =
+            prepare_jar(get_product_with_fee_command(WithdrawalFeeDto::Percent(U128(5), 4)));
+
+        context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+        context.switch_account(&alice);
+
+        let PromiseOrValue::Value(withdraw) = context.contract.withdraw(U32(0), Some(U128(100_000))) else {
+            panic!("Invalid promise type");
+        };
+
+        assert_eq!(withdraw.withdrawn_amount, U128(99500));
+        assert_eq!(withdraw.fee, U128(500));
+
+        let jar = context.contract.get_jar(U32(0));
+
+        assert_eq!(jar.principal, U128(900000));
+    }
+
+    #[test]
+    fn test_failed_withdraw() {
+        let (_, _, mut context) = prepare_jar(get_register_product_command());
+
+        let jar_view = context.contract.get_jar(U32(0));
+        let jar = context.contract.jars[0].clone();
+        let withdraw = context.contract.after_withdraw_internal(jar, 1234, None, false);
+
+        assert_eq!(withdraw.withdrawn_amount, U128(0));
+        assert_eq!(withdraw.fee, U128(0));
+
+        assert_eq!(jar_view, context.contract.get_jar(U32(0)));
     }
 }

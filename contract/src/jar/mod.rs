@@ -5,9 +5,12 @@ pub mod view;
 #[cfg(test)]
 mod helpers {
     use near_sdk::AccountId;
-    use crate::common::{Timestamp, TokenAmount};
-    use crate::jar::model::{Jar, JarState};
-    use crate::product::model::ProductId;
+
+    use crate::{
+        common::{Timestamp, TokenAmount},
+        jar::model::{Jar, JarState},
+        product::model::ProductId,
+    };
 
     impl Jar {
         pub(crate) fn generate(index: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
