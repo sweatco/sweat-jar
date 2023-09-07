@@ -7,9 +7,8 @@ use near_sdk::{
 
 use crate::product::model::ProductId;
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Debug, PartialEq, Clone)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(Debug, PartialEq))]
 pub struct CeFiJar {
     pub id: String,
     pub account_id: AccountId,

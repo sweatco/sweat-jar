@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug};
 
 use near_sdk::{
     json_types::{U128, U64},
@@ -10,9 +10,8 @@ use crate::{common::U32, product::model::ProductId, *};
 
 pub type JarIndexView = U32;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct JarView {
     pub index: JarIndexView,
     pub account_id: AccountId,
@@ -37,9 +36,8 @@ impl From<Jar> for JarView {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct AggregatedTokenAmountView {
     pub detailed: HashMap<JarIndexView, U128>,
     pub total: U128,

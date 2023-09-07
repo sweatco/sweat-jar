@@ -80,6 +80,8 @@ impl Contract {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use common::tests::Context;
     use near_sdk::{
         json_types::{U128, U64},
@@ -90,7 +92,11 @@ mod tests {
     use crate::{
         claim::api::ClaimApi,
         common::{UDecimal, U32},
-        jar::{api::JarApi, model::JarTicket},
+        jar::{
+            api::JarApi,
+            model::JarTicket,
+            view::{AggregatedTokenAmountView, JarView},
+        },
         penalty::api::PenaltyApi,
         product::{
             api::*,
@@ -181,7 +187,9 @@ mod tests {
         let context = Context::new(admin);
 
         let interest = context.contract.get_total_interest(alice);
+
         assert_eq!(interest.total.0, 0);
+        assert_eq!(interest.detailed, HashMap::new());
     }
 
     #[test]
@@ -195,10 +203,15 @@ mod tests {
             .with_products(&[reference_product.clone()])
             .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
 
+        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
+        assert_eq!(jar, contract_jar);
+
         context.set_block_timestamp_in_minutes(30);
 
-        let interest = context.contract.get_total_interest(alice.clone()).total.0;
-        assert_eq!(interest, 684);
+        let interest = context.contract.get_total_interest(alice.clone());
+
+        assert_eq!(interest.total.0, 684);
+        assert_eq!(interest.detailed, HashMap::from([(U32(0), U128(684))]))
     }
 
     #[test]
@@ -212,10 +225,20 @@ mod tests {
             .with_products(&[reference_product.clone()])
             .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
 
+        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
+        assert_eq!(jar, contract_jar);
+
         context.set_block_timestamp_in_days(365);
 
-        let interest = context.contract.get_total_interest(alice.clone()).total.0;
-        assert_eq!(interest, 12_000_000);
+        let interest = context.contract.get_total_interest(alice.clone());
+
+        assert_eq!(
+            interest,
+            AggregatedTokenAmountView {
+                detailed: [(U32(0), U128(12_000_000))].into(),
+                total: U128(12_000_000)
+            }
+        )
     }
 
     #[test]
@@ -228,6 +251,9 @@ mod tests {
         let mut context = Context::new(admin.clone())
             .with_products(&[reference_product.clone()])
             .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
+
+        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
+        assert_eq!(jar, contract_jar);
 
         context.set_block_timestamp_in_days(400);
 
@@ -245,6 +271,9 @@ mod tests {
         let mut context = Context::new(admin.clone())
             .with_products(&[reference_product.clone()])
             .with_jars(&[Jar::generate(0, alice, &reference_product.id).principal(100_000_000)]);
+
+        let contract_jar = JarView::from(context.contract.jars.get(0).unwrap().clone());
+        assert_eq!(jar, contract_jar);
 
         context.set_block_timestamp_in_days(182);
 

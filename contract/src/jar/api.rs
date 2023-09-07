@@ -258,8 +258,8 @@ mod signature_tests {
                 get_register_restakable_product_command,
             },
         },
+        withdraw::api::WithdrawApi,
     };
-    use crate::withdraw::api::WithdrawApi;
 
     // Signature for structure (value -> utf8 bytes):
     // contract_id: "owner" -> [111, 119, 110, 101, 114]

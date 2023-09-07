@@ -14,7 +14,7 @@ pub(crate) mod tests {
         common::{tests::Context, UDecimal},
         product::{
             api::ProductApi,
-            command::{FixedProductTermsDto, RegisterProductCommand, TermsDto},
+            command::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
             model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms},
         },
     };
@@ -40,6 +40,24 @@ pub(crate) mod tests {
                 allows_restaking: false,
             }),
             withdrawal_fee: None,
+            public_key: None,
+            is_enabled: true,
+        }
+    }
+
+    pub(crate) fn get_fee_product_command(fee: WithdrawalFeeDto) -> RegisterProductCommand {
+        RegisterProductCommand {
+            id: "product_with_fee".to_string(),
+            apy_default: (U128(12), 2),
+            apy_fallback: None,
+            cap_min: U128(100),
+            cap_max: U128(100_000_000_000),
+            terms: TermsDto::Fixed(FixedProductTermsDto {
+                lockup_term: U64(365 * 24 * 60 * 60 * 1000),
+                allows_restaking: false,
+                allows_top_up: false,
+            }),
+            withdrawal_fee: Some(fee),
             public_key: None,
             is_enabled: true,
         }
