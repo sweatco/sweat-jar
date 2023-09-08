@@ -3,16 +3,9 @@ use workspaces::Account;
 use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
 #[tokio::test]
-async fn withdraw_fee() -> anyhow::Result<()> {
-    println!("👷🏽 Run withdraw fee test");
+async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
+    println!("👷🏽 Run fixed withdraw fee test");
 
-    test_fixed_fee().await?;
-    test_percent_fee().await?;
-
-    Ok(())
-}
-
-async fn test_fixed_fee() -> anyhow::Result<()> {
     let (context, alice, manager, fee_account) = prepare_contract().await?;
 
     let fee_balance_before = context.ft_contract.ft_balance_of(&fee_account).await?.0;
@@ -56,7 +49,10 @@ async fn test_fixed_fee() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn test_percent_fee() -> anyhow::Result<()> {
+#[tokio::test]
+async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
+    println!("👷🏽 Run percent withdraw fee test");
+
     let (context, alice, manager, fee_account) = prepare_contract().await?;
 
     let fee_balance_before = context.ft_contract.ft_balance_of(&fee_account).await?.0;
