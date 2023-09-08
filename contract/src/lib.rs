@@ -29,6 +29,9 @@ mod penalty;
 mod product;
 mod withdraw;
 
+// TODO: document all the numbers
+// TODO: document gas amounts and how we got these numbers
+
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
