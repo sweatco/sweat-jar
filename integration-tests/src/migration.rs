@@ -2,7 +2,8 @@ use serde_json::json;
 
 use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
-pub(crate) async fn run() -> anyhow::Result<()> {
+#[tokio::test]
+async fn migration() -> anyhow::Result<()> {
     println!("👷🏽 Run migration test");
 
     let mut context = Context::new().await?;

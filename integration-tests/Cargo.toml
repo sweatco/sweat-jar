@@ -4,10 +4,10 @@ version = "1.0.0"
 publish = false
 edition = "2021"
 
-[[bin]]
-name = "integration-tests"
+[lib]
+name = "integration_tests"
 
-[dependencies]
+[dev-dependencies]
 near-sdk = { workspace = true }
 
 anyhow = "1.0"
