@@ -13,10 +13,10 @@ cov:
 	./scripts/coverage.sh
 
 test:
-	cargo test --all
+	cargo test --package sweat_jar
 
 integration:
-	cargo run -p integration-tests
+	cargo test --package integration-tests
 
 int: integration
 

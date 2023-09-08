@@ -59,7 +59,7 @@ impl FtTransferPromise for Promise {
         let args = json!({
             "receiver_id": receiver_id,
             "amount": amount.to_string(),
-            "memo": memo.unwrap_or("".to_string()),
+            "memo": memo.unwrap_or_default(),
         })
         .to_string()
         .as_bytes()
