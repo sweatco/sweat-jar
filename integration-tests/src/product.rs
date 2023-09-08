@@ -1,3 +1,4 @@
+#![cfg(test)]
 use serde_json::{json, Value};
 
 pub(crate) enum RegisterProductCommand {

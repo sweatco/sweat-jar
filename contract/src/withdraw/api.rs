@@ -115,9 +115,9 @@ impl Contract {
                 WithdrawalFee::Fix(amount) => *amount,
                 WithdrawalFee::Percent(percent) => percent * jar.principal,
             })
-            .map(|fee| Fee {
-                amount: fee,
+            .map(|amount| Fee {
                 beneficiary_id: self.fee_account_id.clone(),
+                amount,
             })
     }
 }

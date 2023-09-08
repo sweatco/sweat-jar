@@ -2851,7 +2851,6 @@ dependencies = [
  "near-self-update",
  "rand 0.7.3",
  "sha256",
- "uint",
 ]
 
 [[package]]

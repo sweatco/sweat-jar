@@ -1,6 +1,9 @@
+#![cfg(test)]
+
 use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
-pub(crate) async fn run() -> anyhow::Result<()> {
+#[tokio::test]
+async fn happy_flow() -> anyhow::Result<()> {
     println!("👷🏽 Run happy flow test");
 
     let mut context = Context::new().await?;
