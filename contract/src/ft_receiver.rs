@@ -113,7 +113,7 @@ mod tests {
 
         let ticket_amount = 1_000_000u128;
         let ticket_valid_until = 100_000_000u64;
-        let signature = signer.sign(
+        let signature = signer.sign_base64(
             Contract::get_signature_material(
                 &context.owner,
                 &alice,

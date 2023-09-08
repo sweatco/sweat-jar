@@ -94,7 +94,12 @@ mod tests {
             view::{AggregatedTokenAmountView, JarView},
         },
         penalty::api::PenaltyApi,
-        product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
+        product::{
+            api::*,
+            helpers::MessageSigner,
+            model::DowngradableApy,
+            tests::{get_register_product_command, YEAR_IN_MS},
+        },
         withdraw::api::WithdrawApi,
     };
 
@@ -342,7 +347,7 @@ mod tests {
     fn generate_product() -> Product {
         Product::generate("product")
             .enabled(true)
-            .lockup_term(365 * 24 * 60 * 60 * 1000)
+            .lockup_term(YEAR_IN_MS)
             .apy(Apy::Constant(UDecimal::new(12, 2)))
     }
 }

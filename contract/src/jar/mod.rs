@@ -7,7 +7,7 @@ mod helpers {
     use near_sdk::AccountId;
 
     use crate::{
-        common::{Timestamp, TokenAmount},
+        common::TokenAmount,
         jar::model::{Jar, JarState},
         product::model::ProductId,
     };
@@ -30,11 +30,6 @@ mod helpers {
 
         pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {
             self.principal = principal;
-            self
-        }
-
-        pub(crate) fn created_at(mut self, created_at: Timestamp) -> Jar {
-            self.created_at = created_at;
             self
         }
     }

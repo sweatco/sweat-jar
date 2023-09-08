@@ -5,99 +5,23 @@ pub mod view;
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use near_sdk::{
-        json_types::{Base64VecU8, U128},
-        test_utils::accounts,
-    };
+    use near_sdk::{json_types::Base64VecU8, test_utils::accounts};
 
     use crate::{
         common::{tests::Context, Duration, UDecimal},
         product::{
             api::ProductApi,
-            command::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
-            model::{Apy, Cap, FixedProductTerms, Product, Terms},
+            command::RegisterProductCommand,
+            helpers::MessageSigner,
+            model::{Apy, Product},
         },
     };
 
-    fn get_premium_product_public_key() -> Vec<u8> {
-        vec![
-            33, 80, 163, 149, 64, 30, 150, 45, 68, 212, 97, 122, 213, 118, 189, 174, 239, 109, 48, 82, 50, 35, 197,
-            176, 50, 211, 183, 128, 207, 1, 8, 68,
-        ]
-    }
-
     pub(crate) const YEAR_IN_MS: Duration = 365 * 24 * 60 * 60 * 1000;
-
-    pub(crate) fn get_product() -> Product {
-        Product {
-            id: "product".to_string(),
-            apy: Apy::Constant(UDecimal::new(12, 2)),
-            cap: Cap {
-                min: 100,
-                max: 100_000_000_000,
-            },
-            terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: YEAR_IN_MS,
-                allows_top_up: false,
-                allows_restaking: false,
-            }),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
-        }
-    }
-
-    pub(crate) fn get_product_with_fee_command(fee: WithdrawalFeeDto) -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_with_fee".to_string(),
-            withdrawal_fee: Some(fee),
-            ..Default::default()
-        }
-    }
 
     pub(crate) fn get_register_product_command() -> RegisterProductCommand {
         RegisterProductCommand {
             id: "product".to_string(),
-            ..Default::default()
-        }
-    }
-
-    pub(crate) fn get_register_refillable_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_refillable".to_string(),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                allows_top_up: true,
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-    }
-
-    pub(crate) fn get_register_flexible_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_flexible".to_string(),
-            terms: TermsDto::Flexible,
-            ..Default::default()
-        }
-    }
-
-    pub(crate) fn get_register_restakable_product_command() -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_restakable".to_string(),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
-                allows_restaking: true,
-                ..Default::default()
-            }),
-            ..Default::default()
-        }
-    }
-
-    pub(crate) fn get_register_premium_product_command(public_key: Option<Base64VecU8>) -> RegisterProductCommand {
-        RegisterProductCommand {
-            id: "product_premium".to_string(),
-            apy_default: (U128(20), 2),
-            apy_fallback: Some((U128(10), 2)),
-            public_key: public_key.or_else(|| Some(Base64VecU8(get_premium_product_public_key()))),
             ..Default::default()
         }
     }
@@ -162,26 +86,22 @@ pub(crate) mod tests {
     fn set_public_key() {
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let product = generate_product().public_key(signer.public_key().to_vec());
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let new_signer = MessageSigner::new();
+        let new_pk = new_signer.public_key().to_vec();
 
         context.switch_account(&admin);
-
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
         context.with_deposit_yocto(1, |context| {
             context
                 .contract
-                .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]))
+                .set_public_key(product.id.clone(), Base64VecU8(new_pk.clone()))
         });
 
-        let product = context
-            .contract
-            .products
-            .get(&get_register_product_command().id)
-            .unwrap();
-        assert_eq!(vec![0, 1, 2], product.clone().public_key.unwrap());
+        let product = context.contract.products.get(&product.id).unwrap();
+        assert_eq!(&new_pk, product.public_key.as_ref().unwrap());
     }
 
     #[test]
@@ -190,18 +110,16 @@ pub(crate) mod tests {
         let alice = accounts(0);
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let product = generate_product().public_key(signer.public_key().to_vec());
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
 
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
+        let new_signer = MessageSigner::new();
+        let new_pk = new_signer.public_key().to_vec();
 
         context.switch_account(&alice);
         context.with_deposit_yocto(1, |context| {
-            context
-                .contract
-                .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]))
+            context.contract.set_public_key(product.id, Base64VecU8(new_pk))
         });
     }
 
@@ -210,34 +128,43 @@ pub(crate) mod tests {
     fn set_public_key_without_deposit() {
         let admin = accounts(1);
 
-        let mut context = Context::new(admin.clone());
+        let signer = MessageSigner::new();
+        let product = generate_product().public_key(signer.public_key().to_vec());
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let new_signer = MessageSigner::new();
+        let new_pk = new_signer.public_key().to_vec();
 
         context.switch_account(&admin);
 
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        context
-            .contract
-            .set_public_key(get_register_product_command().id, Base64VecU8(vec![0, 1, 2]));
+        context.contract.set_public_key(product.id, Base64VecU8(new_pk));
     }
 
     #[test]
     fn assert_cap_in_bounds() {
-        get_product().assert_cap(200);
+        generate_product().assert_cap(200);
     }
 
     #[test]
     #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
     fn assert_cap_less_than_min() {
-        get_product().assert_cap(10);
+        generate_product().assert_cap(10);
     }
 
     #[test]
     #[should_panic(expected = "Total amount is out of product bounds: [100..100000000000]")]
     fn assert_cap_more_than_max() {
-        get_product().assert_cap(500_000_000_000);
+        generate_product().assert_cap(500_000_000_000);
+    }
+
+    fn generate_product() -> Product {
+        Product::generate("product")
+            .enabled(true)
+            .lockup_term(YEAR_IN_MS)
+            .apy(Apy::Constant(UDecimal::new(12, 2)))
+            .cap(100, 100_000_000_000)
+            .with_allows_top_up(false)
+            .with_allows_restaking(false)
     }
 }
 
@@ -248,11 +175,17 @@ pub(crate) mod helpers {
     use ed25519_dalek::{Keypair, Signer};
     use fake::{Fake, Faker};
     use general_purpose::STANDARD;
+    use near_sdk::AccountId;
     use rand::rngs::OsRng;
 
     use crate::{
-        common::{Duration, TokenAmount, UDecimal},
-        product::model::{Apy, Cap, FixedProductTerms, Product, Terms},
+        common::{tests::Context, Duration, TokenAmount, UDecimal},
+        jar::model::JarTicket,
+        product::{
+            model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
+            tests::YEAR_IN_MS,
+        },
+        Contract,
     };
 
     pub(crate) struct MessageSigner {
@@ -267,12 +200,14 @@ pub(crate) mod helpers {
             Self { keypair }
         }
 
-        pub(crate) fn sign(&self, message: &str) -> String {
+        pub(crate) fn sign(&self, message: &str) -> Vec<u8> {
             let message_hash = digest(Algorithm::SHA256, message.as_bytes());
             let signature = self.keypair.sign(message_hash.as_slice());
-            let signature_bytes = signature.to_bytes().to_vec();
+            signature.to_bytes().to_vec()
+        }
 
-            STANDARD.encode(signature_bytes)
+        pub(crate) fn sign_base64(&self, message: &str) -> String {
+            STANDARD.encode(self.sign(message))
         }
 
         pub(crate) fn public_key(&self) -> &[u8; 32] {
@@ -320,6 +255,11 @@ pub(crate) mod helpers {
             self
         }
 
+        pub(crate) fn with_withdrawal_fee(mut self, fee: WithdrawalFee) -> Self {
+            self.withdrawal_fee = Some(fee);
+            self
+        }
+
         pub(crate) fn lockup_term(mut self, term: Duration) -> Self {
             self.terms = match self.terms {
                 Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
@@ -341,8 +281,24 @@ pub(crate) mod helpers {
                 Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms { allows_top_up, ..terms }),
                 Terms::Flexible => Terms::Fixed(FixedProductTerms {
                     allows_top_up,
-                    lockup_term: 365 * 24 * 60 * 60 * 1_000,
+                    lockup_term: YEAR_IN_MS,
                     allows_restaking: false,
+                }),
+            };
+
+            self
+        }
+
+        pub(crate) fn with_allows_restaking(mut self, allows_restaking: bool) -> Self {
+            self.terms = match self.terms {
+                Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
+                    allows_restaking,
+                    ..terms
+                }),
+                Terms::Flexible => Terms::Fixed(FixedProductTerms {
+                    allows_restaking,
+                    lockup_term: YEAR_IN_MS,
+                    allows_top_up: false,
                 }),
             };
 
@@ -352,6 +308,24 @@ pub(crate) mod helpers {
         pub(crate) fn apy(mut self, apy: Apy) -> Self {
             self.apy = apy;
             self
+        }
+    }
+
+    impl Context {
+        pub(crate) fn get_signature_material(
+            &self,
+            receiver_id: &AccountId,
+            ticket: &JarTicket,
+            amount: TokenAmount,
+        ) -> String {
+            Contract::get_signature_material(
+                &self.owner,
+                receiver_id,
+                &ticket.product_id,
+                amount,
+                ticket.valid_until.0,
+                None,
+            )
         }
     }
 }
