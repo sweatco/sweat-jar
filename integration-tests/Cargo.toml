@@ -7,7 +7,7 @@ edition = "2021"
 [lib]
 name = "integration_tests"
 
-[dependencies]
+[dev-dependencies]
 near-sdk = { workspace = true }
 
 anyhow = "1.0"

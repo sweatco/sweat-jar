@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 mod common;
 mod context;
 mod ft_contract_interface;

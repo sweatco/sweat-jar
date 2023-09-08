@@ -1,11 +1,9 @@
-#![cfg(test)]
-
 use workspaces::Account;
 
 use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
 #[tokio::test]
-pub async fn withdraw_fee() -> anyhow::Result<()> {
+async fn withdraw_fee() -> anyhow::Result<()> {
     println!("👷🏽 Run withdraw fee test");
 
     test_fixed_fee().await?;

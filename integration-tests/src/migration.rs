@@ -1,11 +1,9 @@
-#![cfg(test)]
-
 use serde_json::json;
 
 use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
 #[tokio::test]
-pub async fn migration() -> anyhow::Result<()> {
+async fn migration() -> anyhow::Result<()> {
     println!("👷🏽 Run migration test");
 
     let mut context = Context::new().await?;

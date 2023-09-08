@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
 #[tokio::test]
