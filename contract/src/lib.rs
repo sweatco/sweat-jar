@@ -69,6 +69,7 @@ pub(crate) enum StorageKey {
 impl Contract {
     #[init]
     #[private]
+    #[must_use]
     pub fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
         Self {
             token_account_id,
@@ -91,7 +92,7 @@ mod tests {
     use super::*;
     use crate::{
         claim::api::ClaimApi,
-        common::{UDecimal, U32},
+        common::{u32::U32, udecimal::UDecimal},
         jar::{
             api::JarApi,
             view::{AggregatedTokenAmountView, JarView},
@@ -291,6 +292,27 @@ mod tests {
 
         interest = context.contract.get_total_interest(alice.clone()).total.0;
         assert_eq!(interest, 6_016_438);
+    }
+
+    #[test]
+    #[should_panic(expected = "Penalty is not applicable for constant APY")]
+    fn penalty_is_not_applicable_for_constant_apy() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let signer = MessageSigner::new();
+        let reference_product = Product::generate("premium_product")
+            .enabled(true)
+            .apy(Apy::Constant(UDecimal::new(20, 2)))
+            .public_key(signer.public_key().to_vec());
+        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
+
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product])
+            .with_jars(&[reference_jar]);
+
+        context.switch_account(&admin);
+        context.contract.set_penalty(0, true);
     }
 
     #[test]

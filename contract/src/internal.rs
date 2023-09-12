@@ -1,6 +1,6 @@
 use near_sdk::require;
 
-use crate::*;
+use crate::{env, AccountId, Contract, Jar, JarIndex, Product, ProductId};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -27,27 +27,15 @@ impl Contract {
     pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> Vec<JarIndex> {
         self.account_jars
             .get(account_id)
-            .map_or_else(Vec::new, |items| items.iter().cloned().collect())
+            .map_or_else(Vec::new, |items| items.iter().copied().collect())
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: &Jar) {
         self.insert_or_update_jar(jar);
-
-        let mut indices = self
-            .account_jars
-            .get(account_id)
-            .map_or_else(HashSet::new, |value| value.clone());
-        indices.insert(jar.index);
-
-        self.save_account_jars(account_id, indices);
-    }
-
-    pub(crate) fn save_account_jars(&mut self, account_id: &AccountId, indices: HashSet<JarIndex>) {
-        if indices.is_empty() {
-            self.account_jars.remove(account_id);
-        } else {
-            self.account_jars.insert(account_id.clone(), indices);
-        }
+        self.account_jars
+            .entry(account_id.clone())
+            .or_default()
+            .insert(jar.index);
     }
 
     fn insert_or_update_jar(&mut self, jar: &Jar) {

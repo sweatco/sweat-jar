@@ -10,7 +10,7 @@ deploy:
 	./scripts/deploy.sh
 
 cov:
-	./scripts/coverage.sh
+	cargo llvm-cov --hide-instantiations --open
 
 test:
 	cargo test --package sweat_jar
@@ -22,3 +22,6 @@ int: integration
 
 fmt:
 	cargo +nightly fmt --all
+
+lint:
+	./scripts/lint.sh

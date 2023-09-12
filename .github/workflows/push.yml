@@ -24,8 +24,16 @@ jobs:
           name: sweat-jar
           path: res/sweat_jar.wasm
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Lint
+        run: make lint
+
   unit-tests:
-    needs: [ build ]
+    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -34,7 +42,7 @@ jobs:
         run: make test
 
   integration-tests:
-    needs: [ build ]
+    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

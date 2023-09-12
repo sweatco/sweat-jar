@@ -11,22 +11,22 @@ use near_sdk::{
 };
 
 use crate::{
-    common::{Timestamp, TokenAmount, UDecimal, MINUTES_IN_YEAR, MS_IN_MINUTE},
+    common::{udecimal::UDecimal, Timestamp, TokenAmount, MINUTES_IN_YEAR, MS_IN_MINUTE},
     event::{emit, EventKind, TopUpData},
     jar::view::JarView,
     product::model::{Apy, Product, ProductId, Terms},
-    *,
+    Base64VecU8, Contract, PublicKey, Signature,
 };
 
 pub type JarIndex = u32;
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
-/// The data from this JarTicket is later combined with additional data, including the contract
+/// The data from this `JarTicket` is later combined with additional data, including the contract
 /// account address, the recipient's account ID, the desired amount of tokens to deposit,
 /// and the ID of the last jar created for the recipient. The concatenation of this data
 /// forms a message that is then hashed using the SHA-256 algorithm. This resulting hash is used
-/// to verify the authenticity of the data against an Ed25519 signature provided in the ft_transfer_call data.
+/// to verify the authenticity of the data against an Ed25519 signature provided in the `ft_transfer_call` data.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarTicket {
@@ -204,11 +204,11 @@ impl Jar {
             0
         };
 
-        let term_in_minutes = (effective_term / MS_IN_MINUTE) as u128;
+        let term_in_minutes = u128::from(effective_term / MS_IN_MINUTE);
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let interest = (term_in_minutes * total_interest) / MINUTES_IN_YEAR as u128;
+        let interest = (term_in_minutes * total_interest) / u128::from(MINUTES_IN_YEAR);
 
         base_interest + interest
     }
@@ -292,7 +292,7 @@ impl Contract {
     pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
         self.jars.get(index).map_or_else(
             || env::panic_str(&format!("Jar on index {index} doesn't exist")),
-            |value| value.clone(),
+            Clone::clone,
         )
     }
 
@@ -311,8 +311,8 @@ impl Contract {
                 .get(account_id)
                 .map(|jars| *jars.iter().max().unwrap_or_else(|| env::panic_str("Jar is empty.")));
 
-            let hash = self.get_ticket_hash(account_id, amount, ticket, last_jar_index);
-            let is_signature_valid = self.verify_signature(&signature.0, &pk, &hash);
+            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_index);
+            let is_signature_valid = Self::verify_signature(&signature.0, &pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
 
@@ -323,7 +323,6 @@ impl Contract {
     }
 
     fn get_ticket_hash(
-        &self,
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
@@ -356,12 +355,12 @@ impl Contract {
             receiver_account_id,
             product_id,
             amount,
-            last_jar_index.map_or_else(|| "".to_string(), |value| value.to_string(),),
+            last_jar_index.map_or_else(String::new, |value| value.to_string(),),
             valid_until,
         )
     }
 
-    fn verify_signature(&self, signature: &Vec<u8>, product_public_key: &Vec<u8>, ticket_hash: &Vec<u8>) -> bool {
+    fn verify_signature(signature: &Vec<u8>, product_public_key: &Vec<u8>, ticket_hash: &Vec<u8>) -> bool {
         let signature = Signature::from_bytes(signature.as_slice()).expect("Invalid signature");
 
         PublicKey::from_bytes(product_public_key.as_slice())

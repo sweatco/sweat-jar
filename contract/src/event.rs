@@ -113,7 +113,7 @@ pub(crate) fn emit(event: EventKind) {
 
 impl SweatJarEvent {
     pub(crate) fn emit(&self) {
-        log!(self.to_json_event_string())
+        log!(self.to_json_event_string());
     }
 
     fn to_json_string(&self) -> String {

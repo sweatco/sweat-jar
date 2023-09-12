@@ -6,7 +6,7 @@ use near_sdk::{
     AccountId,
 };
 
-use crate::{common::U32, product::model::ProductId, *};
+use crate::{common::u32::U32, product::model::ProductId, Jar};
 
 pub type JarIndexView = U32;
 

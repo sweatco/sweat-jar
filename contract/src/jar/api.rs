@@ -3,10 +3,11 @@ use std::collections::HashMap;
 use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 
 use crate::{
-    common::{TokenAmount, U32},
+    assert_ownership,
+    common::{u32::U32, TokenAmount},
     event::{emit, EventKind, RestakeData},
     jar::view::{AggregatedTokenAmountView, JarIndexView, JarView},
-    *,
+    Contract, ContractExt, Jar, JarIndex,
 };
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
@@ -208,7 +209,7 @@ mod tests {
     use near_sdk::test_utils::accounts;
 
     use crate::{
-        common::UDecimal,
+        common::udecimal::UDecimal,
         jar::model::Jar,
         product::{
             model::{Apy, Product},
@@ -247,7 +248,7 @@ mod signature_tests {
     };
 
     use crate::{
-        common::{tests::Context, UDecimal, U32},
+        common::{tests::Context, u32::U32, udecimal::UDecimal},
         jar::{
             api::JarApi,
             model::{Jar, JarTicket},

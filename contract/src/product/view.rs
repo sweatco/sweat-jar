@@ -10,7 +10,6 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct ProductView {
     pub id: ProductId,
     pub apy: ApyView,
@@ -27,7 +26,7 @@ impl From<Product> for ProductView {
             apy: value.apy.into(),
             cap: value.cap.into(),
             terms: value.terms.into(),
-            withdrawal_fee: value.withdrawal_fee.map(|fee| fee.into()),
+            withdrawal_fee: value.withdrawal_fee.map(Into::into),
             is_enabled: value.is_enabled,
         }
     }
@@ -35,7 +34,6 @@ impl From<Product> for ProductView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum TermsView {
     Fixed(FixedProductTermsView),
     Flexible,
@@ -43,7 +41,6 @@ pub enum TermsView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct FixedProductTermsView {
     pub lockup_term: U64,
     pub allows_top_up: bool,
@@ -65,7 +62,6 @@ impl From<Terms> for TermsView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFeeView {
     Fix(U128),
     Percent(f32),
@@ -82,7 +78,6 @@ impl From<WithdrawalFee> for WithdrawalFeeView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum ApyView {
     Constant(f32),
     Downgradable(DowngradableApyView),
@@ -99,7 +94,6 @@ impl From<Apy> for ApyView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct DowngradableApyView {
     pub default: f32,
     pub fallback: f32,
@@ -116,7 +110,6 @@ impl From<DowngradableApy> for DowngradableApyView {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct CapView {
     pub min: U128,
     pub max: U128,

@@ -176,7 +176,7 @@ mod tests {
     use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
 
     use crate::{
-        common::{tests::Context, UDecimal, U32},
+        common::{tests::Context, u32::U32, udecimal::UDecimal},
         jar::{api::JarApi, model::Jar},
         product::model::{Product, WithdrawalFee},
         withdraw::api::WithdrawApi,
