@@ -283,7 +283,7 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Invalid signature")]
+    #[should_panic(expected = "Signature must be 64 bytes")]
     fn verify_ticket_with_invalid_signature() {
         let alice = accounts(0);
         let admin = accounts(1);
@@ -566,7 +566,7 @@ mod signature_tests {
     fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {
         Product::generate(id)
             .enabled(true)
-            .public_key(signer.public_key().to_vec())
+            .public_key(signer.public_key())
             .cap(0, 100_000_000_000)
             .apy(Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(20, 2),

@@ -11,11 +11,11 @@ crate-type = ["cdylib"]
 near-sdk = { workspace = true }
 
 near-contract-standards = "4.1.1"
-ed25519-dalek = "1.0.1"
+ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 near-self-update = { git = "https://github.com/sweatco/near-self-update.git", rev = "7064db3cdd924efc7fa7c00664920a2b482e7bcf" }
 
 [dev-dependencies]
-rand = "0.7.0"
+rand = "0.8.5"
 sha256 = "1.3.0"
 crypto-hash = "0.3"
 fake = "2.8.0"
