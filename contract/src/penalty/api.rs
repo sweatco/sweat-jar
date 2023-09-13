@@ -39,7 +39,7 @@ impl PenaltyApi for Contract {
                 let updated_jar = jar.with_penalty_applied(value);
                 self.jars.replace(jar.index, updated_jar);
             }
-            _ => env::panic_str("Penalty is not applicable"),
+            Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
         };
 
         emit(ApplyPenalty(PenaltyData {

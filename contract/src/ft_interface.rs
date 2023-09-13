@@ -15,7 +15,6 @@ pub(crate) struct FungibleTokenContract {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Fee {
     pub beneficiary_id: AccountId,
     pub amount: TokenAmount,
@@ -43,7 +42,7 @@ impl FungibleTokenInterface for FungibleTokenContract {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())
                 .ft_transfer(receiver_id, amount - fee.amount, Some(memo.to_string()))
-                .ft_transfer(&fee.beneficiary_id, fee.amount, Some(format!("{} fee", memo)))
+                .ft_transfer(&fee.beneficiary_id, fee.amount, Some(format!("{memo} fee")))
         } else {
             Promise::new(self.address.clone()).ft_transfer(receiver_id, amount, Some(memo.to_string()))
         }

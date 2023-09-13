@@ -5,7 +5,7 @@ use near_sdk::{
 };
 
 use crate::{
-    common::{Duration, TokenAmount, UDecimal},
+    common::{udecimal::UDecimal, Duration, TokenAmount},
     env,
 };
 
@@ -14,7 +14,6 @@ pub type ProductId = String;
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Product {
     /// The unique identifier of the product.
     pub id: ProductId,
@@ -65,9 +64,8 @@ pub struct FixedProductTerms {
 }
 
 /// The `WithdrawalFee` enum describes withdrawal fee details, which can be either a fixed amount or a percentage of the withdrawal.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum WithdrawalFee {
     /// Describes a fixed amount of tokens that a user must pay as a fee on withdrawal.
     Fix(TokenAmount),
@@ -77,9 +75,8 @@ pub enum WithdrawalFee {
 }
 
 /// The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub enum Apy {
     /// Describes a constant APY, where the interest remains the same throughout the product's term.
     Constant(UDecimal),
@@ -89,9 +86,8 @@ pub enum Apy {
 }
 
 /// The `DowngradableApy` struct describes an APY that can be downgraded by an oracle.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct DowngradableApy {
     /// The default APY value if the user meets all the terms of the product.
     pub default: UDecimal,
@@ -103,7 +99,6 @@ pub struct DowngradableApy {
 /// The `Cap` struct defines the capacity of a deposit jar in terms of the minimum and maximum allowed principal amounts.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "near_sdk::serde")]
-#[cfg_attr(not(target_arch = "wasm32"), derive(PartialEq))]
 pub struct Cap {
     /// The minimum amount of tokens that can be stored in the jar.
     pub min: TokenAmount,

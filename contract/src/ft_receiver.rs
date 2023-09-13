@@ -5,7 +5,10 @@ use near_sdk::{
     serde_json, PromiseOrValue,
 };
 
-use crate::{jar::model::JarTicket, migration::model::CeFiJar, *};
+use crate::{
+    jar::model::JarTicket, migration::model::CeFiJar, near_bindgen, AccountId, Base64VecU8, Contract, ContractExt,
+    JarIndex,
+};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -68,7 +71,7 @@ mod tests {
     use near_sdk::{json_types::U128, serde_json::json, test_utils::accounts};
 
     use crate::{
-        common::{tests::Context, UDecimal, U32},
+        common::{tests::Context, u32::U32, udecimal::UDecimal},
         jar::{api::JarApi, model::Jar},
         product::{
             helpers::MessageSigner,

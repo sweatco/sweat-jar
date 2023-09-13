@@ -61,9 +61,7 @@ impl ProductApi for Contract {
         self.assert_manager();
         assert_one_yocto();
 
-        if self.products.contains_key(&command.id) {
-            panic!("Product already exists");
-        }
+        assert!(!self.products.contains_key(&command.id), "Product already exists");
 
         let product: Product = command.into();
         self.products.insert(product.clone().id, product.clone());

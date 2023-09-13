@@ -5,7 +5,7 @@ use near_sdk::{
 };
 
 use crate::{
-    common::UDecimal,
+    common::udecimal::UDecimal,
     product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, ProductId, Terms, WithdrawalFee},
 };
 

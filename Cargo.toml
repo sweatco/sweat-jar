@@ -1,18 +1,9 @@
 [workspace]
 
-default-members = ["contract"]
-members = ["contract", "integration-tests"]
-
 resolver = "2"
 
-[profile.release]
-codegen-units = 1
-opt-level = "z"
-lto = true
-debug = false
-panic = "abort"
-overflow-checks = true
-
+default-members = ["contract"]
+members = ["contract", "integration-tests"]
 
 [workspace.dependencies]
 near-sdk = "4.1.1"
