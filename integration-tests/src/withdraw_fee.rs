@@ -1,22 +1,19 @@
-use workspaces::Account;
-
-use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
+use crate::{
+    common::{prepare_contract, Prepared, ValueGetters},
+    product::RegisterProductCommand,
+};
 
 #[tokio::test]
 async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     println!("👷🏽 Run fixed withdraw fee test");
 
-    let (context, alice, manager, fee_account) = prepare_contract().await?;
+    let Prepared {
+        context,
+        alice,
+        fee_account,
+    } = prepare_contract([RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee]).await?;
 
     let fee_balance_before = context.ft_contract.ft_balance_of(&fee_account).await?.0;
-
-    context
-        .jar_contract
-        .register_product(
-            &manager,
-            RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee.json(),
-        )
-        .await?;
 
     context
         .jar_contract
@@ -53,17 +50,13 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
 async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
     println!("👷🏽 Run percent withdraw fee test");
 
-    let (context, alice, manager, fee_account) = prepare_contract().await?;
+    let Prepared {
+        context,
+        alice,
+        fee_account,
+    } = prepare_contract([RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee]).await?;
 
     let fee_balance_before = context.ft_contract.ft_balance_of(&fee_account).await?.0;
-
-    context
-        .jar_contract
-        .register_product(
-            &manager,
-            RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee.json(),
-        )
-        .await?;
 
     context
         .jar_contract
@@ -94,28 +87,4 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
     assert_eq!(10_000, fee_balance_after - fee_balance_before);
 
     Ok(())
-}
-
-async fn prepare_contract() -> anyhow::Result<(Context, Account, Account, Account)> {
-    let mut context = Context::new().await?;
-
-    let manager = &context.account("manager").await?;
-    let alice = &context.account("alice").await?;
-    let fee_account = &context.account("fee").await?;
-
-    context.ft_contract.init().await?;
-    context
-        .jar_contract
-        .init(context.ft_contract.account(), fee_account, manager.id())
-        .await?;
-
-    context
-        .ft_contract
-        .storage_deposit(context.jar_contract.account())
-        .await?;
-    context.ft_contract.storage_deposit(fee_account).await?;
-    context.ft_contract.storage_deposit(alice).await?;
-    context.ft_contract.mint_for_user(alice, 100_000_000).await?;
-
-    Ok((context, alice.clone(), manager.clone(), fee_account.clone()))
 }
