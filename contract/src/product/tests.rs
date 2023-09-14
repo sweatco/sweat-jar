@@ -154,11 +154,11 @@ fn set_public_key() {
     let admin = accounts(1);
 
     let signer = MessageSigner::new();
-    let product = generate_product().public_key(signer.public_key().to_vec());
+    let product = generate_product().public_key(signer.public_key());
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
     let new_signer = MessageSigner::new();
-    let new_pk = new_signer.public_key().to_vec();
+    let new_pk = new_signer.public_key();
 
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| {
@@ -178,11 +178,11 @@ fn set_public_key_by_not_admin() {
     let admin = accounts(1);
 
     let signer = MessageSigner::new();
-    let product = generate_product().public_key(signer.public_key().to_vec());
+    let product = generate_product().public_key(signer.public_key());
     let mut context = Context::new(admin).with_products(&[product.clone()]);
 
     let new_signer = MessageSigner::new();
-    let new_pk = new_signer.public_key().to_vec();
+    let new_pk = new_signer.public_key();
 
     context.switch_account(&alice);
     context.with_deposit_yocto(1, |context| {
@@ -196,11 +196,11 @@ fn set_public_key_without_deposit() {
     let admin = accounts(1);
 
     let signer = MessageSigner::new();
-    let product = generate_product().public_key(signer.public_key().to_vec());
+    let product = generate_product().public_key(signer.public_key());
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
     let new_signer = MessageSigner::new();
-    let new_pk = new_signer.public_key().to_vec();
+    let new_pk = new_signer.public_key();
 
     context.switch_account(&admin);
 

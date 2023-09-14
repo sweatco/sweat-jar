@@ -325,7 +325,7 @@ mod tests {
     fn generate_premium_product_context() -> (MessageSigner, Product) {
         let signer = MessageSigner::new();
         let reference_product = Product::generate("premium")
-            .public_key(signer.public_key().to_vec())
+            .public_key(signer.public_key())
             .lockup_term(365 * 24 * 60 * 60 * 1000)
             .apy(Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(20, 2),

@@ -1,4 +1,4 @@
-use ed25519_dalek::{PublicKey, Signature};
+use ed25519_dalek::Signature;
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, maybestd::collections::HashSet, BorshDeserialize, BorshSerialize},
@@ -304,7 +304,7 @@ mod tests {
         let reference_product = Product::generate("premium_product")
             .enabled(true)
             .apy(Apy::Constant(UDecimal::new(20, 2)))
-            .public_key(signer.public_key().to_vec());
+            .public_key(signer.public_key());
         let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
 
         let mut context = Context::new(admin.clone())
@@ -327,7 +327,7 @@ mod tests {
                 default: UDecimal::new(20, 2),
                 fallback: UDecimal::new(10, 2),
             }))
-            .public_key(signer.public_key().to_vec());
+            .public_key(signer.public_key());
         let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
 
         let mut context = Context::new(admin.clone())

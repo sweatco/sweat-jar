@@ -1,5 +1,6 @@
 use std::cmp;
 
+use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
@@ -15,7 +16,7 @@ use crate::{
     event::{emit, EventKind, TopUpData},
     jar::view::JarView,
     product::model::{Apy, Product, ProductId, Terms},
-    Base64VecU8, Contract, PublicKey, Signature,
+    Base64VecU8, Contract, Signature,
 };
 
 pub type JarIndex = u32;
@@ -360,12 +361,20 @@ impl Contract {
         )
     }
 
-    fn verify_signature(signature: &Vec<u8>, product_public_key: &Vec<u8>, ticket_hash: &Vec<u8>) -> bool {
-        let signature = Signature::from_bytes(signature.as_slice()).expect("Invalid signature");
+    fn verify_signature(signature: &[u8], product_public_key: &[u8], ticket_hash: &[u8]) -> bool {
+        let signature_bytes: &[u8; SIGNATURE_LENGTH] = signature
+            .try_into()
+            .unwrap_or_else(|_| panic!("Signature must be {SIGNATURE_LENGTH} bytes"));
 
-        PublicKey::from_bytes(product_public_key.as_slice())
+        let signature = Signature::from_bytes(signature_bytes);
+
+        let public_key_bytes: &[u8; PUBLIC_KEY_LENGTH] = product_public_key
+            .try_into()
+            .unwrap_or_else(|_| panic!("Public key must be {PUBLIC_KEY_LENGTH} bytes"));
+
+        VerifyingKey::from_bytes(public_key_bytes)
             .expect("Public key is invalid")
-            .verify_strict(ticket_hash.as_slice(), &signature)
+            .verify_strict(ticket_hash, &signature)
             .is_ok()
     }
 }

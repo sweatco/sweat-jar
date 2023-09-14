@@ -2,7 +2,7 @@
 
 use base64::{engine::general_purpose, Engine};
 use crypto_hash::{digest, Algorithm};
-use ed25519_dalek::{Keypair, Signer};
+use ed25519_dalek::{Signer, SigningKey};
 use fake::{Fake, Faker};
 use general_purpose::STANDARD;
 use near_sdk::AccountId;
@@ -19,20 +19,20 @@ use crate::{
 };
 
 pub(crate) struct MessageSigner {
-    keypair: Keypair,
+    signing_key: SigningKey,
 }
 
 impl MessageSigner {
     pub(crate) fn new() -> Self {
-        let mut csprng = OsRng {};
-        let keypair = Keypair::generate(&mut csprng);
+        let mut csprng = OsRng;
+        let signing_key: SigningKey = SigningKey::generate(&mut csprng);
 
-        Self { keypair }
+        Self { signing_key }
     }
 
     pub(crate) fn sign(&self, message: &str) -> Vec<u8> {
         let message_hash = digest(Algorithm::SHA256, message.as_bytes());
-        let signature = self.keypair.sign(message_hash.as_slice());
+        let signature = self.signing_key.sign(message_hash.as_slice());
         signature.to_bytes().to_vec()
     }
 
@@ -40,8 +40,8 @@ impl MessageSigner {
         STANDARD.encode(self.sign(message))
     }
 
-    pub(crate) fn public_key(&self) -> &[u8; 32] {
-        self.keypair.public.as_bytes()
+    pub(crate) fn public_key(&self) -> Vec<u8> {
+        self.signing_key.verifying_key().as_ref().to_vec()
     }
 }
 
