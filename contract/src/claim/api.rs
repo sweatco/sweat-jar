@@ -104,6 +104,8 @@ impl ClaimApi for Contract {
 impl ClaimCallbacks for Contract {
     #[private]
     fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
+        log!("after_claim");
+
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer {
                 let jar = self.get_jar_internal(jar_before_transfer.index);
