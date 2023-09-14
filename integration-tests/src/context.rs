@@ -15,8 +15,8 @@ pub(crate) struct Context {
     worker: Worker<Sandbox>,
     root_account: Account,
     pub accounts: HashMap<String, Account>,
-    pub ft_contract: Box<dyn FtContractInterface>,
-    pub jar_contract: Box<dyn JarContractInterface>,
+    pub ft_contract: Box<dyn FtContractInterface + Send + Sync>,
+    pub jar_contract: Box<dyn JarContractInterface + Send + Sync>,
 }
 
 impl Context {

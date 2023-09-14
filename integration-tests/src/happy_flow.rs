@@ -9,6 +9,7 @@ async fn happy_flow() -> anyhow::Result<()> {
 
     let Prepared {
         context,
+        manager: _,
         alice,
         fee_account: _,
     } = prepare_contract([

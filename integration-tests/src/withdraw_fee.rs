@@ -9,6 +9,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
 
     let Prepared {
         context,
+        manager: _,
         alice,
         fee_account,
     } = prepare_contract([RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee]).await?;
@@ -52,6 +53,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
 
     let Prepared {
         context,
+        manager: _,
         alice,
         fee_account,
     } = prepare_contract([RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee]).await?;

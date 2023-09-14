@@ -1,4 +1,7 @@
-use std::process::{Command, Stdio};
+use std::{
+    process::{Command, Stdio},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use serde_json::Value;
 use workspaces::Account;
@@ -28,19 +31,29 @@ impl ValueGetters for Value {
     }
 }
 
+static CONTRACT_READY: AtomicBool = AtomicBool::new(false);
+
 /// Compile contract in release mode and prepare it for integration tests usage
 pub fn build_contract() -> anyhow::Result<()> {
+    if CONTRACT_READY.load(Ordering::Relaxed) {
+        return Ok(());
+    }
+
     Command::new("make")
         .arg("build")
         .current_dir("..")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()?;
+
+    CONTRACT_READY.store(true, Ordering::Relaxed);
+
     Ok(())
 }
 
 pub(crate) struct Prepared {
     pub(crate) context: Context,
+    pub(crate) manager: Account,
     pub(crate) alice: Account,
     pub(crate) fee_account: Account,
 }
@@ -75,6 +88,7 @@ pub(crate) async fn prepare_contract(
 
     Ok(Prepared {
         context,
+        manager,
         alice,
         fee_account,
     })
