@@ -361,22 +361,20 @@ impl Contract {
         )
     }
 
-    fn verify_signature(signature: &Vec<u8>, product_public_key: &Vec<u8>, ticket_hash: &Vec<u8>) -> bool {
+    fn verify_signature(signature: &[u8], product_public_key: &[u8], ticket_hash: &[u8]) -> bool {
         let signature_bytes: &[u8; SIGNATURE_LENGTH] = signature
-            .as_slice()
             .try_into()
             .unwrap_or_else(|_| panic!("Signature must be {SIGNATURE_LENGTH} bytes"));
 
         let signature = Signature::from_bytes(signature_bytes);
 
         let public_key_bytes: &[u8; PUBLIC_KEY_LENGTH] = product_public_key
-            .as_slice()
             .try_into()
             .unwrap_or_else(|_| panic!("Public key must be {PUBLIC_KEY_LENGTH} bytes"));
 
         VerifyingKey::from_bytes(public_key_bytes)
             .expect("Public key is invalid")
-            .verify_strict(ticket_hash.as_slice(), &signature)
+            .verify_strict(ticket_hash, &signature)
             .is_ok()
     }
 }
