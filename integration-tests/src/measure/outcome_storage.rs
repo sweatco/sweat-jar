@@ -25,7 +25,7 @@ impl OutcomeStorage {
 
     pub fn add_result(result: ExecutionSuccess) {
         let manager = result.outcome().executor_id.clone();
-        let existing = Self::get().insert(manager.to_string(), result);
+        let _existing = Self::get().insert(manager.to_string(), result);
         // assert!(existing.is_none());
     }
 

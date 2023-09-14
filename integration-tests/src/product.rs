@@ -1,11 +1,24 @@
 use serde_json::{json, Value};
 
+#[derive(Debug, Copy, Clone)]
 pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
     Locked10Minutes6PercentsWithPercentWithdrawFee,
+}
+
+impl RegisterProductCommand {
+    pub(crate) fn all() -> &'static [Self] {
+        &[
+            Self::Locked12Months12Percents,
+            Self::Locked6Months6Percents,
+            Self::Locked6Months6PercentsWithWithdrawFee,
+            Self::Locked10Minutes6PercentsWithFixedWithdrawFee,
+            Self::Locked10Minutes6PercentsWithPercentWithdrawFee,
+        ]
+    }
 }
 
 impl RegisterProductCommand {

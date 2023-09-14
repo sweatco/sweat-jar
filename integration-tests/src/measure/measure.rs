@@ -13,13 +13,24 @@ use crate::{
 
 #[tokio::test]
 async fn measure() -> anyhow::Result<()> {
+    let all = RegisterProductCommand::all()
+        .iter()
+        .map(|product| measure_register_product(*product))
+        .collect_vec();
+
+    let res = join_all(all).await.into_iter().map(Result::unwrap).collect_vec();
+
+    dbg!(&res);
+
+    Ok(())
+}
+
+async fn measure_register_product(
+    command: RegisterProductCommand,
+) -> anyhow::Result<(RegisterProductCommand, Vec<Gas>)> {
     let a: Vec<_> = (0..10)
         .into_iter()
-        .map(|_| {
-            spawn(measure_register_product(
-                RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee,
-            ))
-        })
+        .map(|_| spawn(measure_register_one_product(command)))
         .collect_vec();
 
     let res = join_all(a)
@@ -29,12 +40,10 @@ async fn measure() -> anyhow::Result<()> {
         .map(Result::unwrap)
         .collect_vec();
 
-    dbg!(res);
-
-    Ok(())
+    Ok((command, res))
 }
 
-async fn measure_register_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
+async fn measure_register_one_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
     let Prepared {
         context,
         manager,
