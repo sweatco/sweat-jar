@@ -15,7 +15,7 @@ use crate::{
 #[cfg(not(test))]
 use crate::{
     ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER},
-    Gas, Promise,
+    Promise,
 };
 
 /// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.
@@ -69,7 +69,7 @@ impl WithdrawApi for Contract {
         let now = env::block_timestamp_ms();
         let product = self.get_product(&jar.product_id);
 
-        assert_is_liquidable(&jar, &product, now);
+        assert_is_liquidable(&jar, product, now);
 
         self.do_transfer(&account_id, &jar, amount)
     }
@@ -86,7 +86,7 @@ impl Contract {
         if is_promise_success {
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();
-            let jar = jar_before_transfer.withdrawn(&product, withdrawn_amount, now);
+            let jar = jar_before_transfer.withdrawn(product, withdrawn_amount, now);
 
             self.jars.replace(jar_before_transfer.index, jar.unlocked());
 
@@ -131,7 +131,7 @@ impl Contract {
         jar: &Jar,
     ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = self.get_fee(&product, jar);
+        let fee = self.get_fee(product, jar);
 
         self.ft_contract()
             .transfer(account_id, amount, "withdraw", &fee)
@@ -141,7 +141,7 @@ impl Contract {
 
     fn after_withdraw_call(jar_before_transfer: Jar, withdrawn_balance: TokenAmount, fee: &Option<Fee>) -> Promise {
         ext_self::ext(env::current_account_id())
-            .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
+            .with_static_gas(GAS_FOR_AFTER_TRANSFER)
             .after_withdraw(jar_before_transfer, withdrawn_balance, fee.clone())
     }
 }

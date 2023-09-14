@@ -252,8 +252,8 @@ impl Contract {
         signature: Option<Base64VecU8>,
     ) -> JarView {
         let amount = amount.0;
-        let product_id = ticket.clone().product_id;
-        let product = self.get_product(&product_id);
+        let product_id = &ticket.product_id;
+        let product = self.get_product(product_id);
 
         product.assert_enabled();
         product.assert_cap(amount);
@@ -261,9 +261,9 @@ impl Contract {
 
         let index = self.jars.len() as JarIndex;
         let now = env::block_timestamp_ms();
-        let jar = Jar::create(index, account_id.clone(), product_id, amount, now);
+        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
 
-        self.save_jar(&account_id, &jar);
+        self.save_jar(&account_id, jar.clone());
 
         emit(EventKind::CreateJar(jar.clone()));
 
@@ -278,7 +278,7 @@ impl Contract {
         product.assert_cap(jar.principal + amount.0);
 
         let now = env::block_timestamp_ms();
-        let topped_up_jar = jar.topped_up(amount.0, &product, now);
+        let topped_up_jar = jar.topped_up(amount.0, product, now);
 
         self.jars.replace(jar_index, topped_up_jar.clone());
 
@@ -305,7 +305,7 @@ impl Contract {
         signature: Option<Base64VecU8>,
     ) {
         let product = self.get_product(&ticket.product_id);
-        if let Some(pk) = product.public_key {
+        if let Some(pk) = &product.public_key {
             let signature = signature.expect("Signature is required");
             let last_jar_index = self
                 .account_jars
@@ -313,7 +313,7 @@ impl Contract {
                 .map(|jars| *jars.iter().max().unwrap_or_else(|| env::panic_str("Jar is empty.")));
 
             let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_index);
-            let is_signature_valid = Self::verify_signature(&signature.0, &pk, &hash);
+            let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
 

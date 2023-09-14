@@ -113,14 +113,14 @@ impl Product {
     }
 
     pub(crate) fn allows_top_up(&self) -> bool {
-        match self.clone().terms {
+        match &self.terms {
             Terms::Fixed(value) => value.allows_top_up,
             Terms::Flexible => true,
         }
     }
 
     pub(crate) fn allows_restaking(&self) -> bool {
-        match self.clone().terms {
+        match &self.terms {
             Terms::Fixed(value) => value.allows_restaking,
             Terms::Flexible => false,
         }

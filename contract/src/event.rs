@@ -117,7 +117,7 @@ impl SweatJarEvent {
     }
 
     fn to_json_string(&self) -> String {
-        serde_json::to_string(self)
+        serde_json::to_string_pretty(self)
             .unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")))
     }
 

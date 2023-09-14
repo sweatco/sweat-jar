@@ -81,7 +81,7 @@ impl JarContractInterface for Contract {
             .into_result()?;
 
         for log in result.logs() {
-            println!("   📖 {:?}", log);
+            println!("   📖 {log}");
         }
 
         Ok(())
@@ -204,7 +204,7 @@ impl JarContractInterface for Contract {
             println!("   📖 {log}");
         }
 
-        println!("   📟 {result:?}");
+        println!("   📟 {result:#?}");
 
         let result_value = result.json::<Value>()?;
 
@@ -230,7 +230,7 @@ impl JarContractInterface for Contract {
             println!("   📖 {log}");
         }
 
-        println!("   📟 {result:?}");
+        println!("   📟 {result:#?}");
 
         let result_value = result.json::<Value>()?;
 
