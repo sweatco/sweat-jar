@@ -1,3 +1,5 @@
+use std::process::{Command, Stdio};
+
 use serde_json::Value;
 
 pub trait ValueGetters {
@@ -21,4 +23,16 @@ impl ValueGetters for Value {
     fn get_interest(&self) -> u128 {
         self.as_object().unwrap().get("amount").unwrap().get_u128("total")
     }
+}
+
+/// Compile contract in release mode and prepare it for integration tests usage
+#[test]
+pub fn build_contract() -> anyhow::Result<()> {
+    Command::new("make")
+        .arg("build")
+        .current_dir("..")
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .output()?;
+    Ok(())
 }

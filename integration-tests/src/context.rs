@@ -3,7 +3,9 @@ use std::{collections::HashMap, env, fs};
 use near_units::parse_near;
 use workspaces::{network::Sandbox, Account, Worker};
 
-use crate::{ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface};
+use crate::{
+    common::build_contract, ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface,
+};
 
 const EPOCH_BLOCKS_HEIGHT: u64 = 43_200;
 const HOURS_PER_EPOCH: u64 = 12;
@@ -20,6 +22,8 @@ pub(crate) struct Context {
 impl Context {
     pub(crate) async fn new() -> anyhow::Result<Context> {
         println!("🏭 Initializing context");
+
+        build_contract()?;
 
         let worker = workspaces::sandbox().await?;
         let root_account = worker.dev_create_account().await?;
