@@ -5,7 +5,7 @@ use crate::{
     event::{emit, EventKind, MigrationEventItem},
     migration::model::CeFiJar,
     product::model::ProductId,
-    Contract, HashSet, Jar, JarState,
+    Contract, Jar, JarState,
 };
 
 impl Contract {
@@ -38,12 +38,10 @@ impl Contract {
 
             self.jars.push(jar.clone());
 
-            let mut account_jars = self
-                .account_jars
-                .get(&jar.account_id)
-                .map_or_else(HashSet::new, Clone::clone);
-            account_jars.insert(jar.index);
-            self.account_jars.insert(jar.clone().account_id, account_jars);
+            self.account_jars
+                .entry(jar.account_id.clone())
+                .or_default()
+                .insert(jar.index);
 
             total_amount += jar.principal;
 

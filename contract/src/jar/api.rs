@@ -154,7 +154,7 @@ impl JarApi for Contract {
         for index in jar_indices {
             let index = index.0;
             let jar = self.get_jar_internal(index);
-            let interest = jar.get_interest(&self.get_product(&jar.product_id), now);
+            let interest = jar.get_interest(self.get_product(&jar.product_id), now);
 
             detailed_amounts.insert(U32(index), U128(interest));
             total_amount += interest;
@@ -179,7 +179,7 @@ impl JarApi for Contract {
         require!(product.is_enabled, "The product is disabled");
 
         let now = env::block_timestamp_ms();
-        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
+        require!(jar.is_liquidable(product, now), "The jar is not mature yet");
         require!(!jar.is_empty(), "The jar is empty, nothing to restake");
 
         let index = self.jars.len() as JarIndex;
@@ -190,10 +190,10 @@ impl JarApi for Contract {
             jar.principal,
             now,
         );
-        let withdraw_jar = jar.withdrawn(&product, jar.principal, now);
+        let withdraw_jar = jar.withdrawn(product, jar.principal, now);
 
-        self.save_jar(&account_id, &withdraw_jar);
-        self.save_jar(&account_id, &new_jar);
+        self.save_jar(&account_id, withdraw_jar);
+        self.save_jar(&account_id, new_jar.clone());
 
         emit(EventKind::Restake(RestakeData {
             old_index: jar_index,

@@ -7,7 +7,7 @@ use crate::{
     event::{emit, ClaimEventItem, EventKind},
     ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER},
     jar::model::{Jar, JarIndex},
-    Contract, ContractExt, Gas, Promise,
+    Contract, ContractExt, Promise,
 };
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
@@ -67,7 +67,7 @@ impl ClaimApi for Contract {
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let available_interest = jar.get_interest(&product, now);
+            let available_interest = jar.get_interest(product, now);
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - total_interest_to_claim)
             });
@@ -127,6 +127,6 @@ impl ClaimCallbacks for Contract {
 
 fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> Promise {
     ext_self::ext(env::current_account_id())
-        .with_static_gas(Gas::from(GAS_FOR_AFTER_TRANSFER))
+        .with_static_gas(GAS_FOR_AFTER_TRANSFER)
         .after_claim(claimed_amount, jars_before_transfer, event)
 }

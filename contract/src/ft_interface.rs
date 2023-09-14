@@ -7,7 +7,11 @@ use near_sdk::{
 
 use crate::{common::TokenAmount, Contract, ContractExt, Gas};
 
-pub(crate) const GAS_FOR_AFTER_TRANSFER: u64 = 20_000_000_000_000;
+pub(crate) const fn tgas(val: u64) -> Gas {
+    Gas(Gas::ONE_TERA.0 * val)
+}
+
+pub(crate) const GAS_FOR_AFTER_TRANSFER: Gas = tgas(20);
 
 pub(crate) struct FungibleTokenContract {
     address: AccountId,
@@ -64,6 +68,6 @@ impl FtTransferPromise for Promise {
         .as_bytes()
         .to_vec();
 
-        self.function_call("ft_transfer".to_string(), args, 1, Gas(5 * Gas::ONE_TERA.0))
+        self.function_call("ft_transfer".to_string(), args, 1, tgas(5))
     }
 }

@@ -48,7 +48,7 @@ impl FungibleTokenReceiver for Contract {
 
         match ft_message {
             FtMessage::Stake(message) => {
-                let receiver_id = message.receiver_id.unwrap_or_else(|| sender_id.clone());
+                let receiver_id = message.receiver_id.unwrap_or(sender_id);
                 self.create_jar(receiver_id, message.ticket, amount, message.signature);
             }
             FtMessage::Migrate(jars) => {

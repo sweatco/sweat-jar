@@ -17,11 +17,16 @@ impl Contract {
         );
     }
 
-    pub(crate) fn get_product(&self, product_id: &ProductId) -> Product {
+    pub(crate) fn get_product(&self, product_id: &ProductId) -> &Product {
         self.products
             .get(product_id)
             .unwrap_or_else(|| env::panic_str(&format!("Product {product_id} doesn't exist")))
-            .clone()
+    }
+
+    pub(crate) fn get_product_mut(&mut self, product_id: &ProductId) -> &mut Product {
+        self.products
+            .get_mut(product_id)
+            .unwrap_or_else(|| env::panic_str(&format!("Product {product_id} doesn't exist")))
     }
 
     pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> Vec<JarIndex> {
@@ -30,19 +35,20 @@ impl Contract {
             .map_or_else(Vec::new, |items| items.iter().copied().collect())
     }
 
-    pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: &Jar) {
+    pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
+        let jar_index = jar.index;
         self.insert_or_update_jar(jar);
         self.account_jars
             .entry(account_id.clone())
             .or_default()
-            .insert(jar.index);
+            .insert(jar_index);
     }
 
-    fn insert_or_update_jar(&mut self, jar: &Jar) {
+    fn insert_or_update_jar(&mut self, jar: Jar) {
         if jar.index < self.jars.len() {
-            self.jars.replace(jar.index, jar.clone());
+            self.jars.replace(jar.index, jar);
         } else {
-            self.jars.push(jar.clone());
+            self.jars.push(jar);
         }
     }
 }
