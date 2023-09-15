@@ -15,17 +15,36 @@ use crate::{
 
 #[tokio::test]
 async fn measure() -> anyhow::Result<()> {
-    let all = RegisterProductCommand::all()
-        .iter()
-        .map(|product| redundant_command_measure(|| measure_register_one_product(*product)))
-        .collect_vec();
-
-    let res = join_all(all).await.into_iter().map(Result::unwrap).collect_vec();
+    let res = scoped_command_measure(RegisterProductCommand::all(), measure_register_one_product).await?;
 
     dbg!(&res);
 
     Ok(())
 }
+
+async fn scoped_command_measure<Input, Command, Fut>(
+    input: &[Input],
+    mut command: Command,
+) -> anyhow::Result<Vec<(&Input, Gas)>>
+where
+    Input: Copy,
+    Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
+    Command: FnMut(Input) -> Fut + Copy,
+{
+    let all = input
+        .iter()
+        .map(|inp| redundant_command_measure(move || command(*inp)))
+        .collect_vec();
+
+    let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
+
+    let res = input.into_iter().zip(res.into_iter()).collect_vec();
+
+    Ok(res)
+}
+
+/// This method runs the same command several times and checks if
+/// all executions took the same anmount of gas
 async fn redundant_command_measure<Fut>(mut command: impl FnMut() -> Fut) -> anyhow::Result<Gas>
 where
     Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
@@ -39,7 +58,6 @@ where
 
     let gas = all_gas.first().unwrap();
 
-    // Check if all commands have the same anmount of gas
     assert!(all_gas.iter().all(|g| g == gas));
 
     Ok(*gas)
