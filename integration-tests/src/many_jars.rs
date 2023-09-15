@@ -20,8 +20,6 @@ async fn add_random_jar(context: &Context, account: &Account, products: &[&str])
 
 #[tokio::test]
 async fn many_jars() -> anyhow::Result<()> {
-    return Ok(());
-
     println!("👷🏽 Run many jars flow test");
 
     let mut context = Context::new().await?;

@@ -28,7 +28,7 @@ async fn measure() -> anyhow::Result<()> {
 async fn measure_register_product(
     command: RegisterProductCommand,
 ) -> anyhow::Result<(RegisterProductCommand, Vec<Gas>)> {
-    let a: Vec<_> = (0..10)
+    let a: Vec<_> = (0..5)
         .into_iter()
         .map(|_| spawn(measure_register_one_product(command)))
         .collect_vec();
@@ -51,7 +51,11 @@ async fn measure_register_one_product(command: RegisterProductCommand) -> anyhow
         fee_account: _,
     } = prepare_contract([]).await?;
 
-    context.jar_contract.register_product(&manager, command.json()).await?;
+    OutcomeStorage::measure(
+        &manager,
+        context.jar_contract.register_product(&manager, command.json()),
+    )
+    .await?;
 
     Ok(OutcomeStorage::get_result(&manager, "register_product").gas_burnt)
 }
