@@ -10,8 +10,8 @@ pub(crate) enum RegisterProductCommand {
 }
 
 impl RegisterProductCommand {
-    pub(crate) fn all() -> &'static [Self] {
-        &[
+    pub(crate) fn all() -> [Self; 5] {
+        [
             Self::Locked12Months12Percents,
             Self::Locked6Months6Percents,
             Self::Locked6Months6PercentsWithWithdrawFee,

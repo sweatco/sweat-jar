@@ -240,6 +240,8 @@ impl JarContractInterface for Contract {
 
         println!("   ✅ {result_value:?}");
 
+        OutcomeStorage::add_result(result);
+
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }
 }

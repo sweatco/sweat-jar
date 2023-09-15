@@ -2,14 +2,22 @@ use fake::Fake;
 use rand::{prelude::IteratorRandom, thread_rng};
 use workspaces::Account;
 
-use crate::{context::Context, product::RegisterProductCommand};
+use crate::{
+    common::{prepare_contract, Prepared},
+    context::Context,
+    product::RegisterProductCommand,
+};
 
-async fn add_random_jar(context: &Context, account: &Account, products: &[&str]) -> anyhow::Result<()> {
+async fn add_random_jar(
+    context: &Context,
+    account: &Account,
+    products: &[RegisterProductCommand],
+) -> anyhow::Result<()> {
     context
         .jar_contract
         .create_jar(
             account,
-            products.iter().choose(&mut thread_rng()).unwrap().to_string(),
+            products.iter().choose(&mut thread_rng()).unwrap().id(),
             (100_000..500_000).fake(),
             context.ft_contract.account().id(),
         )
@@ -22,48 +30,26 @@ async fn add_random_jar(context: &Context, account: &Account, products: &[&str])
 async fn many_jars() -> anyhow::Result<()> {
     println!("👷🏽 Run many jars flow test");
 
-    let mut context = Context::new().await?;
-
-    let manager = &context.account("manager").await?;
-    let alice = &context.account("alice").await?;
-
-    context.ft_contract.init().await?;
-    context
-        .jar_contract
-        .init(context.ft_contract.account(), manager, manager.id())
-        .await?;
-
-    context
-        .ft_contract
-        .storage_deposit(context.jar_contract.account())
-        .await?;
-    context.ft_contract.storage_deposit(alice).await?;
-    context.ft_contract.mint_for_user(alice, 100_000_000).await?;
-
-    context
-        .jar_contract
-        .register_product(manager, RegisterProductCommand::Locked12Months12Percents.json())
-        .await?;
-    context
-        .jar_contract
-        .register_product(manager, RegisterProductCommand::Locked6Months6Percents.json())
-        .await?;
-    context
-        .jar_contract
-        .register_product(
-            manager,
-            RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee.json(),
-        )
-        .await?;
+    let Prepared {
+        context,
+        manager: _,
+        alice,
+        fee_account: _,
+    } = prepare_contract([
+        RegisterProductCommand::Locked12Months12Percents,
+        RegisterProductCommand::Locked6Months6Percents,
+        RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
+    ])
+    .await?;
 
     for _ in 0..10
     //(10..15).fake()
     {
         add_random_jar(
             &context,
-            alice,
+            &alice,
             &[
-                &RegisterProductCommand::Locked12Months12Percents.id(),
+                RegisterProductCommand::Locked12Months12Percents,
                 // &RegisterProductCommand::Locked6Months6Percents.id(),
                 // &RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee.id(),
             ],
@@ -71,27 +57,9 @@ async fn many_jars() -> anyhow::Result<()> {
         .await?;
     }
 
-    let alice_principal = context.jar_contract.get_total_principal(alice).await?;
-
-    dbg!(&alice_principal);
-
-    let mut alice_interest = context.jar_contract.get_total_interest(alice).await?;
-
-    dbg!(&alice_interest);
-
-    // assert_eq!(1_000_000, alice_principal.get_u128("total"));
-    // assert_eq!(0, alice_interest.get_u128("total"));
-
     context.fast_forward(1).await?;
-    dbg!("Fast forward");
 
-    alice_interest = context.jar_contract.get_total_interest(alice).await?;
-
-    dbg!(&alice_interest);
-
-    // assert!(alice_interest.get_u128("total") > 0);
-
-    let claimed_amount = context.jar_contract.claim_total(alice).await?;
+    let claimed_amount = context.jar_contract.claim_total(&alice).await?;
 
     dbg!(&claimed_amount);
 

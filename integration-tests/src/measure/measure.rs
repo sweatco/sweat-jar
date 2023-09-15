@@ -8,37 +8,55 @@ use tokio::spawn;
 use workspaces::types::Gas;
 
 use crate::{
-    common::{prepare_contract, Prepared},
-    measure::outcome_storage::OutcomeStorage,
+    measure::{claim_total::measure_after_claim_total, register_product::measure_register_product},
     product::RegisterProductCommand,
 };
 
+#[ignore]
 #[tokio::test]
-async fn measure() -> anyhow::Result<()> {
-    let res = scoped_command_measure(RegisterProductCommand::all(), measure_register_one_product).await?;
-
-    dbg!(&res);
+async fn measure_register_product_test() -> anyhow::Result<()> {
+    let measure_register_product =
+        scoped_command_measure(RegisterProductCommand::all(), measure_register_product).await?;
+    dbg!(&measure_register_product);
 
     Ok(())
 }
 
-async fn scoped_command_measure<Input, Command, Fut>(
-    input: &[Input],
+#[ignore]
+#[tokio::test]
+async fn measure_after_claim_total_test() -> anyhow::Result<()> {
+    let measure_after_claim_total = scoped_command_measure(1..20, measure_after_claim_total).await?;
+    dbg!(&measure_after_claim_total);
+
+    for i in (1..measure_after_claim_total.len()).rev() {
+        let diff = measure_after_claim_total[i].1 - measure_after_claim_total[i - 1].1;
+
+        dbg!(&diff);
+    }
+
+    Ok(())
+}
+
+async fn scoped_command_measure<Input, Inputs, Command, Fut>(
+    inputs: Inputs,
     mut command: Command,
-) -> anyhow::Result<Vec<(&Input, Gas)>>
+) -> anyhow::Result<Vec<(Input, Gas)>>
 where
     Input: Copy,
+    Inputs: IntoIterator<Item = Input>,
     Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
     Command: FnMut(Input) -> Fut + Copy,
 {
-    let all = input
+    let inputs = inputs.into_iter().collect_vec();
+
+    let all = inputs
         .iter()
         .map(|inp| redundant_command_measure(move || command(*inp)))
         .collect_vec();
 
     let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
 
-    let res = input.into_iter().zip(res.into_iter()).collect_vec();
+    let res = inputs.into_iter().zip(res.into_iter()).collect_vec();
 
     Ok(res)
 }
@@ -61,20 +79,4 @@ where
     assert!(all_gas.iter().all(|g| g == gas));
 
     Ok(*gas)
-}
-
-async fn measure_register_one_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
-    let Prepared {
-        context,
-        manager,
-        alice: _,
-        fee_account: _,
-    } = prepare_contract([]).await?;
-
-    OutcomeStorage::measure(
-        "register_product",
-        &manager,
-        context.jar_contract.register_product(&manager, command.json()),
-    )
-    .await
 }

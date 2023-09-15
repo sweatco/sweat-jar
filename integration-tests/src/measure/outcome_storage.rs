@@ -32,18 +32,18 @@ impl OutcomeStorage {
         STORAGE.data.lock().unwrap()
     }
 
-    fn start_measuring(manager: &Account) {
+    fn start_measuring(account: &Account) {
         let mut measuring = Self::get_measuring();
-        assert!(measuring.iter().find(|a| a == &manager.id().as_str()).is_none());
-        measuring.push(manager.id().to_string());
+        assert!(measuring.iter().find(|a| a == &account.id().as_str()).is_none());
+        measuring.push(account.id().to_string());
     }
 
-    fn stop_measuring(manager: &Account) {
+    fn stop_measuring(account: &Account) {
         let mut measuring = Self::get_measuring();
 
         let index = measuring
             .iter()
-            .find_position(|a| a == &manager.id().as_str())
+            .find_position(|a| a == &account.id().as_str())
             .unwrap()
             .0;
         measuring.remove(index);
@@ -51,33 +51,35 @@ impl OutcomeStorage {
 
     pub async fn measure<Output>(
         label: &str,
-        manager: &Account,
+        account: &Account,
         future: impl Future<Output = anyhow::Result<Output>>,
     ) -> anyhow::Result<Gas> {
-        Self::start_measuring(manager);
+        Self::start_measuring(account);
         future.await?;
-        Self::stop_measuring(manager);
+        Self::stop_measuring(account);
 
-        Ok(OutcomeStorage::get_result(&manager, label).gas_burnt)
+        let result = OutcomeStorage::get_result(&account, label);
+
+        Ok(result.gas_burnt)
     }
 }
 
 impl OutcomeStorage {
     pub fn add_result(result: ExecutionSuccess) {
-        let manager = result.outcome().executor_id.clone();
+        let executon = result.outcome().executor_id.clone();
 
-        if !Self::get_measuring().contains(&manager.to_string()) {
+        if !Self::get_measuring().contains(&executon.to_string()) {
             return;
         }
 
-        let existing = Self::get_data().insert(manager.to_string(), result);
+        let existing = Self::get_data().insert(executon.to_string(), result);
         assert!(existing.is_none());
     }
 
     /// Get execution result for given manager account
-    pub fn get_result(manager: &Account, label: &str) -> ExecutionOutcome {
+    pub fn get_result(account: &Account, label: &str) -> ExecutionOutcome {
         Self::get_data()
-            .get(manager.id().as_str())
+            .get(account.id().as_str())
             .unwrap()
             .outcomes()
             .into_iter()
