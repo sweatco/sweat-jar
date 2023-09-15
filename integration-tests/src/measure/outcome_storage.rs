@@ -7,6 +7,7 @@ use std::{
 use itertools::Itertools;
 use workspaces::{
     result::{ExecutionOutcome, ExecutionSuccess},
+    types::Gas,
     Account,
 };
 
@@ -48,11 +49,16 @@ impl OutcomeStorage {
         measuring.remove(index);
     }
 
-    pub async fn measure<Output>(manager: &Account, future: impl Future<Output = Output>) -> Output {
+    pub async fn measure<Output>(
+        label: &str,
+        manager: &Account,
+        future: impl Future<Output = anyhow::Result<Output>>,
+    ) -> anyhow::Result<Gas> {
         Self::start_measuring(manager);
-        let result = future.await;
+        future.await?;
         Self::stop_measuring(manager);
-        result
+
+        Ok(OutcomeStorage::get_result(&manager, label).gas_burnt)
     }
 }
 

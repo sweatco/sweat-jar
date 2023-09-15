@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use std::future::Future;
+
 use futures::future::join_all;
 use itertools::Itertools;
 use tokio::spawn;
@@ -15,7 +17,7 @@ use crate::{
 async fn measure() -> anyhow::Result<()> {
     let all = RegisterProductCommand::all()
         .iter()
-        .map(|product| measure_register_product(*product))
+        .map(|product| redundant_command_measure(|| measure_register_one_product(*product)))
         .collect_vec();
 
     let res = join_all(all).await.into_iter().map(Result::unwrap).collect_vec();
@@ -24,23 +26,23 @@ async fn measure() -> anyhow::Result<()> {
 
     Ok(())
 }
-
-async fn measure_register_product(
-    command: RegisterProductCommand,
-) -> anyhow::Result<(RegisterProductCommand, Vec<Gas>)> {
-    let a: Vec<_> = (0..5)
-        .into_iter()
-        .map(|_| spawn(measure_register_one_product(command)))
-        .collect_vec();
-
-    let res = join_all(a)
+async fn redundant_command_measure<Fut>(mut command: impl FnMut() -> Fut) -> anyhow::Result<Gas>
+where
+    Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
+{
+    let futures = (0..2).into_iter().map(|_| spawn(command())).collect_vec();
+    let all_gas: Vec<Gas> = join_all(futures)
         .await
         .into_iter()
         .flatten()
-        .map(Result::unwrap)
-        .collect_vec();
+        .collect::<anyhow::Result<_>>()?;
 
-    Ok((command, res))
+    let gas = all_gas.first().unwrap();
+
+    // Check if all commands have the same anmount of gas
+    assert!(all_gas.iter().all(|g| g == gas));
+
+    Ok(*gas)
 }
 
 async fn measure_register_one_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
@@ -52,10 +54,9 @@ async fn measure_register_one_product(command: RegisterProductCommand) -> anyhow
     } = prepare_contract([]).await?;
 
     OutcomeStorage::measure(
+        "register_product",
         &manager,
         context.jar_contract.register_product(&manager, command.json()),
     )
-    .await?;
-
-    Ok(OutcomeStorage::get_result(&manager, "register_product").gas_burnt)
+    .await
 }
