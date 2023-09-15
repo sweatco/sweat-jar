@@ -1,4 +1,4 @@
-use near_sdk::require;
+use near_sdk::{log, require};
 
 use crate::{env, AccountId, Contract, Jar, JarIndex, Product, ProductId};
 
@@ -36,6 +36,11 @@ impl Contract {
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
+        log!("save_jar");
+
+        log!("account_id: {}", account_id);
+        log!("jar: {:?}", jar);
+
         let jar_index = jar.index;
         self.insert_or_update_jar(jar);
         self.account_jars

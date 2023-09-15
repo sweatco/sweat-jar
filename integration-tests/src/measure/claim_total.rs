@@ -1,3 +1,5 @@
+use std::sync::Mutex;
+
 use workspaces::{types::Gas, Account};
 
 use crate::{
@@ -7,27 +9,39 @@ use crate::{
     product::RegisterProductCommand,
 };
 
+static CONTRACT: Mutex<RegisterProductCommand> = Mutex::new(RegisterProductCommand::Locked6Months6Percents);
+
+pub(crate) fn set_claim_total_contract(contract: RegisterProductCommand) {
+    *CONTRACT.lock().unwrap() = contract;
+}
+
+fn get_contract() -> RegisterProductCommand {
+    *CONTRACT.lock().unwrap()
+}
+
+#[ignore]
+#[tokio::test]
+async fn one_after_claim() -> anyhow::Result<()> {
+    set_claim_total_contract(RegisterProductCommand::Locked6Months6Percents);
+
+    let gas = measure_after_claim_total(1).await?;
+
+    dbg!(&gas);
+
+    Ok(())
+}
+
 pub(crate) async fn measure_after_claim_total(jars_count: usize) -> anyhow::Result<Gas> {
     let Prepared {
         context,
         manager: _,
         alice,
         fee_account: _,
-    } = prepare_contract([
-        RegisterProductCommand::Locked12Months12Percents,
-        RegisterProductCommand::Locked6Months6Percents,
-        RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
-    ])
-    .await?;
+    } = prepare_contract([get_contract()]).await?;
 
     for _ in 0..jars_count {
-        add_jar(
-            &context,
-            &alice,
-            RegisterProductCommand::Locked12Months12Percents,
-            100_000,
-        )
-        .await?;
+        dbg!("add jar");
+        add_jar(&context, &alice, get_contract(), 100_000).await?;
     }
 
     context.fast_forward(1).await?;

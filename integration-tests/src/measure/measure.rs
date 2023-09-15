@@ -8,7 +8,10 @@ use tokio::spawn;
 use workspaces::types::Gas;
 
 use crate::{
-    measure::{claim_total::measure_after_claim_total, register_product::measure_register_product},
+    measure::{
+        claim_total::{measure_after_claim_total, set_claim_total_contract},
+        register_product::measure_register_product,
+    },
     product::RegisterProductCommand,
 };
 
@@ -25,14 +28,24 @@ async fn measure_register_product_test() -> anyhow::Result<()> {
 #[ignore]
 #[tokio::test]
 async fn measure_after_claim_total_test() -> anyhow::Result<()> {
-    let measure_after_claim_total = scoped_command_measure(1..20, measure_after_claim_total).await?;
-    dbg!(&measure_after_claim_total);
+    let mut results = vec![];
 
-    for i in (1..measure_after_claim_total.len()).rev() {
-        let diff = measure_after_claim_total[i].1 - measure_after_claim_total[i - 1].1;
+    for product in [RegisterProductCommand::Locked12Months12Percents] {
+        set_claim_total_contract(product);
 
-        dbg!(&diff);
+        let measure_after_claim_total = scoped_command_measure(1..4, measure_after_claim_total).await?;
+
+        let mut difs = vec![];
+
+        for i in (1..measure_after_claim_total.len()).rev() {
+            let diff = measure_after_claim_total[i].1 - measure_after_claim_total[i - 1].1;
+            difs.push(diff);
+        }
+
+        results.push((product, measure_after_claim_total, difs))
     }
+
+    dbg!(results);
 
     Ok(())
 }
@@ -67,11 +80,12 @@ async fn redundant_command_measure<Fut>(mut command: impl FnMut() -> Fut) -> any
 where
     Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
 {
-    let futures = (0..2).into_iter().map(|_| spawn(command())).collect_vec();
+    let futures = (0..1).into_iter().map(|_| spawn(command())).collect_vec();
+
     let all_gas: Vec<Gas> = join_all(futures)
         .await
         .into_iter()
-        .flatten()
+        .map(Result::unwrap)
         .collect::<anyhow::Result<_>>()?;
 
     let gas = all_gas.first().unwrap();
