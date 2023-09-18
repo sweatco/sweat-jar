@@ -70,3 +70,139 @@ The DeFi Jars contract provides the following features:
 16. User can withdraw any amount of $SWEAT from the principal of a Flexible Jar at any moment. If a Product involves a withdrawal fee, the User pays this fee from the withdrawn principal amount.
 17. User can top up the principal of a Flexible Jar or Fixed Jar if the related Fixed Product allows top-ups.
 18. User can restake a Fixed Jar after its maturity. On restake, a new Jar is created, and the principal of the original Jar is transferred to the new one.
+
+## 2. 🤖 Technical requirements
+
+DeFi Jar contract is a smart contract for NEAR network. It has been developed with Rust language using
+[near-sdk-rs](https://github.com/near/near-sdk-rs). 
+
+Integration tests are NEAR Workspaces ([workspaces-rs](https://github.com/near/near-workspaces-rs)) sandbox tests.
+
+The smart contract uses [ed25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek/tree/main/ed25519-dalek) to verify signatures for Premium Products.
+
+## 2.1. Project structure
+
+Here's a structure of the project:
+```bash
+.
+├── Cargo.toml
+├── Makefile
+├── README.md
+├── contract
+│   ├── Cargo.toml
+│   ├── README.md
+│   └── src
+│       ├── assert.rs
+│       ├── claim
+│       │   ├── api.rs
+│       │   └── mod.rs
+│       ├── common
+│       │   ├── mod.rs
+│       │   ├── tests.rs
+│       │   ├── u32.rs
+│       │   └── udecimal.rs
+│       ├── event.rs
+│       ├── ft_interface.rs
+│       ├── ft_receiver.rs
+│       ├── internal.rs
+│       ├── jar
+│       │   ├── api.rs
+│       │   ├── mod.rs
+│       │   ├── model.rs
+│       │   └── view.rs
+│       ├── lib.rs
+│       ├── migration
+│       │   ├── api.rs
+│       │   ├── mod.rs
+│       │   └── model.rs
+│       ├── penalty
+│       │   ├── api.rs
+│       │   └── mod.rs
+│       ├── product
+│       │   ├── api.rs
+│       │   ├── command.rs
+│       │   ├── helpers.rs
+│       │   ├── mod.rs
+│       │   ├── model.rs
+│       │   ├── tests.rs
+│       │   └── view.rs
+│       └── withdraw
+│           ├── api.rs
+│           ├── mod.rs
+│           └── view.rs
+├── docs
+│   └── requirements.md
+├── integration-tests
+│   ├── Cargo.toml
+│   ├── rust-toolchain.toml
+│   └── src
+│       ├── common.rs
+│       ├── context.rs
+│       ├── ft_contract_interface.rs
+│       ├── happy_flow.rs
+│       ├── jar_contract_interface.rs
+│       ├── lib.rs
+│       ├── migration.rs
+│       ├── product.rs
+│       └── withdraw_fee.rs
+├── rust-toolchain.toml
+└── scripts
+    ├── build-in-docker.sh
+    ├── build.sh
+    ├── deploy.sh
+    └── lint.sh
+```
+
+Start with reading `contract/README.md` to find all the information about building, testing and deploying a smart contract.
+
+#### 2.1.1. Tooling
+
+`Makefile` contains handy commands:
+- **build**: to build the contract locally;
+- **build-in-docker**: build reproducible artifact in Docker;
+- **test**: run unit tests;
+- **cov**: run unit tests with coverage;
+- **integration**: run integration tests; 
+- **lint**: run lint checks;
+- **fmt**: format the code;
+- **deploy**: deploy the contract to dev account on Testnet.
+
+These command either operate on `cargo`, or run scripts that can be found in `scripts` directory.
+
+#### 2.1.2. Artifacts
+
+`res` directory contains WASM binaries:
+
+- **sweat.wasm**: assembled FT token contract for testing purposes;
+- **sweat_jar.wasm**: actual version of the DeFi Jar contract.
+
+#### 2.1.2. Codebase
+
+Under the `./contract` directory you can find the smart contract module. Project configuration and dependencies can be 
+found in `Cargo.toml` file. `lib.rs` file contains the contract data structure and initializing code as well.
+Each of `claim`, `jar`, `penalty`, `product` and `withdraw` modules contains 
+feature-specific code. These modules can contain following parts:
+- `api.rs` – describes public methods for the feature.
+- `model.rs` – contains data structures for internal use in contract.
+- `view.rs` – contains data structures to receive from a client or return them. They reflect structs from `model.rs`, hide redundant data and contain more readable or easier parsable types.
+
+Structures and API traits in these files are documented, so you can refer to this documentation.
+
+`ft_interface.rs` contains helpers to make interaction with related FT contract easier.
+
+Code in `ft_receiver.rs` handles incoming Token transfers. This mechanism is used for Jars creation, top-ups and migration. 
+
+#### 2.1.3. Integration tests
+
+`./integration-tests` directory contains integration tests for the smart contract. It works with both FT and DeFi Jars contracts.
+It covers following scenarios:
+
+- **happy_flow.rs**: // TODO!
+- **migration.rs**: // TODO!
+- **withdraw_fee.rs**: // TODO!
+
+Beside these files it also contains utilities and testing data. The most significant are:
+
+- **context.rs**: // TODO!
+- **ft_contract_interface.rs**: // TODO!
+- **jar_contract_interface.rs**: // TODO!
