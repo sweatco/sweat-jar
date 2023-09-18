@@ -11,7 +11,7 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
-async fn measure_withdraw_testг() -> anyhow::Result<()> {
+async fn measure_withdraw_test() -> anyhow::Result<()> {
     let result = scoped_command_measure(
         generate_permutations(
             &[

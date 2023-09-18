@@ -28,7 +28,7 @@ pub const fn tgas(val: u64) -> Gas {
 /// Const of after claim call with 1 jar
 const INITIAL_GAS_FOR_AFTER_CLAIM: u64 = 4 * TERA;
 
-/// Cost of adding 1 additional jar in after claim call
+/// Cost of adding 1 additional jar in after claim call. Measured with `measure_after_claim_total_test`
 const ADDITIONAL_AFTER_CLAIM_JAR_COST: u64 = 300 * GIGA;
 
 /// Values are measured with `measure_after_claim_total_test`
