@@ -11,6 +11,9 @@ pub(crate) const fn tgas(val: u64) -> Gas {
     Gas(Gas::ONE_TERA.0 * val)
 }
 
+/// TODO: Document this
+pub(crate) const _INITIAL_GAS_FOR_AFTER_CLAIM: Gas = tgas(4);
+
 pub(crate) const GAS_FOR_AFTER_TRANSFER: Gas = tgas(20);
 
 pub(crate) struct FungibleTokenContract {

@@ -49,22 +49,24 @@ impl OutcomeStorage {
         measuring.remove(index);
     }
 
+    /// Execute command and measure its gas price
     pub async fn measure<Output>(
         label: &str,
         account: &Account,
         future: impl Future<Output = anyhow::Result<Output>>,
-    ) -> anyhow::Result<Gas> {
+    ) -> anyhow::Result<(Gas, Output)> {
         Self::start_measuring(account);
-        future.await?;
+        let output = future.await?;
         Self::stop_measuring(account);
 
         let result = OutcomeStorage::get_result(&account, label);
 
-        Ok(result.gas_burnt)
+        Ok((result.gas_burnt, output))
     }
 }
 
 impl OutcomeStorage {
+    /// Store successful execution result
     pub fn add_result(result: ExecutionSuccess) {
         let executon = result.outcome().executor_id.clone();
 

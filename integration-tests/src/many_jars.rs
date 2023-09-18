@@ -57,7 +57,7 @@ async fn many_jars() -> anyhow::Result<()> {
         .await?;
     }
 
-    context.fast_forward(1).await?;
+    context.fast_forward_hours(1).await?;
 
     let claimed_amount = context.jar_contract.claim_total(&alice).await?;
 

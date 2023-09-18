@@ -29,7 +29,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     let mut alice_balance = context.ft_contract.ft_balance_of(&alice).await?;
     assert_eq!(99_000_000, alice_balance.0);
 
-    context.fast_forward(1).await?;
+    context.fast_forward_hours(1).await?;
 
     let withdraw_result = context.jar_contract.withdraw(&alice, "0").await?;
     let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
@@ -73,7 +73,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
     let mut alice_balance = context.ft_contract.ft_balance_of(&alice).await?;
     assert_eq!(99_000_000, alice_balance.0);
 
-    context.fast_forward(1).await?;
+    context.fast_forward_hours(1).await?;
 
     let withdraw_result = context.jar_contract.withdraw(&alice, "0").await?;
     let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");

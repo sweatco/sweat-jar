@@ -30,10 +30,14 @@ async fn measure_register_product_test() -> anyhow::Result<()> {
 async fn measure_after_claim_total_test() -> anyhow::Result<()> {
     let mut results = vec![];
 
-    for product in [RegisterProductCommand::Locked12Months12Percents] {
+    for product in [
+        RegisterProductCommand::Locked12Months12Percents,
+        RegisterProductCommand::Locked6Months6Percents,
+        RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
+    ] {
         set_claim_total_contract(product);
 
-        let measure_after_claim_total = scoped_command_measure(1..4, measure_after_claim_total).await?;
+        let measure_after_claim_total = scoped_command_measure(1..10, measure_after_claim_total).await?;
 
         let mut difs = vec![];
 

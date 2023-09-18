@@ -65,7 +65,7 @@ impl Context {
         fs::read(wasm_filepath).expect("Failed to load wasm")
     }
 
-    pub(crate) async fn fast_forward(&self, hours: u64) -> anyhow::Result<()> {
+    pub(crate) async fn fast_forward_hours(&self, hours: u64) -> anyhow::Result<()> {
         let blocks_to_advance = ONE_HOUR_BLOCKS_HEIGHT * hours;
 
         println!("⏳ Fast forward to {hours} hours ({blocks_to_advance} blocks)...");

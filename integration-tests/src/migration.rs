@@ -35,7 +35,7 @@ async fn migration() -> anyhow::Result<()> {
         .register_product(manager, RegisterProductCommand::Locked12Months12Percents.json())
         .await?;
 
-    context.fast_forward(1).await?;
+    context.fast_forward_hours(1).await?;
 
     context
         .ft_contract

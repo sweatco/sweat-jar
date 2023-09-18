@@ -37,7 +37,7 @@ async fn happy_flow() -> anyhow::Result<()> {
     assert_eq!(1_000_000, alice_principal.get_u128("total"));
     assert_eq!(0, alice_interest.get_interest());
 
-    context.fast_forward(1).await?;
+    context.fast_forward_hours(1).await?;
 
     alice_interest = context.jar_contract.get_total_interest(alice).await?;
     assert!(alice_interest.get_interest() > 0);

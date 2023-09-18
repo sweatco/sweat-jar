@@ -22,7 +22,7 @@ fn get_contract() -> RegisterProductCommand {
 #[ignore]
 #[tokio::test]
 async fn one_after_claim() -> anyhow::Result<()> {
-    set_claim_total_contract(RegisterProductCommand::Locked6Months6Percents);
+    set_claim_total_contract(RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee);
 
     let gas = measure_after_claim_total(1).await?;
 
@@ -44,9 +44,10 @@ pub(crate) async fn measure_after_claim_total(jars_count: usize) -> anyhow::Resu
         add_jar(&context, &alice, get_contract(), 100_000).await?;
     }
 
-    context.fast_forward(1).await?;
+    context.fast_forward_hours(2).await?;
 
-    let gas = OutcomeStorage::measure("interest_to_claim", &alice, context.jar_contract.claim_total(&alice)).await?;
+    let (gas, _claimed) =
+        OutcomeStorage::measure("interest_to_claim", &alice, context.jar_contract.claim_total(&alice)).await?;
 
     Ok(gas)
 }
