@@ -21,10 +21,6 @@ pub(crate) const MS_IN_YEAR: Duration = MINUTES_IN_YEAR * MS_IN_MINUTE;
 const TERA: u64 = Gas::ONE_TERA.0;
 const GIGA: u64 = TERA / 1000;
 
-pub const fn _ggas(val: u64) -> Gas {
-    Gas(GIGA * val)
-}
-
 pub const fn tgas(val: u64) -> Gas {
     Gas(TERA * val)
 }
@@ -40,15 +36,16 @@ const ADDITIONAL_AFTER_CLAIM_JAR_COST: u64 = 300 * GIGA;
 /// TODO: check actual number of jars and split to separate transactions if we have not enough gas
 pub(crate) const GAS_FOR_AFTER_CLAIM: Gas = Gas(INITIAL_GAS_FOR_AFTER_CLAIM + ADDITIONAL_AFTER_CLAIM_JAR_COST * 50);
 
-pub(crate) const GAS_FOR_AFTER_TRANSFER: Gas = tgas(20);
+/// Value is measured with `measure_withdraw_test`
+/// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
+pub(crate) const GAS_FOR_AFTER_WITHDRAW: Gas = tgas(4);
 
 #[cfg(test)]
 mod test {
-    use crate::common::{_ggas, tgas};
+    use crate::common::tgas;
 
     #[test]
     fn test_gas_methods() {
         assert_eq!(tgas(50).0, 50_000_000_000_000);
-        assert_eq!(_ggas(73).0, 73_000_000_000);
     }
 }

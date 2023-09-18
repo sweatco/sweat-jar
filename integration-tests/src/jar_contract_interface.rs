@@ -214,6 +214,8 @@ impl JarContractInterface for Contract {
 
         println!("   ✅ {result_value:?}");
 
+        OutcomeStorage::add_result(result);
+
         Ok(result_value)
     }
 

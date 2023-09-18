@@ -68,13 +68,13 @@ impl OutcomeStorage {
 impl OutcomeStorage {
     /// Store successful execution result
     pub fn add_result(result: ExecutionSuccess) {
-        let executon = result.outcome().executor_id.clone();
+        let execution = result.outcome().executor_id.clone();
 
-        if !Self::get_measuring().contains(&executon.to_string()) {
+        if !Self::get_measuring().contains(&execution.to_string()) {
             return;
         }
 
-        let existing = Self::get_data().insert(executon.to_string(), result);
+        let existing = Self::get_data().insert(execution.to_string(), result);
         assert!(existing.is_none());
     }
 
