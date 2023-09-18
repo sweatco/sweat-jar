@@ -1,4 +1,4 @@
-use near_sdk::{ext_contract, is_promise_success, json_types::U128, log, near_bindgen, PromiseOrValue};
+use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
 use crate::{
     assert::{assert_is_liquidable, assert_sufficient_balance},
@@ -80,8 +80,6 @@ impl Contract {
         fee: Option<Fee>,
         is_promise_success: bool,
     ) -> WithdrawView {
-        log!("after_withdraw_internal");
-
         if is_promise_success {
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();

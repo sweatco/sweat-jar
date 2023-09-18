@@ -1,6 +1,6 @@
 use std::cmp;
 
-use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, log, near_bindgen, PromiseOrValue};
+use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
 use crate::{
     common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
@@ -45,16 +45,8 @@ pub trait ClaimCallbacks {
 #[near_bindgen]
 impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
-        log!("claim total");
-
         let account_id = env::predecessor_account_id();
-
-        log!("account_id: {}", account_id);
-
         let jar_indices = self.account_jar_ids(&account_id);
-
-        log!("jar indices: {:?}", jar_indices);
-
         self.claim_jars(jar_indices, None)
     }
 
