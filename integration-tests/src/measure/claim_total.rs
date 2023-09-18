@@ -1,3 +1,5 @@
+#![cfg(test)]
+
 use std::sync::Mutex;
 
 use workspaces::{types::Gas, Account};
@@ -5,7 +7,7 @@ use workspaces::{types::Gas, Account};
 use crate::{
     common::{prepare_contract, Prepared},
     context::Context,
-    measure::outcome_storage::OutcomeStorage,
+    measure::{measure::scoped_command_measure, outcome_storage::OutcomeStorage},
     product::RegisterProductCommand,
 };
 
@@ -17,6 +19,35 @@ pub(crate) fn set_claim_total_contract(contract: RegisterProductCommand) {
 
 fn get_contract() -> RegisterProductCommand {
     *CONTRACT.lock().unwrap()
+}
+
+#[ignore]
+#[tokio::test]
+async fn measure_after_claim_total_test() -> anyhow::Result<()> {
+    let mut results = vec![];
+
+    for product in [
+        RegisterProductCommand::Locked12Months12Percents,
+        RegisterProductCommand::Locked6Months6Percents,
+        RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
+    ] {
+        set_claim_total_contract(product);
+
+        let measure_after_claim_total = scoped_command_measure(1..10, measure_after_claim_total).await?;
+
+        let mut difs = vec![];
+
+        for i in (1..measure_after_claim_total.len()).rev() {
+            let diff = measure_after_claim_total[i].1 - measure_after_claim_total[i - 1].1;
+            difs.push(diff);
+        }
+
+        results.push((product, measure_after_claim_total, difs))
+    }
+
+    dbg!(results);
+
+    Ok(())
 }
 
 #[ignore]

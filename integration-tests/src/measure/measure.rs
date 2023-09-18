@@ -7,13 +7,7 @@ use itertools::Itertools;
 use tokio::spawn;
 use workspaces::types::Gas;
 
-use crate::{
-    measure::{
-        claim_total::{measure_after_claim_total, set_claim_total_contract},
-        register_product::measure_register_product,
-    },
-    product::RegisterProductCommand,
-};
+use crate::{measure::register_product::measure_register_product, product::RegisterProductCommand};
 
 #[ignore]
 #[tokio::test]
@@ -25,36 +19,7 @@ async fn measure_register_product_test() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[ignore]
-#[tokio::test]
-async fn measure_after_claim_total_test() -> anyhow::Result<()> {
-    let mut results = vec![];
-
-    for product in [
-        RegisterProductCommand::Locked12Months12Percents,
-        RegisterProductCommand::Locked6Months6Percents,
-        RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
-    ] {
-        set_claim_total_contract(product);
-
-        let measure_after_claim_total = scoped_command_measure(1..10, measure_after_claim_total).await?;
-
-        let mut difs = vec![];
-
-        for i in (1..measure_after_claim_total.len()).rev() {
-            let diff = measure_after_claim_total[i].1 - measure_after_claim_total[i - 1].1;
-            difs.push(diff);
-        }
-
-        results.push((product, measure_after_claim_total, difs))
-    }
-
-    dbg!(results);
-
-    Ok(())
-}
-
-async fn scoped_command_measure<Input, Inputs, Command, Fut>(
+pub(crate) async fn scoped_command_measure<Input, Inputs, Command, Fut>(
     inputs: Inputs,
     mut command: Command,
 ) -> anyhow::Result<Vec<(Input, Gas)>>
