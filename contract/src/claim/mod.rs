@@ -10,7 +10,7 @@ mod tests {
         jar::{api::JarApi, model::Jar},
         product::{
             model::{Apy, Product},
-            tests::YEAR_IN_MS,
+            tests::MS_IN_YEAR,
         },
     };
 
@@ -54,7 +54,7 @@ mod tests {
     fn generate_product() -> Product {
         Product::generate("product")
             .enabled(true)
-            .lockup_term(YEAR_IN_MS)
+            .lockup_term(MS_IN_YEAR)
             .apy(Apy::Constant(UDecimal::new(12, 2)))
     }
 }

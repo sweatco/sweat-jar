@@ -6,7 +6,11 @@ use near_sdk::{
     AccountId,
 };
 
-use crate::{common::u32::U32, product::model::ProductId, Jar};
+use crate::{
+    common::{u32::U32, Timestamp},
+    product::model::ProductId,
+    Jar,
+};
 
 pub type JarIndexView = U32;
 
@@ -41,4 +45,11 @@ impl From<Jar> for JarView {
 pub struct AggregatedTokenAmountView {
     pub detailed: HashMap<JarIndexView, U128>,
     pub total: U128,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde(crate = "near_sdk::serde")]
+pub struct AggregatedInterestView {
+    pub amount: AggregatedTokenAmountView,
+    pub timestamp: Timestamp,
 }

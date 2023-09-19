@@ -102,7 +102,7 @@ mod tests {
             api::*,
             helpers::MessageSigner,
             model::DowngradableApy,
-            tests::{get_register_product_command, YEAR_IN_MS},
+            tests::{get_register_product_command, MS_IN_YEAR},
         },
         withdraw::api::WithdrawApi,
     };
@@ -185,8 +185,8 @@ mod tests {
 
         let interest = context.contract.get_total_interest(alice);
 
-        assert_eq!(interest.total.0, 0);
-        assert_eq!(interest.detailed, HashMap::new());
+        assert_eq!(interest.amount.total.0, 0);
+        assert_eq!(interest.amount.detailed, HashMap::new());
     }
 
     #[test]
@@ -209,8 +209,8 @@ mod tests {
 
         let interest = context.contract.get_total_interest(alice);
 
-        assert_eq!(interest.total.0, 684);
-        assert_eq!(interest.detailed, HashMap::from([(U32(0), U128(684))]))
+        assert_eq!(interest.amount.total.0, 684);
+        assert_eq!(interest.amount.detailed, HashMap::from([(U32(0), U128(684))]))
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
         let interest = context.contract.get_total_interest(alice);
 
         assert_eq!(
-            interest,
+            interest.amount,
             AggregatedTokenAmountView {
                 detailed: [(U32(0), U128(12_000_000))].into(),
                 total: U128(12_000_000)
@@ -260,7 +260,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(400);
 
-        let interest = context.contract.get_total_interest(alice).total.0;
+        let interest = context.contract.get_total_interest(alice).amount.total.0;
         assert_eq!(interest, 12_000_000);
     }
 
@@ -282,7 +282,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_total_interest(alice.clone()).total.0;
+        let mut interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
         assert_eq!(interest, 5_983_561);
 
         context.switch_account(&alice);
@@ -290,7 +290,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_total_interest(alice.clone()).total.0;
+        interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
         assert_eq!(interest, 6_016_438);
     }
 
@@ -336,7 +336,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(182);
 
-        let mut interest = context.contract.get_total_interest(alice.clone()).total.0;
+        let mut interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
         assert_eq!(interest, 9_972_602);
 
         context.switch_account(&admin);
@@ -344,7 +344,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(365);
 
-        interest = context.contract.get_total_interest(alice).total.0;
+        interest = context.contract.get_total_interest(alice).amount.total.0;
         assert_eq!(interest, 10_000_000);
     }
 
@@ -366,13 +366,13 @@ mod tests {
         context.contract.withdraw(U32(reference_jar.index), None);
 
         let interest = context.contract.get_total_interest(alice.clone());
-        assert_eq!(12_000_000, interest.total.0);
+        assert_eq!(12_000_000, interest.amount.total.0);
     }
 
     fn generate_product() -> Product {
         Product::generate("product")
             .enabled(true)
-            .lockup_term(YEAR_IN_MS)
+            .lockup_term(MS_IN_YEAR)
             .apy(Apy::Constant(UDecimal::new(12, 2)))
     }
 }

@@ -13,7 +13,7 @@ use crate::{
     jar::model::JarTicket,
     product::{
         model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
-        tests::YEAR_IN_MS,
+        tests::MS_IN_YEAR,
     },
     Contract,
 };
@@ -111,7 +111,7 @@ impl Product {
             Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms { allows_top_up, ..terms }),
             Terms::Flexible => Terms::Fixed(FixedProductTerms {
                 allows_top_up,
-                lockup_term: YEAR_IN_MS,
+                lockup_term: MS_IN_YEAR,
                 allows_restaking: false,
             }),
         };
@@ -127,7 +127,7 @@ impl Product {
             }),
             Terms::Flexible => Terms::Fixed(FixedProductTerms {
                 allows_restaking,
-                lockup_term: YEAR_IN_MS,
+                lockup_term: MS_IN_YEAR,
                 allows_top_up: false,
             }),
         };

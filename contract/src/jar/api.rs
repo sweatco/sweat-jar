@@ -6,7 +6,7 @@ use crate::{
     assert_ownership,
     common::{u32::U32, TokenAmount},
     event::{emit, EventKind, RestakeData},
-    jar::view::{AggregatedTokenAmountView, JarIndexView, JarView},
+    jar::view::{AggregatedInterestView, AggregatedTokenAmountView, JarIndexView, JarView},
     Contract, ContractExt, Jar, JarIndex,
 };
 
@@ -68,7 +68,7 @@ pub trait JarApi {
     ///
     /// An `U128` representing the sum of interest amounts across all deposit jars for the specified account.
     /// Returns 0 if the account has no associated jars.
-    fn get_total_interest(&self, account_id: AccountId) -> AggregatedTokenAmountView;
+    fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView;
 
     /// Retrieves the interest amount for a specific set of deposit jars.
     ///
@@ -81,7 +81,7 @@ pub trait JarApi {
     ///
     /// An `U128` representing the sum of interest amounts for the specified deposit jars.
     ///
-    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView;
+    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedInterestView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
@@ -139,13 +139,13 @@ impl JarApi for Contract {
         }
     }
 
-    fn get_total_interest(&self, account_id: AccountId) -> AggregatedTokenAmountView {
+    fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
         let jar_indices = self.account_jar_ids(&account_id).into_iter().map(U32).collect();
 
         self.get_interest(jar_indices)
     }
 
-    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView {
+    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedInterestView {
         let now = env::block_timestamp_ms();
 
         let mut detailed_amounts = HashMap::<JarIndexView, U128>::new();
@@ -160,9 +160,12 @@ impl JarApi for Contract {
             total_amount += interest;
         }
 
-        AggregatedTokenAmountView {
-            detailed: detailed_amounts,
-            total: U128(total_amount),
+        AggregatedInterestView {
+            amount: AggregatedTokenAmountView {
+                detailed: detailed_amounts,
+                total: U128(total_amount),
+            },
+            timestamp: now,
         }
     }
 
@@ -213,7 +216,7 @@ mod tests {
         jar::model::Jar,
         product::{
             model::{Apy, Product},
-            tests::YEAR_IN_MS,
+            tests::MS_IN_YEAR,
         },
     };
 
@@ -221,10 +224,10 @@ mod tests {
     fn get_interest_before_maturity() {
         let product = Product::generate("product")
             .apy(Apy::Constant(UDecimal::new(12, 2)))
-            .lockup_term(2 * YEAR_IN_MS);
+            .lockup_term(2 * MS_IN_YEAR);
         let jar = Jar::generate(0, &accounts(0), &product.id).principal(100_000_000);
 
-        let interest = jar.get_interest(&product, YEAR_IN_MS);
+        let interest = jar.get_interest(&product, MS_IN_YEAR);
         assert_eq!(12_000_000, interest);
     }
 
@@ -232,7 +235,7 @@ mod tests {
     fn get_interest_after_maturity() {
         let product = Product::generate("product")
             .apy(Apy::Constant(UDecimal::new(12, 2)))
-            .lockup_term(YEAR_IN_MS);
+            .lockup_term(MS_IN_YEAR);
         let jar = Jar::generate(0, &accounts(0), &product.id).principal(100_000_000);
 
         let interest = jar.get_interest(&product, 400 * 24 * 60 * 60 * 1000);
@@ -257,7 +260,7 @@ mod signature_tests {
             api::*,
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
-            tests::YEAR_IN_MS,
+            tests::MS_IN_YEAR,
         },
     };
 
@@ -493,7 +496,7 @@ mod signature_tests {
         let admin = accounts(1);
 
         let product = generate_product("restakable_product")
-            .lockup_term(YEAR_IN_MS)
+            .lockup_term(MS_IN_YEAR)
             .with_allows_restaking(true);
         let jar = Jar::generate(0, &alice, &product.id).principal(0);
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
@@ -511,7 +514,7 @@ mod signature_tests {
 
         let product = generate_product("restakable_product")
             .with_allows_restaking(true)
-            .lockup_term(YEAR_IN_MS);
+            .lockup_term(MS_IN_YEAR);
         let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
