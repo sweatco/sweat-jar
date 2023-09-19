@@ -68,5 +68,8 @@ mod tests {
     #[test]
     fn udecimal_mul() {
         assert_eq!(UDecimal::new(12, 0) * 5, UDecimal::new(60, 0) * 1);
+        assert_eq!(UDecimal::new(14, 1) * 10, UDecimal::new(14, 0) * 1);
+        assert_eq!(UDecimal::new(16, 2) * 100, UDecimal::new(16, 0) * 1);
+        assert_eq!(UDecimal::new(18, 3) * 1000, UDecimal::new(18, 0) * 1);
     }
 }
