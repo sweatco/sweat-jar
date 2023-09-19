@@ -141,7 +141,7 @@ impl Product {
     }
 
     /// Check if fee in new product is not to high
-    pub(crate) fn assert_fee(&self) {
+    pub(crate) fn assert_fee_amount(&self) {
         let Some(ref fee) = self.withdrawal_fee else {
             return;
         };

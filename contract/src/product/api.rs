@@ -65,7 +65,7 @@ impl ProductApi for Contract {
 
         let product: Product = command.into();
 
-        product.assert_fee();
+        product.assert_fee_amount();
 
         self.products.insert(product.id.clone(), product.clone());
 
