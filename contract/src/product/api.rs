@@ -64,6 +64,9 @@ impl ProductApi for Contract {
         assert!(!self.products.contains_key(&command.id), "Product already exists");
 
         let product: Product = command.into();
+
+        product.assert_fee();
+
         self.products.insert(product.id.clone(), product.clone());
 
         emit(EventKind::RegisterProduct(product));

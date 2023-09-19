@@ -139,6 +139,23 @@ impl Product {
     pub(crate) fn assert_enabled(&self) {
         require!(self.is_enabled, "It's not possible to create new jars for this product");
     }
+
+    /// Check if fee in new product is not to high
+    pub(crate) fn assert_fee(&self) {
+        let Some(ref fee) = self.withdrawal_fee else {
+            return;
+        };
+
+        let fee_ok = match fee {
+            WithdrawalFee::Fix(amount) => amount < &self.cap.min,
+            WithdrawalFee::Percent(percent) => percent.to_f32() < 100.0,
+        };
+
+        require!(
+            fee_ok,
+            "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
+        );
+    }
 }
 
 #[cfg(test)]

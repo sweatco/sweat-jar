@@ -64,4 +64,9 @@ mod tests {
 
         assert_eq!(0.12, float_value);
     }
+
+    #[test]
+    fn udecimal_mul() {
+        assert_eq!(UDecimal::new(12, 0) * 5, UDecimal::new(60, 0) * 1);
+    }
 }
