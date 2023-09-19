@@ -97,6 +97,12 @@ pub enum JarState {
     Closed,
 }
 
+impl JarState {
+    pub(crate) fn active(&self) -> bool {
+        matches!(self, JarState::Active)
+    }
+}
+
 impl Jar {
     pub(crate) fn create(
         index: JarIndex,
@@ -272,6 +278,9 @@ impl Contract {
 
     pub(crate) fn top_up(&mut self, jar_index: JarIndex, amount: U128) -> U128 {
         let jar = self.get_jar_internal(jar_index);
+
+        require!(jar.state.active(), "Closed jar doesn't allow top-ups");
+
         let product = self.get_product(&jar.product_id);
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
