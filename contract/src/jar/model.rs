@@ -43,7 +43,9 @@ pub struct JarTicket {
 }
 
 /// The `Jar` struct represents a deposit jar within the smart contract.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct Jar {
     /// The index of the jar in the `Contracts.jars` vector. Also serves as the unique identifier for the jar.
@@ -82,7 +84,9 @@ pub struct Jar {
 /// A cached value that stores calculated interest based on the current state of the jar.
 /// This cache is updated whenever properties that impact interest calculation change,
 /// allowing for efficient interest calculations between state changes.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarCache {
     pub updated_at: Timestamp,
@@ -90,7 +94,9 @@ pub struct JarCache {
 }
 
 /// The state of a jar, indicating whether it is active or closed.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd,
+)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub enum JarState {
     Active,

@@ -29,10 +29,10 @@ impl Contract {
             .unwrap_or_else(|| env::panic_str(&format!("Product {product_id} doesn't exist")))
     }
 
-    pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> Vec<JarIndex> {
+    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
         self.account_jars
             .get(account_id)
-            .map_or_else(Vec::new, |items| items.iter().copied().collect())
+            .map_or_else(Vec::new, |items| items.jars.iter().cloned().collect())
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
@@ -41,7 +41,8 @@ impl Contract {
         self.account_jars
             .entry(account_id.clone())
             .or_default()
-            .insert(jar_index);
+            .jars
+            .insert(jar);
     }
 
     fn insert_or_update_jar(&mut self, jar: Jar) {

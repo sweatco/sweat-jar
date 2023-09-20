@@ -34,7 +34,7 @@ pub trait ClaimApi {
     ///
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
     /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(&mut self, jar_indices: Vec<JarIndex>, amount: Option<U128>) -> PromiseOrValue<U128>;
+    fn claim_jars(&mut self, jar_indices: Vec<Jar>, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
@@ -50,13 +50,12 @@ impl ClaimApi for Contract {
         self.claim_jars(jar_indices, None)
     }
 
-    fn claim_jars(&mut self, jar_indices: Vec<JarIndex>, amount: Option<U128>) -> PromiseOrValue<U128> {
+    fn claim_jars(&mut self, jars: Vec<Jar>, amount: Option<U128>) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
-        let unlocked_jars: Vec<Jar> = jar_indices
+        let unlocked_jars: Vec<Jar> = jars
             .into_iter()
-            .map(|index| self.get_jar_internal(index))
             .filter(|jar| !jar.is_pending_withdraw && jar.account_id == account_id)
             .collect();
 
