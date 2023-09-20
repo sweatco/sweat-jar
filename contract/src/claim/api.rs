@@ -6,7 +6,7 @@ use crate::{
     common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
     event::{emit, ClaimEventItem, EventKind},
     ft_interface::FungibleTokenInterface,
-    jar::model::{Jar, JarIndex},
+    jar::model::Jar,
     Contract, ContractExt, Promise,
 };
 
@@ -46,7 +46,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
-        let jar_indices = self.account_jar_ids(&account_id);
+        let jar_indices = self.account_jars(&account_id);
         self.claim_jars(jar_indices, None)
     }
 
@@ -71,13 +71,12 @@ impl ClaimApi for Contract {
             });
 
             let updated_jar = jar.claimed(available_interest, interest_to_claim, now).locked();
-            self.jars.replace(jar.index, updated_jar);
 
             if interest_to_claim > 0 {
                 total_interest_to_claim += interest_to_claim;
 
                 event_data.push(ClaimEventItem {
-                    index: jar.index,
+                    index: jar.id,
                     interest_to_claim: U128(interest_to_claim),
                 });
             }
@@ -104,7 +103,8 @@ impl ClaimCallbacks for Contract {
     fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer {
-                self.get_jar_mut_internal(jar_before_transfer.index).unlock();
+                //  self.get_jar_mut_internal(jar_before_transfer.id).unlock();
+                todo!()
             }
 
             emit(event);
@@ -112,8 +112,9 @@ impl ClaimCallbacks for Contract {
             claimed_amount
         } else {
             for jar_before_transfer in jars_before_transfer {
-                self.jars
-                    .replace(jar_before_transfer.index, jar_before_transfer.unlocked());
+                // self.jars
+                //     .replace(jar_before_transfer.index, jar_before_transfer.unlocked());
+                todo!()
             }
 
             U128(0)

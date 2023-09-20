@@ -240,7 +240,7 @@ mod signature_tests {
             .with_jars(&[alice_jar.clone()]);
 
         context.switch_account(&admin);
-        context.contract.restake(U32(alice_jar.index));
+        context.contract.restake(alice, U32(alice_jar.id));
     }
 
     #[test]
@@ -254,7 +254,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(alice, U32(jar.id));
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(alice, U32(jar.id));
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(alice, U32(jar.id));
     }
 
     #[test]
@@ -307,7 +307,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(alice, U32(jar.id));
     }
 
     #[test]
@@ -324,14 +324,14 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(alice.clone(), U32(jar.id));
 
         let alice_jars = context.contract.get_jars_for_account(alice);
         assert_eq!(2, alice_jars.len());
-        assert_eq!(0, alice_jars.iter().find(|item| item.index.0 == 0).unwrap().principal.0);
+        assert_eq!(0, alice_jars.iter().find(|item| item.id.0 == 0).unwrap().principal.0);
         assert_eq!(
             1_000_000,
-            alice_jars.iter().find(|item| item.index.0 == 1).unwrap().principal.0
+            alice_jars.iter().find(|item| item.id.0 == 1).unwrap().principal.0
         );
     }
 
@@ -350,7 +350,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(alice, U32(jar.id));
     }
 
     #[test]
@@ -400,7 +400,7 @@ mod helpers {
     impl Jar {
         pub(crate) fn generate(index: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
             Self {
-                index,
+                id: index,
                 account_id: account_id.clone(),
                 product_id: product_id.clone(),
                 created_at: 0,

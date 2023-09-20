@@ -51,10 +51,14 @@ impl Contract {
                 format!("Product {} is not registered", ce_fi_jar.product_id),
             );
 
-            let index = self.jars.len();
+            // let index = self.jars.len();
+
+            let index = 0;
+
+            todo!();
 
             let jar = Jar {
-                index,
+                id: index,
                 account_id: ce_fi_jar.account_id,
                 product_id: ce_fi_jar.product_id,
                 created_at: ce_fi_jar.created_at.0,
@@ -66,18 +70,20 @@ impl Contract {
                 is_penalty_applied: false,
             };
 
-            self.jars.push(jar.clone());
+            // self.jars.push(jar.clone());
+            todo!();
 
             self.account_jars
                 .entry(jar.account_id.clone())
                 .or_default()
-                .insert(jar.index);
+                .jars
+                .insert(jar.clone());
 
             total_amount += jar.principal;
 
             event_data.push(MigrationEventItem {
                 original_id: ce_fi_jar.id,
-                index: jar.index,
+                index: jar.id,
                 account_id: jar.account_id,
             });
         }

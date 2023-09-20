@@ -19,7 +19,7 @@ use crate::{
     Base64VecU8, Contract, Signature,
 };
 
-pub type JarIndex = u32;
+pub type JarID = u32;
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
@@ -49,7 +49,8 @@ pub struct JarTicket {
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct Jar {
     /// The index of the jar in the `Contracts.jars` vector. Also serves as the unique identifier for the jar.
-    pub index: JarIndex,
+    /// TODO: Redocument
+    pub id: JarID,
 
     /// The account ID of the owner of the jar.
     pub account_id: AccountId,
@@ -111,14 +112,14 @@ impl JarState {
 
 impl Jar {
     pub(crate) fn create(
-        index: JarIndex,
+        index: JarID,
         account_id: AccountId,
         product_id: ProductId,
         principal: TokenAmount,
         created_at: Timestamp,
     ) -> Self {
         Self {
-            index,
+            id: index,
             account_id,
             product_id,
             principal,
@@ -275,7 +276,7 @@ impl Contract {
         product.assert_cap(amount);
         self.verify(&account_id, amount, &ticket, signature);
 
-        let index = self.jars.len() as JarIndex;
+        let index = self.next_jar_index(&account_id);
         let now = env::block_timestamp_ms();
         let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
 
@@ -286,8 +287,8 @@ impl Contract {
         jar.into()
     }
 
-    pub(crate) fn top_up(&mut self, jar_index: JarIndex, amount: U128) -> U128 {
-        let jar = self.get_jar_internal(jar_index);
+    pub(crate) fn top_up(&mut self, account: &AccountId, jar_index: JarID, amount: U128) -> U128 {
+        let jar = self.get_jar_internal(account, jar_index);
 
         require!(jar.state.is_active(), "Closed jar doesn't allow top-ups");
 
@@ -299,7 +300,7 @@ impl Contract {
         let now = env::block_timestamp_ms();
         let topped_up_jar = jar.topped_up(amount.0, product, now);
 
-        self.jars.replace(jar_index, topped_up_jar.clone());
+        // self.jars.replace(jar_index, topped_up_jar.clone());
 
         emit(EventKind::TopUp(TopUpData {
             index: jar_index,
@@ -309,17 +310,28 @@ impl Contract {
         U128(topped_up_jar.principal)
     }
 
-    pub(crate) fn get_jar_mut_internal(&mut self, index: JarIndex) -> &mut Jar {
-        self.jars
-            .get_mut(index)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar on index {index} doesn't exist")))
+    pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarID) -> &mut Jar {
+        self.account_jars
+            .get_mut(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
+            .get_mut(id)
     }
 
-    pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
-        self.jars.get(index).map_or_else(
-            || env::panic_str(&format!("Jar on index {index} doesn't exist")),
-            Clone::clone,
-        )
+    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarID) -> &Jar {
+        self.account_jars
+            .get(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
+            .get(id)
+    }
+
+    pub(crate) fn get_jars_internal(&self, account: &AccountId) -> Vec<Jar> {
+        self.account_jars
+            .get(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
+            .jars
+            .iter()
+            .cloned()
+            .collect()
     }
 
     pub(crate) fn verify(
@@ -335,7 +347,7 @@ impl Contract {
             let last_jar_index = self
                 .account_jars
                 .get(account_id)
-                .map(|jars| *jars.iter().max().unwrap_or_else(|| env::panic_str("Jar is empty.")));
+                .map(|account_jars| account_jars.last_index);
 
             let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_index);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
@@ -352,7 +364,7 @@ impl Contract {
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
-        last_jar_index: Option<JarIndex>,
+        last_jar_index: Option<JarID>,
     ) -> Vec<u8> {
         sha256(
             Self::get_signature_material(
@@ -373,7 +385,7 @@ impl Contract {
         product_id: &ProductId,
         amount: TokenAmount,
         valid_until: Timestamp,
-        last_jar_index: Option<JarIndex>,
+        last_jar_index: Option<JarID>,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",

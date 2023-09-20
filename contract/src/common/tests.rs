@@ -48,8 +48,6 @@ impl Context {
 
     pub(crate) fn with_jars(mut self, jars: &[Jar]) -> Self {
         for jar in jars {
-            self.contract.jars.push(jar.clone());
-
             self.contract
                 .account_jars
                 .entry(jar.account_id.clone())

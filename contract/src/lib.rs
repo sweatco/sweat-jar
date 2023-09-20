@@ -13,7 +13,7 @@ use product::model::{Apy, Product, ProductId};
 
 use crate::{
     assert::{assert_is_not_closed, assert_ownership},
-    jar::model::{Jar, JarIndex, JarState},
+    jar::model::{Jar, JarID, JarState},
 };
 
 mod assert;
@@ -38,8 +38,25 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct AccountJars {
-    pub last_index: JarIndex,
+    pub last_index: JarID,
     pub jars: HashSet<Jar>,
+}
+
+impl AccountJars {
+    pub(crate) fn get(&self, id: JarID) -> &Jar {
+        self.jars
+            .iter()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
+    }
+
+    pub(crate) fn get_mut(&mut self, id: JarID) -> &mut Jar {
+        // self.jars
+        //     .iter()
+        //     .find(|jar| jar.id == id)
+        //     .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
+        todo!()
+    }
 }
 
 #[near_bindgen]
@@ -57,9 +74,6 @@ pub struct Contract {
 
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
-
-    /// A vector containing information about all deposit jars.
-    pub jars: Vector<Jar>,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
@@ -86,7 +100,6 @@ impl Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::Products),
-            jars: Vector::new(StorageKey::Jars),
             account_jars: LookupMap::new(StorageKey::AccountJars),
             empty_jars: Default::default(),
         }

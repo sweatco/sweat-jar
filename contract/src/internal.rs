@@ -1,6 +1,6 @@
 use near_sdk::require;
 
-use crate::{env, AccountId, Contract, Jar, JarIndex, Product, ProductId};
+use crate::{env, jar::model::JarID, AccountId, Contract, Jar, Product, ProductId};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -15,6 +15,13 @@ impl Contract {
             env::predecessor_account_id() == self.token_account_id,
             format!("Can receive tokens only from {}", self.token_account_id)
         );
+    }
+
+    pub(crate) fn next_jar_index(&self, account: &AccountId) -> JarID {
+        self.account_jars
+            .get(account)
+            .map(|jars| jars.last_index + 1)
+            .unwrap_or_default()
     }
 
     pub(crate) fn get_product(&self, product_id: &ProductId) -> &Product {
@@ -36,20 +43,10 @@ impl Contract {
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        let jar_index = jar.index;
-        self.insert_or_update_jar(jar);
         self.account_jars
             .entry(account_id.clone())
             .or_default()
             .jars
             .insert(jar);
-    }
-
-    fn insert_or_update_jar(&mut self, jar: Jar) {
-        if jar.index < self.jars.len() {
-            self.jars.replace(jar.index, jar);
-        } else {
-            self.jars.push(jar);
-        }
     }
 }
