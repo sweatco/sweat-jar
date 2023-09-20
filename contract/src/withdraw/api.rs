@@ -108,17 +108,17 @@ impl Contract {
     }
 
     fn get_fee(&self, product: &Product, jar: &Jar) -> Option<Fee> {
-        product
-            .withdrawal_fee
-            .as_ref()
-            .map(|fee| match fee {
-                WithdrawalFee::Fix(amount) => *amount,
-                WithdrawalFee::Percent(percent) => percent * jar.principal,
-            })
-            .map(|amount| Fee {
-                beneficiary_id: self.fee_account_id.clone(),
-                amount,
-            })
+        let fee = product.withdrawal_fee.as_ref()?;
+
+        let amount = match fee {
+            WithdrawalFee::Fix(amount) => *amount,
+            WithdrawalFee::Percent(percent) => percent * jar.principal,
+        };
+
+        Some(Fee {
+            beneficiary_id: self.fee_account_id.clone(),
+            amount,
+        })
     }
 }
 

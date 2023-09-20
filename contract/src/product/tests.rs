@@ -114,6 +114,30 @@ fn register_downgradable_product() {
 }
 
 #[test]
+#[should_panic(
+    expected = "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
+)]
+fn register_product_with_too_high_fixed_fee() {
+    register_product(RegisterProductCommand {
+        id: "product_with_fixed_fee".to_string(),
+        withdrawal_fee: WithdrawalFeeDto::Fix(U128(200)).into(),
+        ..Default::default()
+    });
+}
+
+#[test]
+#[should_panic(
+    expected = "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
+)]
+fn register_product_with_too_high_percent_fee() {
+    register_product(RegisterProductCommand {
+        id: "product_with_fixed_fee".to_string(),
+        withdrawal_fee: WithdrawalFeeDto::Percent(U128(100), 0).into(),
+        ..Default::default()
+    });
+}
+
+#[test]
 fn register_product_with_fee() {
     let product = register_product(RegisterProductCommand {
         id: "product_with_fixed_fee".to_string(),

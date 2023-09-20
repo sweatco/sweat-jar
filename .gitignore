@@ -4,6 +4,8 @@
 node_modules
 /.pnp
 .pnp.js
+package.json
+package-lock.json
 
 # build
 /out
@@ -15,6 +17,8 @@ node_modules
 # testing
 /coverage
 /integration-tests/target
+/neardev
+/integration-tests/neardev
 
 # production
 /build
