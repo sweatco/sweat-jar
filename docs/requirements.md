@@ -80,9 +80,10 @@ Integration tests are NEAR Workspaces ([workspaces-rs](https://github.com/near/n
 
 The smart contract uses [ed25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek/tree/main/ed25519-dalek) to verify signatures for Premium Products.
 
-## 2.1. Project structure
+### 2.1. Project structure
 
-Here's a structure of the project:
+Here is an overview of the project structure:
+
 ```bash
 .
 ├── Cargo.toml
@@ -153,56 +154,84 @@ Here's a structure of the project:
     └── lint.sh
 ```
 
-Start with reading `contract/README.md` to find all the information about building, testing and deploying a smart contract.
+Start by reading `contract/README.md` to access comprehensive information about building, testing, and deploying a smart contract.
 
 #### 2.1.1. Tooling
 
-`Makefile` contains handy commands:
-- **build**: to build the contract locally;
-- **build-in-docker**: build reproducible artifact in Docker;
-- **test**: run unit tests;
-- **cov**: run unit tests with coverage;
-- **integration**: run integration tests; 
-- **lint**: run lint checks;
-- **fmt**: format the code;
-- **deploy**: deploy the contract to dev account on Testnet.
+The `Makefile` contains useful commands for building, testing, and deploying the contract. 
+These commands either operate on `cargo` or run scripts found in the `scripts` directory. 
+To view all the available commands for `make`, use the following command:
 
-These command either operate on `cargo`, or run scripts that can be found in `scripts` directory.
+```shell
+make help
+```
 
 #### 2.1.2. Artifacts
 
-`res` directory contains WASM binaries:
+The `res` directory contains WASM binaries:
 
-- **sweat.wasm**: assembled FT token contract for testing purposes;
-- **sweat_jar.wasm**: actual version of the DeFi Jar contract.
+- **sweat.wasm**: Assembled FT token contract for testing purposes.
+- **sweat_jar.wasm**: The actual version of the DeFi Jar contract.
 
 #### 2.1.2. Codebase
 
-Under the `./contract` directory you can find the smart contract module. Project configuration and dependencies can be 
-found in `Cargo.toml` file. `lib.rs` file contains the contract data structure and initializing code as well.
-Each of `claim`, `jar`, `penalty`, `product` and `withdraw` modules contains 
-feature-specific code. These modules can contain following parts:
-- `api.rs` – describes public methods for the feature.
-- `model.rs` – contains data structures for internal use in contract.
-- `view.rs` – contains data structures to receive from a client or return them. They reflect structs from `model.rs`, hide redundant data and contain more readable or easier parsable types.
+Under the `./contract` directory, you can locate the smart contract module. Project configuration and dependencies are 
+found in the `Cargo.toml` file. The lib.rs file contains the contract data structure and initialization code. 
+Each of the _claim, jar, penalty, product, and withdraw_ modules contains feature-specific code. 
+These modules consist of the following parts:
+
+- **api.rs** – Describes public methods for the feature.
+- **model.rs** – Contains data structures for internal use within the contract.
+- **view.rs** – Contains data structures to receive from a client or return to them. These structures reflect structs from model.rs, hiding redundant data and providing more readable or easily parsable types.
 
 Structures and API traits in these files are documented, so you can refer to this documentation.
 
-`ft_interface.rs` contains helpers to make interaction with related FT contract easier.
+The `ft_interface.rs` file contains helpers to facilitate interaction with the related FT contract.
 
-Code in `ft_receiver.rs` handles incoming Token transfers. This mechanism is used for Jars creation, top-ups and migration. 
+The code in `ft_receiver.rs` handles incoming Token transfers. This mechanism is used for Jar creation, top-ups, and migration.
 
 #### 2.1.3. Integration tests
 
-`./integration-tests` directory contains integration tests for the smart contract. It works with both FT and DeFi Jars contracts.
-It covers following scenarios:
+The `./integration-tests` directory contains integration tests for the smart contract. 
+These tests work with both FT and DeFi Jars contracts, covering the following scenarios:
 
-- **happy_flow.rs**: // TODO!
-- **migration.rs**: // TODO!
-- **withdraw_fee.rs**: // TODO!
+- **happy_flow.rs:** This scenario represents the successful registration of a product, the creation of a Jar, and the accrual of interest.
+- **migration.rs:** These tests focus on the batched migration of CeFi $SWEAT Jars to the contract.
+- **withdraw_fee.rs:** These tests deal with withdrawing Jars with fees, checking for the correct transfer of principal to a user account and fees account.
 
-Beside these files it also contains utilities and testing data. The most significant are:
+In addition to these files, it also contains utilities and testing data, with the most significant being:
 
-- **context.rs**: // TODO!
-- **ft_contract_interface.rs**: // TODO!
-- **jar_contract_interface.rs**: // TODO!
+- **context.rs:** This provides context for a test suite, loading artifacts, granting access to smart contract interfaces, and enabling time travel.
+- **ft_contract_interface.rs:** This offers an interface for the FT Contract API.
+- **jar_contract_interface.rs:** This provides an interface for the DeFi Jar Contract API.
+
+## 2.2. Architecture overview
+
+### 2.2.1. Actors
+
+The contract involves the participation of the following entities:
+
+- **DeFi Jar Contract:** This contract handles $SWEAT deposits (Jars) and manages their operations.
+- **NEP-141 Fungible Token Contract** ($SWEAT Token contract): This contract facilitates token transfers and is responsible for triggering the execution of the DeFi Jar Contract's logic when it receives tokens. 
+- **Oracle**: This third-party entity possesses additional information about Contract users. In the context of the Contract, the Oracle's role is to validate that users have the authorization to create Jars, and to generate Signatures for them. 
+- **Consumer** (NEAR Indexer): The Consumer observes events emitted by the **DeFi Jar Contract**. It maintains a connection between users' on-chain data and their data in third-party services.
+
+Refer to the following chart for a detailed overview of the entities involved within the system during the Staking process.
+
+![staking architecture](staking_architecture.png)
+
+### 2.2.2. Security
+
+To prevent data tampering and unauthorized access to Products, an [Ed25519 signature system](https://ed25519.cr.yp.to/) 
+is utilized. When authorization checks are necessary to create Jars for a Product, the Product must include 
+a verifying (public) key. In this scenario:
+
+- An Oracle generates a keypair and securely stores the private key.
+- Subsequently, the Oracle provides the public key to an Admin, who then uses this public key to create a Product.
+- In case the private key is compromised, the Oracle has the ability to generate a new keypair, and the Admin can update the public key associated with a Product.
+
+To perform a sensitive operation (currently limited to Jar creation), a User must obtain a signature from the Oracle. 
+This signature must be included along with other required arguments. The Contract then composes a message identical 
+to the one signed by the Oracle, incorporating the provided arguments and contextual data. 
+Subsequently, the Contract verifies this message against the Signature, using the Product's public key, to ensure 
+the prevention of tampering.

@@ -21,6 +21,7 @@ node_modules
 /contract/target
 
 # misc
+dev.env
 .DS_Store
 .env.local
 .env.development.local
