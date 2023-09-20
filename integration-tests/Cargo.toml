@@ -8,7 +8,11 @@ edition = "2021"
 name = "integration_tests"
 
 [dev-dependencies]
+fake = { workspace = true }
+rand = { workspace = true }
+futures = { workspace = true }
 near-sdk = { workspace = true }
+itertools = { workspace = true }
 
 anyhow = "1.0"
 borsh = "0.10.3"

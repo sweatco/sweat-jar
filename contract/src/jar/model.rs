@@ -139,6 +139,10 @@ impl Jar {
         }
     }
 
+    pub(crate) fn unlock(&mut self) {
+        self.is_pending_withdraw = false;
+    }
+
     pub(crate) fn with_penalty_applied(&self, is_applied: bool) -> Self {
         Self {
             is_penalty_applied: is_applied,
@@ -297,6 +301,12 @@ impl Contract {
         }));
 
         U128(topped_up_jar.principal)
+    }
+
+    pub(crate) fn get_jar_mut_internal(&mut self, index: JarIndex) -> &mut Jar {
+        self.jars
+            .get_mut(index)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar on index {index} doesn't exist")))
     }
 
     pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {

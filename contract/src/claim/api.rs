@@ -3,9 +3,9 @@ use std::cmp;
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
 use crate::{
-    common::TokenAmount,
+    common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
     event::{emit, ClaimEventItem, EventKind},
-    ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER},
+    ft_interface::FungibleTokenInterface,
     jar::model::{Jar, JarIndex},
     Contract, ContractExt, Promise,
 };
@@ -47,7 +47,6 @@ impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let jar_indices = self.account_jar_ids(&account_id);
-
         self.claim_jars(jar_indices, None)
     }
 
@@ -106,9 +105,7 @@ impl ClaimCallbacks for Contract {
     fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer {
-                let jar = self.get_jar_internal(jar_before_transfer.index);
-
-                self.jars.replace(jar_before_transfer.index, jar.unlocked());
+                self.get_jar_mut_internal(jar_before_transfer.index).unlock();
             }
 
             emit(event);
@@ -127,6 +124,6 @@ impl ClaimCallbacks for Contract {
 
 fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> Promise {
     ext_self::ext(env::current_account_id())
-        .with_static_gas(GAS_FOR_AFTER_TRANSFER)
+        .with_static_gas(GAS_FOR_AFTER_CLAIM)
         .after_claim(claimed_amount, jars_before_transfer, event)
 }
