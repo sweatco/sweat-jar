@@ -9,10 +9,10 @@ use crate::{
 };
 
 impl Contract {
-    /// Migrates CeFi Jars to create DeFi Jars.
+    /// Migrates `CeFi Jars` to create `DeFi Jars`.
     ///
     /// This method receives a list of entities called `CeFiJar`, which represent token deposits
-    /// from a 3rd party service, and creates corresponding DeFi Jars for them. In order to support
+    /// from a 3rd party service, and creates corresponding `DeFi Jars` for them. In order to support
     /// the transition of deposit terms from the 3rd party to the contract, the `Product` with these
     /// terms must be registered beforehand.
     ///
