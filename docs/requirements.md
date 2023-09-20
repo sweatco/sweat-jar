@@ -4,7 +4,24 @@ The DeFi Jars contract allows users to stake their NEP-141 fungible tokens and a
 
 The contract enables a contract administrator to register Products describing the terms of deposits. Users can then stake FTs into Jars, which are deposits based on the specified Products. The contract also provides the ability to restrict the creation of Jars for specific Products based on external conditions and involves third-party services.
 
-## 📖 Terminology
+## Table of content
+1. [**Terminology**](#1--terminology)
+2. [**Functional Requirements**](#2--functional-requirements)
+   1. [Roles](#21--roles)
+   2. [Features](#22--features)
+   3. [Use cases](#23--use-cases)
+3. [**Technical requirements**](#3--technical-requirements)
+   1. [Project structure](#31--project-structure)
+      1. [Tooling](#311--tooling)
+      2. [Artifacts](#312--artifacts)
+      3. [Codebase](#313--codebase)
+      4. [Integration tests](#314--integration-tests)
+   2. [Architecture overview](#32--architecture-overview)
+      1. [Actors](#321--actors)
+      2. [Security](#322--security)
+   3. [Migration strategy](#33--migration-strategy)
+
+## 1. 📖 Terminology
 
 The contract operates with the following entities:
 
@@ -27,9 +44,9 @@ The contract allows users to perform the following actions:
 - **Restake:** This refers to the act of re-enacting a previous “stake” action under the same terms.
 - **Claim:** This is the act of a user requesting the smart contract to release the accrued earnings from applied ERs on all or selected Jars containing funds.
 
-## 1. 🧑‍💼 Functional Requirements
+## 2. 🧑‍💼 Functional Requirements
 
-### 1.1. 👤 Roles
+### 2.1. 👤 Roles
 
 The DeFi Jars contract defines three roles:
 
@@ -37,7 +54,7 @@ The DeFi Jars contract defines three roles:
 - **User:** Users can create Jars by staking tokens, claim accrued interest, unstake their funds, and restake mature Jars.
 - **Oracle:** While not directly represented in the contract, the Oracle role can issue signatures to restrict Users' access to specific Products based on conditions that cannot be evaluated within the contract itself.
 
-### 1.2. ⚙️ Features
+### 2.2. ⚙️ Features
 
 The DeFi Jars contract provides the following features:
 
@@ -50,7 +67,7 @@ The DeFi Jars contract provides the following features:
 - Claim accrued $SWEAT from a Jar (User).
 - Top up the $SWEAT balance of a Jar (User).
 
-### 1.3. 🧑‍💻 Use cases
+### 2.3. 🧑‍💻 Use cases
 
 1. Admin can register a new Fixed Product. It must contain the Product ID, APY, Jar capacity, withdrawal fee, an optional verifying (public) key, lockup term, and indicators regarding whether it's enabled right after registration, allows top-ups, and allows restaking.
 2. Admin can register a new Flexible Product. It must contain the Product ID, APY, Jar capacity, withdrawal fee, an optional verifying (public) key, and indicators regarding whether it's enabled right after registration.
@@ -71,7 +88,7 @@ The DeFi Jars contract provides the following features:
 17. User can top up the principal of a Flexible Jar or Fixed Jar if the related Fixed Product allows top-ups.
 18. User can restake a Fixed Jar after its maturity. On restake, a new Jar is created, and the principal of the original Jar is transferred to the new one.
 
-## 2. 🤖 Technical requirements
+## 3. 🤖 Technical requirements
 
 DeFi Jar contract is a smart contract for NEAR network. It has been developed with Rust language using
 [near-sdk-rs](https://github.com/near/near-sdk-rs). 
@@ -80,7 +97,7 @@ Integration tests are NEAR Workspaces ([workspaces-rs](https://github.com/near/n
 
 The smart contract uses [ed25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek/tree/main/ed25519-dalek) to verify signatures for Premium Products.
 
-### 2.1. 🧬 Project structure
+### 3.1. 🧬 Project structure
 
 Here is an overview of the project structure:
 
@@ -99,7 +116,7 @@ Here is an overview of the project structure:
 
 Start by reading `README.md` to access comprehensive information about building, testing, and deploying a smart contract.
 
-#### 2.1.1. 🛠️ Tooling
+#### 3.1.1. 🛠️ Tooling
 
 The `Makefile` contains useful commands for building, testing, and deploying the contract. 
 These commands either operate on `cargo` or run scripts found in the `scripts` directory. 
@@ -109,14 +126,14 @@ To view all the available commands for `make`, use the following command:
 make help
 ```
 
-#### 2.1.2. 📦 Artifacts
+#### 3.1.2. 📦 Artifacts
 
 The `res` directory contains WASM binaries:
 
 - **sweat.wasm**: Assembled FT token contract for testing purposes.
 - **sweat_jar.wasm**: The actual version of the DeFi Jar contract.
 
-#### 2.1.2. 💿 Codebase
+#### 3.1.3. 💿 Codebase
 
 Under the `./contract` directory, you can locate the smart contract module. Project configuration and dependencies are 
 found in the `Cargo.toml` file. The lib.rs file contains the contract data structure and initialization code. 
@@ -133,7 +150,7 @@ The `ft_interface.rs` file contains helpers to facilitate interaction with the r
 
 The code in `ft_receiver.rs` handles incoming Token transfers. This mechanism is used for Jar creation, top-ups, and migration.
 
-#### 2.1.3. 🧪 Integration tests
+#### 3.1.4. 🧪 Integration tests
 
 The `./integration-tests` directory contains integration tests for the smart contract. 
 These tests work with both FT and DeFi Jars contracts, covering the following scenarios:
@@ -148,9 +165,9 @@ In addition to these files, it also contains utilities and testing data, with th
 - **ft_contract_interface.rs:** This offers an interface for the FT Contract API.
 - **jar_contract_interface.rs:** This provides an interface for the DeFi Jar Contract API.
 
-## 2.2. 📐 Architecture overview
+## 3.2. 📐 Architecture overview
 
-### 2.2.1. 🎭 Actors
+### 3.2.1. 🎭 Actors
 
 The contract involves the participation of the following entities:
 
@@ -163,7 +180,7 @@ Refer to the following chart for a detailed overview of the entities involved wi
 
 ![staking architecture](staking_architecture.png)
 
-### 2.2.2. 🔐 Security
+### 3.2.2. 🔐 Security
 
 To prevent data tampering and unauthorized access to Products, an [Ed25519 signature system](https://ed25519.cr.yp.to/) 
 is utilized. When authorization checks are necessary to create Jars for a Product, the Product must include 
@@ -178,3 +195,15 @@ This signature must be included along with other required arguments. The Contrac
 to the one signed by the Oracle, incorporating the provided arguments and contextual data. 
 Subsequently, the Contract verifies this message against the Signature, using the Product's public key, to ensure 
 the prevention of tampering.
+
+## 3.3. 🚃 Migration strategy
+
+Sweat Economy already offers a CeFi staking product. One of the goals is to migrate these centralized deposits to the blockchain.
+Migration occurs on-demand, and a User must choose to opt into the DeFi Jars to migrate their existing deposits.
+To prepare for migration, an Admin must create Products that reflect those existing in the third-party CeFi service. 
+These Products can be disabled from the beginning, and it shouldn't impact the migration process. This feature is convenient for managing legacy Products.
+The Migration API provides a batched method for migration, thus enabling flexibility for Oracle implementation.
+
+Here's a chart illustrating the migration process:
+
+![migration](migration.png)
