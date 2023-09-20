@@ -27,7 +27,7 @@ The contract allows users to perform the following actions:
 - **Restake:** This refers to the act of re-enacting a previous “stake” action under the same terms.
 - **Claim:** This is the act of a user requesting the smart contract to release the accrued earnings from applied ERs on all or selected Jars containing funds.
 
-## 1. Functional Requirements
+## 1. 🧑‍💼 Functional Requirements
 
 ### 1.1. 👤 Roles
 
@@ -80,7 +80,7 @@ Integration tests are NEAR Workspaces ([workspaces-rs](https://github.com/near/n
 
 The smart contract uses [ed25519-dalek](https://github.com/dalek-cryptography/curve25519-dalek/tree/main/ed25519-dalek) to verify signatures for Premium Products.
 
-### 2.1. Project structure
+### 2.1. 🧬 Project structure
 
 Here is an overview of the project structure:
 
@@ -156,7 +156,7 @@ Here is an overview of the project structure:
 
 Start by reading `contract/README.md` to access comprehensive information about building, testing, and deploying a smart contract.
 
-#### 2.1.1. Tooling
+#### 2.1.1. 🛠️ Tooling
 
 The `Makefile` contains useful commands for building, testing, and deploying the contract. 
 These commands either operate on `cargo` or run scripts found in the `scripts` directory. 
@@ -166,14 +166,14 @@ To view all the available commands for `make`, use the following command:
 make help
 ```
 
-#### 2.1.2. Artifacts
+#### 2.1.2. 📦 Artifacts
 
 The `res` directory contains WASM binaries:
 
 - **sweat.wasm**: Assembled FT token contract for testing purposes.
 - **sweat_jar.wasm**: The actual version of the DeFi Jar contract.
 
-#### 2.1.2. Codebase
+#### 2.1.2. 💿 Codebase
 
 Under the `./contract` directory, you can locate the smart contract module. Project configuration and dependencies are 
 found in the `Cargo.toml` file. The lib.rs file contains the contract data structure and initialization code. 
@@ -190,7 +190,7 @@ The `ft_interface.rs` file contains helpers to facilitate interaction with the r
 
 The code in `ft_receiver.rs` handles incoming Token transfers. This mechanism is used for Jar creation, top-ups, and migration.
 
-#### 2.1.3. Integration tests
+#### 2.1.3. 🧪 Integration tests
 
 The `./integration-tests` directory contains integration tests for the smart contract. 
 These tests work with both FT and DeFi Jars contracts, covering the following scenarios:
@@ -205,9 +205,9 @@ In addition to these files, it also contains utilities and testing data, with th
 - **ft_contract_interface.rs:** This offers an interface for the FT Contract API.
 - **jar_contract_interface.rs:** This provides an interface for the DeFi Jar Contract API.
 
-## 2.2. Architecture overview
+## 2.2. 📐 Architecture overview
 
-### 2.2.1. Actors
+### 2.2.1. 🎭 Actors
 
 The contract involves the participation of the following entities:
 
@@ -220,7 +220,7 @@ Refer to the following chart for a detailed overview of the entities involved wi
 
 ![staking architecture](staking_architecture.png)
 
-### 2.2.2. Security
+### 2.2.2. 🔐 Security
 
 To prevent data tampering and unauthorized access to Products, an [Ed25519 signature system](https://ed25519.cr.yp.to/) 
 is utilized. When authorization checks are necessary to create Jars for a Product, the Product must include 
