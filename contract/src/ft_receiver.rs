@@ -200,7 +200,7 @@ mod tests {
 
         let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(500);
 
-        let mut context = Context::new(admin.clone())
+        let mut context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[reference_jar.clone()]);
 
@@ -226,7 +226,7 @@ mod tests {
         let initial_jar_principal = 100_000;
         let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
 
-        let mut context = Context::new(admin.clone())
+        let mut context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[reference_jar.clone()]);
 
@@ -255,8 +255,10 @@ mod tests {
         let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
         let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
 
-        let mut context =
-            Context::new(admin).with_products(&[reference_product.clone(), reference_restakable_product.clone()]);
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product.clone(), reference_restakable_product.clone()]);
+
+        context.switch_account(&admin);
 
         let amount_alice = 100;
         let amount_bob = 200;
