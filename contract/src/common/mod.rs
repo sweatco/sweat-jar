@@ -33,7 +33,6 @@ const ADDITIONAL_AFTER_CLAIM_JAR_COST: u64 = 300 * GIGA;
 
 /// Values are measured with `measure_after_claim_total_test`
 /// For now number of jars is arbitrary
-/// TODO: check actual number of jars and split to separate transactions if we have not enough gas
 pub(crate) const GAS_FOR_AFTER_CLAIM: Gas = Gas(INITIAL_GAS_FOR_AFTER_CLAIM + ADDITIONAL_AFTER_CLAIM_JAR_COST * 50);
 
 /// Value is measured with `measure_withdraw_test`

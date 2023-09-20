@@ -39,7 +39,7 @@ async fn happy_flow() -> anyhow::Result<()> {
 
     context.fast_forward_hours(1).await?;
 
-    alice_interest = context.jar_contract.get_total_interest(alice).await?;
+    alice_interest = context.jar_contract.get_total_interest(&alice).await?;
     assert!(alice_interest.get_interest() > 0);
 
     let claimed_amount = context.jar_contract.claim_total(&alice).await?;
