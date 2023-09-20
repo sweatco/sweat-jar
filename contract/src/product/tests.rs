@@ -6,7 +6,7 @@ use near_sdk::{
 };
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal, Duration, MINUTES_IN_YEAR},
+    common::{tests::Context, udecimal::UDecimal, MS_IN_YEAR},
     product::{
         api::ProductApi,
         command::{RegisterProductCommand, TermsDto, WithdrawalFeeDto},
@@ -14,8 +14,6 @@ use crate::{
         model::{Apy, DowngradableApy, Product, Terms, WithdrawalFee},
     },
 };
-
-pub(crate) const MS_IN_YEAR: Duration = MINUTES_IN_YEAR * 60 * 1000;
 
 pub(crate) fn get_register_product_command() -> RegisterProductCommand {
     RegisterProductCommand {

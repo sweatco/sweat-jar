@@ -92,18 +92,13 @@ mod tests {
     use super::*;
     use crate::{
         claim::api::ClaimApi,
-        common::{u32::U32, udecimal::UDecimal},
+        common::{u32::U32, udecimal::UDecimal, MS_IN_YEAR},
         jar::{
             api::JarApi,
             view::{AggregatedTokenAmountView, JarView},
         },
         penalty::api::PenaltyApi,
-        product::{
-            api::*,
-            helpers::MessageSigner,
-            model::DowngradableApy,
-            tests::{get_register_product_command, MS_IN_YEAR},
-        },
+        product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
         withdraw::api::WithdrawApi,
     };
 

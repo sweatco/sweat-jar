@@ -6,12 +6,9 @@ mod tests {
 
     use crate::{
         claim::api::ClaimApi,
-        common::{tests::Context, u32::U32, udecimal::UDecimal},
+        common::{tests::Context, u32::U32, udecimal::UDecimal, MS_IN_YEAR},
         jar::{api::JarApi, model::Jar},
-        product::{
-            model::{Apy, Product},
-            tests::MS_IN_YEAR,
-        },
+        product::model::{Apy, Product},
     };
 
     #[test]

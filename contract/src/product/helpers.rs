@@ -9,12 +9,9 @@ use near_sdk::AccountId;
 use rand::rngs::OsRng;
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal, Duration, TokenAmount},
+    common::{tests::Context, udecimal::UDecimal, Duration, TokenAmount, MS_IN_YEAR},
     jar::model::JarTicket,
-    product::{
-        model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
-        tests::MS_IN_YEAR,
-    },
+    product::model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
     Contract,
 };
 
