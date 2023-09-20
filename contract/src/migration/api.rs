@@ -40,8 +40,6 @@ impl Contract {
     /// This method can only be called by the Contract Admin. Unauthorized access will result in a panic.
     ///
     pub(crate) fn migrate_jars(&mut self, jars: Vec<CeFiJar>, total_received: U128) {
-        self.assert_manager();
-
         let mut event_data: Vec<MigrationEventItem> = vec![];
         let mut total_amount: TokenAmount = 0;
 
