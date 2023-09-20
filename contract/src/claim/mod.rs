@@ -6,12 +6,9 @@ mod tests {
 
     use crate::{
         claim::api::ClaimApi,
-        common::{tests::Context, u32::U32, udecimal::UDecimal},
+        common::{tests::Context, u32::U32, udecimal::UDecimal, MS_IN_YEAR},
         jar::{api::JarApi, model::Jar},
-        product::{
-            model::{Apy, Product},
-            tests::YEAR_IN_MS,
-        },
+        product::model::{Apy, Product},
     };
 
     #[test]
@@ -54,7 +51,7 @@ mod tests {
     fn generate_product() -> Product {
         Product::generate("product")
             .enabled(true)
-            .lockup_term(YEAR_IN_MS)
+            .lockup_term(MS_IN_YEAR)
             .apy(Apy::Constant(UDecimal::new(12, 2)))
     }
 }

@@ -54,12 +54,12 @@ async fn happy_flow() -> anyhow::Result<()> {
     let alice_principal = context.jar_contract.get_total_principal(alice).await?;
     let mut alice_interest = context.jar_contract.get_total_interest(alice).await?;
     assert_eq!(1_000_000, alice_principal.get_u128("total"));
-    assert_eq!(0, alice_interest.get_u128("total"));
+    assert_eq!(0, alice_interest.get_interest());
 
     context.fast_forward(1).await?;
 
     alice_interest = context.jar_contract.get_total_interest(alice).await?;
-    assert!(alice_interest.get_u128("total") > 0);
+    assert!(alice_interest.get_interest() > 0);
 
     let claimed_amount = context.jar_contract.claim_total(alice).await?;
     assert!(15 < claimed_amount && claimed_amount < 20);
