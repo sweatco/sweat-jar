@@ -1,6 +1,8 @@
 #!/bin/sh
 
-./build.sh
+source dev.env
+
+make build
 
 if [ $? -ne 0 ]; then
   echo ">> Error building contract"
@@ -9,5 +11,4 @@ fi
 
 echo ">> Deploying contract"
 
-# https://docs.near.org/tools/near-cli#near-dev-deploy
-near dev-deploy --wasmFile ./target/wasm32-unknown-unknown/release/sweat_jar.wasm
+near dev-deploy --wasmFile "res/sweat_jar.wasm" --initFunction "init" --initArgs "{\"token_account_id\": \"$TOKEN_ACCOUNT_ID\", \"manager\": \"$ADMIN_ACCOUNT_ID\", \"fee_account_id\": \"$FEE_ACCOUNT_ID\"}"
