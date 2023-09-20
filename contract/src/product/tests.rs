@@ -6,7 +6,7 @@ use near_sdk::{
 };
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal, Duration},
+    common::{tests::Context, udecimal::UDecimal, MS_IN_YEAR},
     product::{
         api::ProductApi,
         command::{RegisterProductCommand, TermsDto, WithdrawalFeeDto},
@@ -14,8 +14,6 @@ use crate::{
         model::{Apy, DowngradableApy, Product, Terms, WithdrawalFee},
     },
 };
-
-pub(crate) const YEAR_IN_MS: Duration = 365 * 24 * 60 * 60 * 1000;
 
 pub(crate) fn get_register_product_command() -> RegisterProductCommand {
     RegisterProductCommand {
@@ -251,7 +249,7 @@ fn assert_cap_more_than_max() {
 fn generate_product() -> Product {
     Product::generate("product")
         .enabled(true)
-        .lockup_term(YEAR_IN_MS)
+        .lockup_term(MS_IN_YEAR)
         .apy(Apy::Constant(UDecimal::new(12, 2)))
         .cap(100, 100_000_000_000)
         .with_allows_top_up(false)

@@ -12,7 +12,7 @@ use near_sdk::{
 };
 
 use crate::{
-    common::{udecimal::UDecimal, Timestamp, TokenAmount, MINUTES_IN_YEAR, MS_IN_MINUTE},
+    common::{udecimal::UDecimal, Timestamp, TokenAmount, MS_IN_YEAR},
     event::{emit, EventKind, TopUpData},
     jar::view::JarView,
     product::model::{Apy, Product, ProductId, Terms},
@@ -211,11 +211,11 @@ impl Jar {
             0
         };
 
-        let term_in_minutes = u128::from(effective_term / MS_IN_MINUTE);
+        let term_in_minutes = u128::from(effective_term);
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let interest = (term_in_minutes * total_interest) / u128::from(MINUTES_IN_YEAR);
+        let interest = (term_in_minutes * total_interest) / u128::from(MS_IN_YEAR);
 
         base_interest + interest
     }
