@@ -90,71 +90,14 @@ Here is an overview of the project structure:
 ├── Makefile
 ├── README.md
 ├── contract
-│   ├── Cargo.toml
-│   ├── README.md
-│   └── src
-│       ├── assert.rs
-│       ├── claim
-│       │   ├── api.rs
-│       │   └── mod.rs
-│       ├── common
-│       │   ├── mod.rs
-│       │   ├── tests.rs
-│       │   ├── u32.rs
-│       │   └── udecimal.rs
-│       ├── event.rs
-│       ├── ft_interface.rs
-│       ├── ft_receiver.rs
-│       ├── internal.rs
-│       ├── jar
-│       │   ├── api.rs
-│       │   ├── mod.rs
-│       │   ├── model.rs
-│       │   └── view.rs
-│       ├── lib.rs
-│       ├── migration
-│       │   ├── api.rs
-│       │   ├── mod.rs
-│       │   └── model.rs
-│       ├── penalty
-│       │   ├── api.rs
-│       │   └── mod.rs
-│       ├── product
-│       │   ├── api.rs
-│       │   ├── command.rs
-│       │   ├── helpers.rs
-│       │   ├── mod.rs
-│       │   ├── model.rs
-│       │   ├── tests.rs
-│       │   └── view.rs
-│       └── withdraw
-│           ├── api.rs
-│           ├── mod.rs
-│           └── view.rs
 ├── docs
-│   └── requirements.md
 ├── integration-tests
-│   ├── Cargo.toml
-│   ├── rust-toolchain.toml
-│   └── src
-│       ├── common.rs
-│       ├── context.rs
-│       ├── ft_contract_interface.rs
-│       ├── happy_flow.rs
-│       ├── jar_contract_interface.rs
-│       ├── lib.rs
-│       ├── migration.rs
-│       ├── product.rs
-│       └── withdraw_fee.rs
-├── rust-toolchain.toml
 └── scripts
-    ├── build-in-docker.sh
-    ├── build.sh
-    ├── deploy.sh
-    └── lint.sh
 ```
 
-Start by reading `contract/README.md` to access comprehensive information about building, testing, and deploying a smart contract.
+`cargo` and `integration-tests` are regular cargo projects with their respective layouts.
+
+Start by reading `README.md` to access comprehensive information about building, testing, and deploying a smart contract.
 
 #### 2.1.1. 🛠️ Tooling
 
