@@ -99,7 +99,7 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, account_id: AccountId, jar_index: JarIDView) -> JarView;
+    fn restake(&mut self, jar_index: JarIDView) -> JarView;
 }
 
 #[near_bindgen]
@@ -161,10 +161,11 @@ impl JarApi for Contract {
         }
     }
 
-    fn restake(&mut self, account_id: AccountId, jar_index: JarIDView) -> JarView {
+    fn restake(&mut self, jar_index: JarIDView) -> JarView {
         let jar_index = jar_index.0;
-        let jar = self.get_jar_internal(&account_id, jar_index);
         let account_id = env::predecessor_account_id();
+
+        let jar = self.get_jar_internal(&account_id, jar_index);
 
         assert_ownership(jar, &account_id);
 

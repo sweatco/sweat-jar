@@ -228,7 +228,7 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account doesn't own this jar")]
+    #[should_panic(expected = "Account 'bob' doesn't exist")]
     fn restake_by_not_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
@@ -240,7 +240,7 @@ mod signature_tests {
             .with_jars(&[alice_jar.clone()]);
 
         context.switch_account(&admin);
-        context.contract.restake(alice, U32(alice_jar.id));
+        context.contract.restake(U32(alice_jar.id));
     }
 
     #[test]
@@ -254,7 +254,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(alice, U32(jar.id));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(alice, U32(jar.id));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(alice, U32(jar.id));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -307,7 +307,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(alice, U32(jar.id));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -324,7 +324,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(alice.clone(), U32(jar.id));
+        context.contract.restake(U32(jar.id));
 
         let alice_jars = context.contract.get_jars_for_account(alice);
         // TODO: ask
@@ -351,7 +351,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(alice, U32(jar.id));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -395,9 +395,9 @@ mod helpers {
     use crate::{common::TokenAmount, jar::model::Jar, product::model::ProductId};
 
     impl Jar {
-        pub(crate) fn generate(index: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
+        pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
             Self {
-                id: index,
+                id,
                 account_id: account_id.clone(),
                 product_id: product_id.clone(),
                 created_at: 0,

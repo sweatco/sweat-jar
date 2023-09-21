@@ -24,7 +24,7 @@ pub trait ClaimApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_ids` - A `Vec<JarID>` containing the indices of the deposit jars from which interest is being claimed.
+    /// * `jar_ids` - A `Vec<JarID>` containing the IDs of the deposit jars from which interest is being claimed.
     /// * `amount` - An optional `TokenAmount` specifying the desired amount of tokens to claim. If provided, the method
     ///              will attempt to claim this specific amount of tokens. If not provided or if the specified amount
     ///              is greater than the total available interest in the provided jars, the method will claim the maximum
@@ -54,9 +54,8 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
-        let jars = self.account_jars(&account_id);
-
-        let unlocked_jars: Vec<Jar> = jars
+        let unlocked_jars: Vec<Jar> = self
+            .account_jars(&account_id)
             .iter()
             .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&jar.id))
             .cloned()
