@@ -1,6 +1,7 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
     json_types::U128,
+    require,
     serde::{Deserialize, Serialize},
     serde_json, PromiseOrValue,
 };
@@ -18,7 +19,7 @@ pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
 
-    /// Reserved for internal service use; will be removed shortly after release.
+    /// Represents a request to create DeFi Jars from provided CeFi Jars.
     Migrate(Vec<CeFiJar>),
 
     /// Represents a request to refill (top up) an existing jar using its `JarIndex`.
@@ -52,6 +53,8 @@ impl FungibleTokenReceiver for Contract {
                 self.create_jar(receiver_id, message.ticket, amount, message.signature);
             }
             FtMessage::Migrate(jars) => {
+                require!(sender_id == self.manager, "Migration can be performed only by admin");
+
                 self.migrate_jars(jars, amount);
             }
             FtMessage::TopUp(jar_index) => {
@@ -200,7 +203,7 @@ mod tests {
 
         let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(500);
 
-        let mut context = Context::new(admin.clone())
+        let mut context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[reference_jar.clone()]);
 
@@ -226,7 +229,7 @@ mod tests {
         let initial_jar_principal = 100_000;
         let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
 
-        let mut context = Context::new(admin.clone())
+        let mut context = Context::new(admin)
             .with_products(&[reference_product])
             .with_jars(&[reference_jar.clone()]);
 
@@ -255,8 +258,8 @@ mod tests {
         let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
         let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
 
-        let mut context =
-            Context::new(admin).with_products(&[reference_product.clone(), reference_restakable_product.clone()]);
+        let mut context = Context::new(admin.clone())
+            .with_products(&[reference_product.clone(), reference_restakable_product.clone()]);
 
         let amount_alice = 100;
         let amount_bob = 200;
@@ -283,7 +286,7 @@ mod tests {
         context.switch_account_to_ft_contract_account();
         context
             .contract
-            .ft_on_transfer(alice.clone(), U128(amount_alice + amount_bob), msg.to_string());
+            .ft_on_transfer(admin, U128(amount_alice + amount_bob), msg.to_string());
 
         let alice_jars = context.contract.get_jars_for_account(alice);
         assert_eq!(alice_jars.len(), 1);
@@ -292,6 +295,37 @@ mod tests {
         let bob_jars = context.contract.get_jars_for_account(bob);
         assert_eq!(bob_jars.len(), 1);
         assert_eq!(bob_jars.first().unwrap().principal.0, amount_bob);
+    }
+
+    #[test]
+    #[should_panic(expected = "Migration can be performed only by admin")]
+    fn transfer_with_migration_message_by_not_admin() {
+        let alice = accounts(0);
+        let admin = accounts(1);
+
+        let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
+        let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
+
+        let mut context = Context::new(admin).with_products(&[reference_product.clone(), reference_restakable_product]);
+
+        let amount_alice = 1_000;
+        let msg = json!({
+            "type": "migrate",
+            "data": [
+                {
+                    "id": "cefi_product_3",
+                    "account_id": alice,
+                    "product_id": reference_product.id,
+                    "principal": amount_alice.to_string(),
+                    "created_at": "0",
+                },
+            ]
+        });
+
+        context.switch_account_to_ft_contract_account();
+        context
+            .contract
+            .ft_on_transfer(alice, U128(amount_alice), msg.to_string());
     }
 
     #[test]
