@@ -40,7 +40,7 @@ pub trait WithdrawApi {
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(
         &mut self,
-        account: AccountId,
+        account_id: AccountId,
         jar_index: JarIDView,
         amount: Option<U128>,
     ) -> PromiseOrValue<WithdrawView>;
@@ -60,11 +60,11 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(
         &mut self,
-        account: AccountId,
+        account_id: AccountId,
         jar_index: JarIDView,
         amount: Option<U128>,
     ) -> PromiseOrValue<WithdrawView> {
-        let jar = self.get_jar_internal(&account, jar_index.0).locked();
+        let jar = self.get_jar_internal(&account_id, jar_index.0).locked();
         let amount = amount.map_or(jar.principal, |value| value.0);
 
         let account_id = env::predecessor_account_id();

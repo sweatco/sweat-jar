@@ -193,6 +193,7 @@ impl JarContractInterface for Contract {
         println!("▶️ Withdraw jar #{jar_index}");
 
         let args = json!({
+            "account_id": user.id(),
             "jar_index": jar_index,
         });
 

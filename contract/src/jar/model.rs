@@ -292,7 +292,7 @@ impl Contract {
     pub(crate) fn delete_jar(&mut self, jar: Jar) {
         let account = &jar.account_id;
 
-        let jars = &mut self
+        let jars = self
             .account_jars
             .get_mut(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")));

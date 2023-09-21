@@ -21,7 +21,7 @@ pub trait JarApi {
     /// # Returns
     ///
     /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, account: AccountId, jar_index: JarIDView) -> JarView;
+    fn get_jar(&self, account_id: AccountId, jar_index: JarIDView) -> JarView;
 
     /// Retrieves information about all deposit jars associated with a given account.
     ///
@@ -99,13 +99,13 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, account: AccountId, jar_index: JarIDView) -> JarView;
+    fn restake(&mut self, account_id: AccountId, jar_index: JarIDView) -> JarView;
 }
 
 #[near_bindgen]
 impl JarApi for Contract {
-    fn get_jar(&self, account: AccountId, jar_id: JarIDView) -> JarView {
-        self.get_jar_internal(&account, jar_id.0).into()
+    fn get_jar(&self, account_id: AccountId, jar_id: JarIDView) -> JarView {
+        self.get_jar_internal(&account_id, jar_id.0).into()
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
@@ -161,9 +161,9 @@ impl JarApi for Contract {
         }
     }
 
-    fn restake(&mut self, account: AccountId, jar_index: JarIDView) -> JarView {
+    fn restake(&mut self, account_id: AccountId, jar_index: JarIDView) -> JarView {
         let jar_index = jar_index.0;
-        let jar = self.get_jar_internal(&account, jar_index);
+        let jar = self.get_jar_internal(&account_id, jar_index);
         let account_id = env::predecessor_account_id();
 
         assert_ownership(jar, &account_id);
