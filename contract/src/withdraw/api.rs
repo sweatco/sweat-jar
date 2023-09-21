@@ -200,7 +200,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Account 'owner' doesn't exist")]
     fn withdraw_locked_jar_before_maturity_by_not_owner() {
-        let (alice, _, mut context) = prepare_jar(&generate_product());
+        let (_, _, mut context) = prepare_jar(&generate_product());
 
         context.contract.withdraw(U32(0), None);
     }
@@ -218,7 +218,7 @@ mod tests {
     #[should_panic(expected = "Account 'owner' doesn't exist")]
     fn withdraw_locked_jar_after_maturity_by_not_owner() {
         let product = generate_product();
-        let (alice, jar, mut context) = prepare_jar(&product);
+        let (_, jar, mut context) = prepare_jar(&product);
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
         context.contract.withdraw(U32(jar.id), None);
@@ -238,7 +238,7 @@ mod tests {
     #[should_panic(expected = "Account 'owner' doesn't exist")]
     fn withdraw_flexible_jar_by_not_owner() {
         let product = generate_flexible_product();
-        let (alice, jar, mut context) = prepare_jar(&product);
+        let (_, jar, mut context) = prepare_jar(&product);
 
         context.set_block_timestamp_in_days(1);
         context.contract.withdraw(U32(jar.id), None);

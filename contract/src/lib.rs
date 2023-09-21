@@ -52,11 +52,14 @@ pub struct Contract {
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
 
+    /// TODO: doc
+    pub last_jar_id: JarID,
+
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, Vec<Jar>>,
 
-    /// TODO: doc
-    pub last_jar_id: JarID,
+    /// TODO: document
+    empty_jars: Vec<Jar>,
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -77,6 +80,7 @@ impl Contract {
             manager,
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJars),
+            empty_jars: vec![],
             last_jar_id: 0,
         }
     }
@@ -91,12 +95,12 @@ impl JarsStorage for Vec<Jar> {
     fn get_jar(&self, id: JarID) -> &Jar {
         self.iter()
             .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 
     fn get_jar_mut(&mut self, id: JarID) -> &mut Jar {
         self.iter_mut()
             .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 }

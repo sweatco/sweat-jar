@@ -329,10 +329,6 @@ impl Contract {
             .get_jar(id)
     }
 
-    pub(crate) fn get_jars_internal(&self, account: &AccountId) -> Vec<Jar> {
-        self.account_jars.get(account).cloned().unwrap_or_default()
-    }
-
     pub(crate) fn verify(
         &self,
         account_id: &AccountId,

@@ -46,7 +46,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
-        let jar_ids = self.account_jars(&account_id).into_iter().map(|a| a.id).collect();
+        let jar_ids = self.account_jars(&account_id).iter().map(|a| a.id).collect();
         self.claim_jars(jar_ids, None)
     }
 
@@ -57,8 +57,9 @@ impl ClaimApi for Contract {
         let jars = self.account_jars(&account_id);
 
         let unlocked_jars: Vec<Jar> = jars
-            .into_iter()
+            .iter()
             .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&jar.id))
+            .cloned()
             .collect();
 
         let mut total_interest_to_claim: TokenAmount = 0;

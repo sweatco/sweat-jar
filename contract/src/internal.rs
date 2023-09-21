@@ -38,8 +38,8 @@ impl Contract {
             .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 
-    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
-        self.account_jars.get(account_id).cloned().unwrap_or_default()
+    pub(crate) fn account_jars(&self, account_id: &AccountId) -> &[Jar] {
+        self.account_jars.get(account_id).unwrap_or(&self.empty_jars)
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {

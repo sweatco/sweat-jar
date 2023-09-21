@@ -22,7 +22,7 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
                 RegisterProductCommand::Locked6Months6Percents,
                 RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
             ],
-            &(1..10).collect_vec(),
+            &(1..5).collect_vec(),
         ),
         measure_after_claim_total,
     )

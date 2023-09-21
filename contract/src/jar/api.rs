@@ -109,7 +109,7 @@ impl JarApi for Contract {
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
-        self.account_jars(&account_id).into_iter().map(Into::into).collect()
+        self.account_jars(&account_id).iter().map(Into::into).collect()
     }
 
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
@@ -144,7 +144,7 @@ impl JarApi for Contract {
         let mut detailed_amounts = HashMap::<JarIDView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for jar in self.get_jars_internal(&account_id) {
+        for jar in self.account_jars(&account_id) {
             let index = jar.id;
             let interest = jar.get_interest(self.get_product(&jar.product_id), now);
 
