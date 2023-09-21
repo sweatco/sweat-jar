@@ -119,7 +119,7 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
             .account_jars
             .get(&alice)
             .unwrap()
-            .get(jar_index)
+            .get_jar(jar_index)
             .clone(),
     );
     assert_eq!(JarView::from(jar), contract_jar);
@@ -151,7 +151,7 @@ fn get_total_interest_with_single_jar_on_maturity() {
             .account_jars
             .get(&alice)
             .unwrap()
-            .get(jar_index)
+            .get_jar(jar_index)
             .clone(),
     );
     assert_eq!(JarView::from(jar), contract_jar);
@@ -188,7 +188,7 @@ fn get_total_interest_with_single_jar_after_maturity() {
             .account_jars
             .get(&alice)
             .unwrap()
-            .get(jar_index)
+            .get_jar(jar_index)
             .clone(),
     );
     assert_eq!(JarView::from(jar), contract_jar);
@@ -218,7 +218,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
             .account_jars
             .get(&alice)
             .unwrap()
-            .get(jar_index)
+            .get_jar(jar_index)
             .clone(),
     );
     assert_eq!(JarView::from(jar), contract_jar);

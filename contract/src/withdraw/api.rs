@@ -362,7 +362,6 @@ mod tests {
             .account_jars
             .get(&alice)
             .unwrap()
-            .jars
             .iter()
             .next()
             .unwrap();

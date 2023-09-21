@@ -17,11 +17,13 @@ impl Contract {
         );
     }
 
-    pub(crate) fn next_jar_index(&self, account: &AccountId) -> JarID {
-        self.account_jars
-            .get(account)
-            .map(|jars| jars.last_id + 1)
-            .unwrap_or_default()
+    pub(crate) fn next_jar_id(&mut self) -> JarID {
+        self.last_jar_id += 1;
+        self.last_jar_id
+    }
+
+    pub(crate) fn increment_jar_id(&mut self) {
+        self.last_jar_id += 1;
     }
 
     pub(crate) fn get_product(&self, product_id: &ProductId) -> &Product {
@@ -37,13 +39,10 @@ impl Contract {
     }
 
     pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
-        self.account_jars
-            .get(account_id)
-            .map(|a| a.jars.clone())
-            .unwrap_or_default()
+        self.account_jars.get(account_id).cloned().unwrap_or_default()
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.account_jars.entry(account_id.clone()).or_default().jars.push(jar);
+        self.account_jars.entry(account_id.clone()).or_default().push(jar);
     }
 }

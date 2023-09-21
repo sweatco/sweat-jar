@@ -179,8 +179,8 @@ impl JarApi for Contract {
 
         let principal = jar.principal;
 
-        let index = self.next_jar_index(&account_id);
-        let new_jar = Jar::create(index, jar.account_id.clone(), jar.product_id.clone(), principal, now);
+        let id = self.last_jar_id + 1;
+        let new_jar = Jar::create(id, jar.account_id.clone(), jar.product_id.clone(), principal, now);
         let (should_be_closed, withdraw_jar) = jar.withdrawn(product, principal, now);
 
         if should_be_closed {
@@ -190,6 +190,8 @@ impl JarApi for Contract {
         }
 
         self.save_jar(&account_id, new_jar.clone());
+
+        self.increment_jar_id();
 
         emit(EventKind::Restake(RestakeData {
             old_index: jar_index,

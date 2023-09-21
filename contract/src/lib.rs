@@ -1,7 +1,7 @@
 use ed25519_dalek::Signature;
 use near_sdk::{
     assert_one_yocto,
-    borsh::{self, maybestd::collections::HashSet, BorshDeserialize, BorshSerialize},
+    borsh::{self, BorshDeserialize, BorshSerialize},
     env,
     json_types::Base64VecU8,
     near_bindgen,
@@ -36,33 +36,6 @@ mod withdraw;
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(Default, BorshDeserialize, BorshSerialize)]
-pub struct AccountJars {
-    pub last_id: JarID,
-    pub jars: Vec<Jar>,
-}
-
-impl AccountJars {
-    pub(crate) fn get(&self, id: JarID) -> &Jar {
-        self.jars
-            .iter()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
-    }
-
-    pub(crate) fn get_mut(&mut self, id: JarID) -> &mut Jar {
-        self.jars
-            .iter_mut()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
-    }
-
-    pub(crate) fn next_jar_id(&mut self) -> JarID {
-        self.last_id += 1;
-        self.last_id
-    }
-}
-
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, SelfUpdate)]
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
@@ -80,10 +53,10 @@ pub struct Contract {
     pub products: UnorderedMap<ProductId, Product>,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub account_jars: LookupMap<AccountId, AccountJars>,
+    pub account_jars: LookupMap<AccountId, Vec<Jar>>,
 
-    /// TODO: document
-    pub empty_jars: HashSet<Jar>,
+    /// TODO: doc
+    pub last_jar_id: JarID,
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -104,7 +77,26 @@ impl Contract {
             manager,
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJars),
-            empty_jars: HashSet::default(),
+            last_jar_id: 0,
         }
+    }
+}
+
+pub(crate) trait JarsStorage {
+    fn get_jar(&self, id: JarID) -> &Jar;
+    fn get_jar_mut(&mut self, id: JarID) -> &mut Jar;
+}
+
+impl JarsStorage for Vec<Jar> {
+    fn get_jar(&self, id: JarID) -> &Jar {
+        self.iter()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
+    }
+
+    fn get_jar_mut(&mut self, id: JarID) -> &mut Jar {
+        self.iter_mut()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
     }
 }

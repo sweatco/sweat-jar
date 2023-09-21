@@ -53,10 +53,10 @@ impl Contract {
 
             let account_jars = self.account_jars.entry(ce_fi_jar.account_id.clone()).or_default();
 
-            let index = account_jars.next_jar_id();
+            let id = self.last_jar_id + 1;
 
             let jar = Jar {
-                id: index,
+                id,
                 account_id: ce_fi_jar.account_id,
                 product_id: ce_fi_jar.product_id,
                 created_at: ce_fi_jar.created_at.0,
@@ -67,9 +67,11 @@ impl Contract {
                 is_penalty_applied: false,
             };
 
-            account_jars.jars.push(jar.clone());
+            account_jars.push(jar.clone());
 
             total_amount += jar.principal;
+
+            self.increment_jar_id();
 
             event_data.push(MigrationEventItem {
                 original_id: ce_fi_jar.id,

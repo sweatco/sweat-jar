@@ -16,7 +16,7 @@ use crate::{
     event::{emit, EventKind, TopUpData},
     jar::view::JarView,
     product::model::{Apy, Product, ProductId, Terms},
-    Base64VecU8, Contract, Signature,
+    Base64VecU8, Contract, JarsStorage, Signature,
 };
 
 pub type JarID = u32;
@@ -93,14 +93,14 @@ pub struct JarCache {
 
 impl Jar {
     pub(crate) fn create(
-        index: JarID,
+        id: JarID,
         account_id: AccountId,
         product_id: ProductId,
         principal: TokenAmount,
         created_at: Timestamp,
     ) -> Self {
         Self {
-            id: index,
+            id,
             account_id,
             product_id,
             principal,
@@ -256,9 +256,9 @@ impl Contract {
         product.assert_cap(amount);
         self.verify(&account_id, amount, &ticket, signature);
 
-        let index = self.next_jar_index(&account_id);
+        let id = self.next_jar_id();
         let now = env::block_timestamp_ms();
-        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
+        let jar = Jar::create(id, account_id.clone(), product_id.clone(), amount, now);
 
         self.save_jar(&account_id, jar.clone());
 
@@ -295,8 +295,7 @@ impl Contract {
         let jars = &mut self
             .account_jars
             .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
-            .jars;
+            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")));
 
         require!(!jars.is_empty(), "Trying to delete jar from empty account");
 
@@ -320,22 +319,18 @@ impl Contract {
         self.account_jars
             .get_mut(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
-            .get_mut(id)
+            .get_jar_mut(id)
     }
 
     pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarID) -> &Jar {
         self.account_jars
             .get(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
-            .get(id)
+            .get_jar(id)
     }
 
     pub(crate) fn get_jars_internal(&self, account: &AccountId) -> Vec<Jar> {
-        let Some(account_jars) = self.account_jars.get(account) else {
-            return vec![];
-        };
-
-        account_jars.jars.clone()
+        self.account_jars.get(account).cloned().unwrap_or_default()
     }
 
     pub(crate) fn verify(
@@ -348,12 +343,15 @@ impl Contract {
         let product = self.get_product(&ticket.product_id);
         if let Some(pk) = &product.public_key {
             let signature = signature.expect("Signature is required");
-            let last_jar_index = self
-                .account_jars
-                .get(account_id)
-                .map(|account_jars| account_jars.last_id);
 
-            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_index);
+            // TODO: Document
+            let last_jar_id = if self.last_jar_id == 0 {
+                None
+            } else {
+                Some(self.last_jar_id)
+            };
+
+            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");

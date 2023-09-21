@@ -106,8 +106,8 @@ mod tests {
             .contract
             .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
 
-        let jar = context.contract.get_jar(alice, U32(0));
-        assert_eq!(jar.id.0, 0);
+        let jar = context.contract.get_jar(alice, U32(1));
+        assert_eq!(jar.id.0, 1);
     }
 
     #[test]
@@ -149,8 +149,8 @@ mod tests {
             .contract
             .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(alice.clone(), U32(0));
-        assert_eq!(jar.id.0, 0);
+        let jar = context.contract.get_jar(alice.clone(), U32(1));
+        assert_eq!(jar.id.0, 1);
 
         let result = catch_unwind(move || {
             context

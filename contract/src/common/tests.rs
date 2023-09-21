@@ -52,7 +52,6 @@ impl Context {
                 .account_jars
                 .entry(jar.account_id.clone())
                 .or_default()
-                .jars
                 .push(jar.clone());
         }
 
