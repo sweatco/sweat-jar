@@ -5,13 +5,10 @@ use near_sdk::{
     AccountId, Promise,
 };
 
-use crate::{common::TokenAmount, Contract, ContractExt, Gas};
-
-pub(crate) const fn tgas(val: u64) -> Gas {
-    Gas(Gas::ONE_TERA.0 * val)
-}
-
-pub(crate) const GAS_FOR_AFTER_TRANSFER: Gas = tgas(20);
+use crate::{
+    common::{tgas, TokenAmount},
+    Contract, ContractExt,
+};
 
 pub(crate) struct FungibleTokenContract {
     address: AccountId,

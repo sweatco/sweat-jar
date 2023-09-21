@@ -3,6 +3,8 @@ use near_units::parse_near;
 use serde_json::{json, Value};
 use workspaces::{Account, AccountId, Contract};
 
+use crate::measure::outcome_storage::OutcomeStorage;
+
 #[async_trait]
 pub(crate) trait JarContractInterface {
     fn account(&self) -> &Account;
@@ -65,14 +67,14 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn register_product(&self, user: &Account, register_product_command_json: Value) -> anyhow::Result<()> {
+    async fn register_product(&self, manager: &Account, register_product_command_json: Value) -> anyhow::Result<()> {
         println!("▶️ Register product: {register_product_command_json:?}");
 
         let args = json!({
             "command": register_product_command_json,
         });
 
-        let result = user
+        let result = manager
             .call(self.id(), "register_product")
             .args_json(args)
             .deposit(1)
@@ -83,6 +85,8 @@ impl JarContractInterface for Contract {
         for log in result.logs() {
             println!("   📖 {log}");
         }
+
+        OutcomeStorage::add_result(result);
 
         Ok(())
     }
@@ -210,6 +214,8 @@ impl JarContractInterface for Contract {
 
         println!("   ✅ {result_value:?}");
 
+        OutcomeStorage::add_result(result);
+
         Ok(result_value)
     }
 
@@ -235,6 +241,8 @@ impl JarContractInterface for Contract {
         let result_value = result.json::<Value>()?;
 
         println!("   ✅ {result_value:?}");
+
+        OutcomeStorage::add_result(result);
 
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }

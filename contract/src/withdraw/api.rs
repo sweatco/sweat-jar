@@ -3,7 +3,7 @@ use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen,
 use crate::{
     assert::{assert_is_liquidable, assert_sufficient_balance},
     assert_is_not_closed, assert_ownership,
-    common::TokenAmount,
+    common::{TokenAmount, GAS_FOR_AFTER_WITHDRAW},
     env,
     event::{emit, EventKind, WithdrawData},
     ft_interface::Fee,
@@ -13,10 +13,7 @@ use crate::{
     AccountId, Contract, ContractExt, Jar, Product,
 };
 #[cfg(not(test))]
-use crate::{
-    ft_interface::{FungibleTokenInterface, GAS_FOR_AFTER_TRANSFER},
-    Promise,
-};
+use crate::{ft_interface::FungibleTokenInterface, Promise};
 
 /// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.
 pub trait WithdrawApi {
@@ -141,7 +138,7 @@ impl Contract {
 
     fn after_withdraw_call(jar_before_transfer: Jar, withdrawn_balance: TokenAmount, fee: &Option<Fee>) -> Promise {
         ext_self::ext(env::current_account_id())
-            .with_static_gas(GAS_FOR_AFTER_TRANSFER)
+            .with_static_gas(GAS_FOR_AFTER_WITHDRAW)
             .after_withdraw(jar_before_transfer, withdrawn_balance, fee.clone())
     }
 }

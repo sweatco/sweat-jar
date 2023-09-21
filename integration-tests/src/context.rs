@@ -3,7 +3,9 @@ use std::{collections::HashMap, env, fs};
 use near_units::parse_near;
 use workspaces::{network::Sandbox, Account, Worker};
 
-use crate::{ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface};
+use crate::{
+    common::build_contract, ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface,
+};
 
 const EPOCH_BLOCKS_HEIGHT: u64 = 43_200;
 const HOURS_PER_EPOCH: u64 = 12;
@@ -13,13 +15,15 @@ pub(crate) struct Context {
     worker: Worker<Sandbox>,
     root_account: Account,
     pub accounts: HashMap<String, Account>,
-    pub ft_contract: Box<dyn FtContractInterface>,
-    pub jar_contract: Box<dyn JarContractInterface>,
+    pub ft_contract: Box<dyn FtContractInterface + Send + Sync>,
+    pub jar_contract: Box<dyn JarContractInterface + Send + Sync>,
 }
 
 impl Context {
     pub(crate) async fn new() -> anyhow::Result<Context> {
         println!("🏭 Initializing context");
+
+        build_contract()?;
 
         let worker = workspaces::sandbox().await?;
         let root_account = worker.dev_create_account().await?;
@@ -61,7 +65,7 @@ impl Context {
         fs::read(wasm_filepath).expect("Failed to load wasm")
     }
 
-    pub(crate) async fn fast_forward(&self, hours: u64) -> anyhow::Result<()> {
+    pub(crate) async fn fast_forward_hours(&self, hours: u64) -> anyhow::Result<()> {
         let blocks_to_advance = ONE_HOUR_BLOCKS_HEIGHT * hours;
 
         println!("⏳ Fast forward to {hours} hours ({blocks_to_advance} blocks)...");

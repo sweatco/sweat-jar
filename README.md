@@ -58,3 +58,25 @@ To obtain an identical build artifact on any machine, matching the one deployed 
 ```shell
 make build-in-docker
 ```
+
+## 3. Measure gas consumption
+
+
+Integration tests crate contains `measure` module which can be used to measure required amount of gas for each method.
+
+#### 3.1. To measure a single call you need to:
+- Create a method: `(Input) -> anyhow::Result<Gas>`.
+- In this method prepere context and everything required for the call.
+- Wrap the call you want to measure in `OutcomeStorage::measure`.
+- Pass a label, it is any text which can be found in logs of this method and identify it.
+- Pass calling account id.
+- Return `Gas` value returned by `OutcomeStorage::measure`.
+
+See example: `integration-tests/src/measure/withdraw.rs::measure_one_withdraw`.
+
+#### 3.2. To measure calls with different data:
+
+- Use `generate_permutations` method for generating all possible value combinations you want to test.
+- Pass the data and your method to `scoped_command_measure`, it will collect all the data and return the report for each call and permutation.
+
+See example: `integration-tests/src/measure/withdraw.rs::measure_withdraw_test`.
