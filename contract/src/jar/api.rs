@@ -7,7 +7,7 @@ use crate::{
     common::{u32::U32, TokenAmount},
     event::{emit, EventKind, RestakeData},
     jar::view::{AggregatedInterestView, AggregatedTokenAmountView, JarIDView, JarView},
-    Contract, ContractExt, Jar, JarID,
+    Contract, ContractExt, Jar,
 };
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.

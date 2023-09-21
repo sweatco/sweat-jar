@@ -134,13 +134,6 @@ impl Jar {
         self.is_pending_withdraw = false;
     }
 
-    pub(crate) fn with_penalty_applied(&self, is_applied: bool) -> Self {
-        Self {
-            is_penalty_applied: is_applied,
-            ..self.clone()
-        }
-    }
-
     pub(crate) fn apply_penalty(&mut self, is_applied: bool) {
         self.is_penalty_applied = is_applied;
     }
@@ -157,15 +150,18 @@ impl Jar {
         }
     }
 
-    pub(crate) fn claimed(&self, available_yield: TokenAmount, claimed_amount: TokenAmount, now: Timestamp) -> Self {
-        Self {
-            claimed_balance: self.claimed_balance + claimed_amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: available_yield - claimed_amount,
-            }),
-            ..self.clone()
-        }
+    pub(crate) fn claim(
+        &mut self,
+        available_yield: TokenAmount,
+        claimed_amount: TokenAmount,
+        now: Timestamp,
+    ) -> &mut Self {
+        self.claimed_balance = self.claimed_balance + claimed_amount;
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: available_yield - claimed_amount,
+        });
+        self
     }
 
     pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {

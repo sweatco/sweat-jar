@@ -5,7 +5,7 @@ use near_sdk::{
     env,
     json_types::Base64VecU8,
     near_bindgen,
-    store::{LookupMap, UnorderedMap, Vector},
+    store::{LookupMap, UnorderedMap},
     AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise,
 };
 use near_self_update::SelfUpdate;
@@ -89,7 +89,6 @@ pub struct Contract {
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Products,
-    Jars,
     AccountJars,
 }
 

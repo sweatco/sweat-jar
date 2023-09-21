@@ -70,7 +70,9 @@ impl ClaimApi for Contract {
                 cmp::min(available_interest, amount.0 - total_interest_to_claim)
             });
 
-            let updated_jar = jar.claimed(available_interest, interest_to_claim, now).locked();
+            self.get_jar_mut_internal(&jar.account_id, jar.id)
+                .claim(available_interest, interest_to_claim, now)
+                .lock();
 
             if interest_to_claim > 0 {
                 total_interest_to_claim += interest_to_claim;
