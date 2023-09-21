@@ -42,7 +42,7 @@ mod tests {
         context.set_block_timestamp_in_days(365);
 
         context.switch_account(&alice);
-        context.contract.claim_jars(vec![jar.clone()], Some(U128(100)));
+        context.contract.claim_jars(vec![jar.id], Some(U128(100)));
 
         let jar = context.contract.get_jar(alice, U32(jar.id));
         assert_eq!(100, jar.claimed_balance.0);

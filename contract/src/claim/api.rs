@@ -6,7 +6,7 @@ use crate::{
     common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
     event::{emit, ClaimEventItem, EventKind},
     ft_interface::FungibleTokenInterface,
-    jar::model::Jar,
+    jar::model::{Jar, JarID},
     Contract, ContractExt, Promise,
 };
 
@@ -24,7 +24,7 @@ pub trait ClaimApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars from which interest is being claimed.
+    /// * `jar_ids` - A `Vec<JarID>` containing the indices of the deposit jars from which interest is being claimed.
     /// * `amount` - An optional `TokenAmount` specifying the desired amount of tokens to claim. If provided, the method
     ///              will attempt to claim this specific amount of tokens. If not provided or if the specified amount
     ///              is greater than the total available interest in the provided jars, the method will claim the maximum
@@ -34,7 +34,7 @@ pub trait ClaimApi {
     ///
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
     /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(&mut self, jar_indices: Vec<Jar>, amount: Option<U128>) -> PromiseOrValue<U128>;
+    fn claim_jars(&mut self, jar_ids: Vec<JarID>, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
@@ -46,17 +46,19 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
-        let jar_indices = self.account_jars(&account_id);
-        self.claim_jars(jar_indices, None)
+        let jar_ids = self.account_jars(&account_id).into_iter().map(|a| a.id).collect();
+        self.claim_jars(jar_ids, None)
     }
 
-    fn claim_jars(&mut self, jars: Vec<Jar>, amount: Option<U128>) -> PromiseOrValue<U128> {
+    fn claim_jars(&mut self, jar_ids: Vec<JarID>, amount: Option<U128>) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
+        let jars = self.account_jars(&account_id);
+
         let unlocked_jars: Vec<Jar> = jars
             .into_iter()
-            .filter(|jar| !jar.is_pending_withdraw && jar.account_id == account_id)
+            .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&jar.id))
             .collect();
 
         let mut total_interest_to_claim: TokenAmount = 0;
