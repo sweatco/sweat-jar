@@ -1,6 +1,6 @@
 use serde_json::{json, Value};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,
