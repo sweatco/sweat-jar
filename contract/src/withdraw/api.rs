@@ -92,13 +92,16 @@ impl Contract {
         if is_promise_success {
             let product = self.get_product(&jar_before_transfer.product_id);
             let now = env::block_timestamp_ms();
-            let jar = jar_before_transfer.withdrawn(product, withdrawn_amount, now);
+            let (should_be_closed, jar) = jar_before_transfer.withdrawn(product, withdrawn_amount, now);
 
             let jar_id = jar.id;
 
-            let stored_jar = self.get_jar_mut_internal(&jar.account_id, jar_id);
-
-            *stored_jar = jar;
+            if should_be_closed {
+                self.delete_jar(jar);
+            } else {
+                let stored_jar = self.get_jar_mut_internal(&jar.account_id, jar_id);
+                *stored_jar = jar;
+            }
 
             emit(EventKind::Withdraw(WithdrawData { id: jar_id }));
 

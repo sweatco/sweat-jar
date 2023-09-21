@@ -166,7 +166,7 @@ impl JarApi for Contract {
         let jar = self.get_jar_internal(&account, jar_index);
         let account_id = env::predecessor_account_id();
 
-        assert_ownership(&jar, &account_id);
+        assert_ownership(jar, &account_id);
 
         let product = self.get_product(&jar.product_id);
 
@@ -177,17 +177,18 @@ impl JarApi for Contract {
         require!(jar.is_liquidable(product, now), "The jar is not mature yet");
         require!(!jar.is_empty(), "The jar is empty, nothing to restake");
 
-        let index = self.next_jar_index(&account_id);
-        let new_jar = Jar::create(
-            index,
-            jar.account_id.clone(),
-            jar.product_id.clone(),
-            jar.principal,
-            now,
-        );
-        let withdraw_jar = jar.withdrawn(product, jar.principal, now);
+        let principal = jar.principal;
 
-        self.save_jar(&account_id, withdraw_jar);
+        let index = self.next_jar_index(&account_id);
+        let new_jar = Jar::create(index, jar.account_id.clone(), jar.product_id.clone(), principal, now);
+        let (should_be_closed, withdraw_jar) = jar.withdrawn(product, principal, now);
+
+        if should_be_closed {
+            self.delete_jar(withdraw_jar);
+        } else {
+            self.save_jar(&account_id, withdraw_jar);
+        }
+
         self.save_jar(&account_id, new_jar.clone());
 
         emit(EventKind::Restake(RestakeData {

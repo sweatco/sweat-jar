@@ -138,16 +138,15 @@ impl Jar {
         self.is_penalty_applied = is_applied;
     }
 
-    pub(crate) fn topped_up(&self, amount: TokenAmount, product: &Product, now: Timestamp) -> Self {
+    pub(crate) fn top_up(&mut self, amount: TokenAmount, product: &Product, now: Timestamp) -> &mut Self {
         let current_interest = self.get_interest(product, now);
-        Self {
-            principal: self.principal + amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: current_interest,
-            }),
-            ..self.clone()
-        }
+
+        self.principal += amount;
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: current_interest,
+        });
+        self
     }
 
     pub(crate) fn claim(
@@ -156,7 +155,7 @@ impl Jar {
         claimed_amount: TokenAmount,
         now: Timestamp,
     ) -> &mut Self {
-        self.claimed_balance = self.claimed_balance + claimed_amount;
+        self.claimed_balance += claimed_amount;
         self.cache = Some(JarCache {
             updated_at: now,
             interest: available_yield - claimed_amount,
@@ -164,17 +163,20 @@ impl Jar {
         self
     }
 
-    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
+    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> (bool, Self) {
         let current_interest = self.get_interest(product, now);
 
-        Self {
-            principal: self.principal - withdrawn_amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: current_interest,
-            }),
-            ..self.clone()
-        }
+        (
+            should_be_closed(product, self, withdrawn_amount),
+            Self {
+                principal: self.principal - withdrawn_amount,
+                cache: Some(JarCache {
+                    updated_at: now,
+                    interest: current_interest,
+                }),
+                ..self.clone()
+            },
+        )
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -234,6 +236,10 @@ impl Jar {
     }
 }
 
+fn should_be_closed(product: &Product, original_jar: &Jar, withdrawn_amount: TokenAmount) -> bool {
+    !(product.is_flexible() || original_jar.principal - withdrawn_amount > 0)
+}
+
 impl Contract {
     pub(crate) fn create_jar(
         &mut self,
@@ -263,23 +269,51 @@ impl Contract {
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_index: JarID, amount: U128) -> U128 {
         let jar = self.get_jar_internal(account, jar_index);
-
-        let product = self.get_product(&jar.product_id);
+        let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
         product.assert_cap(jar.principal + amount.0);
 
         let now = env::block_timestamp_ms();
-        let topped_up_jar = jar.topped_up(amount.0, product, now);
 
-        // self.jars.replace(jar_index, topped_up_jar.clone());
+        let principal = self
+            .get_jar_mut_internal(account, jar_index)
+            .top_up(amount.0, &product, now)
+            .principal;
 
         emit(EventKind::TopUp(TopUpData {
             index: jar_index,
             amount,
         }));
 
-        U128(topped_up_jar.principal)
+        U128(principal)
+    }
+
+    pub(crate) fn delete_jar(&mut self, jar: Jar) {
+        let account = &jar.account_id;
+
+        let jars = &mut self
+            .account_jars
+            .get_mut(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
+            .jars;
+
+        require!(!jars.is_empty(), "Trying to delete jar from empty account");
+
+        if jars.len() == 1 {
+            jars.clear();
+            return;
+        }
+        // TODO: document
+
+        let jar_index = jars
+            .iter()
+            .position(|j| j.id == jar.id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
+
+        let last_jar = jars.pop().unwrap();
+
+        jars[jar_index] = last_jar;
     }
 
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarID) -> &mut Jar {
@@ -297,13 +331,11 @@ impl Contract {
     }
 
     pub(crate) fn get_jars_internal(&self, account: &AccountId) -> Vec<Jar> {
-        self.account_jars
-            .get(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
-            .jars
-            .iter()
-            .cloned()
-            .collect()
+        let Some(account_jars) = self.account_jars.get(account) else {
+            return vec![];
+        };
+
+        account_jars.jars.clone()
     }
 
     pub(crate) fn verify(

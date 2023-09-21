@@ -104,7 +104,7 @@ impl Contract {
             manager,
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJars),
-            empty_jars: Default::default(),
+            empty_jars: HashSet::default(),
         }
     }
 }
