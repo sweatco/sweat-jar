@@ -295,7 +295,7 @@ impl Contract {
         let jars = self
             .account_jars
             .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")));
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")));
 
         require!(!jars.is_empty(), "Trying to delete jar from empty account");
 
@@ -318,14 +318,14 @@ impl Contract {
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarID) -> &mut Jar {
         self.account_jars
             .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar_mut(id)
     }
 
     pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarID) -> &Jar {
         self.account_jars
             .get(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account {account} doesn't exist")))
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar(id)
     }
 

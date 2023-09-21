@@ -38,12 +38,7 @@ pub trait WithdrawApi {
     /// - If the caller is not the owner of the specified jar.
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(
-        &mut self,
-        account_id: AccountId,
-        jar_index: JarIDView,
-        amount: Option<U128>,
-    ) -> PromiseOrValue<WithdrawView>;
+    fn withdraw(&mut self, jar_index: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
 }
 
 #[ext_contract(ext_self)]
@@ -58,16 +53,11 @@ pub trait WithdrawCallbacks {
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(
-        &mut self,
-        account_id: AccountId,
-        jar_index: JarIDView,
-        amount: Option<U128>,
-    ) -> PromiseOrValue<WithdrawView> {
+    fn withdraw(&mut self, jar_index: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
+        let account_id = env::predecessor_account_id();
         let jar = self.get_jar_internal(&account_id, jar_index.0).locked();
         let amount = amount.map_or(jar.principal, |value| value.0);
 
-        let account_id = env::predecessor_account_id();
         assert_ownership(&jar, &account_id);
 
         assert_sufficient_balance(&jar, amount);
@@ -208,11 +198,11 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account doesn't own this jar")]
+    #[should_panic(expected = "Account 'owner' doesn't exist")]
     fn withdraw_locked_jar_before_maturity_by_not_owner() {
         let (alice, _, mut context) = prepare_jar(&generate_product());
 
-        context.contract.withdraw(alice, U32(0), None);
+        context.contract.withdraw(U32(0), None);
     }
 
     #[test]
@@ -221,17 +211,17 @@ mod tests {
         let (alice, jar, mut context) = prepare_jar(&generate_product());
 
         context.switch_account(&alice);
-        context.contract.withdraw(alice, U32(jar.id), None);
+        context.contract.withdraw(U32(jar.id), None);
     }
 
     #[test]
-    #[should_panic(expected = "Account doesn't own this jar")]
+    #[should_panic(expected = "Account 'owner' doesn't exist")]
     fn withdraw_locked_jar_after_maturity_by_not_owner() {
         let product = generate_product();
         let (alice, jar, mut context) = prepare_jar(&product);
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
-        context.contract.withdraw(alice, U32(jar.id), None);
+        context.contract.withdraw(U32(jar.id), None);
     }
 
     #[test]
@@ -241,17 +231,17 @@ mod tests {
 
         context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
         context.switch_account(&alice);
-        context.contract.withdraw(alice, U32(jar.id), None);
+        context.contract.withdraw(U32(jar.id), None);
     }
 
     #[test]
-    #[should_panic(expected = "Account doesn't own this jar")]
+    #[should_panic(expected = "Account 'owner' doesn't exist")]
     fn withdraw_flexible_jar_by_not_owner() {
         let product = generate_flexible_product();
         let (alice, jar, mut context) = prepare_jar(&product);
 
         context.set_block_timestamp_in_days(1);
-        context.contract.withdraw(alice, U32(jar.id), None);
+        context.contract.withdraw(U32(jar.id), None);
     }
 
     #[test]
@@ -262,7 +252,7 @@ mod tests {
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
 
-        context.contract.withdraw(alice.clone(), U32(reference_jar.id), None);
+        context.contract.withdraw(U32(reference_jar.id), None);
         let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
         assert_eq!(0, jar.principal.0);
     }
@@ -275,7 +265,7 @@ mod tests {
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
 
-        context.contract.withdraw(alice.clone(), U32(0), Some(U128(100_000)));
+        context.contract.withdraw(U32(0), Some(U128(100_000)));
         let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
         assert_eq!(900_000, jar.principal.0);
     }
@@ -288,9 +278,7 @@ mod tests {
 
         context.set_block_timestamp_in_days(1);
         context.switch_account(&alice);
-        context
-            .contract
-            .withdraw(alice.clone(), U32(jar.id), Some(U128(2_000_000)));
+        context.contract.withdraw(U32(jar.id), Some(U128(2_000_000)));
     }
 
     #[test]
@@ -305,11 +293,7 @@ mod tests {
         context.switch_account(&alice);
 
         let withdraw_amount = 100_000;
-        let PromiseOrValue::Value(withdraw) =
-            context
-                .contract
-                .withdraw(alice.clone(), U32(0), Some(U128(withdraw_amount)))
-        else {
+        let PromiseOrValue::Value(withdraw) = context.contract.withdraw(U32(0), Some(U128(withdraw_amount))) else {
             panic!("Invalid promise type");
         };
 
@@ -334,11 +318,7 @@ mod tests {
         context.switch_account(&alice);
 
         let withdrawn_amount = 100_000;
-        let PromiseOrValue::Value(withdraw) =
-            context
-                .contract
-                .withdraw(alice.clone(), U32(0), Some(U128(withdrawn_amount)))
-        else {
+        let PromiseOrValue::Value(withdraw) = context.contract.withdraw(U32(0), Some(U128(withdrawn_amount))) else {
             panic!("Invalid promise type");
         };
 

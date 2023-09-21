@@ -169,7 +169,7 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Product not_existing_product doesn't exist")]
+    #[should_panic(expected = "Product 'not_existing_product' doesn't exist")]
     fn verify_ticket_with_not_existing_product() {
         let admin = accounts(0);
 
