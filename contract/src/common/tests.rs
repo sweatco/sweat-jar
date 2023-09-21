@@ -53,7 +53,7 @@ impl Context {
                 .entry(jar.account_id.clone())
                 .or_default()
                 .jars
-                .insert(jar.clone());
+                .push(jar.clone());
         }
 
         self

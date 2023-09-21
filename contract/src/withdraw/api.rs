@@ -2,7 +2,7 @@ use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen,
 
 use crate::{
     assert::{assert_is_liquidable, assert_sufficient_balance},
-    assert_is_not_closed, assert_ownership,
+    assert_ownership,
     common::{TokenAmount, GAS_FOR_AFTER_WITHDRAW},
     env,
     event::{emit, EventKind, WithdrawData},
@@ -71,7 +71,6 @@ impl WithdrawApi for Contract {
         assert_ownership(&jar, &account_id);
 
         assert_sufficient_balance(&jar, amount);
-        assert_is_not_closed(&jar);
 
         let now = env::block_timestamp_ms();
         let product = self.get_product(&jar.product_id);
@@ -95,26 +94,26 @@ impl Contract {
             let now = env::block_timestamp_ms();
             let jar = jar_before_transfer.withdrawn(product, withdrawn_amount, now);
 
-            // self.jars.replace(jar_before_transfer.id, jar.unlocked());
-            todo!();
+            let jar_id = jar.id;
 
-            emit(EventKind::Withdraw(WithdrawData { index: jar.id }));
+            let stored_jar = self.get_jar_mut_internal(&jar.account_id, jar_id);
+
+            *stored_jar = jar;
+
+            emit(EventKind::Withdraw(WithdrawData { id: jar_id }));
 
             WithdrawView::new(withdrawn_amount, fee)
         } else {
-            // self.jars
-            //     .replace(jar_before_transfer.id, jar_before_transfer.unlocked());
+            let stored_jar = self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id);
 
-            todo!();
+            *stored_jar = jar_before_transfer.unlocked();
 
             WithdrawView::new(0, None)
         }
     }
 
     fn do_transfer(&mut self, account_id: &AccountId, jar: &Jar, amount: TokenAmount) -> PromiseOrValue<WithdrawView> {
-        // self.jars.replace(jar.id, jar.locked());
-        todo!();
-
+        self.get_jar_mut_internal(account_id, jar.id).lock();
         self.transfer_withdraw(account_id, amount, jar)
     }
 

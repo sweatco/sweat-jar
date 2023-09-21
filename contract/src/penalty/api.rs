@@ -28,23 +28,19 @@ pub trait PenaltyApi {
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
-    fn set_penalty(&mut self, account: AccountId, jar_index: JarID, value: bool) {
+    fn set_penalty(&mut self, account: AccountId, jar_id: JarID, value: bool) {
         self.assert_manager();
 
-        let jar = self.get_jar_internal(&account, jar_index);
+        let jar = self.get_jar_internal(&account, jar_id);
         let product = self.get_product(&jar.product_id);
 
         match product.apy {
-            Apy::Downgradable(_) => {
-                let updated_jar = jar.with_penalty_applied(value);
-                todo!();
-                // self.jars.replace(jar.id, updated_jar);
-            }
+            Apy::Downgradable(_) => self.get_jar_mut_internal(&account, jar_id).apply_penalty(value),
             Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
         };
 
         emit(ApplyPenalty(PenaltyData {
-            index: jar_index,
+            index: jar_id,
             is_applied: value,
         }));
     }

@@ -12,8 +12,8 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product, ProductId};
 
 use crate::{
-    assert::{assert_is_not_closed, assert_ownership},
-    jar::model::{Jar, JarID, JarState},
+    assert::assert_ownership,
+    jar::model::{Jar, JarID},
 };
 
 mod assert;
@@ -38,8 +38,8 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct AccountJars {
-    pub last_index: JarID,
-    pub jars: HashSet<Jar>,
+    pub last_id: JarID,
+    pub jars: Vec<Jar>,
 }
 
 impl AccountJars {
@@ -51,11 +51,15 @@ impl AccountJars {
     }
 
     pub(crate) fn get_mut(&mut self, id: JarID) -> &mut Jar {
-        // self.jars
-        //     .iter()
-        //     .find(|jar| jar.id == id)
-        //     .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
-        todo!()
+        self.jars
+            .iter_mut()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with {id} doesn't exist")))
+    }
+
+    pub(crate) fn next_jar_id(&mut self) -> JarID {
+        self.last_id += 1;
+        self.last_id
     }
 }
 

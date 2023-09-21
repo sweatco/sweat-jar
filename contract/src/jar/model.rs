@@ -75,9 +75,6 @@ pub struct Jar {
     /// Indicates whether an operation involving cross-contract calls is in progress for this jar.
     pub is_pending_withdraw: bool,
 
-    /// The state of the jar, indicating whether it is active or closed.
-    pub state: JarState,
-
     /// Indicates whether a penalty has been applied to the jar's owner due to violating product terms.
     pub is_penalty_applied: bool,
 }
@@ -92,22 +89,6 @@ pub struct Jar {
 pub struct JarCache {
     pub updated_at: Timestamp,
     pub interest: TokenAmount,
-}
-
-/// The state of a jar, indicating whether it is active or closed.
-#[derive(
-    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd,
-)]
-#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-pub enum JarState {
-    Active,
-    Closed,
-}
-
-impl JarState {
-    pub(crate) fn is_active(&self) -> bool {
-        matches!(self, JarState::Active)
-    }
 }
 
 impl Jar {
@@ -127,7 +108,6 @@ impl Jar {
             cache: None,
             claimed_balance: 0,
             is_pending_withdraw: false,
-            state: JarState::Active,
             is_penalty_applied: false,
         }
     }
@@ -137,6 +117,10 @@ impl Jar {
             is_pending_withdraw: true,
             ..self.clone()
         }
+    }
+
+    pub(crate) fn lock(&mut self) {
+        self.is_pending_withdraw = true;
     }
 
     pub(crate) fn unlocked(&self) -> Self {
@@ -155,6 +139,10 @@ impl Jar {
             is_penalty_applied: is_applied,
             ..self.clone()
         }
+    }
+
+    pub(crate) fn apply_penalty(&mut self, is_applied: bool) {
+        self.is_penalty_applied = is_applied;
     }
 
     pub(crate) fn topped_up(&self, amount: TokenAmount, product: &Product, now: Timestamp) -> Self {
@@ -182,7 +170,6 @@ impl Jar {
 
     pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
         let current_interest = self.get_interest(product, now);
-        let state = get_final_state(product, self, withdrawn_amount);
 
         Self {
             principal: self.principal - withdrawn_amount,
@@ -190,7 +177,6 @@ impl Jar {
                 updated_at: now,
                 interest: current_interest,
             }),
-            state,
             ..self.clone()
         }
     }
@@ -252,14 +238,6 @@ impl Jar {
     }
 }
 
-fn get_final_state(product: &Product, original_jar: &Jar, withdrawn_amount: TokenAmount) -> JarState {
-    if product.is_flexible() || original_jar.principal - withdrawn_amount > 0 {
-        JarState::Active
-    } else {
-        JarState::Closed
-    }
-}
-
 impl Contract {
     pub(crate) fn create_jar(
         &mut self,
@@ -289,8 +267,6 @@ impl Contract {
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_index: JarID, amount: U128) -> U128 {
         let jar = self.get_jar_internal(account, jar_index);
-
-        require!(jar.state.is_active(), "Closed jar doesn't allow top-ups");
 
         let product = self.get_product(&jar.product_id);
 
@@ -347,7 +323,7 @@ impl Contract {
             let last_jar_index = self
                 .account_jars
                 .get(account_id)
-                .map(|account_jars| account_jars.last_index);
+                .map(|account_jars| account_jars.last_id);
 
             let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_index);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);

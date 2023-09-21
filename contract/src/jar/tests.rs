@@ -391,11 +391,7 @@ mod signature_tests {
 mod helpers {
     use near_sdk::AccountId;
 
-    use crate::{
-        common::TokenAmount,
-        jar::model::{Jar, JarState},
-        product::model::ProductId,
-    };
+    use crate::{common::TokenAmount, jar::model::Jar, product::model::ProductId};
 
     impl Jar {
         pub(crate) fn generate(index: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
@@ -408,7 +404,6 @@ mod helpers {
                 cache: None,
                 claimed_balance: 0,
                 is_pending_withdraw: false,
-                state: JarState::Active,
                 is_penalty_applied: false,
             }
         }

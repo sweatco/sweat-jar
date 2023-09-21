@@ -20,7 +20,7 @@ impl Contract {
     pub(crate) fn next_jar_index(&self, account: &AccountId) -> JarID {
         self.account_jars
             .get(account)
-            .map(|jars| jars.last_index + 1)
+            .map(|jars| jars.last_id + 1)
             .unwrap_or_default()
     }
 
@@ -43,10 +43,6 @@ impl Contract {
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.account_jars
-            .entry(account_id.clone())
-            .or_default()
-            .jars
-            .insert(jar);
+        self.account_jars.entry(account_id.clone()).or_default().jars.push(jar);
     }
 }

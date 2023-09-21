@@ -103,8 +103,8 @@ impl ClaimCallbacks for Contract {
     fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
         if is_promise_success() {
             for jar_before_transfer in jars_before_transfer {
-                //  self.get_jar_mut_internal(jar_before_transfer.id).unlock();
-                todo!()
+                self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id)
+                    .unlock();
             }
 
             emit(event);
@@ -112,9 +112,10 @@ impl ClaimCallbacks for Contract {
             claimed_amount
         } else {
             for jar_before_transfer in jars_before_transfer {
-                // self.jars
-                //     .replace(jar_before_transfer.index, jar_before_transfer.unlocked());
-                todo!()
+                let account_id = jar_before_transfer.account_id.clone();
+                let jar_id = jar_before_transfer.id;
+
+                *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
             }
 
             U128(0)
