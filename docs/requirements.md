@@ -20,6 +20,7 @@ The contract enables a contract administrator to register Products describing th
       1. [Actors](#321--actors)
       2. [Security](#322--security)
    3. [Migration strategy](#33--migration-strategy)
+   4. [Premium Products and 3rd party subscriptions](#34-premium-products-and-3rd-party-subscriptions)
 
 ## 1. 📖 Terminology
 
@@ -207,3 +208,20 @@ The Migration API provides a batched method for migration, thus enabling flexibi
 Here's a chart illustrating the migration process:
 
 ![migration](migration.png)
+
+## 3.4. 💎 Premium Products and 3rd party subscriptions
+
+As the Contract allows for the creation of Premium (protected) Products, the system can involve third parties to verify 
+whether a user is authorized to use these Products or impose penalties in case of violations of Premium Product terms. 
+In the case of $SWEAT, the third party is _Sweatcoin_, and a user is authorized to create Premium Products only when 
+they have a _Sweatcoin Premium Subscription_. Since this information is off-chain, an Oracle is essential for 
+verification. Numerous other scenarios, such as giveaways and rewards, can also enable access to Premium Products.
+
+For these purposes, two mechanisms are provided:
+
+1. Premium Products can be protected by [Ed25519 signing](#322--security). In this case, a user must obtain a signature to use Premium Products.
+2. An Oracle can monitor the state of the third-party service. In the event of terms violations, it can act as an Admin and apply penalties for the user's Premium Jars.
+
+Here's a chart illustrating the interaction of system Actors in the case of purchasing and canceling a Premium Subscription:
+
+![premium](premium.png)
