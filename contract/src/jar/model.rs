@@ -255,7 +255,7 @@ impl Contract {
         product.assert_cap(amount);
         self.verify(&account_id, amount, &ticket, signature);
 
-        let id = self.next_jar_id();
+        let id = self.increment_and_get_last_jar_id();
         let now = env::block_timestamp_ms();
         let jar = Jar::create(id, account_id.clone(), product_id.clone(), amount, now);
 

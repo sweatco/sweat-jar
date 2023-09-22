@@ -21,13 +21,9 @@ impl Contract {
         );
     }
 
-    pub(crate) fn next_jar_id(&mut self) -> JarId {
+    pub(crate) fn increment_and_get_last_jar_id(&mut self) -> JarId {
         self.last_jar_id += 1;
         self.last_jar_id
-    }
-
-    pub(crate) fn increment_jar_id(&mut self) {
-        self.last_jar_id += 1;
     }
 
     pub(crate) fn get_product(&self, product_id: &ProductId) -> &Product {

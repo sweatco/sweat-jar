@@ -51,9 +51,9 @@ impl Contract {
                 format!("Product {} is not registered", ce_fi_jar.product_id),
             );
 
-            let account_jars = self.account_jars.entry(ce_fi_jar.account_id.clone()).or_default();
+            let id = self.increment_and_get_last_jar_id();
 
-            let id = self.last_jar_id + 1;
+            let account_jars = self.account_jars.entry(ce_fi_jar.account_id.clone()).or_default();
 
             let jar = Jar {
                 id,
@@ -70,8 +70,6 @@ impl Contract {
             account_jars.push(jar.clone());
 
             total_amount += jar.principal;
-
-            self.increment_jar_id();
 
             event_data.push(MigrationEventItem {
                 original_id: ce_fi_jar.id,
