@@ -39,7 +39,7 @@ impl Contract {
     }
 
     pub(crate) fn account_jars(&self, account_id: &AccountId) -> &[Jar] {
-        self.account_jars.get(account_id).unwrap_or(&self.empty_jars)
+        self.account_jars.get(account_id).map_or(&[], Vec::as_slice)
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {

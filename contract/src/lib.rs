@@ -52,14 +52,11 @@ pub struct Contract {
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
 
-    /// TODO: doc
+    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_jar_id: JarID,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, Vec<Jar>>,
-
-    /// TODO: document
-    empty_jars: Vec<Jar>,
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
@@ -80,7 +77,6 @@ impl Contract {
             manager,
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJars),
-            empty_jars: vec![],
             last_jar_id: 0,
         }
     }

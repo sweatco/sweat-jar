@@ -48,8 +48,7 @@ pub struct JarTicket {
 )]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct Jar {
-    /// The index of the jar in the `Contracts.jars` vector. Also serves as the unique identifier for the jar.
-    /// TODO: Redocument
+    /// The unique identifier for the jar.
     pub id: JarID,
 
     /// The account ID of the owner of the jar.
@@ -303,7 +302,9 @@ impl Contract {
             jars.clear();
             return;
         }
-        // TODO: document
+
+        // On jar deletion, we move the last jar in the vector in the deleted jar's place.
+        // This way we don't need to shift all jars to fill empty space in the vector.
 
         let jar_index = jars
             .iter()
@@ -312,7 +313,9 @@ impl Contract {
 
         let last_jar = jars.pop().unwrap();
 
-        jars[jar_index] = last_jar;
+        if jar_index != jars.len() {
+            jars[jar_index] = last_jar;
+        }
     }
 
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarID) -> &mut Jar {
@@ -340,7 +343,8 @@ impl Contract {
         if let Some(pk) = &product.public_key {
             let signature = signature.expect("Signature is required");
 
-            // TODO: Document
+            // If this is the first jar in this contract ever, oracle will send empty string as nonce.
+            // Which is equivalent to `None` value here.
             let last_jar_id = if self.last_jar_id == 0 {
                 None
             } else {
