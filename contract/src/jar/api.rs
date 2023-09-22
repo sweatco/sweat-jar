@@ -50,13 +50,15 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars for which the
+    /// * `jar_ids` - A `Vec<JarIDView>` containing the IDs of the deposit jars for which the
     ///                   principal is being retrieved.
+    ///
+    /// * `account_id` - The `AccountId` of the account for which the principal is being retrieved.
     ///
     /// # Returns
     ///
     /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView;
+    fn get_principal(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -74,14 +76,14 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars for which the
+    /// * `jar_ids` - A `Vec<JarIDView>` containing the IDs of the deposit jars for which the
     ///                   interest is being retrieved.
     ///
     /// # Returns
     ///
     /// An `U128` representing the sum of interest amounts for the specified deposit jars.
     ///
-    fn get_interest(&self, account_id: AccountId) -> AggregatedInterestView;
+    fn get_interest(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedInterestView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
@@ -113,19 +115,22 @@ impl JarApi for Contract {
     }
 
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        self.get_principal(account_id)
+        self.get_principal(
+            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
+            account_id,
+        )
     }
 
-    fn get_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
+    fn get_principal(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedTokenAmountView {
         let mut detailed_amounts = HashMap::<JarIDView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for jar in self.get_jars_for_account(account_id) {
+        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
             let id = jar.id;
             let principal = jar.principal;
 
-            detailed_amounts.insert(id, principal);
-            total_amount += principal.0;
+            detailed_amounts.insert(U32(id), U128(principal));
+            total_amount += principal;
         }
 
         AggregatedTokenAmountView {
@@ -135,20 +140,22 @@ impl JarApi for Contract {
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
-        self.get_interest(account_id)
+        self.get_interest(
+            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
+            account_id,
+        )
     }
 
-    fn get_interest(&self, account_id: AccountId) -> AggregatedInterestView {
+    fn get_interest(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedInterestView {
         let now = env::block_timestamp_ms();
 
         let mut detailed_amounts = HashMap::<JarIDView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for jar in self.account_jars(&account_id) {
-            let index = jar.id;
+        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
             let interest = jar.get_interest(self.get_product(&jar.product_id), now);
 
-            detailed_amounts.insert(U32(index), U128(interest));
+            detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
         }
 

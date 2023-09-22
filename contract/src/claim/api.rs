@@ -20,7 +20,7 @@ pub trait ClaimApi {
     /// interest across all jars is zero, the returned value will also be zero.
     fn claim_total(&mut self) -> PromiseOrValue<U128>;
 
-    /// Claims interest from specific deposit jars with provided indices.
+    /// Claims interest from specific deposit jars with provided IDs.
     ///
     /// # Arguments
     ///

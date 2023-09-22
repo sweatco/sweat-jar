@@ -17,7 +17,7 @@ pub trait PenaltyApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_id` - The index of the jar for which the penalty status is being modified.
+    /// * `jar_id` - The ID of the jar for which the penalty status is being modified.
     /// * `value` - A boolean value indicating whether the penalty should be applied (`true`) or canceled (`false`).
     ///
     /// # Panics
