@@ -16,12 +16,12 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_index` - The index of the deposit jar for which information is being retrieved.
+    /// * `jar_id` - The ID of the deposit jar for which information is being retrieved.
     ///
     /// # Returns
     ///
     /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, account_id: AccountId, jar_index: JarIDView) -> JarView;
+    fn get_jar(&self, account_id: AccountId, jar_id: JarIDView) -> JarView;
 
     /// Retrieves information about all deposit jars associated with a given account.
     ///
@@ -87,7 +87,7 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_index` - The index of the deposit jar from which the restaking is being initiated.
+    /// * `jar_id` - The ID of the deposit jar from which the restaking is being initiated.
     ///
     /// # Returns
     ///
@@ -99,7 +99,7 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, jar_index: JarIDView) -> JarView;
+    fn restake(&mut self, jar_id: JarIDView) -> JarView;
 }
 
 #[near_bindgen]
@@ -121,10 +121,10 @@ impl JarApi for Contract {
         let mut total_amount: TokenAmount = 0;
 
         for jar in self.get_jars_for_account(account_id) {
-            let index = jar.id;
+            let id = jar.id;
             let principal = jar.principal;
 
-            detailed_amounts.insert(index, principal);
+            detailed_amounts.insert(id, principal);
             total_amount += principal.0;
         }
 
@@ -161,11 +161,11 @@ impl JarApi for Contract {
         }
     }
 
-    fn restake(&mut self, jar_index: JarIDView) -> JarView {
-        let jar_index = jar_index.0;
+    fn restake(&mut self, jar_id: JarIDView) -> JarView {
+        let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
 
-        let jar = self.get_jar_internal(&account_id, jar_index);
+        let jar = self.get_jar_internal(&account_id, jar_id);
 
         assert_ownership(jar, &account_id);
 
@@ -195,8 +195,8 @@ impl JarApi for Contract {
         self.increment_jar_id();
 
         emit(EventKind::Restake(RestakeData {
-            old_index: jar_index,
-            new_index: new_jar.id,
+            old_id: jar_id,
+            new_id: new_jar.id,
         }));
 
         new_jar.into()

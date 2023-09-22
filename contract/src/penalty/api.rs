@@ -17,13 +17,13 @@ pub trait PenaltyApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_index` - The index of the jar for which the penalty status is being modified.
+    /// * `jar_id` - The index of the jar for which the penalty status is being modified.
     /// * `value` - A boolean value indicating whether the penalty should be applied (`true`) or canceled (`false`).
     ///
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn set_penalty(&mut self, account_id: AccountId, jar_index: JarID, value: bool);
+    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarID, value: bool);
 }
 
 #[near_bindgen]
@@ -40,7 +40,7 @@ impl PenaltyApi for Contract {
         };
 
         emit(ApplyPenalty(PenaltyData {
-            index: jar_id,
+            id: jar_id,
             is_applied: value,
         }));
     }

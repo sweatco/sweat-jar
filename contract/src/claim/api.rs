@@ -80,7 +80,7 @@ impl ClaimApi for Contract {
                 total_interest_to_claim += interest_to_claim;
 
                 event_data.push(ClaimEventItem {
-                    index: jar.id,
+                    id: jar.id,
                     interest_to_claim: U128(interest_to_claim),
                 });
             }

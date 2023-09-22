@@ -266,8 +266,8 @@ impl Contract {
         jar.into()
     }
 
-    pub(crate) fn top_up(&mut self, account: &AccountId, jar_index: JarID, amount: U128) -> U128 {
-        let jar = self.get_jar_internal(account, jar_index);
+    pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarID, amount: U128) -> U128 {
+        let jar = self.get_jar_internal(account, jar_id);
         let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
@@ -276,14 +276,11 @@ impl Contract {
         let now = env::block_timestamp_ms();
 
         let principal = self
-            .get_jar_mut_internal(account, jar_index)
+            .get_jar_mut_internal(account, jar_id)
             .top_up(amount.0, &product, now)
             .principal;
 
-        emit(EventKind::TopUp(TopUpData {
-            index: jar_index,
-            amount,
-        }));
+        emit(EventKind::TopUp(TopUpData { id: jar_id, amount }));
 
         U128(principal)
     }
@@ -306,15 +303,15 @@ impl Contract {
         // On jar deletion, we move the last jar in the vector in the deleted jar's place.
         // This way we don't need to shift all jars to fill empty space in the vector.
 
-        let jar_index = jars
+        let jar_id = jars
             .iter()
             .position(|j| j.id == jar.id)
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
 
         let last_jar = jars.pop().unwrap();
 
-        if jar_index != jars.len() {
-            jars[jar_index] = last_jar;
+        if jar_id != jars.len() {
+            jars[jar_id] = last_jar;
         }
     }
 
@@ -366,7 +363,7 @@ impl Contract {
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
-        last_jar_index: Option<JarID>,
+        last_jar_id: Option<JarID>,
     ) -> Vec<u8> {
         sha256(
             Self::get_signature_material(
@@ -375,7 +372,7 @@ impl Contract {
                 &ticket.product_id,
                 amount,
                 ticket.valid_until.0,
-                last_jar_index,
+                last_jar_id,
             )
             .as_bytes(),
         )
@@ -387,7 +384,7 @@ impl Contract {
         product_id: &ProductId,
         amount: TokenAmount,
         valid_until: Timestamp,
-        last_jar_index: Option<JarID>,
+        last_jar_id: Option<JarID>,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",
@@ -395,7 +392,7 @@ impl Contract {
             receiver_account_id,
             product_id,
             amount,
-            last_jar_index.map_or_else(String::new, |value| value.to_string(),),
+            last_jar_id.map_or_else(String::new, |value| value.to_string(),),
             valid_until,
         )
     }

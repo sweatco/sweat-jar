@@ -107,13 +107,13 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
 
     let reference_product = generate_product();
 
-    let jar_index = 0;
-    let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+    let jar_id = 0;
+    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_index));
+    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_minutes(30);
@@ -131,13 +131,13 @@ fn get_total_interest_with_single_jar_on_maturity() {
 
     let reference_product = generate_product();
 
-    let jar_index = 0;
-    let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+    let jar_id = 0;
+    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_index));
+    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(365);
@@ -160,13 +160,13 @@ fn get_total_interest_with_single_jar_after_maturity() {
 
     let reference_product = generate_product();
 
-    let jar_index = 0;
-    let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+    let jar_id = 0;
+    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_index));
+    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(400);
@@ -182,13 +182,13 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
 
     let reference_product = generate_product();
 
-    let jar_index = 0;
-    let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
+    let jar_id = 0;
+    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_index));
+    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(182);

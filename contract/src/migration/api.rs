@@ -75,7 +75,7 @@ impl Contract {
 
             event_data.push(MigrationEventItem {
                 original_id: ce_fi_jar.id,
-                index: jar.id,
+                id: jar.id,
                 account_id: jar.account_id,
             });
         }

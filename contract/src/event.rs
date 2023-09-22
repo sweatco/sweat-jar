@@ -44,7 +44,7 @@ struct SweatJarEvent {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ClaimEventItem {
-    pub index: JarID,
+    pub id: JarID,
     pub interest_to_claim: U128,
 }
 
@@ -58,21 +58,21 @@ pub struct WithdrawData {
 #[serde(crate = "near_sdk::serde")]
 pub struct MigrationEventItem {
     pub original_id: String,
-    pub index: JarID,
+    pub id: JarID,
     pub account_id: AccountId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct RestakeData {
-    pub old_index: JarID,
-    pub new_index: JarID,
+    pub old_id: JarID,
+    pub new_id: JarID,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct PenaltyData {
-    pub index: JarID,
+    pub id: JarID,
     pub is_applied: bool,
 }
 
@@ -93,7 +93,7 @@ pub struct ChangeProductPublicKeyData {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TopUpData {
-    pub index: JarID,
+    pub id: JarID,
     pub amount: U128,
 }
 

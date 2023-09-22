@@ -22,7 +22,7 @@ pub enum FtMessage {
     /// Represents a request to create DeFi Jars from provided CeFi Jars.
     Migrate(Vec<CeFiJar>),
 
-    /// Represents a request to refill (top up) an existing jar using its `JarIndex`.
+    /// Represents a request to refill (top up) an existing jar using its `JarID`.
     TopUp(JarID),
 }
 
@@ -57,8 +57,8 @@ impl FungibleTokenReceiver for Contract {
 
                 self.migrate_jars(jars, amount);
             }
-            FtMessage::TopUp(jar_index) => {
-                self.top_up(&sender_id, jar_index, amount);
+            FtMessage::TopUp(jar_id) => {
+                self.top_up(&sender_id, jar_id, amount);
             }
         }
 

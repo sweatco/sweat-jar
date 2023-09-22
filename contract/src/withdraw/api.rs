@@ -21,7 +21,7 @@ pub trait WithdrawApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_index` - The index of the deposit jar from which the withdrawal is being made.
+    /// * `jar_id` - The ID of the deposit jar from which the withdrawal is being made.
     /// * `amount` - An optional `U128` value indicating the amount of tokens to withdraw. If `None` is provided,
     ///              the entire balance of the jar will be withdrawn.
     ///
@@ -38,7 +38,7 @@ pub trait WithdrawApi {
     /// - If the caller is not the owner of the specified jar.
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(&mut self, jar_index: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
+    fn withdraw(&mut self, jar_id: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
 }
 
 #[ext_contract(ext_self)]
@@ -53,9 +53,9 @@ pub trait WithdrawCallbacks {
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_index: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
+    fn withdraw(&mut self, jar_id: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        let jar = self.get_jar_internal(&account_id, jar_index.0).locked();
+        let jar = self.get_jar_internal(&account_id, jar_id.0).locked();
         let amount = amount.map_or(jar.principal, |value| value.0);
 
         assert_ownership(&jar, &account_id);
