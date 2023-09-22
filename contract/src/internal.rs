@@ -43,7 +43,7 @@ impl Contract {
     }
 
     pub(crate) fn account_jars(&self, account_id: &AccountId) -> &[Jar] {
-        self.account_jars.get(account_id).map_or(&[], Vec::as_slice)
+        self.account_jars.get(account_id).map_or(&[], |jars| jars.as_slice())
     }
 
     pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIDView]) -> Vec<&Jar> {
@@ -64,6 +64,8 @@ impl Contract {
     }
 
     pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.account_jars.entry(account_id.clone()).or_default().push(jar);
+        let jars = self.account_jars.entry(account_id.clone()).or_default();
+        jars.last_id = jar.id;
+        jars.push(jar);
     }
 }

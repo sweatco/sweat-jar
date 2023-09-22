@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use ed25519_dalek::Signature;
 use near_sdk::{
     assert_one_yocto,
@@ -56,7 +58,28 @@ pub struct Contract {
     pub last_jar_id: JarID,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub account_jars: LookupMap<AccountId, Vec<Jar>>,
+    pub account_jars: LookupMap<AccountId, AccountJars>,
+}
+
+#[derive(Default, BorshDeserialize, BorshSerialize)]
+pub struct AccountJars {
+    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
+    pub last_id: JarID,
+    pub jars: Vec<Jar>,
+}
+
+impl Deref for AccountJars {
+    type Target = Vec<Jar>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.jars
+    }
+}
+
+impl DerefMut for AccountJars {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.jars
+    }
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]

@@ -330,23 +330,21 @@ impl Contract {
     }
 
     pub(crate) fn verify(
-        &self,
+        &mut self,
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
         signature: Option<Base64VecU8>,
     ) {
+        let last_jar_id = self.account_jars.entry(account_id.clone()).or_default().last_id;
         let product = self.get_product(&ticket.product_id);
+
         if let Some(pk) = &product.public_key {
             let signature = signature.expect("Signature is required");
 
-            // If this is the first jar in this contract ever, oracle will send empty string as nonce.
+            // If this is the first jar for this user ever, oracle will send empty string as nonce.
             // Which is equivalent to `None` value here.
-            let last_jar_id = if self.last_jar_id == 0 {
-                None
-            } else {
-                Some(self.last_jar_id)
-            };
+            let last_jar_id = if last_jar_id == 0 { None } else { Some(last_jar_id) };
 
             let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);

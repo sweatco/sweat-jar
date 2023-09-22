@@ -73,7 +73,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let reference_product = generate_premium_product("premium_product", &signer);
-        let context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
 
         let amount = 14_000_000;
         let ticket = JarTicket {
@@ -96,7 +96,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let reference_product = generate_premium_product("premium_product", &signer);
-        let context = Context::new(admin).with_products(&[reference_product.clone()]);
+        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
 
         let amount = 1_000_000;
         let ticket = JarTicket {
@@ -120,7 +120,7 @@ mod signature_tests {
         let product = generate_premium_product("premium_product", &signer);
         let another_product = generate_premium_product("another_premium_product", &MessageSigner::new());
 
-        let context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
 
         let amount = 15_000_000;
         let ticket_for_another_product = JarTicket {
@@ -200,7 +200,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let product = generate_premium_product("not_existing_product", &signer);
-        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 3_000_000;
         let ticket = JarTicket {
@@ -216,7 +216,7 @@ mod signature_tests {
         let admin = accounts(0);
 
         let product = generate_product("regular_product");
-        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;
         let ticket = JarTicket {
