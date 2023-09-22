@@ -7,7 +7,7 @@ use near_sdk::{
 
 use crate::{
     env,
-    jar::model::{Jar, JarID},
+    jar::model::{Jar, JarId},
     product::model::{Product, ProductId},
     PACKAGE_NAME, VERSION,
 };
@@ -44,35 +44,35 @@ struct SweatJarEvent {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct ClaimEventItem {
-    pub id: JarID,
+    pub id: JarId,
     pub interest_to_claim: U128,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct WithdrawData {
-    pub id: JarID,
+    pub id: JarId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MigrationEventItem {
     pub original_id: String,
-    pub id: JarID,
+    pub id: JarId,
     pub account_id: AccountId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct RestakeData {
-    pub old_id: JarID,
-    pub new_id: JarID,
+    pub old_id: JarId,
+    pub new_id: JarId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct PenaltyData {
-    pub id: JarID,
+    pub id: JarId,
     pub is_applied: bool,
 }
 
@@ -93,7 +93,7 @@ pub struct ChangeProductPublicKeyData {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TopUpData {
-    pub id: JarID,
+    pub id: JarId,
     pub amount: U128,
 }
 

@@ -19,7 +19,7 @@ use crate::{
     Base64VecU8, Contract, JarsStorage, Signature,
 };
 
-pub type JarID = u32;
+pub type JarId = u32;
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
@@ -49,7 +49,7 @@ pub struct JarTicket {
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct Jar {
     /// The unique identifier for the jar.
-    pub id: JarID,
+    pub id: JarId,
 
     /// The account ID of the owner of the jar.
     pub account_id: AccountId,
@@ -92,7 +92,7 @@ pub struct JarCache {
 
 impl Jar {
     pub(crate) fn create(
-        id: JarID,
+        id: JarId,
         account_id: AccountId,
         product_id: ProductId,
         principal: TokenAmount,
@@ -266,7 +266,7 @@ impl Contract {
         jar.into()
     }
 
-    pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarID, amount: U128) -> U128 {
+    pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
         let jar = self.get_jar_internal(account, jar_id);
         let product = self.get_product(&jar.product_id).clone();
 
@@ -315,14 +315,14 @@ impl Contract {
         }
     }
 
-    pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarID) -> &mut Jar {
+    pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
         self.account_jars
             .get_mut(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar_mut(id)
     }
 
-    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarID) -> &Jar {
+    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> &Jar {
         self.account_jars
             .get(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
@@ -361,7 +361,7 @@ impl Contract {
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
-        last_jar_id: Option<JarID>,
+        last_jar_id: Option<JarId>,
     ) -> Vec<u8> {
         sha256(
             Self::get_signature_material(
@@ -382,7 +382,7 @@ impl Contract {
         product_id: &ProductId,
         amount: TokenAmount,
         valid_until: Timestamp,
-        last_jar_id: Option<JarID>,
+        last_jar_id: Option<JarId>,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",

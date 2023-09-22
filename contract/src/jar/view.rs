@@ -12,12 +12,12 @@ use crate::{
     Jar,
 };
 
-pub type JarIDView = U32;
+pub type JarIdView = U32;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarView {
-    pub id: JarIDView,
+    pub id: JarIdView,
     pub account_id: AccountId,
     pub product_id: ProductId,
     pub created_at: U64,
@@ -57,7 +57,7 @@ impl From<&Jar> for JarView {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct AggregatedTokenAmountView {
-    pub detailed: HashMap<JarIDView, U128>,
+    pub detailed: HashMap<JarIdView, U128>,
     pub total: U128,
 }
 

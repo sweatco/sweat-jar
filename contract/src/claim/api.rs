@@ -6,7 +6,7 @@ use crate::{
     common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
     event::{emit, ClaimEventItem, EventKind},
     ft_interface::FungibleTokenInterface,
-    jar::model::{Jar, JarID},
+    jar::model::{Jar, JarId},
     Contract, ContractExt, Promise,
 };
 
@@ -24,7 +24,7 @@ pub trait ClaimApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_ids` - A `Vec<JarID>` containing the IDs of the deposit jars from which interest is being claimed.
+    /// * `jar_ids` - A `Vec<JarId>` containing the IDs of the deposit jars from which interest is being claimed.
     /// * `amount` - An optional `TokenAmount` specifying the desired amount of tokens to claim. If provided, the method
     ///              will attempt to claim this specific amount of tokens. If not provided or if the specified amount
     ///              is greater than the total available interest in the provided jars, the method will claim the maximum
@@ -34,7 +34,7 @@ pub trait ClaimApi {
     ///
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
     /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(&mut self, jar_ids: Vec<JarID>, amount: Option<U128>) -> PromiseOrValue<U128>;
+    fn claim_jars(&mut self, jar_ids: Vec<JarId>, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
@@ -50,7 +50,7 @@ impl ClaimApi for Contract {
         self.claim_jars(jar_ids, None)
     }
 
-    fn claim_jars(&mut self, jar_ids: Vec<JarID>, amount: Option<U128>) -> PromiseOrValue<U128> {
+    fn claim_jars(&mut self, jar_ids: Vec<JarId>, amount: Option<U128>) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 

@@ -2,7 +2,7 @@ use near_sdk::{env, near_bindgen, AccountId};
 
 use crate::{
     event::{emit, EventKind::ApplyPenalty, PenaltyData},
-    jar::model::JarID,
+    jar::model::JarId,
     product::model::Apy,
     Contract, ContractExt,
 };
@@ -23,12 +23,12 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarID, value: bool);
+    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarId, value: bool);
 }
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarID, value: bool) {
+    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarId, value: bool) {
         self.assert_manager();
 
         let jar = self.get_jar_internal(&account_id, jar_id);

@@ -7,7 +7,7 @@ use crate::{
     env,
     event::{emit, EventKind, WithdrawData},
     ft_interface::Fee,
-    jar::view::JarIDView,
+    jar::view::JarIdView,
     product::model::WithdrawalFee,
     withdraw::view::WithdrawView,
     AccountId, Contract, ContractExt, Jar, Product,
@@ -38,7 +38,7 @@ pub trait WithdrawApi {
     /// - If the caller is not the owner of the specified jar.
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(&mut self, jar_id: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
+    fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
 }
 
 #[ext_contract(ext_self)]
@@ -53,7 +53,7 @@ pub trait WithdrawCallbacks {
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    fn withdraw(&mut self, jar_id: JarIDView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
+    fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
         let jar = self.get_jar_internal(&account_id, jar_id.0).locked();
         let amount = amount.map_or(jar.principal, |value| value.0);

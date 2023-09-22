@@ -6,7 +6,7 @@ use crate::{
     assert_ownership,
     common::{u32::U32, TokenAmount},
     event::{emit, EventKind, RestakeData},
-    jar::view::{AggregatedInterestView, AggregatedTokenAmountView, JarIDView, JarView},
+    jar::view::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     Contract, ContractExt, Jar,
 };
 
@@ -21,7 +21,7 @@ pub trait JarApi {
     /// # Returns
     ///
     /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, account_id: AccountId, jar_id: JarIDView) -> JarView;
+    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView;
 
     /// Retrieves information about all deposit jars associated with a given account.
     ///
@@ -50,7 +50,7 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_ids` - A `Vec<JarIDView>` containing the IDs of the deposit jars for which the
+    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
     ///                   principal is being retrieved.
     ///
     /// * `account_id` - The `AccountId` of the account for which the principal is being retrieved.
@@ -58,7 +58,7 @@ pub trait JarApi {
     /// # Returns
     ///
     /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedTokenAmountView;
+    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -76,14 +76,14 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_ids` - A `Vec<JarIDView>` containing the IDs of the deposit jars for which the
+    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
     ///                   interest is being retrieved.
     ///
     /// # Returns
     ///
     /// An `U128` representing the sum of interest amounts for the specified deposit jars.
     ///
-    fn get_interest(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedInterestView;
+    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
@@ -101,12 +101,12 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, jar_id: JarIDView) -> JarView;
+    fn restake(&mut self, jar_id: JarIdView) -> JarView;
 }
 
 #[near_bindgen]
 impl JarApi for Contract {
-    fn get_jar(&self, account_id: AccountId, jar_id: JarIDView) -> JarView {
+    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
         self.get_jar_internal(&account_id, jar_id.0).into()
     }
 
@@ -121,8 +121,8 @@ impl JarApi for Contract {
         )
     }
 
-    fn get_principal(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedTokenAmountView {
-        let mut detailed_amounts = HashMap::<JarIDView, U128>::new();
+    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView {
+        let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
@@ -146,10 +146,10 @@ impl JarApi for Contract {
         )
     }
 
-    fn get_interest(&self, jar_ids: Vec<JarIDView>, account_id: AccountId) -> AggregatedInterestView {
+    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView {
         let now = env::block_timestamp_ms();
 
-        let mut detailed_amounts = HashMap::<JarIDView, U128>::new();
+        let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
@@ -168,7 +168,7 @@ impl JarApi for Contract {
         }
     }
 
-    fn restake(&mut self, jar_id: JarIDView) -> JarView {
+    fn restake(&mut self, jar_id: JarIdView) -> JarView {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
 

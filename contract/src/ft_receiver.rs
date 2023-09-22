@@ -8,7 +8,7 @@ use near_sdk::{
 
 use crate::{
     jar::model::JarTicket, migration::model::CeFiJar, near_bindgen, AccountId, Base64VecU8, Contract, ContractExt,
-    JarID,
+    JarId,
 };
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
@@ -22,8 +22,8 @@ pub enum FtMessage {
     /// Represents a request to create DeFi Jars from provided CeFi Jars.
     Migrate(Vec<CeFiJar>),
 
-    /// Represents a request to refill (top up) an existing jar using its `JarID`.
-    TopUp(JarID),
+    /// Represents a request to refill (top up) an existing jar using its `JarId`.
+    TopUp(JarId),
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.

@@ -15,7 +15,7 @@ use product::model::{Apy, Product, ProductId};
 
 use crate::{
     assert::assert_ownership,
-    jar::model::{Jar, JarID},
+    jar::model::{Jar, JarId},
 };
 
 mod assert;
@@ -55,7 +55,7 @@ pub struct Contract {
     pub products: UnorderedMap<ProductId, Product>,
 
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
-    pub last_jar_id: JarID,
+    pub last_jar_id: JarId,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
@@ -64,7 +64,7 @@ pub struct Contract {
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct AccountJars {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
-    pub last_id: JarID,
+    pub last_id: JarId,
     pub jars: Vec<Jar>,
 }
 
@@ -106,18 +106,18 @@ impl Contract {
 }
 
 pub(crate) trait JarsStorage {
-    fn get_jar(&self, id: JarID) -> &Jar;
-    fn get_jar_mut(&mut self, id: JarID) -> &mut Jar;
+    fn get_jar(&self, id: JarId) -> &Jar;
+    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar;
 }
 
 impl JarsStorage for Vec<Jar> {
-    fn get_jar(&self, id: JarID) -> &Jar {
+    fn get_jar(&self, id: JarId) -> &Jar {
         self.iter()
             .find(|jar| jar.id == id)
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 
-    fn get_jar_mut(&mut self, id: JarID) -> &mut Jar {
+    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar {
         self.iter_mut()
             .find(|jar| jar.id == id)
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))

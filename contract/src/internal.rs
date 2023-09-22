@@ -2,7 +2,7 @@ use near_sdk::require;
 
 use crate::{
     env,
-    jar::{model::JarID, view::JarIDView},
+    jar::{model::JarId, view::JarIdView},
     AccountId, Contract, Jar, Product, ProductId,
 };
 
@@ -21,7 +21,7 @@ impl Contract {
         );
     }
 
-    pub(crate) fn next_jar_id(&mut self) -> JarID {
+    pub(crate) fn next_jar_id(&mut self) -> JarId {
         self.last_jar_id += 1;
         self.last_jar_id
     }
@@ -46,7 +46,7 @@ impl Contract {
         self.account_jars.get(account_id).map_or(&[], |jars| jars.as_slice())
     }
 
-    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIDView]) -> Vec<&Jar> {
+    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<&Jar> {
         let mut result: Vec<&Jar> = vec![];
 
         let all_jars = self.account_jars(account_id);
