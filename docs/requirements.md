@@ -10,6 +10,7 @@ The contract enables a contract administrator to register Products describing th
    1. [Roles](#21--roles)
    2. [Features](#22--features)
    3. [Use cases](#23--use-cases)
+   4. [Fees](#24--fees)
 3. [**Technical requirements**](#3--technical-requirements)
    1. [Project structure](#31--project-structure)
       1. [Tooling](#311--tooling)
@@ -88,6 +89,19 @@ The DeFi Jars contract provides the following features:
 16. User can withdraw any amount of $SWEAT from the principal of a Flexible Jar at any moment. If a Product involves a withdrawal fee, the User pays this fee from the withdrawn principal amount.
 17. User can top up the principal of a Flexible Jar or Fixed Jar if the related Fixed Product allows top-ups.
 18. User can restake a Fixed Jar after its maturity. On restake, a new Jar is created, and the principal of the original Jar is transferred to the new one.
+
+### 2.4. 💸 Fees
+
+1. All contract interactions performed by users will incur a gas fee.
+2. Sweat Economy uses a relayer within Sweat Wallet allowing users to pay gas fees in $SWEAT. 
+At the moment it's only allowed for Jar creation and Top-up operations.
+3. Gas fees will vary based on the operation type and storage fees incurred by the action.
+4. Withdrawal fees are different to gas fees and charged when a user unstakes their funds.
+5. Withdrawal fees are deduced from the principal balance staked in a jar.
+6. A user will not be able to stake an amount less than or equal to the withdrawal fee of a jar.
+7. This validation will be performed on the client side.
+8. Withdrawal fees will be set by Sweat Economy based on the product type and/or other conditions which can be incentivised.
+9. All other information on fees should be referenced in Sweat Economy's [Grow Terms and Conditions](https://sweateconomy.com/grow-terms).
 
 ## 3. 🤖 Technical requirements
 
