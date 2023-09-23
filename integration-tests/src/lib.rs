@@ -9,3 +9,4 @@ mod measure;
 mod migration;
 mod product;
 mod withdraw_fee;
+mod product_actions;

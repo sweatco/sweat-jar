@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use near_sdk::json_types::{Base64VecU8, U128};
 use near_units::parse_near;
 use serde_json::{json, Value};
 use workspaces::{Account, AccountId, Contract};
@@ -30,13 +31,29 @@ pub(crate) trait JarContractInterface {
 
     async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value>;
 
+    async fn get_principal(&self, jar_ids: Vec<String>) -> anyhow::Result<Value>; // TODO: call somewhere
+
     async fn get_total_interest(&self, user: &Account) -> anyhow::Result<Value>;
+
+    async fn get_interest(&self, jar_ids: Vec<String>) -> anyhow::Result<Value>; // TODO: call somewhere
 
     async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value>;
 
     async fn withdraw(&self, user: &Account, jar_index: &str) -> anyhow::Result<Value>;
 
     async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
+
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<String>, amount: Option<U128>) -> anyhow::Result<u128>; // TODO: call somewhere
+
+    async fn get_jar(&self, jar_id: String) -> anyhow::Result<Value>; // TODO: call somewhere
+
+    async fn restake(&self, user: &Account, jar_id: String) -> anyhow::Result<()>; // TODO: call somewhere
+
+    async fn set_penalty(&self, admin: &Account, jar_id: String, value: bool) -> anyhow::Result<()>; // TODO: call somewhere
+
+    async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>; // TODO: call somewhere
+
+    async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>; // TODO: call somewhere
 }
 
 #[async_trait]
@@ -161,6 +178,20 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
+    async fn get_principal(&self, jar_ids: Vec<String>) -> anyhow::Result<Value> {
+        println!("▶️ Get principal for jars {:?}", jar_ids);
+
+        let args = json!({
+            "jar_ids": jar_ids,
+        });
+
+        let result = self.view("get_principal").args_json(args).await?.json()?;
+
+        println!("   ✅ {:?}", result);
+
+        Ok(result)
+    }
+
     async fn get_total_interest(&self, user: &Account) -> anyhow::Result<Value> {
         println!("▶️ Get total interest for user {:?}", user.id());
 
@@ -169,6 +200,20 @@ impl JarContractInterface for Contract {
         });
 
         let result = self.view("get_total_interest").args_json(args).await?.json()?;
+
+        println!("   ✅ {:?}", result);
+
+        Ok(result)
+    }
+
+    async fn get_interest(&self, jar_ids: Vec<String>) -> anyhow::Result<Value> {
+        println!("▶️ Get interest for jars {:?}", jar_ids);
+
+        let args = json!({
+            "jar_ids": jar_ids,
+        });
+
+        let result = self.view("get_interest").args_json(args).await?.json()?;
 
         println!("   ✅ {:?}", result);
 
@@ -245,5 +290,141 @@ impl JarContractInterface for Contract {
         OutcomeStorage::add_result(result);
 
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
+    }
+
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<String>, amount: Option<U128>) -> anyhow::Result<u128> {
+        println!("▶️ Claim jars: {:?}", jar_ids);
+
+        let args = json!({
+            "jar_ids": jar_ids,
+            "amount": amount,
+        });
+
+        let result = user
+            .call(self.id(), "claim_jars")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        println!("   📟 {result:#?}");
+
+        let result_value = result.json::<Value>()?;
+
+        println!("   ✅ {result_value:?}");
+
+        OutcomeStorage::add_result(result);
+
+        Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
+    }
+
+    async fn get_jar(&self, jar_id: String) -> anyhow::Result<Value> {
+        println!("▶️ Get jar #{jar_id}");
+
+        let args = json!({
+            "jar_id": jar_id,
+        });
+
+        let result = self.view("get_jar").args_json(args).await?.json()?;
+
+        println!("   ✅ {:?}", result);
+
+        Ok(result)
+    }
+
+    async fn restake(&self, user: &Account, jar_id: String) -> anyhow::Result<()> {
+        println!("▶️ Restake jar #{jar_id}");
+
+        let args = json!({
+            "jar_id": jar_id,
+        });
+
+        let result = user
+            .call(self.id(), "restake")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        Ok(())
+    }
+
+    async fn set_penalty(&self, admin: &Account, jar_id: String, value: bool) -> anyhow::Result<()> {
+        println!("▶️ Set penalty for jar #{jar_id}");
+
+        let args = json!({
+            "jar_id": jar_id,
+            "value": value,
+        });
+
+        let result = admin
+            .call(self.id(), "set_penalty")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        Ok(())
+    }
+
+    async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()> {
+        println!("▶️ Set enabled for product #{product_id}");
+
+        let args = json!({
+            "product_id": product_id,
+            "is_enabled": is_enabled,
+        });
+
+        let result = admin
+            .call(self.id(), "set_enabled")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        Ok(())
+    }
+
+    async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()> {
+        println!("▶️ Set public key for product #{product_id}");
+
+        let args = json!({
+            "product_id": product_id,
+            "public_key": public_key,
+        });
+
+        let result = admin
+            .call(self.id(), "set_public_key")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        Ok(())
     }
 }
