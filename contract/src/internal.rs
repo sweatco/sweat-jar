@@ -59,7 +59,7 @@ impl Contract {
         result
     }
 
-    pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
+    pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
         let jars = self.account_jars.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
         jars.push(jar);

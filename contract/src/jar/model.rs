@@ -4,7 +4,7 @@ use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
-    env::sha256,
+    env::{panic_str, sha256},
     json_types::{U128, U64},
     require,
     serde::{Deserialize, Serialize},
@@ -166,7 +166,7 @@ impl Jar {
         let current_interest = self.get_interest(product, now);
 
         (
-            should_be_closed(product, self, withdrawn_amount),
+            should_be_closed(product, self, withdrawn_amount) && current_interest == 0,
             Self {
                 principal: self.principal - withdrawn_amount,
                 cache: Some(JarCache {
@@ -259,7 +259,7 @@ impl Contract {
         let now = env::block_timestamp_ms();
         let jar = Jar::create(id, account_id.clone(), product_id.clone(), amount, now);
 
-        self.save_jar(&account_id, jar.clone());
+        self.add_new_jar(&account_id, jar.clone());
 
         emit(EventKind::CreateJar(jar.clone()));
 
@@ -340,7 +340,12 @@ impl Contract {
         let product = self.get_product(&ticket.product_id);
 
         if let Some(pk) = &product.public_key {
-            let signature = signature.expect("Signature is required");
+            let Some(signature) = signature else {
+                panic_str("Signature is required");
+            };
+
+            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
+            require!(is_time_valid, "Ticket is outdated");
 
             // If this is the first jar for this user ever, oracle will send empty string as nonce.
             // Which is equivalent to `None` value here.
@@ -350,10 +355,6 @@ impl Contract {
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
-
-            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
-
-            require!(is_time_valid, "Ticket is outdated");
         }
     }
 

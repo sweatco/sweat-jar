@@ -196,15 +196,17 @@ impl JarApi for Contract {
             principal,
             now,
         );
+
         let (should_be_closed, withdraw_jar) = jar.withdrawn(product, principal, now);
 
         if should_be_closed {
             self.delete_jar(withdraw_jar);
         } else {
-            self.save_jar(&account_id, withdraw_jar);
+            let jar_id = withdraw_jar.id;
+            *self.get_jar_mut_internal(&account_id, jar_id) = withdraw_jar;
         }
 
-        self.save_jar(&account_id, new_jar.clone());
+        self.add_new_jar(&account_id, new_jar.clone());
 
         emit(EventKind::Restake(RestakeData {
             old_id: jar_id,

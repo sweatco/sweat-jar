@@ -264,20 +264,18 @@ fn get_interest_after_withdraw() {
     let alice = accounts(0);
     let admin = accounts(1);
 
-    let reference_product = generate_product();
-    let reference_jar = &Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
+    let product = generate_product();
+    let jar = Jar::generate(0, &alice, &product.id).principal(100_000_000);
 
-    let mut context = Context::new(admin)
-        .with_products(&[reference_product])
-        .with_jars(&[reference_jar.clone()]);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.set_block_timestamp_in_days(400);
 
     context.switch_account(&alice);
-    context.contract.withdraw(U32(reference_jar.id), None);
+    context.contract.withdraw(U32(jar.id), None);
 
     let interest = context.contract.get_total_interest(alice.clone());
-    assert_eq!(0, interest.amount.total.0);
+    assert_eq!(12_000_000, interest.amount.total.0);
 }
 
 fn generate_product() -> Product {
