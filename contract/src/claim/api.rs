@@ -1,12 +1,12 @@
 use std::cmp;
 
-use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
+use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
     common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
     event::{emit, ClaimEventItem, EventKind},
     ft_interface::FungibleTokenInterface,
-    jar::model::{Jar, JarIndex},
+    jar::model::{Jar, JarId},
     Contract, ContractExt, Promise,
 };
 
@@ -20,11 +20,11 @@ pub trait ClaimApi {
     /// interest across all jars is zero, the returned value will also be zero.
     fn claim_total(&mut self) -> PromiseOrValue<U128>;
 
-    /// Claims interest from specific deposit jars with provided indices.
+    /// Claims interest from specific deposit jars with provided IDs.
     ///
     /// # Arguments
     ///
-    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars from which interest is being claimed.
+    /// * `jar_ids` - A `Vec<JarId>` containing the IDs of the deposit jars from which interest is being claimed.
     /// * `amount` - An optional `TokenAmount` specifying the desired amount of tokens to claim. If provided, the method
     ///              will attempt to claim this specific amount of tokens. If not provided or if the specified amount
     ///              is greater than the total available interest in the provided jars, the method will claim the maximum
@@ -34,7 +34,7 @@ pub trait ClaimApi {
     ///
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
     /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(&mut self, jar_indices: Vec<JarIndex>, amount: Option<U128>) -> PromiseOrValue<U128>;
+    fn claim_jars(&mut self, jar_ids: Vec<JarId>, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
@@ -46,18 +46,19 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
-        let jar_indices = self.account_jar_ids(&account_id);
-        self.claim_jars(jar_indices, None)
+        let jar_ids = self.account_jars(&account_id).iter().map(|a| a.id).collect();
+        self.claim_jars(jar_ids, None)
     }
 
-    fn claim_jars(&mut self, jar_indices: Vec<JarIndex>, amount: Option<U128>) -> PromiseOrValue<U128> {
+    fn claim_jars(&mut self, jar_ids: Vec<JarId>, amount: Option<U128>) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
-        let unlocked_jars: Vec<Jar> = jar_indices
-            .into_iter()
-            .map(|index| self.get_jar_internal(index))
-            .filter(|jar| !jar.is_pending_withdraw && jar.account_id == account_id)
+        let unlocked_jars: Vec<Jar> = self
+            .account_jars(&account_id)
+            .iter()
+            .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&jar.id))
+            .cloned()
             .collect();
 
         let mut total_interest_to_claim: TokenAmount = 0;
@@ -71,30 +72,91 @@ impl ClaimApi for Contract {
                 cmp::min(available_interest, amount.0 - total_interest_to_claim)
             });
 
-            let updated_jar = jar.claimed(available_interest, interest_to_claim, now).locked();
-            self.jars.replace(jar.index, updated_jar);
+            self.get_jar_mut_internal(&jar.account_id, jar.id)
+                .claim(available_interest, interest_to_claim, now)
+                .lock();
 
             if interest_to_claim > 0 {
                 total_interest_to_claim += interest_to_claim;
 
                 event_data.push(ClaimEventItem {
-                    index: jar.index,
+                    id: jar.id,
                     interest_to_claim: U128(interest_to_claim),
                 });
             }
         }
 
         if total_interest_to_claim > 0 {
-            self.ft_contract()
-                .transfer(&account_id, total_interest_to_claim, "claim", &None)
-                .then(after_claim_call(
-                    U128(total_interest_to_claim),
-                    unlocked_jars,
-                    EventKind::Claim(event_data),
-                ))
-                .into()
+            self.claim_interest(
+                &account_id,
+                U128(total_interest_to_claim),
+                unlocked_jars,
+                EventKind::Claim(event_data),
+            )
         } else {
             PromiseOrValue::Value(U128(0))
+        }
+    }
+}
+
+impl Contract {
+    #[cfg(test)]
+    fn claim_interest(
+        &mut self,
+        _account_id: &AccountId,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+    ) -> PromiseOrValue<U128> {
+        PromiseOrValue::Value(self.after_claim_internal(claimed_amount, jars_before_transfer, event, true))
+    }
+
+    #[cfg(not(test))]
+    fn claim_interest(
+        &mut self,
+        account_id: &AccountId,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+    ) -> PromiseOrValue<U128> {
+        self.ft_contract()
+            .transfer(account_id, claimed_amount.0, "claim", &None)
+            .then(after_claim_call(claimed_amount, jars_before_transfer, event))
+            .into()
+    }
+
+    fn after_claim_internal(
+        &mut self,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+        is_promise_success: bool,
+    ) -> U128 {
+        if is_promise_success {
+            for jar_before_transfer in jars_before_transfer {
+                let jar = self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id);
+
+                jar.unlock();
+
+                if let Some(ref cache) = jar.cache {
+                    if cache.interest == 0 && jar.principal == 0 {
+                        self.delete_jar(jar_before_transfer);
+                    }
+                }
+            }
+
+            emit(event);
+
+            claimed_amount
+        } else {
+            for jar_before_transfer in jars_before_transfer {
+                let account_id = jar_before_transfer.account_id.clone();
+                let jar_id = jar_before_transfer.id;
+
+                *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
+            }
+
+            U128(0)
         }
     }
 }
@@ -103,25 +165,11 @@ impl ClaimApi for Contract {
 impl ClaimCallbacks for Contract {
     #[private]
     fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
-        if is_promise_success() {
-            for jar_before_transfer in jars_before_transfer {
-                self.get_jar_mut_internal(jar_before_transfer.index).unlock();
-            }
-
-            emit(event);
-
-            claimed_amount
-        } else {
-            for jar_before_transfer in jars_before_transfer {
-                self.jars
-                    .replace(jar_before_transfer.index, jar_before_transfer.unlocked());
-            }
-
-            U128(0)
-        }
+        self.after_claim_internal(claimed_amount, jars_before_transfer, event, is_promise_success())
     }
 }
 
+#[cfg(not(test))]
 fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(GAS_FOR_AFTER_CLAIM)

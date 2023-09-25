@@ -4,7 +4,7 @@ use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
-    env::sha256,
+    env::{panic_str, sha256},
     json_types::{U128, U64},
     require,
     serde::{Deserialize, Serialize},
@@ -16,10 +16,10 @@ use crate::{
     event::{emit, EventKind, TopUpData},
     jar::view::JarView,
     product::model::{Apy, Product, ProductId, Terms},
-    Base64VecU8, Contract, Signature,
+    Base64VecU8, Contract, JarsStorage, Signature,
 };
 
-pub type JarIndex = u32;
+pub type JarId = u32;
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
@@ -43,11 +43,13 @@ pub struct JarTicket {
 }
 
 /// The `Jar` struct represents a deposit jar within the smart contract.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct Jar {
-    /// The index of the jar in the `Contracts.jars` vector. Also serves as the unique identifier for the jar.
-    pub index: JarIndex,
+    /// The unique identifier for the jar.
+    pub id: JarId,
 
     /// The account ID of the owner of the jar.
     pub account_id: AccountId,
@@ -72,9 +74,6 @@ pub struct Jar {
     /// Indicates whether an operation involving cross-contract calls is in progress for this jar.
     pub is_pending_withdraw: bool,
 
-    /// The state of the jar, indicating whether it is active or closed.
-    pub state: JarState,
-
     /// Indicates whether a penalty has been applied to the jar's owner due to violating product terms.
     pub is_penalty_applied: bool,
 }
@@ -82,37 +81,25 @@ pub struct Jar {
 /// A cached value that stores calculated interest based on the current state of the jar.
 /// This cache is updated whenever properties that impact interest calculation change,
 /// allowing for efficient interest calculations between state changes.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[derive(
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarCache {
     pub updated_at: Timestamp,
     pub interest: TokenAmount,
 }
 
-/// The state of a jar, indicating whether it is active or closed.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Eq, PartialEq, Debug)]
-#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-pub enum JarState {
-    Active,
-    Closed,
-}
-
-impl JarState {
-    pub(crate) fn is_active(&self) -> bool {
-        matches!(self, JarState::Active)
-    }
-}
-
 impl Jar {
     pub(crate) fn create(
-        index: JarIndex,
+        id: JarId,
         account_id: AccountId,
         product_id: ProductId,
         principal: TokenAmount,
         created_at: Timestamp,
     ) -> Self {
         Self {
-            index,
+            id,
             account_id,
             product_id,
             principal,
@@ -120,7 +107,6 @@ impl Jar {
             cache: None,
             claimed_balance: 0,
             is_pending_withdraw: false,
-            state: JarState::Active,
             is_penalty_applied: false,
         }
     }
@@ -130,6 +116,10 @@ impl Jar {
             is_pending_withdraw: true,
             ..self.clone()
         }
+    }
+
+    pub(crate) fn lock(&mut self) {
+        self.is_pending_withdraw = true;
     }
 
     pub(crate) fn unlocked(&self) -> Self {
@@ -143,49 +133,49 @@ impl Jar {
         self.is_pending_withdraw = false;
     }
 
-    pub(crate) fn with_penalty_applied(&self, is_applied: bool) -> Self {
-        Self {
-            is_penalty_applied: is_applied,
-            ..self.clone()
-        }
+    pub(crate) fn apply_penalty(&mut self, is_applied: bool) {
+        self.is_penalty_applied = is_applied;
     }
 
-    pub(crate) fn topped_up(&self, amount: TokenAmount, product: &Product, now: Timestamp) -> Self {
+    pub(crate) fn top_up(&mut self, amount: TokenAmount, product: &Product, now: Timestamp) -> &mut Self {
         let current_interest = self.get_interest(product, now);
-        Self {
-            principal: self.principal + amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: current_interest,
-            }),
-            ..self.clone()
-        }
+
+        self.principal += amount;
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: current_interest,
+        });
+        self
     }
 
-    pub(crate) fn claimed(&self, available_yield: TokenAmount, claimed_amount: TokenAmount, now: Timestamp) -> Self {
-        Self {
-            claimed_balance: self.claimed_balance + claimed_amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: available_yield - claimed_amount,
-            }),
-            ..self.clone()
-        }
+    pub(crate) fn claim(
+        &mut self,
+        available_yield: TokenAmount,
+        claimed_amount: TokenAmount,
+        now: Timestamp,
+    ) -> &mut Self {
+        self.claimed_balance += claimed_amount;
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: available_yield - claimed_amount,
+        });
+        self
     }
 
-    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
+    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> (bool, Self) {
         let current_interest = self.get_interest(product, now);
-        let state = get_final_state(product, self, withdrawn_amount);
 
-        Self {
-            principal: self.principal - withdrawn_amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: current_interest,
-            }),
-            state,
-            ..self.clone()
-        }
+        (
+            should_be_closed(product, self, withdrawn_amount) && current_interest == 0,
+            Self {
+                principal: self.principal - withdrawn_amount,
+                cache: Some(JarCache {
+                    updated_at: now,
+                    interest: current_interest,
+                }),
+                ..self.clone()
+            },
+        )
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -245,12 +235,8 @@ impl Jar {
     }
 }
 
-fn get_final_state(product: &Product, original_jar: &Jar, withdrawn_amount: TokenAmount) -> JarState {
-    if product.is_flexible() || original_jar.principal - withdrawn_amount > 0 {
-        JarState::Active
-    } else {
-        JarState::Closed
-    }
+fn should_be_closed(product: &Product, original_jar: &Jar, withdrawn_amount: TokenAmount) -> bool {
+    !(product.is_flexible() || original_jar.principal - withdrawn_amount > 0)
 }
 
 impl Contract {
@@ -269,76 +255,106 @@ impl Contract {
         product.assert_cap(amount);
         self.verify(&account_id, amount, &ticket, signature);
 
-        let index = self.jars.len() as JarIndex;
+        let id = self.increment_and_get_last_jar_id();
         let now = env::block_timestamp_ms();
-        let jar = Jar::create(index, account_id.clone(), product_id.clone(), amount, now);
+        let jar = Jar::create(id, account_id.clone(), product_id.clone(), amount, now);
 
-        self.save_jar(&account_id, jar.clone());
+        self.add_new_jar(&account_id, jar.clone());
 
         emit(EventKind::CreateJar(jar.clone()));
 
         jar.into()
     }
 
-    pub(crate) fn top_up(&mut self, jar_index: JarIndex, amount: U128) -> U128 {
-        let jar = self.get_jar_internal(jar_index);
-
-        require!(jar.state.is_active(), "Closed jar doesn't allow top-ups");
-
-        let product = self.get_product(&jar.product_id);
+    pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
+        let jar = self.get_jar_internal(account, jar_id);
+        let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
         product.assert_cap(jar.principal + amount.0);
 
         let now = env::block_timestamp_ms();
-        let topped_up_jar = jar.topped_up(amount.0, product, now);
 
-        self.jars.replace(jar_index, topped_up_jar.clone());
+        let principal = self
+            .get_jar_mut_internal(account, jar_id)
+            .top_up(amount.0, &product, now)
+            .principal;
 
-        emit(EventKind::TopUp(TopUpData {
-            index: jar_index,
-            amount,
-        }));
+        emit(EventKind::TopUp(TopUpData { id: jar_id, amount }));
 
-        U128(topped_up_jar.principal)
+        U128(principal)
     }
 
-    pub(crate) fn get_jar_mut_internal(&mut self, index: JarIndex) -> &mut Jar {
-        self.jars
-            .get_mut(index)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar on index {index} doesn't exist")))
+    pub(crate) fn delete_jar(&mut self, jar: Jar) {
+        let account = &jar.account_id;
+
+        let jars = self
+            .account_jars
+            .get_mut(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")));
+
+        require!(!jars.is_empty(), "Trying to delete jar from empty account");
+
+        if jars.len() == 1 {
+            jars.clear();
+            return;
+        }
+
+        // On jar deletion, we move the last jar in the vector in the deleted jar's place.
+        // This way we don't need to shift all jars to fill empty space in the vector.
+
+        let jar_position = jars
+            .iter()
+            .position(|j| j.id == jar.id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
+
+        let last_jar = jars.pop().unwrap();
+
+        if jar_position != jars.len() {
+            jars[jar_position] = last_jar;
+        }
     }
 
-    pub(crate) fn get_jar_internal(&self, index: JarIndex) -> Jar {
-        self.jars.get(index).map_or_else(
-            || env::panic_str(&format!("Jar on index {index} doesn't exist")),
-            Clone::clone,
-        )
+    pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
+        self.account_jars
+            .get_mut(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
+            .get_jar_mut(id)
+    }
+
+    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> &Jar {
+        self.account_jars
+            .get(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
+            .get_jar(id)
     }
 
     pub(crate) fn verify(
-        &self,
+        &mut self,
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
         signature: Option<Base64VecU8>,
     ) {
+        let last_jar_id = self.account_jars.entry(account_id.clone()).or_default().last_id;
         let product = self.get_product(&ticket.product_id);
-        if let Some(pk) = &product.public_key {
-            let signature = signature.expect("Signature is required");
-            let last_jar_index = self
-                .account_jars
-                .get(account_id)
-                .map(|jars| *jars.iter().max().unwrap_or_else(|| env::panic_str("Jar is empty.")));
 
-            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_index);
+        if let Some(pk) = &product.public_key {
+            let Some(signature) = signature else {
+                panic_str("Signature is required");
+            };
+
+            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
+            require!(is_time_valid, "Ticket is outdated");
+
+            // If this is the first jar for this user ever, oracle will send empty string as nonce.
+            // Which is equivalent to `None` value here.
+            let last_jar_id = if last_jar_id == 0 { None } else { Some(last_jar_id) };
+
+            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
-
-            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
-
-            require!(is_time_valid, "Ticket is outdated");
         }
     }
 
@@ -346,7 +362,7 @@ impl Contract {
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
-        last_jar_index: Option<JarIndex>,
+        last_jar_id: Option<JarId>,
     ) -> Vec<u8> {
         sha256(
             Self::get_signature_material(
@@ -355,7 +371,7 @@ impl Contract {
                 &ticket.product_id,
                 amount,
                 ticket.valid_until.0,
-                last_jar_index,
+                last_jar_id,
             )
             .as_bytes(),
         )
@@ -367,7 +383,7 @@ impl Contract {
         product_id: &ProductId,
         amount: TokenAmount,
         valid_until: Timestamp,
-        last_jar_index: Option<JarIndex>,
+        last_jar_id: Option<JarId>,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",
@@ -375,7 +391,7 @@ impl Contract {
             receiver_account_id,
             product_id,
             amount,
-            last_jar_index.map_or_else(String::new, |value| value.to_string(),),
+            last_jar_id.map_or_else(String::new, |value| value.to_string(),),
             valid_until,
         )
     }

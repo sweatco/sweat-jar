@@ -1,19 +1,21 @@
+use std::ops::{Deref, DerefMut};
+
 use ed25519_dalek::Signature;
 use near_sdk::{
     assert_one_yocto,
-    borsh::{self, maybestd::collections::HashSet, BorshDeserialize, BorshSerialize},
+    borsh::{self, BorshDeserialize, BorshSerialize},
     env,
     json_types::Base64VecU8,
     near_bindgen,
-    store::{LookupMap, UnorderedMap, Vector},
+    store::{LookupMap, UnorderedMap},
     AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise,
 };
 use near_self_update::SelfUpdate;
 use product::model::{Apy, Product, ProductId};
 
 use crate::{
-    assert::{assert_is_not_closed, assert_ownership},
-    jar::model::{Jar, JarIndex, JarState},
+    assert::assert_ownership,
+    jar::model::{Jar, JarId},
 };
 
 mod assert;
@@ -27,6 +29,7 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
+mod tests;
 mod withdraw;
 
 // TODO: document all the numbers
@@ -51,17 +54,37 @@ pub struct Contract {
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
 
-    /// A vector containing information about all deposit jars.
-    pub jars: Vector<Jar>,
+    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
+    pub last_jar_id: JarId,
 
-    /// A lookup map that associates account IDs with sets of jar indexes owned by each account.
-    pub account_jars: LookupMap<AccountId, HashSet<JarIndex>>,
+    /// A lookup map that associates account IDs with sets of jars owned by each account.
+    pub account_jars: LookupMap<AccountId, AccountJars>,
+}
+
+#[derive(Default, BorshDeserialize, BorshSerialize)]
+pub struct AccountJars {
+    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
+    pub last_id: JarId,
+    pub jars: Vec<Jar>,
+}
+
+impl Deref for AccountJars {
+    type Target = Vec<Jar>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.jars
+    }
+}
+
+impl DerefMut for AccountJars {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.jars
+    }
 }
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Products,
-    Jars,
     AccountJars,
 }
 
@@ -76,298 +99,27 @@ impl Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::Products),
-            jars: Vector::new(StorageKey::Jars),
             account_jars: LookupMap::new(StorageKey::AccountJars),
+            last_jar_id: 0,
         }
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
+pub(crate) trait JarsStorage {
+    fn get_jar(&self, id: JarId) -> &Jar;
+    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar;
+}
 
-    use common::tests::Context;
-    use near_sdk::{json_types::U128, test_utils::accounts};
-
-    use super::*;
-    use crate::{
-        claim::api::ClaimApi,
-        common::{u32::U32, udecimal::UDecimal, MS_IN_YEAR},
-        jar::{
-            api::JarApi,
-            view::{AggregatedTokenAmountView, JarView},
-        },
-        penalty::api::PenaltyApi,
-        product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
-        withdraw::api::WithdrawApi,
-    };
-
-    #[test]
-    fn add_product_to_list_by_admin() {
-        let admin = accounts(0);
-        let mut context = Context::new(admin.clone());
-
-        context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-
-        let products = context.contract.get_products();
-        assert_eq!(products.len(), 1);
-        assert_eq!(products.first().unwrap().id, "product".to_string());
+impl JarsStorage for Vec<Jar> {
+    fn get_jar(&self, id: JarId) -> &Jar {
+        self.iter()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 
-    #[test]
-    #[should_panic(expected = "Can be performed only by admin")]
-    fn add_product_to_list_by_not_admin() {
-        let admin = accounts(0);
-        let mut context = Context::new(admin);
-
-        context.with_deposit_yocto(1, |context| {
-            context.contract.register_product(get_register_product_command())
-        });
-    }
-
-    #[test]
-    fn get_principle_with_no_jars() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-        let context = Context::new(admin);
-
-        let principal = context.contract.get_total_principal(alice);
-        assert_eq!(principal.total.0, 0);
-    }
-
-    #[test]
-    fn get_principal_with_single_jar() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let reference_product = generate_product();
-        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
-        let context = Context::new(admin)
-            .with_products(&[reference_product])
-            .with_jars(&[reference_jar]);
-
-        let principal = context.contract.get_total_principal(alice).total.0;
-        assert_eq!(principal, 100);
-    }
-
-    #[test]
-    fn get_principal_with_multiple_jars() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let reference_product = generate_product();
-        let jars = &[
-            Jar::generate(0, &alice, &reference_product.id).principal(100),
-            Jar::generate(1, &alice, &reference_product.id).principal(200),
-            Jar::generate(2, &alice, &reference_product.id).principal(400),
-        ];
-
-        let context = Context::new(admin).with_products(&[reference_product]).with_jars(jars);
-
-        let principal = context.contract.get_total_principal(alice).total.0;
-        assert_eq!(principal, 700);
-    }
-
-    #[test]
-    fn get_total_interest_with_no_jars() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let context = Context::new(admin);
-
-        let interest = context.contract.get_total_interest(alice);
-
-        assert_eq!(interest.amount.total.0, 0);
-        assert_eq!(interest.amount.detailed, HashMap::new());
-    }
-
-    #[test]
-    fn get_total_interest_with_single_jar_after_30_minutes() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let reference_product = generate_product();
-
-        let jar_index = 0;
-        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin)
-            .with_products(&[reference_product])
-            .with_jars(&[jar.clone()]);
-
-        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
-        assert_eq!(JarView::from(jar), contract_jar);
-
-        context.set_block_timestamp_in_minutes(30);
-
-        let interest = context.contract.get_total_interest(alice);
-
-        assert_eq!(interest.amount.total.0, 684);
-        assert_eq!(interest.amount.detailed, HashMap::from([(U32(0), U128(684))]))
-    }
-
-    #[test]
-    fn get_total_interest_with_single_jar_on_maturity() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let reference_product = generate_product();
-
-        let jar_index = 0;
-        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin)
-            .with_products(&[reference_product])
-            .with_jars(&[jar.clone()]);
-
-        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
-        assert_eq!(JarView::from(jar), contract_jar);
-
-        context.set_block_timestamp_in_days(365);
-
-        let interest = context.contract.get_total_interest(alice);
-
-        assert_eq!(
-            interest.amount,
-            AggregatedTokenAmountView {
-                detailed: [(U32(0), U128(12_000_000))].into(),
-                total: U128(12_000_000)
-            }
-        )
-    }
-
-    #[test]
-    fn get_total_interest_with_single_jar_after_maturity() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let reference_product = generate_product();
-
-        let jar_index = 0;
-        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin)
-            .with_products(&[reference_product])
-            .with_jars(&[jar.clone()]);
-
-        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
-        assert_eq!(JarView::from(jar), contract_jar);
-
-        context.set_block_timestamp_in_days(400);
-
-        let interest = context.contract.get_total_interest(alice).amount.total.0;
-        assert_eq!(interest, 12_000_000);
-    }
-
-    #[test]
-    fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let reference_product = generate_product();
-
-        let jar_index = 0;
-        let jar = Jar::generate(jar_index, &alice, &reference_product.id).principal(100_000_000);
-        let mut context = Context::new(admin)
-            .with_products(&[reference_product])
-            .with_jars(&[jar.clone()]);
-
-        let contract_jar = JarView::from(context.contract.jars.get(jar_index).unwrap().clone());
-        assert_eq!(JarView::from(jar), contract_jar);
-
-        context.set_block_timestamp_in_days(182);
-
-        let mut interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
-        assert_eq!(interest, 5_983_561);
-
-        context.switch_account(&alice);
-        context.contract.claim_total();
-
-        context.set_block_timestamp_in_days(365);
-
-        interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
-        assert_eq!(interest, 6_016_438);
-    }
-
-    #[test]
-    #[should_panic(expected = "Penalty is not applicable for constant APY")]
-    fn penalty_is_not_applicable_for_constant_apy() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let signer = MessageSigner::new();
-        let reference_product = Product::generate("premium_product")
-            .enabled(true)
-            .apy(Apy::Constant(UDecimal::new(20, 2)))
-            .public_key(signer.public_key());
-        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
-
-        let mut context = Context::new(admin.clone())
-            .with_products(&[reference_product])
-            .with_jars(&[reference_jar]);
-
-        context.switch_account(&admin);
-        context.contract.set_penalty(0, true);
-    }
-
-    #[test]
-    fn get_total_interest_for_premium_with_penalty_after_half_term() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let signer = MessageSigner::new();
-        let reference_product = Product::generate("premium_product")
-            .enabled(true)
-            .apy(Apy::Downgradable(DowngradableApy {
-                default: UDecimal::new(20, 2),
-                fallback: UDecimal::new(10, 2),
-            }))
-            .public_key(signer.public_key());
-        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
-
-        let mut context = Context::new(admin.clone())
-            .with_products(&[reference_product])
-            .with_jars(&[reference_jar]);
-
-        context.set_block_timestamp_in_days(182);
-
-        let mut interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
-        assert_eq!(interest, 9_972_602);
-
-        context.switch_account(&admin);
-        context.contract.set_penalty(0, true);
-
-        context.set_block_timestamp_in_days(365);
-
-        interest = context.contract.get_total_interest(alice).amount.total.0;
-        assert_eq!(interest, 10_000_000);
-    }
-
-    #[test]
-    fn get_interest_after_withdraw() {
-        let alice = accounts(0);
-        let admin = accounts(1);
-
-        let reference_product = generate_product();
-        let reference_jar = &Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
-
-        let mut context = Context::new(admin)
-            .with_products(&[reference_product])
-            .with_jars(&[reference_jar.clone()]);
-
-        context.set_block_timestamp_in_days(400);
-
-        context.switch_account(&alice);
-        context.contract.withdraw(U32(reference_jar.index), None);
-
-        let interest = context.contract.get_total_interest(alice.clone());
-        assert_eq!(12_000_000, interest.amount.total.0);
-    }
-
-    fn generate_product() -> Product {
-        Product::generate("product")
-            .enabled(true)
-            .lockup_term(MS_IN_YEAR)
-            .apy(Apy::Constant(UDecimal::new(12, 2)))
+    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar {
+        self.iter_mut()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 }

@@ -2,13 +2,9 @@ use near_sdk::{require, AccountId};
 
 use crate::{
     common::{Timestamp, TokenAmount},
-    jar::model::{Jar, JarState},
+    jar::model::Jar,
     product::model::Product,
 };
-
-pub(crate) fn assert_is_not_closed(jar: &Jar) {
-    assert_ne!(jar.state, JarState::Closed, "Jar is closed");
-}
 
 pub(crate) fn assert_sufficient_balance(jar: &Jar, amount: TokenAmount) {
     require!(jar.principal >= amount, "Insufficient balance");
