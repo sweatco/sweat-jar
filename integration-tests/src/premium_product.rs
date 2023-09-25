@@ -3,7 +3,7 @@ use ed25519_dalek::Signer;
 use near_sdk::env::sha256;
 
 use crate::{
-    common::{generate_keypair, prepare_contract, Prepared},
+    common::{generate_keypair, prepare_contract, Prepared, ValueGetters},
     product::RegisterProductCommand,
 };
 
@@ -58,18 +58,7 @@ async fn premium_product() -> anyhow::Result<()> {
     assert_eq!(result.as_str().unwrap(), amount.to_string());
 
     let jars = context.jar_contract.get_jars_for_account(&alice).await?;
-    let jar_id = jars
-        .as_array()
-        .unwrap()
-        .get(0)
-        .unwrap()
-        .as_object()
-        .unwrap()
-        .get("id")
-        .unwrap()
-        .as_str()
-        .unwrap()
-        .to_string();
+    let jar_id = jars.as_array().unwrap().get(0).unwrap().get_jar_id();
 
     let jar = context
         .jar_contract

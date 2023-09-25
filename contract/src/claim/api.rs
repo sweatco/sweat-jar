@@ -3,10 +3,10 @@ use std::cmp;
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
-    common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
+    common::{u32::U32, TokenAmount, GAS_FOR_AFTER_CLAIM},
     event::{emit, ClaimEventItem, EventKind},
     ft_interface::FungibleTokenInterface,
-    jar::model::{Jar, JarId},
+    jar::{model::Jar, view::JarIdView},
     Contract, ContractExt, Promise,
 };
 
@@ -34,7 +34,7 @@ pub trait ClaimApi {
     ///
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
     /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(&mut self, jar_ids: Vec<JarId>, amount: Option<U128>) -> PromiseOrValue<U128>;
+    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
@@ -46,18 +46,18 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
-        let jar_ids = self.account_jars(&account_id).iter().map(|a| a.id).collect();
+        let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars(jar_ids, None)
     }
 
-    fn claim_jars(&mut self, jar_ids: Vec<JarId>, amount: Option<U128>) -> PromiseOrValue<U128> {
+    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
         let unlocked_jars: Vec<Jar> = self
             .account_jars(&account_id)
             .iter()
-            .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&jar.id))
+            .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&U32(jar.id)))
             .cloned()
             .collect();
 

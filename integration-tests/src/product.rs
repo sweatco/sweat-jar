@@ -106,7 +106,7 @@ impl RegisterProductCommand {
                     "data": {
                         "lockup_term": "600000",
                         "allows_top_up": false,
-                        "allows_restaking": false,
+                        "allows_restaking": true,
                     }
                 },
                 "is_enabled": true,
