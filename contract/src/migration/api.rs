@@ -5,7 +5,7 @@ use crate::{
     event::{emit, EventKind, MigrationEventItem},
     migration::model::CeFiJar,
     product::model::ProductId,
-    Contract, Jar, JarState,
+    Contract, Jar,
 };
 
 impl Contract {
@@ -51,10 +51,12 @@ impl Contract {
                 format!("Product {} is not registered", ce_fi_jar.product_id),
             );
 
-            let index = self.jars.len();
+            let id = self.increment_and_get_last_jar_id();
+
+            let account_jars = self.account_jars.entry(ce_fi_jar.account_id.clone()).or_default();
 
             let jar = Jar {
-                index,
+                id,
                 account_id: ce_fi_jar.account_id,
                 product_id: ce_fi_jar.product_id,
                 created_at: ce_fi_jar.created_at.0,
@@ -62,22 +64,16 @@ impl Contract {
                 cache: None,
                 claimed_balance: 0,
                 is_pending_withdraw: false,
-                state: JarState::Active,
                 is_penalty_applied: false,
             };
 
-            self.jars.push(jar.clone());
-
-            self.account_jars
-                .entry(jar.account_id.clone())
-                .or_default()
-                .insert(jar.index);
+            account_jars.push(jar.clone());
 
             total_amount += jar.principal;
 
             event_data.push(MigrationEventItem {
                 original_id: ce_fi_jar.id,
-                index: jar.index,
+                id: jar.id,
                 account_id: jar.account_id,
             });
         }

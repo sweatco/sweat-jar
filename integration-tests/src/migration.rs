@@ -81,11 +81,11 @@ async fn migration() -> anyhow::Result<()> {
     assert_eq!(2, alice_jars.len());
 
     let alice_first_jar = alice_jars.get(0).unwrap();
-    assert_eq!("0", alice_first_jar.get("index").unwrap().as_str().unwrap());
+    assert_eq!("1", alice_first_jar.get("id").unwrap().as_str().unwrap());
     assert_eq!("2000000", alice_first_jar.get("principal").unwrap().as_str().unwrap());
 
     let alice_second_jar = alice_jars.get(1).unwrap();
-    assert_eq!("1", alice_second_jar.get("index").unwrap().as_str().unwrap());
+    assert_eq!("2", alice_second_jar.get("id").unwrap().as_str().unwrap());
     assert_eq!("700000", alice_second_jar.get("principal").unwrap().as_str().unwrap());
 
     let alice_principal = context.jar_contract.get_total_principal(alice).await?;

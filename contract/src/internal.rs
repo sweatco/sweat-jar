@@ -1,6 +1,10 @@
 use near_sdk::require;
 
-use crate::{env, AccountId, Contract, Jar, JarIndex, Product, ProductId};
+use crate::{
+    env,
+    jar::{model::JarId, view::JarIdView},
+    AccountId, Contract, Jar, Product, ProductId,
+};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -17,38 +21,47 @@ impl Contract {
         );
     }
 
+    pub(crate) fn increment_and_get_last_jar_id(&mut self) -> JarId {
+        self.last_jar_id += 1;
+        self.last_jar_id
+    }
+
     pub(crate) fn get_product(&self, product_id: &ProductId) -> &Product {
         self.products
             .get(product_id)
-            .unwrap_or_else(|| env::panic_str(&format!("Product {product_id} doesn't exist")))
+            .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 
     pub(crate) fn get_product_mut(&mut self, product_id: &ProductId) -> &mut Product {
         self.products
             .get_mut(product_id)
-            .unwrap_or_else(|| env::panic_str(&format!("Product {product_id} doesn't exist")))
+            .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 
-    pub(crate) fn account_jar_ids(&self, account_id: &AccountId) -> Vec<JarIndex> {
-        self.account_jars
-            .get(account_id)
-            .map_or_else(Vec::new, |items| items.iter().copied().collect())
+    pub(crate) fn account_jars(&self, account_id: &AccountId) -> &[Jar] {
+        self.account_jars.get(account_id).map_or(&[], |jars| jars.as_slice())
     }
 
-    pub(crate) fn save_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        let jar_index = jar.index;
-        self.insert_or_update_jar(jar);
-        self.account_jars
-            .entry(account_id.clone())
-            .or_default()
-            .insert(jar_index);
-    }
+    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<&Jar> {
+        let mut result: Vec<&Jar> = vec![];
 
-    fn insert_or_update_jar(&mut self, jar: Jar) {
-        if jar.index < self.jars.len() {
-            self.jars.replace(jar.index, jar);
-        } else {
-            self.jars.push(jar);
+        let all_jars = self.account_jars(account_id);
+
+        for id in ids {
+            result.push(
+                all_jars
+                    .iter()
+                    .find(|jar| jar.id == id.0)
+                    .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0))),
+            );
         }
+
+        result
+    }
+
+    pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
+        let jars = self.account_jars.entry(account_id.clone()).or_default();
+        jars.last_id = jar.id;
+        jars.push(jar);
     }
 }

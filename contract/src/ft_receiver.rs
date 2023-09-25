@@ -8,7 +8,7 @@ use near_sdk::{
 
 use crate::{
     jar::model::JarTicket, migration::model::CeFiJar, near_bindgen, AccountId, Base64VecU8, Contract, ContractExt,
-    JarIndex,
+    JarId,
 };
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
@@ -22,8 +22,8 @@ pub enum FtMessage {
     /// Represents a request to create DeFi Jars from provided CeFi Jars.
     Migrate(Vec<CeFiJar>),
 
-    /// Represents a request to refill (top up) an existing jar using its `JarIndex`.
-    TopUp(JarIndex),
+    /// Represents a request to refill (top up) an existing jar using its `JarId`.
+    TopUp(JarId),
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.
@@ -57,8 +57,8 @@ impl FungibleTokenReceiver for Contract {
 
                 self.migrate_jars(jars, amount);
             }
-            FtMessage::TopUp(jar_index) => {
-                self.top_up(jar_index, amount);
+            FtMessage::TopUp(jar_id) => {
+                self.top_up(&sender_id, jar_id, amount);
             }
         }
 
@@ -102,10 +102,12 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(alice, U128(1_000_000), msg.to_string());
+        context
+            .contract
+            .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
 
-        let jar = context.contract.get_jar(U32(0));
-        assert_eq!(jar.index.0, 0);
+        let jar = context.contract.get_jar(alice, U32(1));
+        assert_eq!(jar.id.0, 1);
     }
 
     #[test]
@@ -147,8 +149,8 @@ mod tests {
             .contract
             .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(U32(0));
-        assert_eq!(jar.index.0, 0);
+        let jar = context.contract.get_jar(alice.clone(), U32(1));
+        assert_eq!(jar.id.0, 1);
 
         let result = catch_unwind(move || {
             context
@@ -177,16 +179,16 @@ mod tests {
 
         let msg = json!({
             "type": "top_up",
-            "data": reference_jar.index,
+            "data": reference_jar.id,
         });
 
         context.switch_account_to_ft_contract_account();
         let top_up_amount = 700;
         context
             .contract
-            .ft_on_transfer(alice, U128(top_up_amount), msg.to_string());
+            .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(U32(0));
+        let jar = context.contract.get_jar(alice, U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 
@@ -209,7 +211,7 @@ mod tests {
 
         let msg = json!({
             "type": "top_up",
-            "data": reference_jar.index,
+            "data": reference_jar.id,
         });
 
         context.switch_account_to_ft_contract_account();
@@ -235,7 +237,7 @@ mod tests {
 
         let msg = json!({
             "type": "top_up",
-            "data": reference_jar.index,
+            "data": reference_jar.id,
         });
 
         context.switch_account_to_ft_contract_account();
@@ -243,9 +245,9 @@ mod tests {
         let top_up_amount = 1_000;
         context
             .contract
-            .ft_on_transfer(alice, U128(top_up_amount), msg.to_string());
+            .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(U32(0));
+        let jar = context.contract.get_jar(alice, U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 

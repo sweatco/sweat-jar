@@ -6,8 +6,8 @@ use crate::{
     assert_ownership,
     common::{u32::U32, TokenAmount},
     event::{emit, EventKind, RestakeData},
-    jar::view::{AggregatedInterestView, AggregatedTokenAmountView, JarIndexView, JarView},
-    Contract, ContractExt, Jar, JarIndex,
+    jar::view::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
+    Contract, ContractExt, Jar,
 };
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
@@ -16,12 +16,12 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_index` - The index of the deposit jar for which information is being retrieved.
+    /// * `jar_id` - The ID of the deposit jar for which information is being retrieved.
     ///
     /// # Returns
     ///
     /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, jar_index: JarIndexView) -> JarView;
+    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView;
 
     /// Retrieves information about all deposit jars associated with a given account.
     ///
@@ -50,13 +50,15 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars for which the
+    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
     ///                   principal is being retrieved.
+    ///
+    /// * `account_id` - The `AccountId` of the account for which the principal is being retrieved.
     ///
     /// # Returns
     ///
     /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView;
+    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -74,20 +76,20 @@ pub trait JarApi {
     ///
     /// # Arguments
     ///
-    /// * `jar_indices` - A `Vec<JarIndex>` containing the indices of the deposit jars for which the
+    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
     ///                   interest is being retrieved.
     ///
     /// # Returns
     ///
     /// An `U128` representing the sum of interest amounts for the specified deposit jars.
     ///
-    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedInterestView;
+    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
     /// # Arguments
     ///
-    /// * `jar_index` - The index of the deposit jar from which the restaking is being initiated.
+    /// * `jar_id` - The ID of the deposit jar from which the restaking is being initiated.
     ///
     /// # Returns
     ///
@@ -99,37 +101,35 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, jar_index: JarIndexView) -> JarView;
+    fn restake(&mut self, jar_id: JarIdView) -> JarView;
 }
 
 #[near_bindgen]
 impl JarApi for Contract {
-    fn get_jar(&self, jar_index: JarIndexView) -> JarView {
-        self.get_jar_internal(jar_index.0).into()
+    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
+        self.get_jar_internal(&account_id, jar_id.0).into()
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
-        self.account_jar_ids(&account_id)
-            .into_iter()
-            .map(|index| self.get_jar(U32(index)))
-            .collect()
+        self.account_jars(&account_id).iter().map(Into::into).collect()
     }
 
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        let jar_indices = self.account_jar_ids(&account_id).into_iter().map(U32).collect();
-
-        self.get_principal(jar_indices)
+        self.get_principal(
+            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
+            account_id,
+        )
     }
 
-    fn get_principal(&self, jar_indices: Vec<JarIndexView>) -> AggregatedTokenAmountView {
-        let mut detailed_amounts = HashMap::<JarIndexView, U128>::new();
+    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView {
+        let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for index in jar_indices {
-            let index = index.0;
-            let principal = self.get_jar_internal(index).principal;
+        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
+            let id = jar.id;
+            let principal = jar.principal;
 
-            detailed_amounts.insert(U32(index), U128(principal));
+            detailed_amounts.insert(U32(id), U128(principal));
             total_amount += principal;
         }
 
@@ -140,23 +140,22 @@ impl JarApi for Contract {
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
-        let jar_indices = self.account_jar_ids(&account_id).into_iter().map(U32).collect();
-
-        self.get_interest(jar_indices)
+        self.get_interest(
+            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
+            account_id,
+        )
     }
 
-    fn get_interest(&self, jar_indices: Vec<JarIndexView>) -> AggregatedInterestView {
+    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView {
         let now = env::block_timestamp_ms();
 
-        let mut detailed_amounts = HashMap::<JarIndexView, U128>::new();
+        let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for index in jar_indices {
-            let index = index.0;
-            let jar = self.get_jar_internal(index);
+        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
             let interest = jar.get_interest(self.get_product(&jar.product_id), now);
 
-            detailed_amounts.insert(U32(index), U128(interest));
+            detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
         }
 
@@ -169,12 +168,15 @@ impl JarApi for Contract {
         }
     }
 
-    fn restake(&mut self, jar_index: JarIndexView) -> JarView {
-        let jar_index = jar_index.0;
-        let jar = self.get_jar_internal(jar_index);
+    fn restake(&mut self, jar_id: JarIdView) -> JarView {
+        let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
 
-        assert_ownership(&jar, &account_id);
+        let restaked_jar_id = self.increment_and_get_last_jar_id();
+
+        let jar = self.get_jar_internal(&account_id, jar_id);
+
+        assert_ownership(jar, &account_id);
 
         let product = self.get_product(&jar.product_id);
 
@@ -185,22 +187,30 @@ impl JarApi for Contract {
         require!(jar.is_liquidable(product, now), "The jar is not mature yet");
         require!(!jar.is_empty(), "The jar is empty, nothing to restake");
 
-        let index = self.jars.len() as JarIndex;
+        let principal = jar.principal;
+
         let new_jar = Jar::create(
-            index,
+            restaked_jar_id,
             jar.account_id.clone(),
             jar.product_id.clone(),
-            jar.principal,
+            principal,
             now,
         );
-        let withdraw_jar = jar.withdrawn(product, jar.principal, now);
 
-        self.save_jar(&account_id, withdraw_jar);
-        self.save_jar(&account_id, new_jar.clone());
+        let (should_be_closed, withdraw_jar) = jar.withdrawn(product, principal, now);
+
+        if should_be_closed {
+            self.delete_jar(withdraw_jar);
+        } else {
+            let jar_id = withdraw_jar.id;
+            *self.get_jar_mut_internal(&account_id, jar_id) = withdraw_jar;
+        }
+
+        self.add_new_jar(&account_id, new_jar.clone());
 
         emit(EventKind::Restake(RestakeData {
-            old_index: jar_index,
-            new_index: new_jar.index,
+            old_id: jar_id,
+            new_id: new_jar.id,
         }));
 
         new_jar.into()

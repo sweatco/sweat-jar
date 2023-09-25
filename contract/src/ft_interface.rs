@@ -22,6 +22,7 @@ pub struct Fee {
 }
 
 impl FungibleTokenContract {
+    #[cfg(not(test))]
     fn new(address: AccountId) -> Self {
         Self { address }
     }
@@ -29,6 +30,7 @@ impl FungibleTokenContract {
 
 #[near_bindgen]
 impl Contract {
+    #[cfg(not(test))]
     pub(crate) fn ft_contract(&self) -> impl FungibleTokenInterface {
         FungibleTokenContract::new(self.token_account_id.clone())
     }

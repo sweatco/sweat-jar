@@ -31,7 +31,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
 
     context.fast_forward_hours(1).await?;
 
-    let withdraw_result = context.jar_contract.withdraw(&alice, "0").await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, "1").await?;
     let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
     let fee_amount = withdraw_result.get_u128("fee");
 
@@ -75,7 +75,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
 
     context.fast_forward_hours(1).await?;
 
-    let withdraw_result = context.jar_contract.withdraw(&alice, "0").await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, "1").await?;
     let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
     let fee_amount = withdraw_result.get_u128("fee");
 

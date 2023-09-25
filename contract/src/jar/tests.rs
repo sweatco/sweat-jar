@@ -73,7 +73,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let reference_product = generate_premium_product("premium_product", &signer);
-        let context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
 
         let amount = 14_000_000;
         let ticket = JarTicket {
@@ -96,7 +96,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let reference_product = generate_premium_product("premium_product", &signer);
-        let context = Context::new(admin).with_products(&[reference_product.clone()]);
+        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
 
         let amount = 1_000_000;
         let ticket = JarTicket {
@@ -120,7 +120,7 @@ mod signature_tests {
         let product = generate_premium_product("premium_product", &signer);
         let another_product = generate_premium_product("another_premium_product", &MessageSigner::new());
 
-        let context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
 
         let amount = 15_000_000;
         let ticket_for_another_product = JarTicket {
@@ -169,7 +169,7 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Product not_existing_product doesn't exist")]
+    #[should_panic(expected = "Product 'not_existing_product' doesn't exist")]
     fn verify_ticket_with_not_existing_product() {
         let admin = accounts(0);
 
@@ -200,7 +200,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let product = generate_premium_product("not_existing_product", &signer);
-        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 3_000_000;
         let ticket = JarTicket {
@@ -216,7 +216,7 @@ mod signature_tests {
         let admin = accounts(0);
 
         let product = generate_product("regular_product");
-        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;
         let ticket = JarTicket {
@@ -228,7 +228,7 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account doesn't own this jar")]
+    #[should_panic(expected = "Account 'bob' doesn't exist")]
     fn restake_by_not_owner() {
         let alice = accounts(0);
         let admin = accounts(1);
@@ -240,7 +240,7 @@ mod signature_tests {
             .with_jars(&[alice_jar.clone()]);
 
         context.switch_account(&admin);
-        context.contract.restake(U32(alice_jar.index));
+        context.contract.restake(U32(alice_jar.id));
     }
 
     #[test]
@@ -254,7 +254,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -268,7 +268,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -289,7 +289,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -307,7 +307,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -324,14 +324,15 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(U32(jar.id));
 
         let alice_jars = context.contract.get_jars_for_account(alice);
+
         assert_eq!(2, alice_jars.len());
-        assert_eq!(0, alice_jars.iter().find(|item| item.index.0 == 0).unwrap().principal.0);
+        assert_eq!(0, alice_jars.iter().find(|item| item.id.0 == 0).unwrap().principal.0);
         assert_eq!(
             1_000_000,
-            alice_jars.iter().find(|item| item.index.0 == 1).unwrap().principal.0
+            alice_jars.iter().find(|item| item.id.0 == 1).unwrap().principal.0
         );
     }
 
@@ -350,7 +351,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.index));
+        context.contract.restake(U32(jar.id));
     }
 
     #[test]
@@ -391,16 +392,12 @@ mod signature_tests {
 mod helpers {
     use near_sdk::AccountId;
 
-    use crate::{
-        common::TokenAmount,
-        jar::model::{Jar, JarState},
-        product::model::ProductId,
-    };
+    use crate::{common::TokenAmount, jar::model::Jar, product::model::ProductId};
 
     impl Jar {
-        pub(crate) fn generate(index: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
+        pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
             Self {
-                index,
+                id,
                 account_id: account_id.clone(),
                 product_id: product_id.clone(),
                 created_at: 0,
@@ -408,7 +405,6 @@ mod helpers {
                 cache: None,
                 claimed_balance: 0,
                 is_pending_withdraw: false,
-                state: JarState::Active,
                 is_penalty_applied: false,
             }
         }
