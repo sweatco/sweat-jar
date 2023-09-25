@@ -87,28 +87,51 @@ impl ClaimApi for Contract {
         }
 
         if total_interest_to_claim > 0 {
-            self.ft_contract()
-                .transfer(&account_id, total_interest_to_claim, "claim", &None)
-                .then(after_claim_call(
+            #[cfg(not(test))]
+            {
+                self.ft_contract()
+                    .transfer(&account_id, total_interest_to_claim, "claim", &None)
+                    .then(after_claim_call(
+                        U128(total_interest_to_claim),
+                        unlocked_jars,
+                        EventKind::Claim(event_data),
+                    ))
+                    .into()
+            }
+            #[cfg(test)]
+            {
+                PromiseOrValue::Value(self.after_claim_internal(
                     U128(total_interest_to_claim),
                     unlocked_jars,
                     EventKind::Claim(event_data),
+                    true,
                 ))
-                .into()
+            }
         } else {
             PromiseOrValue::Value(U128(0))
         }
     }
 }
 
-#[near_bindgen]
-impl ClaimCallbacks for Contract {
-    #[private]
-    fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
-        if is_promise_success() {
+impl Contract {
+    fn after_claim_internal(
+        &mut self,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+        is_promise_success: bool,
+    ) -> U128 {
+        if is_promise_success {
             for jar_before_transfer in jars_before_transfer {
-                self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id)
-                    .unlock();
+                let jar = self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id);
+
+                jar.unlock();
+
+                if let Some(ref cache) = jar.cache {
+                    if cache.interest == 0 && jar.principal == 0 {
+                        self.delete_jar(jar_before_transfer);
+                    }
+                }
             }
 
             emit(event);
@@ -127,6 +150,15 @@ impl ClaimCallbacks for Contract {
     }
 }
 
+#[near_bindgen]
+impl ClaimCallbacks for Contract {
+    #[private]
+    fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
+        self.after_claim_internal(claimed_amount, jars_before_transfer, event, is_promise_success())
+    }
+}
+
+#[cfg(not(test))]
 fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(GAS_FOR_AFTER_CLAIM)

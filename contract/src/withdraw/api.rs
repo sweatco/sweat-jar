@@ -3,7 +3,7 @@ use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen,
 use crate::{
     assert::{assert_is_liquidable, assert_sufficient_balance},
     assert_ownership,
-    common::{TokenAmount, GAS_FOR_AFTER_WITHDRAW},
+    common::TokenAmount,
     env,
     event::{emit, EventKind, WithdrawData},
     ft_interface::Fee,
@@ -91,6 +91,7 @@ impl Contract {
             } else {
                 let stored_jar = self.get_jar_mut_internal(&jar.account_id, jar_id);
                 *stored_jar = jar;
+                stored_jar.unlock();
             }
 
             emit(EventKind::Withdraw(WithdrawData { id: jar_id }));
@@ -144,7 +145,7 @@ impl Contract {
 
     fn after_withdraw_call(jar_before_transfer: Jar, withdrawn_balance: TokenAmount, fee: &Option<Fee>) -> Promise {
         ext_self::ext(env::current_account_id())
-            .with_static_gas(GAS_FOR_AFTER_WITHDRAW)
+            .with_static_gas(crate::common::GAS_FOR_AFTER_WITHDRAW)
             .after_withdraw(jar_before_transfer, withdrawn_balance, fee.clone())
     }
 }
