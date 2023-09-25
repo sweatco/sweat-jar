@@ -7,6 +7,7 @@ mod happy_flow;
 mod jar_contract_interface;
 mod measure;
 mod migration;
+mod premium_product;
 mod product;
-mod withdraw_fee;
 mod product_actions;
+mod withdraw_fee;

@@ -4,16 +4,18 @@ use serde_json::{json, Value};
 pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,
+    Flexible6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
     Locked10Minutes6PercentsWithPercentWithdrawFee,
 }
 
 impl RegisterProductCommand {
-    pub(crate) fn all() -> [Self; 5] {
+    pub(crate) fn all() -> [Self; 6] {
         [
             Self::Locked12Months12Percents,
             Self::Locked6Months6Percents,
+            Self::Flexible6Months6Percents,
             Self::Locked6Months6PercentsWithWithdrawFee,
             Self::Locked10Minutes6PercentsWithFixedWithdrawFee,
             Self::Locked10Minutes6PercentsWithPercentWithdrawFee,
@@ -22,6 +24,18 @@ impl RegisterProductCommand {
 }
 
 impl RegisterProductCommand {
+    pub(crate) fn json_for_premium(&self, public_key: String) -> Value {
+        let json = self.json();
+
+        match json {
+            Value::Object(mut m) => {
+                m.insert("public_key".to_string(), Value::String(public_key));
+                Value::Object(m)
+            }
+            v => v,
+        }
+    }
+
     pub(crate) fn json(&self) -> Value {
         match self {
             RegisterProductCommand::Locked12Months12Percents => json!({
@@ -51,6 +65,17 @@ impl RegisterProductCommand {
                         "allows_top_up": false,
                         "allows_restaking": false,
                     }
+                },
+                "is_enabled": true,
+            }),
+            RegisterProductCommand::Flexible6Months6Percents => json!({
+                "id": "locked_6_months_6_percents",
+                "apy_default": ["12", 2],
+                "apy_fallback": ["6", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
+                "terms": {
+                    "type": "flexible",
                 },
                 "is_enabled": true,
             }),

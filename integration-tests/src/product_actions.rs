@@ -1,9 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use ed25519_dalek::{SigningKey, VerifyingKey};
-use rand::rngs::OsRng;
 
 use crate::{
-    common::{prepare_contract, Prepared},
+    common::{generate_keypair, prepare_contract, Prepared},
     product::RegisterProductCommand,
 };
 
@@ -60,9 +58,7 @@ async fn product_actions() -> anyhow::Result<()> {
         .set_enabled(&manager, RegisterProductCommand::Locked12Months12Percents.id(), true)
         .await?;
 
-    let mut csprng = OsRng;
-    let signing_key: SigningKey = SigningKey::generate(&mut csprng);
-    let verifying_key: VerifyingKey = VerifyingKey::from(&signing_key);
+    let (_, verifying_key) = generate_keypair();
     let pk_base64 = STANDARD.encode(verifying_key.as_bytes());
 
     context

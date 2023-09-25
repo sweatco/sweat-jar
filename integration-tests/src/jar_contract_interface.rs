@@ -29,13 +29,23 @@ pub(crate) trait JarContractInterface {
         ft_contract_id: &AccountId,
     ) -> anyhow::Result<Value>;
 
+    async fn create_premium_jar(
+        &self,
+        user: &Account,
+        product_id: String,
+        amount: u128,
+        signature: String,
+        valid_until: u64,
+        ft_contract_id: &AccountId,
+    ) -> anyhow::Result<Value>;
+
     async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value>;
 
-    async fn get_principal(&self, jar_ids: Vec<String>) -> anyhow::Result<Value>; // TODO: call somewhere
+    async fn get_principal(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value>;
 
     async fn get_total_interest(&self, user: &Account) -> anyhow::Result<Value>;
 
-    async fn get_interest(&self, jar_ids: Vec<String>) -> anyhow::Result<Value>; // TODO: call somewhere
+    async fn get_interest(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value>;
 
     async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value>;
 
@@ -43,17 +53,17 @@ pub(crate) trait JarContractInterface {
 
     async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
 
-    async fn claim_jars(&self, user: &Account, jar_ids: Vec<String>, amount: Option<U128>) -> anyhow::Result<u128>; // TODO: call somewhere
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<String>, amount: Option<U128>) -> anyhow::Result<u128>;
 
-    async fn get_jar(&self, jar_id: String) -> anyhow::Result<Value>; // TODO: call somewhere
+    async fn get_jar(&self, account_id: String, jar_id: String) -> anyhow::Result<Value>;
 
-    async fn restake(&self, user: &Account, jar_id: String) -> anyhow::Result<()>; // TODO: call somewhere
+    async fn restake(&self, user: &Account, jar_id: String) -> anyhow::Result<()>;
 
-    async fn set_penalty(&self, admin: &Account, jar_id: String, value: bool) -> anyhow::Result<()>; // TODO: call somewhere
+    async fn set_penalty(&self, admin: &Account, account_id: &str, jar_id: &str, value: bool) -> anyhow::Result<()>;
 
     async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>;
 
-    async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>; // TODO: call somewhere
+    async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>;
 }
 
 #[async_trait]
@@ -142,34 +152,37 @@ impl JarContractInterface for Contract {
             }
         });
 
-        let args = json!({
-            "receiver_id": self.as_account().id(),
-            "amount": amount.to_string(),
-            "msg": msg.to_string(),
+        self.create_jar_internal(user, msg, amount, ft_contract_id).await
+    }
+
+    async fn create_premium_jar(
+        &self,
+        user: &Account,
+        product_id: String,
+        amount: u128,
+        signature: String,
+        valid_until: u64,
+        ft_contract_id: &AccountId,
+    ) -> anyhow::Result<Value> {
+        println!(
+            "▶️ Create premium jar(product = {:?}) for user {:?} with {:?} tokens",
+            product_id,
+            user.id(),
+            amount
+        );
+
+        let msg = json!({
+            "type": "stake",
+            "data": {
+                "ticket": {
+                    "product_id": product_id,
+                    "valid_until": valid_until.to_string(),
+                },
+                "signature": signature,
+            }
         });
 
-        let result = user
-            .call(ft_contract_id, "ft_transfer_call")
-            .args_json(args)
-            .max_gas()
-            .deposit(parse_near!("1 yocto"))
-            .transact()
-            .await?;
-
-        for log in &result.logs() {
-            println!("   📖 {log}");
-        }
-
-        for failure in &result.failures() {
-            println!("   ❌ {:?}", failure);
-        }
-
-        if let Some(failure) = result.failures().into_iter().next().cloned() {
-            let error = failure.into_result().err().unwrap();
-            return Err(error.into());
-        }
-
-        Ok(result.json()?)
+        self.create_jar_internal(user, msg, amount, ft_contract_id).await
     }
 
     async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value> {
@@ -186,10 +199,11 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn get_principal(&self, jar_ids: Vec<String>) -> anyhow::Result<Value> {
+    async fn get_principal(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value> {
         println!("▶️ Get principal for jars {:?}", jar_ids);
 
         let args = json!({
+            "account_id": user.id(),
             "jar_ids": jar_ids,
         });
 
@@ -214,10 +228,11 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn get_interest(&self, jar_ids: Vec<String>) -> anyhow::Result<Value> {
+    async fn get_interest(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value> {
         println!("▶️ Get interest for jars {:?}", jar_ids);
 
         let args = json!({
+            "account_id": user.id(),
             "jar_ids": jar_ids,
         });
 
@@ -331,10 +346,11 @@ impl JarContractInterface for Contract {
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }
 
-    async fn get_jar(&self, jar_id: String) -> anyhow::Result<Value> {
+    async fn get_jar(&self, account_id: String, jar_id: String) -> anyhow::Result<Value> {
         println!("▶️ Get jar #{jar_id}");
 
         let args = json!({
+            "account_id": account_id,
             "jar_id": jar_id,
         });
 
@@ -367,10 +383,11 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
-    async fn set_penalty(&self, admin: &Account, jar_id: String, value: bool) -> anyhow::Result<()> {
+    async fn set_penalty(&self, admin: &Account, account_id: &str, jar_id: &str, value: bool) -> anyhow::Result<()> {
         println!("▶️ Set penalty for jar #{jar_id}");
 
         let args = json!({
+            "account_id": account_id,
             "jar_id": jar_id,
             "value": value,
         });
@@ -438,5 +455,58 @@ impl JarContractInterface for Contract {
         }
 
         Ok(())
+    }
+}
+
+#[async_trait]
+trait Internal {
+    async fn create_jar_internal(
+        &self,
+        user: &Account,
+        msg: Value,
+        amount: u128,
+        ft_contract_id: &AccountId,
+    ) -> anyhow::Result<Value>;
+}
+
+#[async_trait]
+impl Internal for Contract {
+    async fn create_jar_internal(
+        &self,
+        user: &Account,
+        msg: Value,
+        amount: u128,
+        ft_contract_id: &AccountId,
+    ) -> anyhow::Result<Value> {
+        println!("▶️ Create jar with msg: {:?}", msg,);
+
+        let args = json!({
+            "receiver_id": self.as_account().id(),
+            "amount": amount.to_string(),
+            "msg": msg.to_string(),
+        });
+
+        let result = user
+            .call(ft_contract_id, "ft_transfer_call")
+            .args_json(args)
+            .max_gas()
+            .deposit(parse_near!("1 yocto"))
+            .transact()
+            .await?;
+
+        for log in &result.logs() {
+            println!("   📖 {log}");
+        }
+
+        for failure in &result.failures() {
+            println!("   ❌ {:?}", failure);
+        }
+
+        if let Some(failure) = result.failures().into_iter().next().cloned() {
+            let error = failure.into_result().err().unwrap();
+            return Err(error.into());
+        }
+
+        Ok(result.json()?)
     }
 }
