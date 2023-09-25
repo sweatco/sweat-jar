@@ -303,15 +303,15 @@ impl Contract {
         // On jar deletion, we move the last jar in the vector in the deleted jar's place.
         // This way we don't need to shift all jars to fill empty space in the vector.
 
-        let jar_id = jars
+        let jar_position = jars
             .iter()
             .position(|j| j.id == jar.id)
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
 
         let last_jar = jars.pop().unwrap();
 
-        if jar_id != jars.len() {
-            jars[jar_id] = last_jar;
+        if jar_position != jars.len() {
+            jars[jar_position] = last_jar;
         }
     }
 
