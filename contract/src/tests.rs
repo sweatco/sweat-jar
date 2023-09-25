@@ -223,7 +223,7 @@ fn penalty_is_not_applicable_for_constant_apy() {
         .with_jars(&[reference_jar]);
 
     context.switch_account(&admin);
-    context.contract.set_penalty(alice, 0, true);
+    context.contract.set_penalty(alice, U32(0), true);
 }
 
 #[test]
@@ -251,7 +251,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
     assert_eq!(interest, 9_972_602);
 
     context.switch_account(&admin);
-    context.contract.set_penalty(alice.clone(), 0, true);
+    context.contract.set_penalty(alice.clone(), U32(0), true);
 
     context.set_block_timestamp_in_days(365);
 
