@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use near_sdk::json_types::{Base64VecU8, U128};
+use near_sdk::json_types::U128;
 use near_units::parse_near;
 use serde_json::{json, Value};
 use workspaces::{Account, AccountId, Contract};
@@ -27,7 +27,7 @@ pub(crate) trait JarContractInterface {
         product_id: String,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<Value>;
 
     async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value>;
 
@@ -124,7 +124,7 @@ impl JarContractInterface for Contract {
         product_id: String,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Value> {
         println!(
             "▶️ Create jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -154,14 +154,20 @@ impl JarContractInterface for Contract {
             .max_gas()
             .deposit(parse_near!("1 yocto"))
             .transact()
-            .await?
-            .into_result()?;
+            .await?;
 
-        for log in result.logs() {
+        for log in &result.logs() {
             println!("   📖 {log}");
         }
 
-        Ok(())
+        for failure in result.failures().into_iter().cloned() {
+            let error = failure.into_result().err().unwrap();
+            println!("   ERROR from outcome: {:?}", error);
+
+            // println!("   ERROR: {:?}", failure);
+        }
+
+        Ok(result.json()?)
     }
 
     async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value> {
@@ -394,6 +400,7 @@ impl JarContractInterface for Contract {
             .call(self.id(), "set_enabled")
             .args_json(args)
             .max_gas()
+            .deposit(parse_near!("1 yocto"))
             .transact()
             .await?
             .into_result()?;
@@ -417,6 +424,7 @@ impl JarContractInterface for Contract {
             .call(self.id(), "set_public_key")
             .args_json(args)
             .max_gas()
+            .deposit(parse_near!("1 yocto"))
             .transact()
             .await?
             .into_result()?;
