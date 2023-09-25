@@ -72,7 +72,6 @@ impl ProductApi for Contract {
         emit(EventKind::RegisterProduct(product));
     }
 
-    // TODO: add integration tests
     #[payable]
     fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool) {
         self.assert_manager();
@@ -90,7 +89,6 @@ impl ProductApi for Contract {
         }));
     }
 
-    // TODO: add integration tests
     #[payable]
     fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8) {
         self.assert_manager();

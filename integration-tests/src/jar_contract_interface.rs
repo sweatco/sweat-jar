@@ -51,7 +51,7 @@ pub(crate) trait JarContractInterface {
 
     async fn set_penalty(&self, admin: &Account, jar_id: String, value: bool) -> anyhow::Result<()>; // TODO: call somewhere
 
-    async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>; // TODO: call somewhere
+    async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>;
 
     async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>; // TODO: call somewhere
 }
@@ -415,12 +415,14 @@ impl JarContractInterface for Contract {
     }
 
     async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()> {
-        println!("▶️ Set public key for product #{product_id}");
+        println!("▶️ Set public key for product #{product_id}: {public_key}");
 
         let args = json!({
             "product_id": product_id,
             "public_key": public_key,
         });
+
+        println!("Args: {:?}", args);
 
         let result = admin
             .call(self.id(), "set_public_key")

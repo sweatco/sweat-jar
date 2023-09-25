@@ -1,5 +1,5 @@
+use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::{SigningKey, VerifyingKey};
-use near_sdk::json_types::Base64VecU8;
 use rand::rngs::OsRng;
 
 use crate::{
@@ -30,6 +30,8 @@ async fn product_actions() -> anyhow::Result<()> {
         )
         .await?;
 
+    assert_eq!(result.as_str().unwrap(), "1000000");
+
     context
         .jar_contract
         .set_enabled(&manager, RegisterProductCommand::Locked12Months12Percents.id(), false)
@@ -37,7 +39,12 @@ async fn product_actions() -> anyhow::Result<()> {
 
     let result = context
         .jar_contract
-        .create_jar(&alice, product_id.clone(), 100, context.ft_contract.account().id())
+        .create_jar(
+            &alice,
+            product_id.clone(),
+            1_000_000,
+            context.ft_contract.account().id(),
+        )
         .await;
 
     assert!(result.is_err());
@@ -56,7 +63,7 @@ async fn product_actions() -> anyhow::Result<()> {
     let mut csprng = OsRng;
     let signing_key: SigningKey = SigningKey::generate(&mut csprng);
     let verifying_key: VerifyingKey = VerifyingKey::from(&signing_key);
-    let pk_base64 = serde_json::to_string(&Base64VecU8(verifying_key.as_bytes().to_vec())).unwrap();
+    let pk_base64 = STANDARD.encode(verifying_key.as_bytes());
 
     context
         .jar_contract
@@ -69,7 +76,7 @@ async fn product_actions() -> anyhow::Result<()> {
 
     let result = context
         .jar_contract
-        .create_jar(&alice, product_id, 100, context.ft_contract.account().id())
+        .create_jar(&alice, product_id, 1_000_000, context.ft_contract.account().id())
         .await;
 
     assert!(result.is_err());
@@ -78,7 +85,7 @@ async fn product_actions() -> anyhow::Result<()> {
         .unwrap()
         .root_cause()
         .to_string()
-        .contains("It's not possible to create new jars for this product"));
+        .contains("Signature is required"));
 
     Ok(())
 }
