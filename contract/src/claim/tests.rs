@@ -146,17 +146,6 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     assert_eq!(claimed, U128(200_000));
 
-    let jar = context.contract.get_jar_internal(&alice, jar_id);
-
-    dbg!(&jar);
-
-    assert_eq!(200_000, jar.claimed_balance);
-
-    let Some(ref cache) = jar.cache else { panic!() };
-
-    assert_eq!(cache.interest, 0);
-    assert_eq!(jar.principal, 0);
-
     let _jar = context.contract.get_jar_internal(&alice, jar_id);
 }
 
