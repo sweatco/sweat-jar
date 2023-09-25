@@ -74,4 +74,23 @@ impl Context {
 
         Ok(())
     }
+
+    pub(crate) fn get_signature_material(
+        &self,
+        receiver_id: &Account,
+        product_id: &String,
+        valid_until: u64,
+        amount: u128,
+        last_jar_id: Option<String>,
+    ) -> String {
+        format!(
+            "{},{},{},{},{},{}",
+            self.jar_contract.account().id(),
+            receiver_id.id(),
+            product_id,
+            amount,
+            last_jar_id.map_or_else(String::new, |value| value,),
+            valid_until,
+        )
+    }
 }

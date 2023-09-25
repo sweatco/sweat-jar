@@ -165,14 +165,17 @@ The `ft_interface.rs` file contains helpers to facilitate interaction with the r
 
 The code in `ft_receiver.rs` handles incoming Token transfers. This mechanism is used for Jar creation, top-ups, and migration.
 
-#### 3.1.4. 🧪 Integration tests
+#### 3.1.4. 🌡️ Integration tests
 
 The `./integration-tests` directory contains integration tests for the smart contract. 
 These tests work with both FT and DeFi Jars contracts, covering the following scenarios:
 
-- **happy_flow.rs:** This scenario represents the successful registration of a product, the creation of a Jar, and the accrual of interest.
-- **migration.rs:** These tests focus on the batched migration of CeFi $SWEAT Jars to the contract.
-- **withdraw_fee.rs:** These tests deal with withdrawing Jars with fees, checking for the correct transfer of principal to a user account and fees account.
+- **[happy_flow.rs](..%2Fintegration-tests%2Fsrc%2Fhappy_flow.rs):** This scenario represents the successful registration of a product, the creation of a Jar, and the accrual of interest.
+- **[migration.rs](..%2Fintegration-tests%2Fsrc%2Fmigration.rs):** These tests focus on the batched migration of CeFi $SWEAT Jars to the contract.
+- **[premium_product.rs](..%2Fintegration-tests%2Fsrc%2Fpremium_product.rs):** These tests cover mechanics related to Premium Products, including creation with a signature and applying penalties. 
+- **[product_actions.rs](..%2Fintegration-tests%2Fsrc%2Fproduct_actions.rs):** These tests confirm operations on Products that can be performed by an Admin.
+- **[restake.rs](..%2Fintegration-tests%2Fsrc%2Frestake.rs):** These tests examine the creation of a new Jar from another Jar and the cleanup process after claiming from the original Jar.
+- **[withdraw_fee.rs](..%2Fintegration-tests%2Fsrc%2Fwithdraw_fee.rs):** These tests deal with withdrawing Jars with fees, checking for the correct transfer of principal to a user account and fees account.
 
 In addition to these files, it also contains utilities and testing data, with the most significant being:
 

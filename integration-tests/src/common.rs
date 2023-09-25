@@ -3,6 +3,8 @@ use std::{
     sync::atomic::{AtomicBool, Ordering},
 };
 
+use ed25519_dalek::{SigningKey, VerifyingKey};
+use rand::rngs::OsRng;
 use serde_json::Value;
 use workspaces::Account;
 
@@ -11,6 +13,7 @@ use crate::{context::Context, product::RegisterProductCommand};
 pub trait ValueGetters {
     fn get_u128(&self, key: &str) -> u128;
     fn get_interest(&self) -> u128;
+    fn get_jar_id(&self) -> String;
 }
 
 impl ValueGetters for Value {
@@ -28,6 +31,16 @@ impl ValueGetters for Value {
 
     fn get_interest(&self) -> u128 {
         self.as_object().unwrap().get("amount").unwrap().get_u128("total")
+    }
+
+    fn get_jar_id(&self) -> String {
+        self.as_object()
+            .unwrap()
+            .get("id")
+            .unwrap()
+            .as_str()
+            .unwrap()
+            .to_string()
     }
 }
 
@@ -92,4 +105,12 @@ pub(crate) async fn prepare_contract(
         alice,
         fee_account,
     })
+}
+
+pub(crate) fn generate_keypair() -> (SigningKey, VerifyingKey) {
+    let mut csprng = OsRng;
+    let signing_key: SigningKey = SigningKey::generate(&mut csprng);
+    let verifying_key: VerifyingKey = VerifyingKey::from(&signing_key);
+
+    (signing_key, verifying_key)
 }

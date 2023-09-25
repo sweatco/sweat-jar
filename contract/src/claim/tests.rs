@@ -41,7 +41,7 @@ fn claim_partially_when_having_tokens_to_claim() {
     context.set_block_timestamp_in_days(365);
 
     context.switch_account(&alice);
-    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![jar.id], Some(U128(100))) else {
+    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(100))) else {
         panic!()
     };
 
@@ -63,7 +63,7 @@ fn dont_delete_jar_on_all_interest_claim() {
     context.set_block_timestamp_in_days(365);
 
     context.switch_account(&alice);
-    context.contract.claim_jars(vec![jar.id], Some(U128(200_000)));
+    context.contract.claim_jars(vec![U32(jar.id)], Some(U128(200_000)));
 
     let jar = context.contract.get_jar_internal(&alice, jar.id);
     assert_eq!(200_000, jar.claimed_balance);
@@ -92,7 +92,7 @@ fn claim_all_withdraw_all_and_delete_jar() {
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
     context.switch_account(&alice);
-    context.contract.claim_jars(vec![jar_id], Some(U128(200_000)));
+    context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000)));
 
     let jar = context.contract.get_jar_internal(&alice, jar_id);
     assert_eq!(200_000, jar.claimed_balance);
@@ -140,7 +140,7 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     let jar = context.contract.get_jar_internal(&alice, jar_id);
 
-    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![jar_id], Some(U128(200_000))) else {
+    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000))) else {
         panic!();
     };
 
