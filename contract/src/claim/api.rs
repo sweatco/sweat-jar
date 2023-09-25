@@ -1,6 +1,6 @@
 use std::cmp;
 
-use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
+use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
     common::{TokenAmount, GAS_FOR_AFTER_CLAIM},
@@ -87,26 +87,12 @@ impl ClaimApi for Contract {
         }
 
         if total_interest_to_claim > 0 {
-            #[cfg(not(test))]
-            {
-                self.ft_contract()
-                    .transfer(&account_id, total_interest_to_claim, "claim", &None)
-                    .then(after_claim_call(
-                        U128(total_interest_to_claim),
-                        unlocked_jars,
-                        EventKind::Claim(event_data),
-                    ))
-                    .into()
-            }
-            #[cfg(test)]
-            {
-                PromiseOrValue::Value(self.after_claim_internal(
-                    U128(total_interest_to_claim),
-                    unlocked_jars,
-                    EventKind::Claim(event_data),
-                    true,
-                ))
-            }
+            self.claim_interest(
+                &account_id,
+                U128(total_interest_to_claim),
+                unlocked_jars,
+                EventKind::Claim(event_data),
+            )
         } else {
             PromiseOrValue::Value(U128(0))
         }
@@ -114,6 +100,31 @@ impl ClaimApi for Contract {
 }
 
 impl Contract {
+    #[cfg(test)]
+    fn claim_interest(
+        &mut self,
+        _account_id: &AccountId,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+    ) -> PromiseOrValue<U128> {
+        PromiseOrValue::Value(self.after_claim_internal(claimed_amount, jars_before_transfer, event, true))
+    }
+
+    #[cfg(not(test))]
+    fn claim_interest(
+        &mut self,
+        account_id: &AccountId,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+    ) -> PromiseOrValue<U128> {
+        self.ft_contract()
+            .transfer(account_id, claimed_amount.0, "claim", &None)
+            .then(after_claim_call(claimed_amount, jars_before_transfer, event))
+            .into()
+    }
+
     fn after_claim_internal(
         &mut self,
         claimed_amount: U128,
