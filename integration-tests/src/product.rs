@@ -6,17 +6,19 @@ pub(crate) enum RegisterProductCommand {
     Locked6Months6Percents,
     Flexible6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
+    Locked10Minutes6Percents,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
     Locked10Minutes6PercentsWithPercentWithdrawFee,
 }
 
 impl RegisterProductCommand {
-    pub(crate) fn all() -> [Self; 6] {
+    pub(crate) fn all() -> [Self; 7] {
         [
             Self::Locked12Months12Percents,
             Self::Locked6Months6Percents,
             Self::Flexible6Months6Percents,
             Self::Locked6Months6PercentsWithWithdrawFee,
+            Self::Locked10Minutes6Percents,
             Self::Locked10Minutes6PercentsWithFixedWithdrawFee,
             Self::Locked10Minutes6PercentsWithPercentWithdrawFee,
         ]
@@ -25,15 +27,11 @@ impl RegisterProductCommand {
 
 impl RegisterProductCommand {
     pub(crate) fn json_for_premium(&self, public_key: String) -> Value {
-        let json = self.json();
-
-        match json {
-            Value::Object(mut m) => {
-                m.insert("public_key".to_string(), Value::String(public_key));
-                Value::Object(m)
-            }
-            v => v,
+        let mut json = self.json();
+        if let Value::Object(obj) = &mut json {
+            obj.insert("public_key".to_string(), Value::String(public_key));
         }
+        json
     }
 
     pub(crate) fn json(&self) -> Value {
@@ -69,7 +67,7 @@ impl RegisterProductCommand {
                 "is_enabled": true,
             }),
             RegisterProductCommand::Flexible6Months6Percents => json!({
-                "id": "locked_6_months_6_percents",
+                "id": "flexible_6_months_6_percents",
                 "apy_default": ["12", 2],
                 "apy_fallback": ["6", 2],
                 "cap_min": "100000",
@@ -95,6 +93,21 @@ impl RegisterProductCommand {
                 "withdrawal_fee": {
                     "type": "fix",
                     "data": "1000",
+                },
+                "is_enabled": true,
+            }),
+            RegisterProductCommand::Locked10Minutes6Percents => json!({
+                "id": "locked_10_minutes_6_percents",
+                "apy_default": ["6", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
+                "terms": {
+                    "type": "fixed",
+                    "data": {
+                        "lockup_term": "600000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
+                    }
                 },
                 "is_enabled": true,
             }),

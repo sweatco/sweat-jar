@@ -494,11 +494,11 @@ impl Internal for Contract {
             .transact()
             .await?;
 
-        for log in &result.logs() {
+        for log in result.logs() {
             println!("   📖 {log}");
         }
 
-        for failure in &result.failures() {
+        for failure in result.failures() {
             println!("   ❌ {:?}", failure);
         }
 
