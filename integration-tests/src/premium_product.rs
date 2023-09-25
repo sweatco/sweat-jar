@@ -108,7 +108,7 @@ async fn premium_product() -> anyhow::Result<()> {
 
     let unauthorized_penalty_change = context
         .jar_contract
-        .set_penalty(&alice, &alice.id().to_string(), &jar_id.clone(), true)
+        .set_penalty(&alice, alice.id(), &jar_id.clone(), true)
         .await;
 
     assert!(unauthorized_penalty_change.is_err());
