@@ -72,4 +72,4 @@ jobs:
         with:
           message: Updated binary
           branch: main
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.ACTIONS_TOKEN }}
