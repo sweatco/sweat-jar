@@ -160,11 +160,13 @@ impl JarContractInterface for Contract {
             println!("   📖 {log}");
         }
 
-        for failure in result.failures().into_iter().cloned() {
-            let error = failure.into_result().err().unwrap();
-            println!("   ERROR from outcome: {:?}", error);
+        for failure in &result.failures() {
+            println!("   ❌ {:?}", failure);
+        }
 
-            // println!("   ERROR: {:?}", failure);
+        if let Some(failure) = result.failures().into_iter().next().cloned() {
+            let error = failure.into_result().err().unwrap();
+            return Err(error.into());
         }
 
         Ok(result.json()?)

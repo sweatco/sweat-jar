@@ -1,14 +1,15 @@
+use ed25519_dalek::{SigningKey, VerifyingKey};
 use near_sdk::json_types::Base64VecU8;
+use rand::rngs::OsRng;
 
 use crate::{
-    common::{prepare_contract, Prepared, ValueGetters},
-    product,
+    common::{prepare_contract, Prepared},
     product::RegisterProductCommand,
 };
 
 #[tokio::test]
-async fn happy_flow() -> anyhow::Result<()> {
-    println!("👷🏽 Run happy flow test");
+async fn product_actions() -> anyhow::Result<()> {
+    println!("👷🏽 Run test for product actions");
 
     let Prepared {
         context,
@@ -29,8 +30,6 @@ async fn happy_flow() -> anyhow::Result<()> {
         )
         .await?;
 
-    println!("1. Result of first jar creation: {:?}", result);
-
     context
         .jar_contract
         .set_enabled(&manager, RegisterProductCommand::Locked12Months12Percents.id(), false)
@@ -38,19 +37,48 @@ async fn happy_flow() -> anyhow::Result<()> {
 
     let result = context
         .jar_contract
-        .create_jar(&alice, product_id, 100, context.ft_contract.account().id())
+        .create_jar(&alice, product_id.clone(), 100, context.ft_contract.account().id())
+        .await;
+
+    assert!(result.is_err());
+    assert!(result
+        .err()
+        .unwrap()
+        .root_cause()
+        .to_string()
+        .contains("It's not possible to create new jars for this product"));
+
+    context
+        .jar_contract
+        .set_enabled(&manager, RegisterProductCommand::Locked12Months12Percents.id(), true)
         .await?;
 
-    println!("2. Result of second jar creation: {:?}", result);
+    let mut csprng = OsRng;
+    let signing_key: SigningKey = SigningKey::generate(&mut csprng);
+    let verifying_key: VerifyingKey = VerifyingKey::from(&signing_key);
+    let pk_base64 = serde_json::to_string(&Base64VecU8(verifying_key.as_bytes().to_vec())).unwrap();
 
     context
         .jar_contract
         .set_public_key(
             &manager,
             RegisterProductCommand::Locked12Months12Percents.id(),
-            "".to_string(), // TODO: set real pk
+            pk_base64,
         )
         .await?;
+
+    let result = context
+        .jar_contract
+        .create_jar(&alice, product_id, 100, context.ft_contract.account().id())
+        .await;
+
+    assert!(result.is_err());
+    assert!(result
+        .err()
+        .unwrap()
+        .root_cause()
+        .to_string()
+        .contains("It's not possible to create new jars for this product"));
 
     Ok(())
 }

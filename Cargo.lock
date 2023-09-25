@@ -1411,6 +1411,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "borsh 0.10.3",
+ "ed25519-dalek 2.0.0",
  "fake",
  "futures",
  "itertools",

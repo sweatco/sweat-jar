@@ -13,6 +13,7 @@ rand = { workspace = true }
 futures = { workspace = true }
 near-sdk = { workspace = true }
 itertools = { workspace = true }
+ed25519-dalek = { workspace = true }
 
 anyhow = "1.0"
 borsh = "0.10.3"
