@@ -47,13 +47,3 @@ pub mod gas_data {
     /// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
     pub(crate) const GAS_FOR_AFTER_WITHDRAW: Gas = tgas(4);
 }
-
-#[cfg(test)]
-mod test {
-    use crate::common::tgas;
-
-    #[test]
-    fn test_gas_methods() {
-        assert_eq!(tgas(50).0, 50_000_000_000_000);
-    }
-}

@@ -99,22 +99,6 @@ impl ClaimApi for Contract {
 }
 
 impl Contract {
-    #[cfg(test)]
-    fn claim_interest(
-        &mut self,
-        _account_id: &AccountId,
-        claimed_amount: U128,
-        jars_before_transfer: Vec<Jar>,
-        event: EventKind,
-    ) -> PromiseOrValue<U128> {
-        PromiseOrValue::Value(self.after_claim_internal(
-            claimed_amount,
-            jars_before_transfer,
-            event,
-            crate::common::test_data::get_test_future_success(),
-        ))
-    }
-
     #[cfg(not(test))]
     fn claim_interest(
         &mut self,

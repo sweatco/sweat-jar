@@ -26,29 +26,3 @@ impl WithdrawView {
         }
     }
 }
-
-#[cfg(test)]
-mod test {
-    use near_sdk::{json_types::U128, AccountId};
-
-    use crate::{ft_interface::Fee, withdraw::view::WithdrawView};
-
-    #[test]
-    fn withdrawal_view() {
-        let fee = WithdrawView::new(
-            1_000_000,
-            Some(Fee {
-                beneficiary_id: AccountId::new_unchecked("account_id".to_string()),
-                amount: 100,
-            }),
-        );
-
-        assert_eq!(
-            fee,
-            WithdrawView {
-                withdrawn_amount: U128(1_000_000 - 100),
-                fee: U128(100),
-            }
-        );
-    }
-}

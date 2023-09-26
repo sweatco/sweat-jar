@@ -157,13 +157,3 @@ impl Product {
         );
     }
 }
-
-#[cfg(test)]
-impl Product {
-    pub(crate) fn get_lockup_term(&self) -> Option<Duration> {
-        match self.clone().terms {
-            Terms::Fixed(value) => Some(value.lockup_term),
-            Terms::Flexible => None,
-        }
-    }
-}
