@@ -76,17 +76,16 @@ async fn migration() -> anyhow::Result<()> {
     let manager_balance = context.ft_contract.ft_balance_of(manager).await?;
     assert_eq!(0, manager_balance.0);
 
-    let alice_jars_result = context.jar_contract.get_jars_for_account(alice).await?;
-    let alice_jars = alice_jars_result.as_array().unwrap();
+    let alice_jars = context.jar_contract.get_jars_for_account(alice).await?;
     assert_eq!(2, alice_jars.len());
 
-    let alice_first_jar = alice_jars.get(0).unwrap();
-    assert_eq!("1", alice_first_jar.get("id").unwrap().as_str().unwrap());
-    assert_eq!("2000000", alice_first_jar.get("principal").unwrap().as_str().unwrap());
+    let alice_first_jar = alice_jars.first().unwrap();
+    assert_eq!(1, alice_first_jar.id.0);
+    assert_eq!(2000000, alice_first_jar.principal.0);
 
     let alice_second_jar = alice_jars.get(1).unwrap();
-    assert_eq!("2", alice_second_jar.get("id").unwrap().as_str().unwrap());
-    assert_eq!("700000", alice_second_jar.get("principal").unwrap().as_str().unwrap());
+    assert_eq!(2, alice_second_jar.id.0);
+    assert_eq!(700000, alice_second_jar.principal.0);
 
     let alice_principal = context.jar_contract.get_total_principal(alice).await?;
     assert_eq!(2_700_000, alice_principal.get_u128("total"));

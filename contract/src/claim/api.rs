@@ -1,10 +1,9 @@
 use std::cmp;
 
-use model::{jar_view::JarIdView, U32};
+use model::{jar_view::JarIdView, TokenAmount, U32};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
-    common::TokenAmount,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
     Contract, ContractExt,

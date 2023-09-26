@@ -1,15 +1,11 @@
-use model::jar_view::JarIdView;
+use model::{jar_view::JarIdView, withdraw_view::WithdrawView, Fee, TokenAmount};
 use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
 use crate::{
     assert::{assert_is_liquidable, assert_sufficient_balance},
-    assert_ownership,
-    common::TokenAmount,
-    env,
+    assert_ownership, env,
     event::{emit, EventKind, WithdrawData},
-    ft_interface::Fee,
     product::model::WithdrawalFee,
-    withdraw::view::WithdrawView,
     AccountId, Contract, ContractExt, Jar, Product,
 };
 #[cfg(not(test))]

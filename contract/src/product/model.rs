@@ -1,4 +1,4 @@
-use model::ProductId;
+use model::{ProductId, TokenAmount};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     require,
@@ -6,7 +6,7 @@ use near_sdk::{
 };
 
 use crate::{
-    common::{udecimal::UDecimal, Duration, TokenAmount},
+    common::{udecimal::UDecimal, Duration},
     env,
 };
 

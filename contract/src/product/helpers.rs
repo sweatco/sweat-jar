@@ -5,11 +5,12 @@ use crypto_hash::{digest, Algorithm};
 use ed25519_dalek::{Signer, SigningKey};
 use fake::{Fake, Faker};
 use general_purpose::STANDARD;
+use model::TokenAmount;
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal, Duration, TokenAmount, MS_IN_YEAR},
+    common::{tests::Context, udecimal::UDecimal, Duration, MS_IN_YEAR},
     jar::model::JarTicket,
     product::model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
     Contract,

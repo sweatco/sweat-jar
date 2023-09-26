@@ -1,24 +1,10 @@
-use near_sdk::{
-    near_bindgen,
-    serde::{Deserialize, Serialize},
-    serde_json::json,
-    AccountId, Promise,
-};
+use model::{Fee, TokenAmount};
+use near_sdk::{near_bindgen, serde_json::json, AccountId, Promise};
 
-use crate::{
-    common::{tgas, TokenAmount},
-    Contract, ContractExt,
-};
+use crate::{common::tgas, Contract, ContractExt};
 
 pub(crate) struct FungibleTokenContract {
     address: AccountId,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct Fee {
-    pub beneficiary_id: AccountId,
-    pub amount: TokenAmount,
 }
 
 impl FungibleTokenContract {

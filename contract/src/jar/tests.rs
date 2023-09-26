@@ -391,10 +391,10 @@ mod signature_tests {
 }
 
 mod helpers {
-    use model::ProductId;
+    use model::{ProductId, TokenAmount};
     use near_sdk::AccountId;
 
-    use crate::{common::TokenAmount, jar::model::Jar};
+    use crate::jar::model::Jar;
 
     impl Jar {
         pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {

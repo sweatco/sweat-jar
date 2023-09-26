@@ -34,12 +34,9 @@ pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> a
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context
-        .jar_contract
-        .get_jars_for_account(&alice)
-        .await?
-        .as_array()
-        .unwrap();
+    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
+
+    dbg!(&jars);
 
     // let original_jar_id = jars.as_array().unwrap().get(0).unwrap().get_jar_id();
 
