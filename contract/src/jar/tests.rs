@@ -49,13 +49,14 @@ fn interest_precision() {
 
 #[cfg(test)]
 mod signature_tests {
+    use model::U32;
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         test_utils::accounts,
     };
 
     use crate::{
-        common::{tests::Context, u32::U32, udecimal::UDecimal, MS_IN_YEAR},
+        common::{tests::Context, udecimal::UDecimal, MS_IN_YEAR},
         jar::{
             api::JarApi,
             model::{Jar, JarTicket},
@@ -390,9 +391,10 @@ mod signature_tests {
 }
 
 mod helpers {
+    use model::ProductId;
     use near_sdk::AccountId;
 
-    use crate::{common::TokenAmount, jar::model::Jar, product::model::ProductId};
+    use crate::{common::TokenAmount, jar::model::Jar};
 
     impl Jar {
         pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {

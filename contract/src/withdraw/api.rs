@@ -1,3 +1,4 @@
+use model::jar_view::JarIdView;
 use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
 use crate::{
@@ -7,7 +8,6 @@ use crate::{
     env,
     event::{emit, EventKind, WithdrawData},
     ft_interface::Fee,
-    jar::view::JarIdView,
     product::model::WithdrawalFee,
     withdraw::view::WithdrawView,
     AccountId, Contract, ContractExt, Jar, Product,

@@ -3,16 +3,14 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
+use model::{jar_view::JarView, U32};
 use near_sdk::{json_types::U128, test_utils::accounts};
 
 use super::*;
 use crate::{
     claim::api::ClaimApi,
-    common::{u32::U32, udecimal::UDecimal, MS_IN_YEAR},
-    jar::{
-        api::JarApi,
-        view::{AggregatedTokenAmountView, JarView},
-    },
+    common::{udecimal::UDecimal, MS_IN_YEAR},
+    jar::{api::JarApi, view::AggregatedTokenAmountView},
     penalty::api::PenaltyApi,
     product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
     withdraw::api::WithdrawApi,

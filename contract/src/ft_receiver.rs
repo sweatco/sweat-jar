@@ -70,11 +70,12 @@ impl FungibleTokenReceiver for Contract {
 mod tests {
     use std::panic::catch_unwind;
 
+    use model::U32;
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
     use near_sdk::{json_types::U128, serde_json::json, test_utils::accounts};
 
     use crate::{
-        common::{tests::Context, u32::U32, udecimal::UDecimal},
+        common::{tests::Context, udecimal::UDecimal},
         jar::{api::JarApi, model::Jar},
         product::{
             helpers::MessageSigner,

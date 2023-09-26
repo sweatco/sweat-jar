@@ -1,3 +1,4 @@
+use model::ProductId;
 use near_sdk::{
     json_types::{Base64VecU8, U128},
     log,
@@ -8,7 +9,7 @@ use near_sdk::{
 use crate::{
     env,
     jar::model::{Jar, JarId},
-    product::model::{Product, ProductId},
+    product::model::Product,
     PACKAGE_NAME, VERSION,
 };
 

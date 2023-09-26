@@ -1417,6 +1417,7 @@ dependencies = [
  "futures",
  "itertools",
  "maplit",
+ "model",
  "near-sdk",
  "near-units",
  "pkg-config",
@@ -1593,6 +1594,13 @@ dependencies = [
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys",
+]
+
+[[package]]
+name = "model"
+version = "1.0.0"
+dependencies = [
+ "near-sdk",
 ]
 
 [[package]]
@@ -3039,6 +3047,7 @@ dependencies = [
  "crypto-hash",
  "ed25519-dalek 2.0.0",
  "fake",
+ "model",
  "near-contract-standards",
  "near-sdk",
  "near-self-update",

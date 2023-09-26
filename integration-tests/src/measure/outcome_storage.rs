@@ -59,7 +59,7 @@ impl OutcomeStorage {
         let output = future.await?;
         Self::stop_measuring(account);
 
-        let result = OutcomeStorage::get_result(&account, label);
+        let result = OutcomeStorage::get_labeled_result(&account, label);
 
         Ok((result.gas_burnt, output))
     }
@@ -79,7 +79,7 @@ impl OutcomeStorage {
     }
 
     /// Get execution result for given manager account
-    pub fn get_result(account: &Account, label: &str) -> ExecutionOutcome {
+    pub fn get_labeled_result(account: &Account, label: &str) -> ExecutionOutcome {
         Self::get_data()
             .get(account.id().as_str())
             .unwrap()

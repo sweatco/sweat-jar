@@ -1,3 +1,4 @@
+use model::ProductId;
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     require,
@@ -8,8 +9,6 @@ use crate::{
     common::{udecimal::UDecimal, Duration, TokenAmount},
     env,
 };
-
-pub type ProductId = String;
 
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]

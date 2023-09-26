@@ -1,10 +1,10 @@
+use model::ProductId;
 use near_sdk::{__private::schemars::Set, json_types::U128, require};
 
 use crate::{
     common::TokenAmount,
     event::{emit, EventKind, MigrationEventItem},
     migration::model::CeFiJar,
-    product::model::ProductId,
     Contract, Jar,
 };
 

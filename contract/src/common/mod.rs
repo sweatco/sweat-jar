@@ -1,6 +1,5 @@
 pub(crate) mod test_data;
 pub(crate) mod tests;
-pub(crate) mod u32;
 pub(crate) mod udecimal;
 use near_sdk::Gas;
 

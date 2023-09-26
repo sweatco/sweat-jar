@@ -3,12 +3,15 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use workspaces::{types::Gas, Account};
+use workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},
-    context::Context,
-    measure::{measure::scoped_command_measure, outcome_storage::OutcomeStorage, utils::generate_permutations},
+    measure::{
+        measure::scoped_command_measure,
+        outcome_storage::OutcomeStorage,
+        utils::{add_jar, generate_permutations},
+    },
     product::RegisterProductCommand,
 };
 
@@ -86,18 +89,4 @@ pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, us
         OutcomeStorage::measure("interest_to_claim", &alice, context.jar_contract.claim_total(&alice)).await?;
 
     Ok(gas)
-}
-
-async fn add_jar(
-    context: &Context,
-    account: &Account,
-    product: RegisterProductCommand,
-    amount: u128,
-) -> anyhow::Result<()> {
-    context
-        .jar_contract
-        .create_jar(account, product.id(), amount, context.ft_contract.account().id())
-        .await?;
-
-    Ok(())
 }

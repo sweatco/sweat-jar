@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
+use model::ProductId;
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
@@ -11,7 +12,7 @@ use near_sdk::{
     AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise,
 };
 use near_self_update::SelfUpdate;
-use product::model::{Apy, Product, ProductId};
+use product::model::{Apy, Product};
 
 use crate::{
     assert::assert_ownership,

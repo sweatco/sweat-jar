@@ -380,6 +380,8 @@ impl JarContractInterface for Contract {
             println!("   📖 {log}");
         }
 
+        OutcomeStorage::add_result(result);
+
         Ok(())
     }
 

@@ -16,6 +16,8 @@ itertools = { workspace = true }
 ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
 
+model = { workspace = true }
+
 anyhow = "1.0"
 borsh = "0.10.3"
 maplit = "1.0"
