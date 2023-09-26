@@ -4,7 +4,7 @@ use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};
 
 use crate::{
     claim::api::ClaimApi,
-    common::{tests::Context, u32::U32, udecimal::UDecimal, MS_IN_YEAR},
+    common::{test_data::set_test_future_success, tests::Context, u32::U32, udecimal::UDecimal, MS_IN_YEAR},
     jar::{api::JarApi, model::Jar},
     product::model::{Apy, Product},
     withdraw::api::WithdrawApi,
@@ -45,7 +45,7 @@ fn claim_partially_when_having_tokens_to_claim() {
         panic!()
     };
 
-    dbg!(&claimed);
+    assert_eq!(claimed.0, 100);
 
     let jar = context.contract.get_jar(alice, U32(jar.id));
     assert_eq!(100, jar.claimed_balance.0);
@@ -140,6 +140,8 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     let jar = context.contract.get_jar_internal(&alice, jar_id);
 
+    assert_eq!(jar.principal, 0);
+
     let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000))) else {
         panic!();
     };
@@ -147,6 +149,34 @@ fn withdraw_all_claim_all_and_delete_jar() {
     assert_eq!(claimed, U128(200_000));
 
     let _jar = context.contract.get_jar_internal(&alice, jar_id);
+}
+
+#[test]
+fn failed_future_claim() {
+    set_test_future_success(false);
+
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
+    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
+
+    context.set_block_timestamp_in_days(365);
+
+    context.switch_account(&alice);
+
+    let jar_before_claim = context.contract.get_jar_internal(&alice, jar.id).clone();
+
+    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(200_000))) else {
+        panic!()
+    };
+
+    assert_eq!(claimed.0, 0);
+
+    let jar_after_claim = context.contract.get_jar_internal(&alice, jar.id);
+
+    assert_eq!(&jar_before_claim, jar_after_claim);
 }
 
 fn generate_product() -> Product {
