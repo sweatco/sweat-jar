@@ -69,7 +69,7 @@ async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::R
 
     dbg!(&alice);
 
-    let (gas, _withdraw_result) = OutcomeStorage::measure(
+    let (gas, _withdraw_result) = OutcomeStorage::measure_operation(
         "after_withdraw_internal",
         &alice,
         context.jar_contract.withdraw(&alice, "0"),

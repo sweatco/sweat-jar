@@ -86,7 +86,8 @@ pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, us
     context.fast_forward_hours(2).await?;
 
     let (gas, _claimed) =
-        OutcomeStorage::measure("interest_to_claim", &alice, context.jar_contract.claim_total(&alice)).await?;
+        OutcomeStorage::measure_operation("interest_to_claim", &alice, context.jar_contract.claim_total(&alice))
+            .await?;
 
     Ok(gas)
 }

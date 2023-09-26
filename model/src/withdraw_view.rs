@@ -17,6 +17,7 @@ pub struct WithdrawView {
 }
 
 impl WithdrawView {
+    #[must_use]
     pub fn new(amount: TokenAmount, fee: Option<Fee>) -> Self {
         let (withdrawn_amount, fee) = fee.map_or((amount, 0), |fee| (amount - fee.amount, fee.amount));
 

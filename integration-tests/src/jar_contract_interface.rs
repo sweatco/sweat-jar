@@ -31,7 +31,7 @@ pub(crate) trait JarContractInterface {
         product_id: String,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value>;
+    ) -> anyhow::Result<U128>;
 
     async fn create_premium_jar(
         &self,
@@ -41,7 +41,7 @@ pub(crate) trait JarContractInterface {
         signature: String,
         valid_until: u64,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value>;
+    ) -> anyhow::Result<U128>;
 
     async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value>;
 
@@ -144,7 +144,7 @@ impl JarContractInterface for Contract {
         product_id: String,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<U128> {
         println!(
             "▶️ Create jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -173,7 +173,7 @@ impl JarContractInterface for Contract {
         signature: String,
         valid_until: u64,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<U128> {
         println!(
             "▶️ Create premium jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -484,7 +484,7 @@ trait Internal {
         msg: Value,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value>;
+    ) -> anyhow::Result<U128>;
 }
 
 #[async_trait]
@@ -495,7 +495,7 @@ impl Internal for Contract {
         msg: Value,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<U128> {
         println!("▶️ Create jar with msg: {:?}", msg,);
 
         let args = json!({

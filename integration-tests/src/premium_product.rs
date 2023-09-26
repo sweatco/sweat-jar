@@ -55,7 +55,7 @@ async fn premium_product() -> anyhow::Result<()> {
         )
         .await?;
 
-    assert_eq!(result.as_str().unwrap(), amount.to_string());
+    assert_eq!(result.0, amount);
 
     let jars = context.jar_contract.get_jars_for_account(&alice).await?;
     let jar_id = jars.first().unwrap().id;
