@@ -145,7 +145,7 @@ impl Contract {
 
     fn after_withdraw_call(jar_before_transfer: Jar, withdrawn_balance: TokenAmount, fee: &Option<Fee>) -> Promise {
         ext_self::ext(env::current_account_id())
-            .with_static_gas(crate::common::GAS_FOR_AFTER_WITHDRAW)
+            .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_WITHDRAW)
             .after_withdraw(jar_before_transfer, withdrawn_balance, fee.clone())
     }
 }
@@ -156,9 +156,14 @@ impl Contract {
         let product = self.get_product(&jar.product_id);
         let fee = self.get_fee(&product, jar);
 
-        self.after_withdraw_internal(jar.clone(), amount, fee.clone(), true);
+        let withdrawn = self.after_withdraw_internal(
+            jar.clone(),
+            amount,
+            fee.clone(),
+            crate::common::test_data::get_test_future_success(),
+        );
 
-        PromiseOrValue::Value(WithdrawView::new(amount, fee))
+        PromiseOrValue::Value(withdrawn)
     }
 }
 

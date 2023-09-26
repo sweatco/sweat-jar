@@ -3,7 +3,7 @@
 use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
 
 use crate::{
-    common::{tests::Context, u32::U32, udecimal::UDecimal, MS_IN_YEAR},
+    common::{test_data::set_test_future_success, tests::Context, u32::U32, udecimal::UDecimal, MS_IN_YEAR},
     jar::{api::JarApi, model::Jar},
     product::model::{Apy, Product, WithdrawalFee},
     withdraw::api::WithdrawApi,
@@ -186,7 +186,30 @@ fn product_with_percent_fee() {
 }
 
 #[test]
-fn test_failed_withdraw() {
+fn test_failed_withdraw_promise() {
+    set_test_future_success(false);
+
+    let product = generate_product();
+    let (alice, reference_jar, mut context) = prepare_jar(&product);
+
+    context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+    context.switch_account(&alice);
+
+    let jar_before_withdrawal = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
+
+    let PromiseOrValue::Value(withdrawn) = context.contract.withdraw(U32(0), Some(U128(100_000))) else {
+        panic!()
+    };
+
+    assert_eq!(withdrawn.withdrawn_amount.0, 0);
+
+    let jar_after_withdrawal = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
+
+    assert_eq!(jar_before_withdrawal, jar_after_withdrawal);
+}
+
+#[test]
+fn test_failed_withdraw_internal() {
     let product = generate_product();
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 

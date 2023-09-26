@@ -3,11 +3,10 @@ use std::cmp;
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
-    common::{u32::U32, TokenAmount, GAS_FOR_AFTER_CLAIM},
+    common::{u32::U32, TokenAmount},
     event::{emit, ClaimEventItem, EventKind},
-    ft_interface::FungibleTokenInterface,
     jar::{model::Jar, view::JarIdView},
-    Contract, ContractExt, Promise,
+    Contract, ContractExt,
 };
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
@@ -108,7 +107,12 @@ impl Contract {
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
     ) -> PromiseOrValue<U128> {
-        PromiseOrValue::Value(self.after_claim_internal(claimed_amount, jars_before_transfer, event, true))
+        PromiseOrValue::Value(self.after_claim_internal(
+            claimed_amount,
+            jars_before_transfer,
+            event,
+            crate::common::test_data::get_test_future_success(),
+        ))
     }
 
     #[cfg(not(test))]
@@ -119,6 +123,7 @@ impl Contract {
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
     ) -> PromiseOrValue<U128> {
+        use crate::ft_interface::FungibleTokenInterface;
         self.ft_contract()
             .transfer(account_id, claimed_amount.0, "claim", &None)
             .then(after_claim_call(claimed_amount, jars_before_transfer, event))
@@ -170,8 +175,8 @@ impl ClaimCallbacks for Contract {
 }
 
 #[cfg(not(test))]
-fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> Promise {
+fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> crate::Promise {
     ext_self::ext(env::current_account_id())
-        .with_static_gas(GAS_FOR_AFTER_CLAIM)
+        .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_CLAIM)
         .after_claim(claimed_amount, jars_before_transfer, event)
 }
