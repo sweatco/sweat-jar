@@ -55,3 +55,12 @@ fn thread_name() -> String {
 fn thread_name_test() {
     assert_eq!(thread_name(), "common::test_data::thread_name_test");
 }
+
+#[test]
+fn test_data_storage() {
+    assert_eq!(get_test_future_success(), true);
+    set_test_future_success(false);
+    assert_eq!(get_test_future_success(), false);
+    set_test_future_success(true);
+    assert_eq!(get_test_future_success(), true)
+}
