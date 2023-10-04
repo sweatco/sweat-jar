@@ -52,6 +52,8 @@ pub struct ClaimEventItem {
 #[serde(crate = "near_sdk::serde")]
 pub struct WithdrawData {
     pub id: JarId,
+    pub fee_amount: U128,
+    pub effective_amount: U128,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

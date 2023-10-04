@@ -94,7 +94,11 @@ impl Contract {
                 stored_jar.unlock();
             }
 
-            emit(EventKind::Withdraw(WithdrawData { id: jar_id }));
+            emit(EventKind::Withdraw(WithdrawData {
+                id: jar_id,
+                effective_amount: U128(withdrawn_amount),
+                fee_amount: U128(fee.clone().map_or(0, |value| value.amount)),
+            }));
 
             WithdrawView::new(withdrawn_amount, fee)
         } else {
@@ -154,12 +158,12 @@ impl Contract {
 impl Contract {
     fn transfer_withdraw(&mut self, _: &AccountId, amount: TokenAmount, jar: &Jar) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = self.get_fee(&product, jar);
+        let fee = self.get_fee(product, jar);
 
         let withdrawn = self.after_withdraw_internal(
             jar.clone(),
             amount,
-            fee.clone(),
+            fee,
             crate::common::test_data::get_test_future_success(),
         );
 
