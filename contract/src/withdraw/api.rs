@@ -94,13 +94,15 @@ impl Contract {
                 stored_jar.unlock();
             }
 
+            let withdrawal_result = WithdrawView::new(withdrawn_amount, fee);
+
             emit(EventKind::Withdraw(WithdrawData {
                 id: jar_id,
-                effective_amount: U128(withdrawn_amount),
-                fee_amount: U128(fee.clone().map_or(0, |value| value.amount)),
+                withdrawn_amount: withdrawal_result.withdrawn_amount,
+                fee_amount: withdrawal_result.fee,
             }));
 
-            WithdrawView::new(withdrawn_amount, fee)
+            withdrawal_result
         } else {
             let stored_jar = self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id);
 
