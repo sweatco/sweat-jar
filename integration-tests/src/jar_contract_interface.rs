@@ -74,6 +74,8 @@ pub(crate) trait JarContractInterface {
     async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>;
 
     async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>;
+
+    async fn get_coverage(&self, admin: &Account) -> anyhow::Result<Value>;
 }
 
 #[async_trait]
@@ -473,6 +475,22 @@ impl JarContractInterface for Contract {
         }
 
         Ok(())
+    }
+
+    async fn get_coverage(&self, admin: &Account) -> anyhow::Result<Value> {
+        let result = admin
+            .call(self.id(), "set_public_key")
+            .max_gas()
+            .deposit(parse_near!("1 yocto"))
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        Ok(result.json()?)
     }
 }
 

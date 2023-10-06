@@ -23,12 +23,14 @@ impl Context {
     pub(crate) async fn new() -> anyhow::Result<Context> {
         println!("🏭 Initializing context");
 
-        build_contract()?;
+        // build_contract()?;
 
         let worker = workspaces::sandbox().await?;
         let root_account = worker.dev_create_account().await?;
 
-        let jar_contract = worker.dev_deploy(&Self::load_wasm("../res/sweat_jar.wasm")).await?;
+        let jar_contract = worker
+            .dev_deploy(&Self::load_wasm("../res/sweat_jar_coverage.wasm"))
+            .await?;
         let ft_contract = worker.dev_deploy(&Self::load_wasm("../res/sweat.wasm")).await?;
 
         println!("@@ jar contract deployed to {}", jar_contract.id());

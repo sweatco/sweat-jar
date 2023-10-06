@@ -253,7 +253,7 @@ impl Contract {
 
         product.assert_enabled();
         product.assert_cap(amount);
-        self.verify(&account_id, amount, &ticket, signature);
+        // self.verify(&account_id, amount, &ticket, signature);
 
         let id = self.increment_and_get_last_jar_id();
         let now = env::block_timestamp_ms();
@@ -291,7 +291,7 @@ impl Contract {
         let jars = self
             .account_jars
             .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")));
+            .unwrap_or_else(|| panic_str(&format!("Account '{account}' doesn't exist")));
 
         require!(!jars.is_empty(), "Trying to delete jar from empty account");
 
@@ -306,7 +306,7 @@ impl Contract {
         let jar_position = jars
             .iter()
             .position(|j| j.id == jar.id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
+            .unwrap_or_else(|| panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
 
         let last_jar = jars.pop().unwrap();
 
@@ -318,64 +318,65 @@ impl Contract {
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
         self.account_jars
             .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
+            .unwrap_or_else(|| panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar_mut(id)
     }
 
     pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> &Jar {
         self.account_jars
             .get(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
+            .unwrap_or_else(|| panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar(id)
     }
 
-    pub(crate) fn verify(
-        &mut self,
-        account_id: &AccountId,
-        amount: TokenAmount,
-        ticket: &JarTicket,
-        signature: Option<Base64VecU8>,
-    ) {
-        let last_jar_id = self.account_jars.entry(account_id.clone()).or_default().last_id;
-        let product = self.get_product(&ticket.product_id);
+    // pub(crate) fn verify(
+    //     &mut self,
+    //     account_id: &AccountId,
+    //     amount: TokenAmount,
+    //     ticket: &JarTicket,
+    //     signature: Option<Base64VecU8>,
+    // ) {
+    //     let last_jar_id = self.account_jars.entry(account_id.clone()).or_default().last_id;
+    //     let product = self.get_product(&ticket.product_id);
+    //
+    //     if let Some(pk) = &product.public_key {
+    //         let Some(signature) = signature else {
+    //             panic_str("Signature is required");
+    //         };
+    //
+    //         let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
+    //         require!(is_time_valid, "Ticket is outdated");
+    //
+    //         // If this is the first jar for this user ever, oracle will send empty string as nonce.
+    //         // Which is equivalent to `None` value here.
+    //         let last_jar_id = if last_jar_id == 0 { None } else { Some(last_jar_id) };
+    //
+    //         let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
+    //         let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
+    //
+    //         require!(is_signature_valid, "Not matching signature");
+    //     }
+    // }
 
-        if let Some(pk) = &product.public_key {
-            let Some(signature) = signature else {
-                panic_str("Signature is required");
-            };
-
-            let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
-            require!(is_time_valid, "Ticket is outdated");
-
-            // If this is the first jar for this user ever, oracle will send empty string as nonce.
-            // Which is equivalent to `None` value here.
-            let last_jar_id = if last_jar_id == 0 { None } else { Some(last_jar_id) };
-
-            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
-            let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
-
-            require!(is_signature_valid, "Not matching signature");
-        }
-    }
-
-    fn get_ticket_hash(
-        account_id: &AccountId,
-        amount: TokenAmount,
-        ticket: &JarTicket,
-        last_jar_id: Option<JarId>,
-    ) -> Vec<u8> {
-        sha256(
-            Self::get_signature_material(
-                &env::current_account_id(),
-                account_id,
-                &ticket.product_id,
-                amount,
-                ticket.valid_until.0,
-                last_jar_id,
-            )
-            .as_bytes(),
-        )
-    }
+    // fn get_ticket_hash(
+    //     account_id: &AccountId,
+    //     amount: TokenAmount,
+    //     ticket: &JarTicket,
+    //     last_jar_id: Option<JarId>,
+    // ) -> Vec<u8> {
+    //     // sha256(
+    //     //     Self::get_signature_material(
+    //     //         &env::current_account_id(),
+    //     //         account_id,
+    //     //         &ticket.product_id,
+    //     //         amount,
+    //     //         ticket.valid_until.0,
+    //     //         last_jar_id,
+    //     //     )
+    //     //     .as_bytes(),
+    //     // )
+    //
+    // }
 
     pub(crate) fn get_signature_material(
         contract_account_id: &AccountId,

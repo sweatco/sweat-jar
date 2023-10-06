@@ -48,5 +48,9 @@ async fn happy_flow() -> anyhow::Result<()> {
     let alice_balance = context.ft_contract.ft_balance_of(&alice).await?.0;
     assert_eq!(99_000_000 + claimed_amount, alice_balance);
 
+    let coverage = context.jar_contract.get_coverage(&alice).await?;
+
+    dbg!(&coverage);
+
     Ok(())
 }
