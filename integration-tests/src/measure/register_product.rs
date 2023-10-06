@@ -16,7 +16,7 @@ pub(crate) async fn measure_register_product(command: RegisterProductCommand) ->
         fee_account: _,
     } = prepare_contract([]).await?;
 
-    let (gas, _) = OutcomeStorage::measure(
+    let (gas, _) = OutcomeStorage::measure_operation(
         "register_product",
         &manager,
         context.jar_contract.register_product(&manager, command.json()),

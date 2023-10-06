@@ -1,9 +1,10 @@
+use model::ProductId;
 use near_sdk::{assert_one_yocto, near_bindgen, require};
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
     product::{command::RegisterProductCommand, model::Product, view::ProductView},
-    Base64VecU8, Contract, ContractExt, ProductId,
+    Base64VecU8, Contract, ContractExt,
 };
 
 /// The `ProductApi` trait defines methods for managing products within the smart contract.

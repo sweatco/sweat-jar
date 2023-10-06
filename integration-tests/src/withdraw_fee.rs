@@ -1,5 +1,5 @@
 use crate::{
-    common::{prepare_contract, Prepared, ValueGetters},
+    common::{prepare_contract, Prepared},
     product::RegisterProductCommand,
 };
 
@@ -32,11 +32,11 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     context.fast_forward_hours(1).await?;
 
     let withdraw_result = context.jar_contract.withdraw(&alice, "1").await?;
-    let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
-    let fee_amount = withdraw_result.get_u128("fee");
+    let withdrawn_amount = withdraw_result.withdrawn_amount;
+    let fee_amount = withdraw_result.fee;
 
-    assert_eq!(999_000, withdrawn_amount);
-    assert_eq!(1_000, fee_amount);
+    assert_eq!(999_000, withdrawn_amount.0);
+    assert_eq!(1_000, fee_amount.0);
 
     alice_balance = context.ft_contract.ft_balance_of(&alice).await?;
     assert_eq!(99_999_000, alice_balance.0);
@@ -76,11 +76,11 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
     context.fast_forward_hours(1).await?;
 
     let withdraw_result = context.jar_contract.withdraw(&alice, "1").await?;
-    let withdrawn_amount = withdraw_result.get_u128("withdrawn_amount");
-    let fee_amount = withdraw_result.get_u128("fee");
+    let withdrawn_amount = withdraw_result.withdrawn_amount;
+    let fee_amount = withdraw_result.fee;
 
-    assert_eq!(990_000, withdrawn_amount);
-    assert_eq!(10_000, fee_amount);
+    assert_eq!(990_000, withdrawn_amount.0);
+    assert_eq!(10_000, fee_amount.0);
 
     alice_balance = context.ft_contract.ft_balance_of(&alice).await?;
     assert_eq!(99_990_000, alice_balance.0);

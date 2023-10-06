@@ -1,12 +1,15 @@
 use std::collections::HashMap;
 
+use model::{
+    jar::{JarIdView, JarView},
+    TokenAmount, U32,
+};
 use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 
 use crate::{
     assert_ownership,
-    common::{u32::U32, TokenAmount},
     event::{emit, EventKind, RestakeData},
-    jar::view::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
+    jar::view::{AggregatedInterestView, AggregatedTokenAmountView},
     Contract, ContractExt, Jar,
 };
 

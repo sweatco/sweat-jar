@@ -1,9 +1,10 @@
 use near_sdk::{
     json_types::U128,
     serde::{Deserialize, Serialize},
+    AccountId,
 };
 
-use crate::{common::TokenAmount, ft_interface::Fee};
+use crate::TokenAmount;
 
 /// The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -17,7 +18,8 @@ pub struct WithdrawView {
 }
 
 impl WithdrawView {
-    pub(crate) fn new(amount: TokenAmount, fee: Option<Fee>) -> Self {
+    #[must_use]
+    pub fn new(amount: TokenAmount, fee: Option<Fee>) -> Self {
         let (withdrawn_amount, fee) = fee.map_or((amount, 0), |fee| (amount - fee.amount, fee.amount));
 
         Self {
@@ -31,7 +33,7 @@ impl WithdrawView {
 mod test {
     use near_sdk::{json_types::U128, AccountId};
 
-    use crate::{ft_interface::Fee, withdraw::view::WithdrawView};
+    use crate::{withdraw::WithdrawView, Fee};
 
     #[test]
     fn withdrawal_view() {
@@ -51,4 +53,11 @@ mod test {
             }
         );
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct Fee {
+    pub beneficiary_id: AccountId,
+    pub amount: TokenAmount,
 }

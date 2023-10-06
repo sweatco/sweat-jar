@@ -10,7 +10,6 @@ use crate::{
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
-        random_element::RandomElement,
         utils::{add_jar, generate_permutations},
     },
     product::RegisterProductCommand,
@@ -18,17 +17,17 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
-async fn measure_withdraw_total_test() -> anyhow::Result<()> {
+async fn measure_after_claim_total_test() -> anyhow::Result<()> {
     let measured = scoped_command_measure(
         generate_permutations(
             &[
-                RegisterProductCommand::Locked10Minutes6Percents,
-                RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee,
-                RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee,
+                RegisterProductCommand::Locked12Months12Percents,
+                RegisterProductCommand::Locked6Months6Percents,
+                RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
             ],
-            &(1..8).collect_vec(),
+            &(1..5).collect_vec(),
         ),
-        measure_withdraw,
+        measure_after_claim_total,
     )
     .await?;
 
@@ -45,9 +44,9 @@ async fn measure_withdraw_total_test() -> anyhow::Result<()> {
     let map: HashMap<RegisterProductCommand, _> = map
         .into_iter()
         .map(|(key, gas_cost)| {
-            let mut differences: Vec<i128> = Vec::new();
+            let mut differences: Vec<Gas> = Vec::new();
             for i in 1..gas_cost.len() {
-                let diff = gas_cost[i] as i128 - gas_cost[i - 1] as i128;
+                let diff = gas_cost[i] - gas_cost[i - 1];
                 differences.push(diff);
             }
 
@@ -62,15 +61,15 @@ async fn measure_withdraw_total_test() -> anyhow::Result<()> {
 
 #[ignore]
 #[tokio::test]
-async fn one_withdraw() -> anyhow::Result<()> {
-    let gas = measure_withdraw((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
+async fn one_after_claim() -> anyhow::Result<()> {
+    let gas = measure_after_claim_total((RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee, 1)).await?;
 
     dbg!(&gas);
 
     Ok(())
 }
 
-async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
+pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
     let Prepared {
@@ -86,12 +85,9 @@ async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Res
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
-
-    let jar = jars.random_element();
-
-    let (gas, _) =
-        OutcomeStorage::measure_total(&alice, context.jar_contract.withdraw(&alice, &jar.id.0.to_string())).await?;
+    let (gas, _claimed) =
+        OutcomeStorage::measure_operation("interest_to_claim", &alice, context.jar_contract.claim_total(&alice))
+            .await?;
 
     Ok(gas)
 }

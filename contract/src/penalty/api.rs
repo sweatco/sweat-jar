@@ -1,8 +1,8 @@
+use model::jar::JarIdView;
 use near_sdk::{env, near_bindgen, AccountId};
 
 use crate::{
     event::{emit, EventKind::ApplyPenalty, PenaltyData},
-    jar::view::JarIdView,
     product::model::Apy,
     Contract, ContractExt,
 };

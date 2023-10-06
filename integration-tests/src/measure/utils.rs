@@ -1,3 +1,7 @@
+use workspaces::Account;
+
+use crate::{context::Context, product::RegisterProductCommand};
+
 pub(crate) fn generate_permutations<One, Two>(one: &[One], two: &[Two]) -> Vec<(One, Two)>
 where
     One: Copy,
@@ -53,4 +57,18 @@ mod test {
 
         Ok(())
     }
+}
+
+pub(crate) async fn add_jar(
+    context: &Context,
+    account: &Account,
+    product: RegisterProductCommand,
+    amount: u128,
+) -> anyhow::Result<()> {
+    context
+        .jar_contract
+        .create_jar(account, product.id(), amount, context.ft_contract.account().id())
+        .await?;
+
+    Ok(())
 }

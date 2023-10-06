@@ -1,30 +1,15 @@
 use std::{collections::HashMap, fmt::Debug};
 
+use model::{
+    jar::{JarIdView, JarView},
+    U32,
+};
 use near_sdk::{
     json_types::{U128, U64},
     serde::{Deserialize, Serialize},
-    AccountId,
 };
 
-use crate::{
-    common::{u32::U32, Timestamp},
-    product::model::ProductId,
-    Jar,
-};
-
-pub type JarIdView = U32;
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
-pub struct JarView {
-    pub id: JarIdView,
-    pub account_id: AccountId,
-    pub product_id: ProductId,
-    pub created_at: U64,
-    pub principal: U128,
-    pub claimed_balance: U128,
-    pub is_penalty_applied: bool,
-}
+use crate::{common::Timestamp, Jar};
 
 impl From<Jar> for JarView {
     fn from(value: Jar) -> Self {

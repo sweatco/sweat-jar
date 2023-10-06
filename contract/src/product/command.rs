@@ -1,3 +1,4 @@
+use model::ProductId;
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     json_types::{Base64VecU8, U128, U64},
@@ -6,7 +7,7 @@ use near_sdk::{
 
 use crate::{
     common::udecimal::UDecimal,
-    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, ProductId, Terms, WithdrawalFee},
+    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee},
 };
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, PartialEq, Clone, Debug)]

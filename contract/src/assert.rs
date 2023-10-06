@@ -1,10 +1,7 @@
+use model::TokenAmount;
 use near_sdk::{require, AccountId};
 
-use crate::{
-    common::{Timestamp, TokenAmount},
-    jar::model::Jar,
-    product::model::Product,
-};
+use crate::{common::Timestamp, jar::model::Jar, product::model::Product};
 
 pub(crate) fn assert_sufficient_balance(jar: &Jar, amount: TokenAmount) {
     require!(jar.principal >= amount, "Insufficient balance");

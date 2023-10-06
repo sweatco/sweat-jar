@@ -1,4 +1,8 @@
 use async_trait::async_trait;
+use model::{
+    jar::{JarIdView, JarView},
+    withdraw::WithdrawView,
+};
 use near_sdk::json_types::U128;
 use near_units::parse_near;
 use serde_json::{json, Value};
@@ -27,7 +31,7 @@ pub(crate) trait JarContractInterface {
         product_id: String,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value>;
+    ) -> anyhow::Result<U128>;
 
     async fn create_premium_jar(
         &self,
@@ -37,29 +41,35 @@ pub(crate) trait JarContractInterface {
         signature: String,
         valid_until: u64,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value>;
+    ) -> anyhow::Result<U128>;
 
     async fn get_total_principal(&self, user: &Account) -> anyhow::Result<Value>;
 
-    async fn get_principal(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value>;
+    async fn get_principal(&self, user: &Account, jar_ids: Vec<JarIdView>) -> anyhow::Result<Value>;
 
     async fn get_total_interest(&self, user: &Account) -> anyhow::Result<Value>;
 
-    async fn get_interest(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value>;
+    async fn get_interest(&self, user: &Account, jar_ids: Vec<JarIdView>) -> anyhow::Result<Value>;
 
-    async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value>;
+    async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Vec<JarView>>;
 
-    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<Value>;
+    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<WithdrawView>;
 
     async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
 
-    async fn claim_jars(&self, user: &Account, jar_ids: Vec<String>, amount: Option<U128>) -> anyhow::Result<u128>;
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<u128>;
 
-    async fn get_jar(&self, account_id: String, jar_id: String) -> anyhow::Result<Value>;
+    async fn get_jar(&self, account_id: String, jar_id: JarIdView) -> anyhow::Result<JarView>;
 
-    async fn restake(&self, user: &Account, jar_id: String) -> anyhow::Result<()>;
+    async fn restake(&self, user: &Account, jar_id: JarIdView) -> anyhow::Result<()>;
 
-    async fn set_penalty(&self, admin: &Account, account_id: &str, jar_id: &str, value: bool) -> anyhow::Result<()>;
+    async fn set_penalty(
+        &self,
+        admin: &Account,
+        account_id: &str,
+        jar_id: JarIdView,
+        value: bool,
+    ) -> anyhow::Result<()>;
 
     async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>;
 
@@ -134,7 +144,7 @@ impl JarContractInterface for Contract {
         product_id: String,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<U128> {
         println!(
             "▶️ Create jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -163,7 +173,7 @@ impl JarContractInterface for Contract {
         signature: String,
         valid_until: u64,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<U128> {
         println!(
             "▶️ Create premium jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -199,7 +209,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn get_principal(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value> {
+    async fn get_principal(&self, user: &Account, jar_ids: Vec<JarIdView>) -> anyhow::Result<Value> {
         println!("▶️ Get principal for jars {:?}", jar_ids);
 
         let args = json!({
@@ -228,7 +238,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn get_interest(&self, user: &Account, jar_ids: Vec<String>) -> anyhow::Result<Value> {
+    async fn get_interest(&self, user: &Account, jar_ids: Vec<JarIdView>) -> anyhow::Result<Value> {
         println!("▶️ Get interest for jars {:?}", jar_ids);
 
         let args = json!({
@@ -243,7 +253,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Value> {
+    async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Vec<JarView>> {
         println!("▶️ Get jars for user {:?}", user.id());
 
         let args = json!({
@@ -257,7 +267,7 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<Value> {
+    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<WithdrawView> {
         println!("▶️ Withdraw jar #{jar_id}");
 
         let args = json!({
@@ -278,7 +288,7 @@ impl JarContractInterface for Contract {
 
         println!("   📟 {result:#?}");
 
-        let result_value = result.json::<Value>()?;
+        let result_value = result.json()?;
 
         println!("   ✅ {result_value:?}");
 
@@ -315,7 +325,7 @@ impl JarContractInterface for Contract {
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }
 
-    async fn claim_jars(&self, user: &Account, jar_ids: Vec<String>, amount: Option<U128>) -> anyhow::Result<u128> {
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<u128> {
         println!("▶️ Claim jars: {:?}", jar_ids);
 
         let args = json!({
@@ -346,8 +356,8 @@ impl JarContractInterface for Contract {
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }
 
-    async fn get_jar(&self, account_id: String, jar_id: String) -> anyhow::Result<Value> {
-        println!("▶️ Get jar #{jar_id}");
+    async fn get_jar(&self, account_id: String, jar_id: JarIdView) -> anyhow::Result<JarView> {
+        println!("▶️ Get jar #{jar_id:?}");
 
         let args = json!({
             "account_id": account_id,
@@ -361,8 +371,8 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn restake(&self, user: &Account, jar_id: String) -> anyhow::Result<()> {
-        println!("▶️ Restake jar #{jar_id}");
+    async fn restake(&self, user: &Account, jar_id: JarIdView) -> anyhow::Result<()> {
+        println!("▶️ Restake jar #{jar_id:?}");
 
         let args = json!({
             "jar_id": jar_id,
@@ -380,11 +390,19 @@ impl JarContractInterface for Contract {
             println!("   📖 {log}");
         }
 
+        OutcomeStorage::add_result(result);
+
         Ok(())
     }
 
-    async fn set_penalty(&self, admin: &Account, account_id: &str, jar_id: &str, value: bool) -> anyhow::Result<()> {
-        println!("▶️ Set penalty for jar #{jar_id}");
+    async fn set_penalty(
+        &self,
+        admin: &Account,
+        account_id: &str,
+        jar_id: JarIdView,
+        value: bool,
+    ) -> anyhow::Result<()> {
+        println!("▶️ Set penalty for jar #{jar_id:?}");
 
         let args = json!({
             "account_id": account_id,
@@ -466,7 +484,7 @@ trait Internal {
         msg: Value,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value>;
+    ) -> anyhow::Result<U128>;
 }
 
 #[async_trait]
@@ -477,7 +495,7 @@ impl Internal for Contract {
         msg: Value,
         amount: u128,
         ft_contract_id: &AccountId,
-    ) -> anyhow::Result<Value> {
+    ) -> anyhow::Result<U128> {
         println!("▶️ Create jar with msg: {:?}", msg,);
 
         let args = json!({

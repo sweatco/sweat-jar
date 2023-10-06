@@ -3,28 +3,28 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use workspaces::{types::Gas, Account};
+use workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},
-    context::Context,
-    measure::{measure::scoped_command_measure, outcome_storage::OutcomeStorage, utils::generate_permutations},
+    measure::{
+        measure::scoped_command_measure,
+        outcome_storage::OutcomeStorage,
+        random_element::RandomElement,
+        utils::{add_jar, generate_permutations},
+    },
     product::RegisterProductCommand,
 };
 
 #[ignore]
 #[tokio::test]
-async fn measure_after_claim_total_test() -> anyhow::Result<()> {
+async fn measure_restake_total_test() -> anyhow::Result<()> {
     let measured = scoped_command_measure(
         generate_permutations(
-            &[
-                RegisterProductCommand::Locked12Months12Percents,
-                RegisterProductCommand::Locked6Months6Percents,
-                RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
-            ],
-            &(1..5).collect_vec(),
+            &[RegisterProductCommand::Locked10Minutes6Percents],
+            &(1..20).collect_vec(),
         ),
-        measure_after_claim_total,
+        measure_restake,
     )
     .await?;
 
@@ -58,15 +58,15 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
 
 #[ignore]
 #[tokio::test]
-async fn one_after_claim() -> anyhow::Result<()> {
-    let gas = measure_after_claim_total((RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee, 1)).await?;
+async fn one_restake() -> anyhow::Result<()> {
+    let gas = measure_restake((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
 
     dbg!(&gas);
 
     Ok(())
 }
 
-pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
+pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
     let Prepared {
@@ -82,22 +82,10 @@ pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, us
 
     context.fast_forward_hours(2).await?;
 
-    let (gas, _claimed) =
-        OutcomeStorage::measure("interest_to_claim", &alice, context.jar_contract.claim_total(&alice)).await?;
+    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
+
+    let (gas, _) =
+        OutcomeStorage::measure_total(&alice, context.jar_contract.restake(&alice, jars.random_element().id)).await?;
 
     Ok(gas)
-}
-
-async fn add_jar(
-    context: &Context,
-    account: &Account,
-    product: RegisterProductCommand,
-    amount: u128,
-) -> anyhow::Result<()> {
-    context
-        .jar_contract
-        .create_jar(account, product.id(), amount, context.ft_contract.account().id())
-        .await?;
-
-    Ok(())
 }

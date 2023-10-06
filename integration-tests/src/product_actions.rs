@@ -28,7 +28,7 @@ async fn product_actions() -> anyhow::Result<()> {
         )
         .await?;
 
-    assert_eq!(result.as_str().unwrap(), "1000000");
+    assert_eq!(result.0, 1_000_000);
 
     context
         .jar_contract

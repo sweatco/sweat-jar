@@ -1,3 +1,4 @@
+use model::ProductId;
 use near_sdk::{
     json_types::{U128, U64},
     serde::{Deserialize, Serialize},
@@ -5,7 +6,7 @@ use near_sdk::{
 
 use crate::{
     product::model::{Cap, DowngradableApy, Terms, WithdrawalFee},
-    Apy, Product, ProductId,
+    Apy, Product,
 };
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

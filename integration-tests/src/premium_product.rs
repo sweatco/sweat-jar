@@ -3,7 +3,7 @@ use ed25519_dalek::Signer;
 use near_sdk::env::sha256;
 
 use crate::{
-    common::{generate_keypair, prepare_contract, Prepared, ValueGetters},
+    common::{generate_keypair, prepare_contract, Prepared},
     product::RegisterProductCommand,
 };
 
@@ -55,54 +55,33 @@ async fn premium_product() -> anyhow::Result<()> {
         )
         .await?;
 
-    assert_eq!(result.as_str().unwrap(), amount.to_string());
+    assert_eq!(result.0, amount);
 
     let jars = context.jar_contract.get_jars_for_account(&alice).await?;
-    let jar_id = jars.as_array().unwrap().get(0).unwrap().get_jar_id();
+    let jar_id = jars.first().unwrap().id;
 
     let jar = context
         .jar_contract
         .get_jar(alice.id().to_string(), jar_id.clone())
         .await?;
 
-    assert_eq!(
-        jar.as_object().unwrap().get("principal").unwrap().as_str().unwrap(),
-        amount.to_string()
-    );
-    assert!(!jar
-        .as_object()
-        .unwrap()
-        .get("is_penalty_applied")
-        .unwrap()
-        .as_bool()
-        .unwrap());
+    assert_eq!(jar.principal.0, amount);
+    assert!(!jar.is_penalty_applied);
 
     context
         .jar_contract
-        .set_penalty(&manager, alice.id(), &jar_id.clone(), true)
+        .set_penalty(&manager, alice.id(), jar_id, true)
         .await?;
 
-    let jar = context
-        .jar_contract
-        .get_jar(alice.id().to_string(), jar_id.clone())
-        .await?;
+    let jar = context.jar_contract.get_jar(alice.id().to_string(), jar_id).await?;
 
-    assert!(jar
-        .as_object()
-        .unwrap()
-        .get("is_penalty_applied")
-        .unwrap()
-        .as_bool()
-        .unwrap());
+    assert!(jar.is_penalty_applied);
 
-    let unauthorized_penalty_change = context
-        .jar_contract
-        .set_penalty(&alice, alice.id(), &jar_id.clone(), true)
-        .await;
+    let unauthorized_penalty_change = context.jar_contract.set_penalty(&alice, alice.id(), jar_id, true).await;
 
     assert!(unauthorized_penalty_change.is_err());
 
-    let principal_result = context.jar_contract.get_principal(&alice, vec![jar_id.clone()]).await?;
+    let principal_result = context.jar_contract.get_principal(&alice, vec![jar_id]).await?;
     assert_eq!(
         principal_result
             .as_object()

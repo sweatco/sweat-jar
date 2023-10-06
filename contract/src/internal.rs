@@ -1,10 +1,7 @@
+use model::{jar::JarIdView, ProductId};
 use near_sdk::require;
 
-use crate::{
-    env,
-    jar::{model::JarId, view::JarIdView},
-    AccountId, Contract, Jar, Product, ProductId,
-};
+use crate::{env, jar::model::JarId, AccountId, Contract, Jar, Product};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {

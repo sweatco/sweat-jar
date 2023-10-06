@@ -32,7 +32,7 @@ impl OutcomeStorage {
         STORAGE.data.lock().unwrap()
     }
 
-    fn start_measuring(account: &Account) {
+    pub fn start_measuring(account: &Account) {
         let mut measuring = Self::get_measuring();
         assert!(measuring.iter().find(|a| a == &account.id().as_str()).is_none());
         measuring.push(account.id().to_string());
@@ -49,8 +49,20 @@ impl OutcomeStorage {
         measuring.remove(index);
     }
 
-    /// Execute command and measure its gas price
-    pub async fn measure<Output>(
+    /// Execute command and measure total gas price
+    pub async fn measure_total<Output>(
+        account: &Account,
+        future: impl Future<Output = anyhow::Result<Output>>,
+    ) -> anyhow::Result<(Gas, Output)> {
+        Self::start_measuring(account);
+        let output = future.await?;
+        Self::stop_measuring(account);
+
+        Ok((OutcomeStorage::get_total_gas(&account), output))
+    }
+
+    /// Execute command and measure one of its operations gas price
+    pub async fn measure_operation<Output>(
         label: &str,
         account: &Account,
         future: impl Future<Output = anyhow::Result<Output>>,
@@ -59,7 +71,7 @@ impl OutcomeStorage {
         let output = future.await?;
         Self::stop_measuring(account);
 
-        let result = OutcomeStorage::get_result(&account, label);
+        let result = OutcomeStorage::get_labeled_result(&account, label);
 
         Ok((result.gas_burnt, output))
     }
@@ -78,8 +90,15 @@ impl OutcomeStorage {
         assert!(existing.is_none());
     }
 
+    fn get_total_gas(account: &Account) -> Gas {
+        let data = Self::get_data();
+        let success = data.get(account.id().as_str()).unwrap();
+
+        success.total_gas_burnt
+    }
+
     /// Get execution result for given manager account
-    pub fn get_result(account: &Account, label: &str) -> ExecutionOutcome {
+    fn get_labeled_result(account: &Account, label: &str) -> ExecutionOutcome {
         Self::get_data()
             .get(account.id().as_str())
             .unwrap()
