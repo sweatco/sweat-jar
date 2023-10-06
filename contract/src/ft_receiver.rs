@@ -58,7 +58,7 @@ impl FungibleTokenReceiver for Contract {
                 self.migrate_jars(jars, amount);
             }
             FtMessage::TopUp(jar_id) => {
-                self.top_up(&sender_id, jar_id, amount);
+                self.top_up(jar_id, amount);
             }
         }
 
@@ -107,7 +107,7 @@ mod tests {
             .contract
             .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
 
-        let jar = context.contract.get_jar(alice, U32(1));
+        let jar = context.contract.get_jar(U32(1));
         assert_eq!(jar.id.0, 1);
     }
 
@@ -150,7 +150,7 @@ mod tests {
             .contract
             .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(alice.clone(), U32(1));
+        let jar = context.contract.get_jar(U32(1));
         assert_eq!(jar.id.0, 1);
 
         let result = catch_unwind(move || {
@@ -189,7 +189,7 @@ mod tests {
             .contract
             .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(alice, U32(0));
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 
@@ -248,7 +248,7 @@ mod tests {
             .contract
             .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(alice, U32(0));
+        let jar = context.contract.get_jar(U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 

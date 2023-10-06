@@ -55,7 +55,7 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        let jar = self.get_jar_internal(&account_id, jar_id.0).locked();
+        let jar = self.get_jar_internal(jar_id.0).locked();
         let amount = amount.map_or(jar.principal, |value| value.0);
 
         assert_ownership(&jar, &account_id);
@@ -89,7 +89,7 @@ impl Contract {
             if should_be_closed {
                 self.delete_jar(jar);
             } else {
-                let stored_jar = self.get_jar_mut_internal(&jar.account_id, jar_id);
+                let stored_jar = self.get_jar_mut_internal(jar_id);
                 *stored_jar = jar;
                 stored_jar.unlock();
             }
@@ -104,7 +104,7 @@ impl Contract {
 
             withdrawal_result
         } else {
-            let stored_jar = self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id);
+            let stored_jar = self.get_jar_mut_internal(jar_before_transfer.id);
 
             *stored_jar = jar_before_transfer.unlocked();
 
@@ -113,7 +113,7 @@ impl Contract {
     }
 
     fn do_transfer(&mut self, account_id: &AccountId, jar: &Jar, amount: TokenAmount) -> PromiseOrValue<WithdrawView> {
-        self.get_jar_mut_internal(account_id, jar.id).lock();
+        self.get_jar_mut_internal(jar.id).lock();
         self.transfer_withdraw(account_id, amount, jar)
     }
 

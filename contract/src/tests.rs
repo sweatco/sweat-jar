@@ -111,7 +111,7 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract.jars.get(&jar_id).unwrap());
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_minutes(30);
@@ -135,7 +135,7 @@ fn get_total_interest_with_single_jar_on_maturity() {
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract.jars.get(&jar_id).unwrap());
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(365);
@@ -164,7 +164,7 @@ fn get_total_interest_with_single_jar_after_maturity() {
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract.jars.get(&jar_id).unwrap());
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(400);
@@ -186,7 +186,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
         .with_products(&[reference_product])
         .with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract.account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract.jars.get(&jar_id).unwrap());
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(182);
@@ -221,7 +221,7 @@ fn penalty_is_not_applicable_for_constant_apy() {
         .with_jars(&[reference_jar]);
 
     context.switch_account(&admin);
-    context.contract.set_penalty(alice, U32(0), true);
+    context.contract.set_penalty(U32(0), true);
 }
 
 #[test]
@@ -249,7 +249,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
     assert_eq!(interest, 9_972_602);
 
     context.switch_account(&admin);
-    context.contract.set_penalty(alice.clone(), U32(0), true);
+    context.contract.set_penalty(U32(0), true);
 
     context.set_block_timestamp_in_days(365);
 

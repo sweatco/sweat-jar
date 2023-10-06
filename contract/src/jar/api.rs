@@ -24,7 +24,7 @@ pub trait JarApi {
     /// # Returns
     ///
     /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView;
+    fn get_jar(&self, jar_id: JarIdView) -> JarView;
 
     /// Retrieves information about all deposit jars associated with a given account.
     ///
@@ -55,13 +55,11 @@ pub trait JarApi {
     ///
     /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
     ///                   principal is being retrieved.
-    ///
-    /// * `account_id` - The `AccountId` of the account for which the principal is being retrieved.
-    ///
+    //////
     /// # Returns
     ///
     /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView;
+    fn get_principal(&self, jar_ids: Vec<JarIdView>) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -86,7 +84,7 @@ pub trait JarApi {
     ///
     /// An `U128` representing the sum of interest amounts for the specified deposit jars.
     ///
-    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView;
+    fn get_interest(&self, jar_ids: Vec<JarIdView>) -> AggregatedInterestView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
@@ -109,8 +107,8 @@ pub trait JarApi {
 
 #[near_bindgen]
 impl JarApi for Contract {
-    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
-        self.get_jar_internal(&account_id, jar_id.0).into()
+    fn get_jar(&self, jar_id: JarIdView) -> JarView {
+        self.get_jar_internal(jar_id.0).into()
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
@@ -118,17 +116,14 @@ impl JarApi for Contract {
     }
 
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        self.get_principal(
-            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
-            account_id,
-        )
+        self.get_principal(self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect())
     }
 
-    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView {
+    fn get_principal(&self, jar_ids: Vec<JarIdView>) -> AggregatedTokenAmountView {
         let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
+        for jar in self.jars_with_ids(&jar_ids) {
             let id = jar.id;
             let principal = jar.principal;
 
@@ -143,19 +138,16 @@ impl JarApi for Contract {
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
-        self.get_interest(
-            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
-            account_id,
-        )
+        self.get_interest(self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect())
     }
 
-    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView {
+    fn get_interest(&self, jar_ids: Vec<JarIdView>) -> AggregatedInterestView {
         let now = env::block_timestamp_ms();
 
         let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
+        for jar in self.jars_with_ids(&jar_ids) {
             let interest = jar.get_interest(self.get_product(&jar.product_id), now);
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
@@ -177,7 +169,7 @@ impl JarApi for Contract {
 
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 
-        let jar = self.get_jar_internal(&account_id, jar_id);
+        let jar = self.get_jar_internal(jar_id);
 
         assert_ownership(jar, &account_id);
 
@@ -206,7 +198,7 @@ impl JarApi for Contract {
             self.delete_jar(withdraw_jar);
         } else {
             let jar_id = withdraw_jar.id;
-            *self.get_jar_mut_internal(&account_id, jar_id) = withdraw_jar;
+            *self.get_jar_mut_internal(jar_id) = withdraw_jar;
         }
 
         self.add_new_jar(&account_id, new_jar.clone());

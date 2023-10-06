@@ -16,7 +16,7 @@ use crate::{
     common::{udecimal::UDecimal, Timestamp, MS_IN_YEAR},
     event::{emit, EventKind, TopUpData},
     product::model::{Apy, Product, Terms},
-    Base64VecU8, Contract, JarsStorage, Signature,
+    Base64VecU8, Contract, Signature,
 };
 
 pub type JarId = u32;
@@ -266,8 +266,8 @@ impl Contract {
         jar.into()
     }
 
-    pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
-        let jar = self.get_jar_internal(account, jar_id);
+    pub(crate) fn top_up(&mut self, jar_id: JarId, amount: U128) -> U128 {
+        let jar = self.get_jar_internal(jar_id);
         let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
@@ -276,7 +276,7 @@ impl Contract {
         let now = env::block_timestamp_ms();
 
         let principal = self
-            .get_jar_mut_internal(account, jar_id)
+            .get_jar_mut_internal(jar_id)
             .top_up(amount.0, &product, now)
             .principal;
 
@@ -295,6 +295,8 @@ impl Contract {
 
         require!(!jars.is_empty(), "Trying to delete jar from empty account");
 
+        require!(self.jars.remove(&jar.id).is_some(), "Jar doesn't exist");
+
         if jars.len() == 1 {
             jars.clear();
             return;
@@ -305,7 +307,7 @@ impl Contract {
 
         let jar_position = jars
             .iter()
-            .position(|j| j.id == jar.id)
+            .position(|id| id == &jar.id)
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
 
         let last_jar = jars.pop().unwrap();
@@ -315,18 +317,16 @@ impl Contract {
         }
     }
 
-    pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
-        self.account_jars
-            .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
-            .get_jar_mut(id)
+    pub(crate) fn get_jar_mut_internal(&mut self, id: JarId) -> &mut Jar {
+        self.jars
+            .get_mut(&id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{id}' doesn't exist")))
     }
 
-    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> &Jar {
-        self.account_jars
-            .get(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
-            .get_jar(id)
+    pub(crate) fn get_jar_internal(&self, id: JarId) -> &Jar {
+        self.jars
+            .get(&id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{id}' doesn't exist")))
     }
 
     pub(crate) fn verify(

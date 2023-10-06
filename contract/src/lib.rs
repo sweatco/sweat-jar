@@ -60,17 +60,20 @@ pub struct Contract {
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
+
+    /// A lookup map that associates jar IDs with jars.
+    pub jars: LookupMap<JarId, Jar>,
 }
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
 pub struct AccountJars {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_id: JarId,
-    pub jars: Vec<Jar>,
+    pub jars: Vec<JarId>,
 }
 
 impl Deref for AccountJars {
-    type Target = Vec<Jar>;
+    type Target = Vec<JarId>;
 
     fn deref(&self) -> &Self::Target {
         &self.jars
@@ -87,6 +90,7 @@ impl DerefMut for AccountJars {
 pub(crate) enum StorageKey {
     Products,
     AccountJars,
+    Jars,
 }
 
 #[near_bindgen]
@@ -101,26 +105,8 @@ impl Contract {
             manager,
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJars),
+            jars: LookupMap::new(StorageKey::Jars),
             last_jar_id: 0,
         }
-    }
-}
-
-pub(crate) trait JarsStorage {
-    fn get_jar(&self, id: JarId) -> &Jar;
-    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar;
-}
-
-impl JarsStorage for Vec<Jar> {
-    fn get_jar(&self, id: JarId) -> &Jar {
-        self.iter()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-    }
-
-    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar {
-        self.iter_mut()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 }

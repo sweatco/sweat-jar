@@ -48,7 +48,7 @@ fn claim_partially_when_having_tokens_to_claim() {
 
     assert_eq!(claimed.0, 100);
 
-    let jar = context.contract.get_jar(alice, U32(jar.id));
+    let jar = context.contract.get_jar(U32(jar.id));
     assert_eq!(100, jar.claimed_balance.0);
 }
 
@@ -66,7 +66,7 @@ fn dont_delete_jar_on_all_interest_claim() {
     context.switch_account(&alice);
     context.contract.claim_jars(vec![U32(jar.id)], Some(U128(200_000)));
 
-    let jar = context.contract.get_jar_internal(&alice, jar.id);
+    let jar = context.contract.get_jar_internal(jar.id);
     assert_eq!(200_000, jar.claimed_balance);
 
     let Some(ref cache) = jar.cache else { panic!() };
@@ -76,7 +76,7 @@ fn dont_delete_jar_on_all_interest_claim() {
 }
 
 #[test]
-#[should_panic(expected = "Jar with id: 0 doesn't exist")]
+#[should_panic(expected = "Jar with id: '0' doesn't exist")]
 fn claim_all_withdraw_all_and_delete_jar() {
     let alice = accounts(0);
     let admin = accounts(1);
@@ -95,7 +95,7 @@ fn claim_all_withdraw_all_and_delete_jar() {
     context.switch_account(&alice);
     context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000)));
 
-    let jar = context.contract.get_jar_internal(&alice, jar_id);
+    let jar = context.contract.get_jar_internal(jar_id);
     assert_eq!(200_000, jar.claimed_balance);
 
     let Some(ref cache) = jar.cache else { panic!() };
@@ -110,11 +110,11 @@ fn claim_all_withdraw_all_and_delete_jar() {
     assert_eq!(withdrawn.withdrawn_amount, U128(1_000_000));
     assert_eq!(withdrawn.fee, U128(0));
 
-    let _jar = context.contract.get_jar_internal(&alice, jar_id);
+    let _jar = context.contract.get_jar_internal(jar_id);
 }
 
 #[test]
-#[should_panic(expected = "Jar with id: 0 doesn't exist")]
+#[should_panic(expected = "Jar with id: '0' doesn't exist")]
 fn withdraw_all_claim_all_and_delete_jar() {
     let alice = accounts(0);
     let admin = accounts(1);
@@ -139,7 +139,7 @@ fn withdraw_all_claim_all_and_delete_jar() {
     assert_eq!(withdrawn.withdrawn_amount, U128(1_000_000));
     assert_eq!(withdrawn.fee, U128(0));
 
-    let jar = context.contract.get_jar_internal(&alice, jar_id);
+    let jar = context.contract.get_jar_internal(jar_id);
 
     assert_eq!(jar.principal, 0);
 
@@ -149,7 +149,7 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     assert_eq!(claimed, U128(200_000));
 
-    let _jar = context.contract.get_jar_internal(&alice, jar_id);
+    let _jar = context.contract.get_jar_internal(jar_id);
 }
 
 #[test]
@@ -167,7 +167,7 @@ fn failed_future_claim() {
 
     context.switch_account(&alice);
 
-    let jar_before_claim = context.contract.get_jar_internal(&alice, jar.id).clone();
+    let jar_before_claim = context.contract.get_jar_internal(jar.id).clone();
 
     let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(200_000))) else {
         panic!()
@@ -175,7 +175,7 @@ fn failed_future_claim() {
 
     assert_eq!(claimed.0, 0);
 
-    let jar_after_claim = context.contract.get_jar_internal(&alice, jar.id);
+    let jar_after_claim = context.contract.get_jar_internal(jar.id);
 
     assert_eq!(&jar_before_claim, jar_after_claim);
 }

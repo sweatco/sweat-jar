@@ -1,5 +1,5 @@
 use model::jar::JarIdView;
-use near_sdk::{env, near_bindgen, AccountId};
+use near_sdk::{env, near_bindgen};
 
 use crate::{
     event::{emit, EventKind::ApplyPenalty, PenaltyData},
@@ -23,20 +23,20 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool);
+    fn set_penalty(&mut self, jar_id: JarIdView, value: bool);
 }
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
+    fn set_penalty(&mut self, jar_id: JarIdView, value: bool) {
         self.assert_manager();
 
         let jar_id = jar_id.0;
-        let jar = self.get_jar_internal(&account_id, jar_id);
+        let jar = self.get_jar_internal(jar_id);
         let product = self.get_product(&jar.product_id);
 
         match product.apy {
-            Apy::Downgradable(_) => self.get_jar_mut_internal(&account_id, jar_id).apply_penalty(value),
+            Apy::Downgradable(_) => self.get_jar_mut_internal(jar_id).apply_penalty(value),
             Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
         };
 

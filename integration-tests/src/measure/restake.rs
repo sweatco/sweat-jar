@@ -41,9 +41,9 @@ async fn measure_restake_total_test() -> anyhow::Result<()> {
     let map: HashMap<RegisterProductCommand, _> = map
         .into_iter()
         .map(|(key, gas_cost)| {
-            let mut differences: Vec<Gas> = Vec::new();
+            let mut differences: Vec<i128> = Vec::new();
             for i in 1..gas_cost.len() {
-                let diff = gas_cost[i] - gas_cost[i - 1];
+                let diff = gas_cost[i] as i128 - gas_cost[i - 1] as i128;
                 differences.push(diff);
             }
 

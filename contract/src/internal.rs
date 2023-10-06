@@ -35,20 +35,19 @@ impl Contract {
             .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 
-    pub(crate) fn account_jars(&self, account_id: &AccountId) -> &[Jar] {
-        self.account_jars.get(account_id).map_or(&[], |jars| jars.as_slice())
+    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
+        self.account_jars
+            .get(account_id)
+            .map_or(Vec::new(), |ids| ids.iter().map(|id| self.jars[id].clone()).collect())
     }
 
-    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<&Jar> {
+    pub(crate) fn jars_with_ids(&self, ids: &[JarIdView]) -> Vec<&Jar> {
         let mut result: Vec<&Jar> = vec![];
-
-        let all_jars = self.account_jars(account_id);
 
         for id in ids {
             result.push(
-                all_jars
-                    .iter()
-                    .find(|jar| jar.id == id.0)
+                self.jars
+                    .get(&id.0)
                     .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0))),
             );
         }
@@ -59,6 +58,12 @@ impl Contract {
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
         let jars = self.account_jars.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
-        jars.push(jar);
+        jars.push(jar.id);
+
+        let existing = self.jars.insert(jar.id, jar);
+
+        if existing.is_some() {
+            env::panic_str(&format!("Jar with id: '{}' already exist", jars.last_id))
+        }
     }
 }

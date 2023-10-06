@@ -229,7 +229,7 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Account 'bob' doesn't exist")]
+    #[should_panic(expected = "Account doesn't own this jar")]
     fn restake_by_not_owner() {
         let alice = accounts(0);
         let admin = accounts(1);

@@ -1,5 +1,5 @@
 use model::{ProductId, TokenAmount};
-use near_sdk::{__private::schemars::Set, json_types::U128, require};
+use near_sdk::{__private::schemars::Set, env, json_types::U128, require};
 
 use crate::{
     event::{emit, EventKind, MigrationEventItem},
@@ -66,7 +66,13 @@ impl Contract {
                 is_penalty_applied: false,
             };
 
-            account_jars.push(jar.clone());
+            account_jars.push(jar.id);
+
+            let existing = self.jars.insert(jar.id, jar.clone());
+
+            if existing.is_some() {
+                env::panic_str(&format!("Jar with id: '{}' already exist", jar.id))
+            }
 
             total_amount += jar.principal;
 

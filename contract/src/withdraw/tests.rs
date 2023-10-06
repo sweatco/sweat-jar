@@ -23,7 +23,7 @@ fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
 }
 
 #[test]
-#[should_panic(expected = "Account 'owner' doesn't exist")]
+#[should_panic(expected = "Account doesn't own this jar")]
 fn withdraw_locked_jar_before_maturity_by_not_owner() {
     let (_, _, mut context) = prepare_jar(&generate_product());
 
@@ -40,7 +40,7 @@ fn withdraw_locked_jar_before_maturity_by_owner() {
 }
 
 #[test]
-#[should_panic(expected = "Account 'owner' doesn't exist")]
+#[should_panic(expected = "Account doesn't own this jar")]
 fn withdraw_locked_jar_after_maturity_by_not_owner() {
     let product = generate_product();
     let (_, jar, mut context) = prepare_jar(&product);
@@ -60,7 +60,7 @@ fn withdraw_locked_jar_after_maturity_by_owner() {
 }
 
 #[test]
-#[should_panic(expected = "Account 'owner' doesn't exist")]
+#[should_panic(expected = "Account doesn't own this jar")]
 fn withdraw_flexible_jar_by_not_owner() {
     let product = generate_flexible_product();
     let (_, jar, mut context) = prepare_jar(&product);
@@ -78,7 +78,7 @@ fn withdraw_flexible_jar_by_owner_full() {
     context.switch_account(&alice);
 
     context.contract.withdraw(U32(reference_jar.id), None);
-    let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
+    let jar = context.contract.get_jar(U32(reference_jar.id));
     assert_eq!(0, jar.principal.0);
 }
 
@@ -91,7 +91,7 @@ fn withdraw_flexible_jar_by_owner_with_sufficient_balance() {
     context.switch_account(&alice);
 
     context.contract.withdraw(U32(0), Some(U128(100_000)));
-    let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
+    let jar = context.contract.get_jar(U32(reference_jar.id));
     assert_eq!(900_000, jar.principal.0);
 }
 
@@ -117,7 +117,7 @@ fn dont_delete_jar_after_withdraw_with_interest_left() {
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
     context.switch_account(&alice);
 
-    let jar = context.contract.get_jar_internal(&alice, 0);
+    let jar = context.contract.get_jar_internal(0);
 
     let PromiseOrValue::Value(withdrawn) = context.contract.withdraw(U32(jar.id), Some(U128(1_000_000))) else {
         panic!();
@@ -126,7 +126,7 @@ fn dont_delete_jar_after_withdraw_with_interest_left() {
     assert_eq!(withdrawn.withdrawn_amount, U128(1_000_000));
     assert_eq!(withdrawn.fee, U128(0));
 
-    let jar = context.contract.get_jar_internal(&alice, 0);
+    let jar = context.contract.get_jar_internal(0);
     assert_eq!(jar.principal, 0);
 
     let Some(ref cache) = jar.cache else {
@@ -155,7 +155,7 @@ fn product_with_fixed_fee() {
     assert_eq!(withdraw.withdrawn_amount, U128(withdraw_amount - fee));
     assert_eq!(withdraw.fee, U128(fee));
 
-    let jar = context.contract.get_jar(alice, U32(reference_jar.id));
+    let jar = context.contract.get_jar(U32(reference_jar.id));
 
     assert_eq!(jar.principal, U128(initial_principal - withdraw_amount));
 }
@@ -181,7 +181,7 @@ fn product_with_percent_fee() {
     assert_eq!(withdraw.withdrawn_amount, U128(withdrawn_amount - reference_fee));
     assert_eq!(withdraw.fee, U128(reference_fee));
 
-    let jar = context.contract.get_jar(alice, U32(reference_jar.id));
+    let jar = context.contract.get_jar(U32(reference_jar.id));
 
     assert_eq!(jar.principal, U128(initial_principal - withdrawn_amount));
 }
@@ -196,7 +196,7 @@ fn test_failed_withdraw_promise() {
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
     context.switch_account(&alice);
 
-    let jar_before_withdrawal = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
+    let jar_before_withdrawal = context.contract.get_jar(U32(reference_jar.id));
 
     let PromiseOrValue::Value(withdrawn) = context.contract.withdraw(U32(0), Some(U128(100_000))) else {
         panic!()
@@ -204,7 +204,7 @@ fn test_failed_withdraw_promise() {
 
     assert_eq!(withdrawn.withdrawn_amount.0, 0);
 
-    let jar_after_withdrawal = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
+    let jar_after_withdrawal = context.contract.get_jar(U32(reference_jar.id));
 
     assert_eq!(jar_before_withdrawal, jar_after_withdrawal);
 }
@@ -214,7 +214,7 @@ fn test_failed_withdraw_internal() {
     let product = generate_product();
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 
-    let jar_view = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
+    let jar_view = context.contract.get_jar(U32(reference_jar.id));
     let jar = context
         .contract
         .account_jars
@@ -223,12 +223,15 @@ fn test_failed_withdraw_internal() {
         .iter()
         .next()
         .unwrap();
+
+    let jar = context.contract.jars.get(jar).unwrap();
+
     let withdraw = context.contract.after_withdraw_internal(jar.clone(), 1234, None, false);
 
     assert_eq!(withdraw.withdrawn_amount, U128(0));
     assert_eq!(withdraw.fee, U128(0));
 
-    assert_eq!(jar_view, context.contract.get_jar(alice, U32(0)));
+    assert_eq!(jar_view, context.contract.get_jar(U32(0)));
 }
 
 pub(crate) fn generate_product() -> Product {

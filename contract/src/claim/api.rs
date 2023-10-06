@@ -71,7 +71,7 @@ impl ClaimApi for Contract {
                 cmp::min(available_interest, amount.0 - total_interest_to_claim)
             });
 
-            self.get_jar_mut_internal(&jar.account_id, jar.id)
+            self.get_jar_mut_internal(jar.id)
                 .claim(available_interest, interest_to_claim, now)
                 .lock();
 
@@ -139,7 +139,7 @@ impl Contract {
     ) -> U128 {
         if is_promise_success {
             for jar_before_transfer in jars_before_transfer {
-                let jar = self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id);
+                let jar = self.get_jar_mut_internal(jar_before_transfer.id);
 
                 jar.unlock();
 
@@ -155,10 +155,9 @@ impl Contract {
             claimed_amount
         } else {
             for jar_before_transfer in jars_before_transfer {
-                let account_id = jar_before_transfer.account_id.clone();
                 let jar_id = jar_before_transfer.id;
 
-                *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
+                *self.get_jar_mut_internal(jar_id) = jar_before_transfer.unlocked();
             }
 
             U128(0)

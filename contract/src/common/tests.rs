@@ -52,7 +52,8 @@ impl Context {
                 .account_jars
                 .entry(jar.account_id.clone())
                 .or_default()
-                .push(jar.clone());
+                .push(jar.id);
+            self.contract.jars.insert(jar.id, jar.clone());
         }
 
         self
