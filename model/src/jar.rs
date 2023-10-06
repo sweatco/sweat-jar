@@ -4,7 +4,7 @@ use near_sdk::{
     AccountId,
 };
 
-use crate::{u32::U32, ProductId};
+use crate::{numbers::U32, ProductId};
 
 pub type JarIdView = U32;
 

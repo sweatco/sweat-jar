@@ -1,4 +1,8 @@
-use model::{jar_view::JarIdView, withdraw_view::WithdrawView, Fee, TokenAmount};
+use model::{
+    jar::JarIdView,
+    withdraw::{Fee, WithdrawView},
+    TokenAmount,
+};
 use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
 use crate::{

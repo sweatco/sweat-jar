@@ -1,7 +1,7 @@
 use std::cmp;
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
-use model::{jar_view::JarView, ProductId, TokenAmount};
+use model::{jar::JarView, ProductId, TokenAmount};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,

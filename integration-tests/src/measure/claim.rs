@@ -61,7 +61,7 @@ async fn measure_claim_total_test() -> anyhow::Result<()> {
 
 #[ignore]
 #[tokio::test]
-async fn one_claim() -> anyhow::Result<()> {
+async fn single_claim() -> anyhow::Result<()> {
     let gas = measure_claim((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
 
     dbg!(&gas);

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
-use model::{jar_view::JarView, U32};
+use model::{jar::JarView, U32};
 use near_sdk::{json_types::U128, test_utils::accounts};
 
 use super::*;

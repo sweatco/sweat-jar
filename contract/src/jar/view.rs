@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use model::{
-    jar_view::{JarIdView, JarView},
+    jar::{JarIdView, JarView},
     U32,
 };
 use near_sdk::{

@@ -1,4 +1,4 @@
-use model::{jar_view::JarIdView, ProductId};
+use model::{jar::JarIdView, ProductId};
 use near_sdk::require;
 
 use crate::{env, jar::model::JarId, AccountId, Contract, Jar, Product};

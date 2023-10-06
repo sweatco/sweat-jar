@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use model::{
-    jar_view::{JarIdView, JarView},
-    withdraw_view::WithdrawView,
+    jar::{JarIdView, JarView},
+    withdraw::WithdrawView,
 };
 use near_sdk::json_types::U128;
 use near_units::parse_near;

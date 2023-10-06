@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use model::{
-    jar_view::{JarIdView, JarView},
+    jar::{JarIdView, JarView},
     TokenAmount, U32,
 };
 use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};

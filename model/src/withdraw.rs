@@ -1,9 +1,10 @@
 use near_sdk::{
     json_types::U128,
     serde::{Deserialize, Serialize},
+    AccountId,
 };
 
-use crate::{Fee, TokenAmount};
+use crate::TokenAmount;
 
 /// The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -32,7 +33,7 @@ impl WithdrawView {
 mod test {
     use near_sdk::{json_types::U128, AccountId};
 
-    use crate::{withdraw_view::WithdrawView, Fee};
+    use crate::{withdraw::WithdrawView, Fee};
 
     #[test]
     fn withdrawal_view() {
@@ -52,4 +53,11 @@ mod test {
             }
         );
     }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct Fee {
+    pub beneficiary_id: AccountId,
+    pub amount: TokenAmount,
 }
