@@ -35,10 +35,10 @@ impl Contract {
             .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 
-    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
+    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<&Jar> {
         self.account_jars
             .get(account_id)
-            .map_or(Vec::new(), |ids| ids.iter().map(|id| self.jars[id].clone()).collect())
+            .map_or(Vec::new(), |ids| ids.iter().map(|id| &self.jars[id]).collect())
     }
 
     pub(crate) fn jars_with_ids(&self, ids: &[JarIdView]) -> Vec<&Jar> {

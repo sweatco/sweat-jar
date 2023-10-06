@@ -57,6 +57,7 @@ impl ClaimApi for Contract {
             .account_jars(&account_id)
             .iter()
             .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&U32(jar.id)))
+            .copied()
             .cloned()
             .collect();
 
