@@ -6,5 +6,6 @@ pub(crate) mod outcome_storage;
 pub(crate) mod random_element;
 mod register_product;
 mod restake;
+mod stake;
 pub(crate) mod utils;
 mod withdraw;

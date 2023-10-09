@@ -510,7 +510,8 @@ impl Internal for Contract {
             .max_gas()
             .deposit(parse_near!("1 yocto"))
             .transact()
-            .await?;
+            .await?
+            .into_result()?;
 
         for log in result.logs() {
             println!("   📖 {log}");
@@ -525,6 +526,10 @@ impl Internal for Contract {
             return Err(error.into());
         }
 
-        Ok(result.json()?)
+        let result_value = result.json()?;
+
+        OutcomeStorage::add_result(result);
+
+        Ok(result_value)
     }
 }
