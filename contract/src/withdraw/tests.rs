@@ -223,7 +223,9 @@ fn test_failed_withdraw_internal() {
         .iter()
         .next()
         .unwrap();
-    let withdraw = context.contract.after_withdraw_internal(jar.clone(), 1234, None, false);
+    let withdraw = context
+        .contract
+        .after_withdraw_internal(jar.clone(), true, 1234, None, false);
 
     assert_eq!(withdraw.withdrawn_amount, U128(0));
     assert_eq!(withdraw.fee, U128(0));
