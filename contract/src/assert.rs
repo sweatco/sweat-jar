@@ -3,6 +3,10 @@ use near_sdk::{require, AccountId};
 
 use crate::{common::Timestamp, jar::model::Jar, product::model::Product};
 
+pub(crate) fn assert_not_locked(jar: &Jar) {
+    require!(!jar.is_pending_withdraw, "Another operation on this Jar is in progress");
+}
+
 pub(crate) fn assert_sufficient_balance(jar: &Jar, amount: TokenAmount) {
     require!(jar.principal >= amount, "Insufficient balance");
 }
