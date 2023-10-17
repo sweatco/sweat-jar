@@ -33,18 +33,44 @@ pub fn measure_jars_range() -> Vec<usize> {
 
 #[derive(Serialize)]
 #[serde(crate = "near_sdk::serde")]
+struct Cost {
+    cost: Gas,
+    number_of_jars: usize,
+}
+
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
+struct Diff {
+    diff: i128,
+    jar_cost: i128,
+}
+
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
 pub struct MeasureData {
     total: u64,
-    pub cost: Vec<(Gas, usize)>,
-    pub diff: Vec<i128>,
+    cost: Vec<Cost>,
+    diff: Vec<Diff>,
 }
 
 impl MeasureData {
     pub fn new(cost: Vec<(Gas, usize)>, diff: Vec<i128>) -> Self {
         MeasureData {
             total: cost.iter().map(|a| a.0).sum(),
-            cost,
-            diff,
+            cost: cost
+                .into_iter()
+                .map(|a| Cost {
+                    cost: a.0,
+                    number_of_jars: a.1,
+                })
+                .collect(),
+            diff: diff
+                .into_iter()
+                .map(|a| Diff {
+                    diff: a,
+                    jar_cost: a / measure_jars_multiplier() as i128,
+                })
+                .collect(),
         }
     }
 }
