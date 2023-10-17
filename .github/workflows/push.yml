@@ -51,8 +51,18 @@ jobs:
       - name: Integration tests
         run: make integration
 
+  measure:
+    needs: [ build, lint ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Measure gas
+        run: make measure
+
   push:
-    needs: [ unit-tests, integration-tests ]
+    needs: [ unit-tests, integration-tests, measure ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -70,6 +80,6 @@ jobs:
       - name: Commit & Push changes
         uses: actions-js/push@master
         with:
-          message: Updated binary
+          message: Updated binary and measure
           branch: main
           github_token: ${{ secrets.ACTIONS_TOKEN }}

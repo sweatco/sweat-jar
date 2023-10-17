@@ -1,5 +1,7 @@
-use std::process::{Command, Stdio};
-use std::sync::Mutex;
+use std::{
+    process::{Command, Stdio},
+    sync::Mutex,
+};
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
