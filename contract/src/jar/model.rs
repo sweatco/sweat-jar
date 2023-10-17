@@ -111,13 +111,6 @@ impl Jar {
         }
     }
 
-    pub(crate) fn locked(&self) -> Self {
-        Self {
-            is_pending_withdraw: true,
-            ..self.clone()
-        }
-    }
-
     pub(crate) fn lock(&mut self) {
         self.is_pending_withdraw = true;
     }
