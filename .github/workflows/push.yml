@@ -89,6 +89,7 @@ jobs:
           name: measured
 
       - name: Commit & Push changes
+        if: ${{ github.actor != 'github-actions[bot]' }}
         uses: actions-js/push@master
         with:
           message: Updated binary and measure
