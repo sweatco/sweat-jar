@@ -7,6 +7,10 @@ edition = "2021"
 [lib]
 name = "integration_tests"
 
+[dependencies]
+anyhow = { workspace = true }
+num-format = { workspace = true }
+
 [dev-dependencies]
 fake = { workspace = true }
 rand = { workspace = true }
@@ -18,7 +22,6 @@ base64 = { workspace = true }
 
 model = { workspace = true }
 
-anyhow = "1.0"
 borsh = "0.10.3"
 maplit = "1.0"
 near-units = "0.2.0"

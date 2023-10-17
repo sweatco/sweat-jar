@@ -1420,6 +1420,7 @@ dependencies = [
  "model",
  "near-sdk",
  "near-units",
+ "num-format",
  "pkg-config",
  "rand 0.8.5",
  "serde_json",

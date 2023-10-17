@@ -6,6 +6,9 @@ install: ##@Miscellaneous Install dependencies
 	@npm i near-cli
 	@cargo build
 
+measure: ##@Miscellaneous Measure gas cost.
+	./scripts/measure.sh
+
 build: ##@Build Build the contract locally.
 	./scripts/build.sh
 
@@ -33,6 +36,7 @@ fmt: ##@Chores Format the code using rustfmt nightly.
 
 lint: ##@Chores Run lint checks with Clippy.
 	./scripts/lint.sh
+
 
 HELP_FUN = \
     %help; while(<>){push@{$$help{$$2//'options'}},[$$1,$$3] \

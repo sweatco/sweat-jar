@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use itertools::Itertools;
 use workspaces::types::Gas;
 
+use crate::measure::utils::append_measure;
 use crate::{
     common::{prepare_contract, Prepared},
     measure::{
@@ -31,15 +32,11 @@ async fn measure_claim_total_test() -> anyhow::Result<()> {
     )
     .await?;
 
-    dbg!(&measured);
-
     let mut map: HashMap<RegisterProductCommand, Vec<Gas>> = HashMap::new();
 
     for measure in measured {
         map.entry(measure.0 .0).or_default().push(measure.1);
     }
-
-    dbg!(&map);
 
     let map: HashMap<RegisterProductCommand, _> = map
         .into_iter()
@@ -54,7 +51,7 @@ async fn measure_claim_total_test() -> anyhow::Result<()> {
         })
         .collect();
 
-    dbg!(&map);
+    append_measure("claim", map)?;
 
     Ok(())
 }
