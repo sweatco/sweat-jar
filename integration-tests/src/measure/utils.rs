@@ -10,11 +10,15 @@ use workspaces::{types::Gas, Account};
 use crate::{context::Context, product::RegisterProductCommand};
 
 pub fn number_of_jars_to_measure() -> usize {
-    var("MEASURE_JARS_COUNT").map(|val| val.parse().unwrap()).unwrap_or(20)
+    var("MEASURE_JARS_COUNT")
+        .map(|val| val.parse().unwrap_or(20))
+        .unwrap_or(20)
 }
 
-pub fn measure_chunk_size() -> usize {
-    var("MEASURE_CHUNK_SIZE").map(|val| val.parse().unwrap()).unwrap_or(5)
+pub fn _measure_chunk_size() -> usize {
+    var("MEASURE_CHUNK_SIZE")
+        .map(|val| val.parse().unwrap_or(5))
+        .unwrap_or(5)
 }
 
 #[derive(Serialize)]
