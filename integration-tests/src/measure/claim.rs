@@ -6,7 +6,7 @@ use anyhow::Result;
 use itertools::Itertools;
 use workspaces::types::Gas;
 
-use crate::measure::utils::{MeasureData, NUMBER_OF_JARS_TO_MEASURE};
+use crate::measure::utils::{number_of_jars_to_measure, MeasureData};
 use crate::{
     common::{prepare_contract, Prepared},
     measure::{
@@ -28,7 +28,7 @@ async fn measure_claim_total_test() -> Result<()> {
                     RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee,
                     RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee,
                 ],
-                &(1..NUMBER_OF_JARS_TO_MEASURE).collect_vec(),
+                &(1..number_of_jars_to_measure()).collect_vec(),
             ),
             measure_claim,
         )

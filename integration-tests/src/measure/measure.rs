@@ -7,6 +7,7 @@ use itertools::Itertools;
 use tokio::spawn;
 use workspaces::types::Gas;
 
+use crate::measure::utils::measure_chunk_size;
 use crate::{measure::register_product::measure_register_product, product::RegisterProductCommand};
 
 #[ignore]
@@ -31,12 +32,27 @@ where
 {
     let inputs = inputs.into_iter().collect_vec();
 
-    let all = inputs
-        .iter()
-        .map(|inp| redundant_command_measure(move || command(*inp)))
-        .collect_vec();
+    // async concurrent execution
+    // let all = inputs.iter().map(|inp| command(*inp)).collect_vec();
+    //
+    // let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
 
-    let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
+    // sequential execution
+    // let mut res = vec![];
+    //
+    // for input in &inputs {
+    //     res.push(command(*input).await?);
+    // }
+
+    // Too many concurrent jobs may overwhelm workspaces test framework
+    let chunks = inputs.iter().map(|inp| command(*inp)).chunks(measure_chunk_size());
+
+    let mut res = vec![];
+
+    for chunk in &chunks {
+        let chunk_result: Vec<_> = join_all(chunk).await.into_iter().collect::<anyhow::Result<_>>()?;
+        res.extend(chunk_result);
+    }
 
     let res = inputs.into_iter().zip(res.into_iter()).collect_vec();
 
@@ -45,7 +61,7 @@ where
 
 /// This method runs the same command several times and checks if
 /// all executions took the same anmount of gas
-async fn redundant_command_measure<Fut>(mut command: impl FnMut() -> Fut) -> anyhow::Result<Gas>
+async fn _redundant_command_measure<Fut>(mut command: impl FnMut() -> Fut) -> anyhow::Result<Gas>
 where
     Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
 {

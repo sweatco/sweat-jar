@@ -1,0 +1,34 @@
+name: Measure
+
+on:
+  workflow_dispatch:
+    inputs:
+      number_of_jars:
+        description: 'Number of maximum user jars'
+        required: false
+        default: '20'
+      chunk_size:
+        description: 'Number of concurrent tests'
+        required: false
+        default: '5'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      MEASURE_JARS_COUNT: ${{ github.event.inputs.number_of_jars }}
+      MEASURE_CHUNK_SIZE: ${{ github.event.inputs.chunk_size }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@vv
+
+      - name: Measure gas
+        run: make measure
+
+      - name: Upload measure
+        uses: actions/upload-artifact@v3
+        with:
+          name: measured
+          path: measured.txt
