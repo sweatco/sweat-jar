@@ -6,19 +6,19 @@ on:
       number_of_jars:
         description: 'Number of maximum user jars'
         required: false
-        default: '20'
-      chunk_size:
-        description: 'Number of concurrent tests'
+        default: '5'
+      multiplier:
+        description: 'Jars multiplier'
         required: false
         default: '5'
 
 jobs:
-  build:
+  measure:
     runs-on: ubuntu-latest
 
     env:
       MEASURE_JARS_COUNT: ${{ github.event.inputs.number_of_jars }}
-      MEASURE_CHUNK_SIZE: ${{ github.event.inputs.chunk_size }}
+      MEASURE_JARS_MULTIPLIER: ${{ github.event.inputs.multiplier }}
 
     steps:
       - name: Checkout

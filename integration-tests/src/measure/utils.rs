@@ -1,4 +1,5 @@
 use std::env::var;
+use std::iter::once;
 use std::{fs::OpenOptions, future::Future, io::Write};
 
 use anyhow::{bail, Result};
@@ -9,28 +10,53 @@ use workspaces::{types::Gas, Account};
 
 use crate::{context::Context, product::RegisterProductCommand};
 
-pub fn number_of_jars_to_measure() -> usize {
-    var("MEASURE_JARS_COUNT").map(|val| val.parse().unwrap()).unwrap_or(20)
+const MEASURE_JARS_COUNT: usize = 5;
+const MEASURE_JARS_MULTIPLIER: usize = 10;
+
+fn number_of_jars_to_measure() -> usize {
+    var("MEASURE_JARS_COUNT")
+        .map(|val| val.parse().unwrap_or(MEASURE_JARS_COUNT))
+        .unwrap_or(MEASURE_JARS_COUNT)
 }
 
-pub fn measure_chunk_size() -> usize {
-    var("MEASURE_CHUNK_SIZE").map(|val| val.parse().unwrap()).unwrap_or(5)
+fn measure_jars_multiplier() -> usize {
+    var("MEASURE_JARS_MULTIPLIER")
+        .map(|val| val.parse().unwrap_or(MEASURE_JARS_MULTIPLIER))
+        .unwrap_or(MEASURE_JARS_MULTIPLIER)
+}
+
+pub fn measure_jars_range() -> Vec<usize> {
+    let vals = (1..=number_of_jars_to_measure()).map(|i| i * measure_jars_multiplier() + 1);
+
+    once(1).chain(vals).collect()
 }
 
 #[derive(Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MeasureData {
     total: u64,
-    pub cost: Vec<Gas>,
-    pub diff: Vec<i128>,
+    cost: Vec<String>,
+    diff: Vec<String>,
 }
 
 impl MeasureData {
-    pub fn new(cost: Vec<Gas>, diff: Vec<i128>) -> Self {
+    pub fn new(cost: Vec<(Gas, usize)>, diff: Vec<i128>) -> Self {
         MeasureData {
-            total: cost.iter().sum(),
-            cost,
-            diff,
+            total: cost.iter().map(|a| a.0).sum(),
+            cost: cost
+                .into_iter()
+                .map(|a| format!("  {} - number of jars: {}  ", format_number(a.0), a.1))
+                .collect(),
+            diff: diff
+                .into_iter()
+                .map(|a| {
+                    format!(
+                        "  {} - jar cost: {}  ",
+                        format_number(a),
+                        format_number(a / measure_jars_multiplier() as i128)
+                    )
+                })
+                .collect(),
         }
     }
 }
@@ -67,9 +93,9 @@ fn format_numbers(json_obj: &Value) -> Value {
     match json_obj {
         Value::Number(n) => {
             if let Some(n) = n.as_i64() {
-                Value::String(format_number(&n))
+                Value::String(format_number(n))
             } else if let Some(n) = n.as_u64() {
-                Value::String(format_number(&n))
+                Value::String(format_number(n))
             } else {
                 json_obj.clone()
             }
@@ -89,11 +115,11 @@ fn format_numbers(json_obj: &Value) -> Value {
     }
 }
 
-fn format_number<T: num_format::ToFormattedStr>(number: &T) -> String {
+fn format_number<T: num_format::ToFormattedStr>(number: T) -> String {
     let format = CustomFormat::builder().separator(" ").build().unwrap();
 
     let mut buf = Buffer::new();
-    buf.write_formatted(number, &format);
+    buf.write_formatted(&number, &format);
 
     buf.to_string()
 }

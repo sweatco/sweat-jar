@@ -3,10 +3,9 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use itertools::Itertools;
 use workspaces::types::Gas;
 
-use crate::measure::utils::{number_of_jars_to_measure, MeasureData};
+use crate::measure::utils::{measure_jars_range, MeasureData};
 use crate::{
     common::{prepare_contract, Prepared},
     measure::{
@@ -25,16 +24,16 @@ async fn measure_restake_total_test() -> Result<()> {
         let measured = scoped_command_measure(
             generate_permutations(
                 &[RegisterProductCommand::Locked10Minutes6Percents],
-                &(1..number_of_jars_to_measure()).collect_vec(),
+                &measure_jars_range(),
             ),
             measure_restake,
         )
         .await?;
 
-        let mut map: HashMap<RegisterProductCommand, Vec<Gas>> = HashMap::new();
+        let mut map: HashMap<RegisterProductCommand, Vec<(Gas, usize)>> = HashMap::new();
 
         for measure in measured {
-            map.entry(measure.0 .0).or_default().push(measure.1);
+            map.entry(measure.0 .0).or_default().push((measure.1, measure.0 .1));
         }
 
         let map: HashMap<RegisterProductCommand, _> = map
@@ -42,7 +41,7 @@ async fn measure_restake_total_test() -> Result<()> {
             .map(|(key, gas_cost)| {
                 let mut differences: Vec<i128> = Vec::new();
                 for i in 1..gas_cost.len() {
-                    let diff = gas_cost[i] as i128 - gas_cost[i - 1] as i128;
+                    let diff = gas_cost[i].0 as i128 - gas_cost[i - 1].0 as i128;
                     differences.push(diff);
                 }
 

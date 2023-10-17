@@ -44,3 +44,47 @@ jobs:
 
       - name: Integration tests
         run: make integration
+
+  measure:
+    needs: [ build, lint ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Measure gas
+        run: make measure
+
+      - name: Upload measure
+        uses: actions/upload-artifact@v3
+        with:
+          name: measured
+          path: measured.txt
+
+  push:
+    needs: [ unit-tests, integration-tests, measure ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
+          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
+
+      - name: Download binary
+        uses: actions/download-artifact@v3
+        with:
+          name: sweat-jar
+          path: res/
+
+      - name: Download measure
+        uses: actions/download-artifact@v3
+        with:
+          name: measured
+
+      - name: Commit & Push changes
+        uses: actions-js/push@master
+        with:
+          message: Updated binary and measure
+          branch: measure/test
+          github_token: ${{ secrets.ACTIONS_TOKEN }}
