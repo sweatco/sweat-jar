@@ -6,10 +6,12 @@ default-members = ["contract"]
 members = ["model", "contract", "integration-tests"]
 
 [workspace.dependencies]
+anyhow = "1.0.75"
 fake = "2.8.0"
 rand = "0.8.5"
 futures = "0.3.28"
 near-sdk = "4.1.1"
+num-format = "0.4.4"
 itertools = "0.11.0"
 ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 base64 = "0.21.3"

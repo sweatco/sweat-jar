@@ -1,3 +1,9 @@
+use anyhow::Result;
+use near_sdk::serde::Serialize;
+use num_format::{Buffer, CustomFormat};
+use serde_json::{to_string_pretty, to_value, Map, Value};
+use std::fs::OpenOptions;
+use std::io::Write;
 use workspaces::Account;
 
 use crate::{context::Context, product::RegisterProductCommand};
@@ -28,6 +34,72 @@ where
                 .flat_map(move |&item2| three.iter().map(move |&item3| (item1, item2, item3)))
         })
         .collect()
+}
+
+fn format_numbers(json_obj: &Value) -> Value {
+    match json_obj {
+        Value::Number(n) => {
+            if let Some(n) = n.as_i64() {
+                Value::String(format_number(&n))
+            } else if let Some(n) = n.as_u64() {
+                Value::String(format_number(&n))
+            } else {
+                json_obj.clone()
+            }
+        }
+        Value::Object(obj) => {
+            let mut new_obj = Map::new();
+            for (key, value) in obj {
+                new_obj.insert(key.clone(), format_numbers(value));
+            }
+            Value::Object(new_obj)
+        }
+        Value::Array(arr) => {
+            let new_arr: Vec<Value> = arr.iter().map(|v| format_numbers(v)).collect();
+            Value::Array(new_arr)
+        }
+        _ => json_obj.clone(),
+    }
+}
+
+fn format_number<T: num_format::ToFormattedStr>(number: &T) -> String {
+    let format = CustomFormat::builder().separator(" ").build().unwrap();
+
+    let mut buf = Buffer::new();
+    buf.write_formatted(number, &format);
+
+    buf.to_string()
+}
+
+#[test]
+fn a() {
+    let aa = vec![1000000, 100000000, 100000000];
+
+    let val = to_value(aa).unwrap();
+
+    let fdsdsf = format_numbers(&val);
+
+    println!("{}", to_string_pretty(&fdsdsf).unwrap());
+}
+
+pub fn append_measure<T: Serialize>(label: &str, data: T) -> Result<()> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create(true)
+        .open("../measured.txt")?;
+
+    let value = to_value(data)?;
+
+    let value = format_numbers(&value);
+
+    let json = to_string_pretty(&value)?;
+
+    let data = format!("{label}: \n{json}\n");
+
+    file.write_all(data.as_bytes())?;
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -1,6 +1,8 @@
+use near_sdk::serde::Serialize;
 use serde_json::{json, Value};
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Serialize, Debug, Copy, Clone, Eq, PartialEq, Hash)]
+#[serde(crate = "near_sdk::serde")]
 pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,
