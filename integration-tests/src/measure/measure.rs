@@ -33,9 +33,9 @@ where
     let inputs = inputs.into_iter().collect_vec();
 
     // async concurrent execution
-    // let all = inputs.iter().map(|inp| command(*inp)).collect_vec();
-    //
-    // let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
+    let all = inputs.iter().map(|inp| command(*inp)).collect_vec();
+
+    let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
 
     // sequential execution
     // let mut res = vec![];
@@ -45,14 +45,14 @@ where
     // }
 
     // Too many concurrent jobs may overwhelm workspaces test framework
-    let chunks = inputs.iter().map(|inp| command(*inp)).chunks(measure_chunk_size());
-
-    let mut res = vec![];
-
-    for chunk in &chunks {
-        let chunk_result: Vec<_> = join_all(chunk).await.into_iter().collect::<anyhow::Result<_>>()?;
-        res.extend(chunk_result);
-    }
+    // let chunks = inputs.iter().map(|inp| command(*inp)).chunks(measure_chunk_size());
+    //
+    // let mut res = vec![];
+    //
+    // for chunk in &chunks {
+    //     let chunk_result: Vec<_> = join_all(chunk).await.into_iter().collect::<anyhow::Result<_>>()?;
+    //     res.extend(chunk_result);
+    // }
 
     let res = inputs.into_iter().zip(res.into_iter()).collect_vec();
 
