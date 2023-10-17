@@ -1,7 +1,5 @@
-use std::{
-    process::{Command, Stdio},
-    sync::atomic::{AtomicBool, Ordering},
-};
+use std::process::{Command, Stdio};
+use std::sync::Mutex;
 
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
@@ -44,11 +42,13 @@ impl ValueGetters for Value {
     }
 }
 
-static CONTRACT_READY: AtomicBool = AtomicBool::new(false);
+static CONTRACT_READY: Mutex<bool> = Mutex::new(false);
 
 /// Compile contract in release mode and prepare it for integration tests usage
 pub fn build_contract() -> anyhow::Result<()> {
-    if CONTRACT_READY.load(Ordering::Relaxed) {
+    let mut ready = CONTRACT_READY.lock().unwrap();
+
+    if *ready {
         return Ok(());
     }
 
@@ -59,7 +59,7 @@ pub fn build_contract() -> anyhow::Result<()> {
         .stderr(Stdio::inherit())
         .output()?;
 
-    CONTRACT_READY.store(true, Ordering::Relaxed);
+    *ready = true;
 
     Ok(())
 }
