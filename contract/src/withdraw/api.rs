@@ -71,8 +71,10 @@ impl WithdrawApi for Contract {
 
         assert_is_liquidable(&jar, product, now);
 
-        let (close_jar, withdrawn_jar) = jar.withdrawn(product, amount, now);
-        *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar.locked();
+        let (close_jar, mut withdrawn_jar) = jar.withdrawn(product, amount, now);
+
+        withdrawn_jar.lock();
+        *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
 
         self.transfer_withdraw(&account_id, amount, &jar, close_jar)
     }
