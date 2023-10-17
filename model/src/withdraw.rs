@@ -33,7 +33,7 @@ impl WithdrawView {
 mod test {
     use near_sdk::{json_types::U128, AccountId};
 
-    use crate::{withdraw::WithdrawView, Fee};
+    use crate::withdraw::{Fee, WithdrawView};
 
     #[test]
     fn withdrawal_view() {

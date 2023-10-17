@@ -2,56 +2,61 @@
 
 use std::collections::HashMap;
 
+use anyhow::Result;
 use itertools::Itertools;
 use workspaces::types::Gas;
 
-use crate::measure::utils::append_measure;
+use crate::measure::utils::MeasureData;
 use crate::{
     common::{prepare_contract, Prepared},
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
-        utils::{add_jar, generate_permutations},
+        utils::{add_jar, append_measure, generate_permutations, retry_until_ok},
     },
     product::RegisterProductCommand,
 };
 
 #[ignore]
 #[tokio::test]
-async fn measure_claim_total_test() -> anyhow::Result<()> {
-    let measured = scoped_command_measure(
-        generate_permutations(
-            &[
-                RegisterProductCommand::Locked10Minutes6Percents,
-                RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee,
-                RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee,
-            ],
-            &(1..8).collect_vec(),
-        ),
-        measure_claim,
-    )
-    .await?;
+async fn measure_claim_total_test() -> Result<()> {
+    async fn claim() -> Result<()> {
+        let measured = scoped_command_measure(
+            generate_permutations(
+                &[
+                    RegisterProductCommand::Locked10Minutes6Percents,
+                    RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee,
+                    RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee,
+                ],
+                &(1..8).collect_vec(),
+            ),
+            measure_claim,
+        )
+        .await?;
 
-    let mut map: HashMap<RegisterProductCommand, Vec<Gas>> = HashMap::new();
+        let mut map: HashMap<RegisterProductCommand, Vec<Gas>> = HashMap::new();
 
-    for measure in measured {
-        map.entry(measure.0 .0).or_default().push(measure.1);
+        for measure in measured {
+            map.entry(measure.0 .0).or_default().push(measure.1);
+        }
+
+        let map: HashMap<RegisterProductCommand, _> = map
+            .into_iter()
+            .map(|(key, gas_cost)| {
+                let mut differences: Vec<i128> = Vec::new();
+                for i in 1..gas_cost.len() {
+                    let diff = gas_cost[i] as i128 - gas_cost[i - 1] as i128;
+                    differences.push(diff);
+                }
+
+                (key, MeasureData::new(gas_cost, differences))
+            })
+            .collect();
+
+        append_measure("claim", map)
     }
 
-    let map: HashMap<RegisterProductCommand, _> = map
-        .into_iter()
-        .map(|(key, gas_cost)| {
-            let mut differences: Vec<i128> = Vec::new();
-            for i in 1..gas_cost.len() {
-                let diff = gas_cost[i] as i128 - gas_cost[i - 1] as i128;
-                differences.push(diff);
-            }
-
-            (key, (gas_cost, differences))
-        })
-        .collect();
-
-    append_measure("claim", map)?;
+    retry_until_ok(claim).await?;
 
     Ok(())
 }

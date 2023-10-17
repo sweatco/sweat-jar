@@ -1,12 +1,30 @@
-use anyhow::Result;
+use std::{fs::OpenOptions, future::Future, io::Write};
+
+use anyhow::{bail, Result};
 use near_sdk::serde::Serialize;
 use num_format::{Buffer, CustomFormat};
 use serde_json::{to_string_pretty, to_value, Map, Value};
-use std::fs::OpenOptions;
-use std::io::Write;
-use workspaces::Account;
+use workspaces::{types::Gas, Account};
 
 use crate::{context::Context, product::RegisterProductCommand};
+
+#[derive(Serialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct MeasureData {
+    total: u64,
+    pub cost: Vec<Gas>,
+    pub diff: Vec<i128>,
+}
+
+impl MeasureData {
+    pub fn new(cost: Vec<Gas>, diff: Vec<i128>) -> Self {
+        MeasureData {
+            total: cost.iter().sum(),
+            cost,
+            diff,
+        }
+    }
+}
 
 pub(crate) fn generate_permutations<One, Two>(one: &[One], two: &[Two]) -> Vec<(One, Two)>
 where
@@ -89,6 +107,21 @@ pub fn append_measure<T: Serialize>(label: &str, data: T) -> Result<()> {
     file.write_all(data.as_bytes())?;
 
     Ok(())
+}
+
+/// Measure tests have too many different concurrent operations and may be flaky
+pub async fn retry_until_ok<Res: Future<Output = Result<()>>>(mut job: impl FnMut() -> Res) -> Result<()> {
+    let mut limit = 10;
+
+    while let Err(err) = job().await {
+        dbg!(&err);
+        limit -= 1;
+        if limit == 0 {
+            bail!("Too many retries");
+        }
+    }
+
+    return Ok(());
 }
 
 #[cfg(test)]
