@@ -61,6 +61,12 @@ jobs:
       - name: Measure gas
         run: make measure
 
+      - name: Upload measure
+        uses: actions/upload-artifact@v3
+        with:
+          name: measured
+          path: measured.txt
+
   push:
     needs: [ unit-tests, integration-tests, measure ]
     runs-on: ubuntu-latest
@@ -76,6 +82,11 @@ jobs:
         with:
           name: sweat-jar
           path: res/
+
+      - name: Download measure
+        uses: actions/download-artifact@v3
+        with:
+          name: measured
 
       - name: Commit & Push changes
         uses: actions-js/push@master
