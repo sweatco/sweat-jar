@@ -11,7 +11,7 @@ use workspaces::{types::Gas, Account};
 use crate::{context::Context, product::RegisterProductCommand};
 
 const MEASURE_JARS_COUNT: usize = 5;
-const MEASURE_JARS_MULTIPLIER: usize = 20;
+const MEASURE_JARS_MULTIPLIER: usize = 10;
 
 fn number_of_jars_to_measure() -> usize {
     var("MEASURE_JARS_COUNT")
@@ -26,31 +26,17 @@ fn measure_jars_multiplier() -> usize {
 }
 
 pub fn measure_jars_range() -> Vec<usize> {
-    let vals = (1..number_of_jars_to_measure()).map(|i| i * measure_jars_multiplier());
+    let vals = (1..=number_of_jars_to_measure()).map(|i| i * measure_jars_multiplier() + 1);
 
     once(1).chain(vals).collect()
 }
 
 #[derive(Serialize)]
 #[serde(crate = "near_sdk::serde")]
-struct Cost {
-    cost: Gas,
-    number_of_jars: usize,
-}
-
-#[derive(Serialize)]
-#[serde(crate = "near_sdk::serde")]
-struct Diff {
-    diff: i128,
-    jar_cost: i128,
-}
-
-#[derive(Serialize)]
-#[serde(crate = "near_sdk::serde")]
 pub struct MeasureData {
     total: u64,
-    cost: Vec<Cost>,
-    diff: Vec<Diff>,
+    cost: Vec<String>,
+    diff: Vec<String>,
 }
 
 impl MeasureData {
@@ -59,16 +45,16 @@ impl MeasureData {
             total: cost.iter().map(|a| a.0).sum(),
             cost: cost
                 .into_iter()
-                .map(|a| Cost {
-                    cost: a.0,
-                    number_of_jars: a.1,
-                })
+                .map(|a| format!("  {} - number of jars: {}  ", format_number(a.0), a.1))
                 .collect(),
             diff: diff
                 .into_iter()
-                .map(|a| Diff {
-                    diff: a,
-                    jar_cost: a / measure_jars_multiplier() as i128,
+                .map(|a| {
+                    format!(
+                        "  {} - jar cost: {}  ",
+                        format_number(a),
+                        format_number(a / measure_jars_multiplier() as i128)
+                    )
                 })
                 .collect(),
         }
@@ -107,9 +93,9 @@ fn format_numbers(json_obj: &Value) -> Value {
     match json_obj {
         Value::Number(n) => {
             if let Some(n) = n.as_i64() {
-                Value::String(format_number(&n))
+                Value::String(format_number(n))
             } else if let Some(n) = n.as_u64() {
-                Value::String(format_number(&n))
+                Value::String(format_number(n))
             } else {
                 json_obj.clone()
             }
@@ -129,11 +115,11 @@ fn format_numbers(json_obj: &Value) -> Value {
     }
 }
 
-fn format_number<T: num_format::ToFormattedStr>(number: &T) -> String {
+fn format_number<T: num_format::ToFormattedStr>(number: T) -> String {
     let format = CustomFormat::builder().separator(" ").build().unwrap();
 
     let mut buf = Buffer::new();
-    buf.write_formatted(number, &format);
+    buf.write_formatted(&number, &format);
 
     buf.to_string()
 }
