@@ -71,17 +71,6 @@ fn format_number<T: num_format::ToFormattedStr>(number: &T) -> String {
     buf.to_string()
 }
 
-#[test]
-fn a() {
-    let aa = vec![1000000, 100000000, 100000000];
-
-    let val = to_value(aa).unwrap();
-
-    let fdsdsf = format_numbers(&val);
-
-    println!("{}", to_string_pretty(&fdsdsf).unwrap());
-}
-
 pub fn append_measure<T: Serialize>(label: &str, data: T) -> Result<()> {
     let mut file = OpenOptions::new()
         .write(true)
