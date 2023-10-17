@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use model::{
     jar::JarIdView,
     withdraw::{Fee, WithdrawView},
@@ -74,8 +72,7 @@ impl WithdrawApi for Contract {
         assert_is_liquidable(&jar, product, now);
 
         let (close_jar, withdrawn_jar) = jar.withdrawn(product, amount, now);
-        *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
-        self.get_jar_mut_internal(&account_id, jar.id).lock();
+        *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar.locked();
 
         self.transfer_withdraw(&account_id, amount, &jar, close_jar)
     }
