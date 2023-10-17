@@ -8,6 +8,8 @@ use workspaces::{types::Gas, Account};
 
 use crate::{context::Context, product::RegisterProductCommand};
 
+pub const NUMBER_OF_JARS_TO_MEASURE: usize = 20;
+
 #[derive(Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MeasureData {
