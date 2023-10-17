@@ -32,16 +32,16 @@ where
     let inputs = inputs.into_iter().collect_vec();
 
     // async concurrent execution
-    // let all = inputs.iter().map(|inp| command(*inp)).collect_vec();
-    //
-    // let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
+    let all = inputs.iter().map(|inp| command(*inp)).collect_vec();
+
+    let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
 
     // sequential execution
-    let mut res = vec![];
-
-    for input in &inputs {
-        res.push(command(*input).await?);
-    }
+    // let mut res = vec![];
+    //
+    // for input in &inputs {
+    //     res.push(command(*input).await?);
+    // }
 
     // Too many concurrent jobs may overwhelm workspaces test framework
     // let chunks = inputs.iter().map(|inp| command(*inp)).chunks(measure_chunk_size());

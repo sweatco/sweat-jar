@@ -1,4 +1,5 @@
 use std::env::var;
+use std::iter::once;
 use std::{fs::OpenOptions, future::Future, io::Write};
 
 use anyhow::{bail, Result};
@@ -9,30 +10,39 @@ use workspaces::{types::Gas, Account};
 
 use crate::{context::Context, product::RegisterProductCommand};
 
-pub fn number_of_jars_to_measure() -> usize {
+const MEASURE_JARS_COUNT: usize = 5;
+const MEASURE_JARS_MULTIPLIER: usize = 20;
+
+fn number_of_jars_to_measure() -> usize {
     var("MEASURE_JARS_COUNT")
-        .map(|val| val.parse().unwrap_or(20))
-        .unwrap_or(20)
+        .map(|val| val.parse().unwrap_or(MEASURE_JARS_COUNT))
+        .unwrap_or(MEASURE_JARS_COUNT)
 }
 
-pub fn _measure_chunk_size() -> usize {
-    var("MEASURE_CHUNK_SIZE")
-        .map(|val| val.parse().unwrap_or(5))
-        .unwrap_or(5)
+fn measure_jars_multiplier() -> usize {
+    var("MEASURE_JARS_MULTIPLIER")
+        .map(|val| val.parse().unwrap_or(MEASURE_JARS_MULTIPLIER))
+        .unwrap_or(MEASURE_JARS_MULTIPLIER)
+}
+
+pub fn measure_jars_range() -> Vec<usize> {
+    let vals = (1..number_of_jars_to_measure()).map(|i| i * measure_jars_multiplier());
+
+    once(1).chain(vals).collect()
 }
 
 #[derive(Serialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct MeasureData {
     total: u64,
-    pub cost: Vec<Gas>,
+    pub cost: Vec<(Gas, usize)>,
     pub diff: Vec<i128>,
 }
 
 impl MeasureData {
-    pub fn new(cost: Vec<Gas>, diff: Vec<i128>) -> Self {
+    pub fn new(cost: Vec<(Gas, usize)>, diff: Vec<i128>) -> Self {
         MeasureData {
-            total: cost.iter().sum(),
+            total: cost.iter().map(|a| a.0).sum(),
             cost,
             diff,
         }
