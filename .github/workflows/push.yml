@@ -15,6 +15,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Actor
+        run: echo ${{ github.actor }}
+
       - name: Build
         run: make build-in-docker
 
@@ -89,7 +92,7 @@ jobs:
           name: measured
 
       - name: Commit & Push changes
-        if: ${{ github.actor != 'github-actions[bot]' }}
+        if: ${{ github.actor != 'sweatcoin' }}
         uses: actions-js/push@master
         with:
           message: Updated binary and measure
