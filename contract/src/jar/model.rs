@@ -82,7 +82,7 @@ pub struct Jar {
 /// This cache is updated whenever properties that impact interest calculation change,
 /// allowing for efficient interest calculations between state changes.
 #[derive(
-    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Copy,
 )]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarCache {
@@ -405,4 +405,22 @@ impl Contract {
             .verify_strict(ticket_hash, &signature)
             .is_ok()
     }
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct JarClaimData {
+    pub id: JarId,
+    pub available_interest: u128,
+    pub interest_to_claim: u128,
+    pub claimed_balance_before: u128,
+}
+
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct ClaimData {
+    pub timestamp: u64,
+    pub total_claimed_amount: u128,
+    pub account_id: AccountId,
+    pub jars: Vec<JarClaimData>,
 }

@@ -3053,6 +3053,7 @@ dependencies = [
  "near-sdk",
  "near-self-update",
  "rand 0.8.5",
+ "serde",
  "sha256",
 ]
 

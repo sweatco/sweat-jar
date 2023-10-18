@@ -15,6 +15,7 @@ near-contract-standards = "4.1.1"
 near-self-update = { git = "https://github.com/sweatco/near-self-update.git", rev = "7064db3cdd924efc7fa7c00664920a2b482e7bcf" }
 
 model = { workspace = true }
+serde = { version = "1.0.188", features = ["derive"] }
 
 [dev-dependencies]
 fake = { workspace = true }
