@@ -150,9 +150,11 @@ impl Contract {
             let jar = self.get_jar_mut_internal(&claim_data.account_id, claimed_jar.id);
             jar.unlock();
 
+            let jar = jar.clone();
+
             if let Some(ref cache) = jar.cache {
                 if cache.interest == 0 && jar.principal == 0 {
-                    self.delete_jar(&claim_data.account_id, claimed_jar.id);
+                    self.delete_jar(jar);
                 }
             }
         }
