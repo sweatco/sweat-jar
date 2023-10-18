@@ -10,7 +10,7 @@ on:
       multiplier:
         description: 'Jars multiplier'
         required: false
-        default: '5'
+        default: '10'
 
 jobs:
   measure:
