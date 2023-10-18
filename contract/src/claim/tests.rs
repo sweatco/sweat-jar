@@ -167,7 +167,7 @@ fn failed_future_claim() {
 
     context.switch_account(&alice);
 
-    let mut jar_before_claim = context.contract.get_jar_internal(&alice, jar.id).clone();
+    let jar_before_claim = context.contract.get_jar_internal(&alice, jar.id).clone();
 
     let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(200_000))) else {
         panic!()
@@ -176,8 +176,6 @@ fn failed_future_claim() {
     assert_eq!(claimed.0, 0);
 
     let jar_after_claim = context.contract.get_jar_internal(&alice, jar.id);
-
-    jar_before_claim.cache = jar_after_claim.cache;
 
     assert_eq!(&jar_before_claim, jar_after_claim);
 }

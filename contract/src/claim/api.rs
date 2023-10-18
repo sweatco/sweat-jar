@@ -78,6 +78,7 @@ impl ClaimApi for Contract {
             }
 
             let claimed_balance_before = jar.claimed_balance;
+            let cache_before = jar.cache;
 
             let jar =
                 self.get_jar_mut_internal(&jar.account_id, jar.id)
@@ -97,6 +98,7 @@ impl ClaimApi for Contract {
                 available_interest,
                 interest_to_claim,
                 claimed_balance_before,
+                cache_before,
             });
         }
 
@@ -141,6 +143,7 @@ impl Contract {
                 let jar = self.get_jar_mut_internal(&claim_data.account_id, claimed_jar.id);
                 jar.unlock();
                 jar.claimed_balance = claimed_jar.claimed_balance_before;
+                jar.cache = claimed_jar.cache_before;
             }
 
             return U128(0);

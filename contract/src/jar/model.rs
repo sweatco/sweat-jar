@@ -414,6 +414,7 @@ pub struct JarClaimData {
     pub available_interest: u128,
     pub interest_to_claim: u128,
     pub claimed_balance_before: u128,
+    pub cache_before: Option<JarCache>,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
