@@ -1,5 +1,6 @@
 use model::{jar::JarIdView, ProductId};
 use near_sdk::require;
+use std::collections::HashMap;
 
 use crate::{env, jar::model::JarId, AccountId, Contract, Jar, Product};
 
@@ -40,20 +41,16 @@ impl Contract {
     }
 
     pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<&Jar> {
-        let mut result: Vec<&Jar> = vec![];
+        // iterates once over jars and once over ids
+        let jars: HashMap<JarId, &Jar> = self.account_jars(account_id).iter().map(|jar| (jar.id, jar)).collect();
 
-        let all_jars = self.account_jars(account_id);
-
-        for id in ids {
-            result.push(
-                all_jars
-                    .iter()
-                    .find(|jar| jar.id == id.0)
-                    .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0))),
-            );
-        }
-
-        result
+        ids.iter()
+            .map(|id| {
+                *jars
+                    .get(&id.0)
+                    .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0)))
+            })
+            .collect()
     }
 
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
