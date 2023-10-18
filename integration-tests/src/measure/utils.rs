@@ -1,6 +1,4 @@
-use std::env::var;
-use std::iter::once;
-use std::{fs::OpenOptions, future::Future, io::Write};
+use std::{env::var, fs::OpenOptions, future::Future, io::Write, iter::once};
 
 use anyhow::{bail, Result};
 use near_sdk::serde::Serialize;
