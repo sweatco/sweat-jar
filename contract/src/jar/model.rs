@@ -155,20 +155,19 @@ impl Jar {
         self
     }
 
-    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> (bool, Self) {
-        let current_interest = self.get_interest(product, now);
+    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
+        Self {
+            principal: self.principal - withdrawn_amount,
+            cache: Some(JarCache {
+                updated_at: now,
+                interest: self.get_interest(product, now),
+            }),
+            ..self.clone()
+        }
+    }
 
-        (
-            should_be_closed(product, self, withdrawn_amount) && current_interest == 0,
-            Self {
-                principal: self.principal - withdrawn_amount,
-                cache: Some(JarCache {
-                    updated_at: now,
-                    interest: current_interest,
-                }),
-                ..self.clone()
-            },
-        )
+    pub(crate) fn should_be_closed(&self, product: &Product, now: Timestamp) -> bool {
+        !product.is_flexible() && self.principal == 0 && self.get_interest(product, now) == 0
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -226,10 +225,6 @@ impl Jar {
             Terms::Flexible => now,
         }
     }
-}
-
-fn should_be_closed(product: &Product, original_jar: &Jar, withdrawn_amount: TokenAmount) -> bool {
-    !(product.is_flexible() || original_jar.principal - withdrawn_amount > 0)
 }
 
 impl Contract {

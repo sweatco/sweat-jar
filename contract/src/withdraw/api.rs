@@ -73,7 +73,8 @@ impl WithdrawApi for Contract {
 
         assert_is_liquidable(&jar, product, now);
 
-        let (close_jar, mut withdrawn_jar) = jar.withdrawn(product, amount, now);
+        let mut withdrawn_jar = jar.withdrawn(product, amount, now);
+        let close_jar = withdrawn_jar.should_be_closed(product, now);
 
         withdrawn_jar.lock();
         *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
@@ -109,9 +110,9 @@ impl Contract {
 
             withdrawal_result
         } else {
-            let stored_jar = self.get_jar_mut_internal(&account_id, jar_id);
-
-            *stored_jar = original_jar.unlocked();
+            let jar = self.get_jar_mut_internal(&account_id, jar_id);
+            jar.principal += withdrawn_amount;
+            jar.unlock();
 
             WithdrawView::new(0, None)
         }
