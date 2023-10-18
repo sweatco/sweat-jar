@@ -91,7 +91,7 @@ impl Contract {
     ) -> WithdrawView {
         if is_promise_success {
             if close_jar {
-                self.delete_jar(original_jar.clone());
+                self.delete_jar(&original_jar.account_id, original_jar.id);
             } else {
                 self.get_jar_mut_internal(&original_jar.account_id, original_jar.id)
                     .unlock();

@@ -145,7 +145,7 @@ impl Contract {
 
                 if let Some(ref cache) = jar.cache {
                     if cache.interest == 0 && jar.principal == 0 {
-                        self.delete_jar(jar_before_transfer);
+                        self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
                     }
                 }
             }

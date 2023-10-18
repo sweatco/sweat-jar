@@ -278,40 +278,29 @@ impl Contract {
         U128(principal)
     }
 
-    pub(crate) fn delete_jar(&mut self, jar: Jar) {
-        let account = &jar.account_id;
-
+    pub(crate) fn delete_jar(&mut self, account_id: &AccountId, jar_id: JarId) {
         let jars = self
             .account_jars
-            .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")));
+            .get_mut(account_id)
+            .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")));
 
-        require!(!jars.is_empty(), "Trying to delete jar from empty account");
-
-        if jars.len() == 1 {
-            jars.clear();
-            return;
-        }
-
-        // On jar deletion, we move the last jar in the vector in the deleted jar's place.
-        // This way we don't need to shift all jars to fill empty space in the vector.
+        require!(
+            !jars.is_empty(),
+            "Trying to delete a jar from account without any jars."
+        );
 
         let jar_position = jars
             .iter()
-            .position(|j| j.id == jar.id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id {} doesn't exist", jar.id)));
+            .position(|j| j.id == jar_id)
+            .unwrap_or_else(|| panic_str(&format!("Jar with id {jar_id} doesn't exist")));
 
-        let last_jar = jars.pop().unwrap();
-
-        if jar_position != jars.len() {
-            jars[jar_position] = last_jar;
-        }
+        jars.swap_remove(jar_position);
     }
 
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
         self.account_jars
             .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
+            .unwrap_or_else(|| panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar_mut(id)
     }
 
