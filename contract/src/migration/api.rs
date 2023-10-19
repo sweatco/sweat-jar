@@ -64,15 +64,15 @@ impl Contract {
                 is_penalty_applied: false,
             };
 
-            account_jars.push(jar.clone());
-
             total_amount += jar.principal;
 
             event_data.push(MigrationEventItem {
                 original_id: ce_fi_jar.id,
                 id: jar.id,
-                account_id: jar.account_id,
+                account_id: jar.account_id.clone(),
             });
+
+            account_jars.push(jar);
         }
 
         require!(
