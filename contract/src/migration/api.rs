@@ -1,5 +1,5 @@
-use model::{ProductId, TokenAmount};
-use near_sdk::{__private::schemars::Set, json_types::U128, require};
+use model::TokenAmount;
+use near_sdk::{json_types::U128, require};
 
 use crate::{
     event::{emit, EventKind, MigrationEventItem},
@@ -42,11 +42,9 @@ impl Contract {
         let mut event_data: Vec<MigrationEventItem> = vec![];
         let mut total_amount: TokenAmount = 0;
 
-        let product_ids: Set<ProductId> = self.products.keys().cloned().collect();
-
         for ce_fi_jar in jars {
             require!(
-                product_ids.contains(&ce_fi_jar.product_id),
+                self.products.contains_key(&ce_fi_jar.product_id),
                 format!("Product {} is not registered", ce_fi_jar.product_id),
             );
 
@@ -66,15 +64,15 @@ impl Contract {
                 is_penalty_applied: false,
             };
 
-            account_jars.push(jar.clone());
-
             total_amount += jar.principal;
 
             event_data.push(MigrationEventItem {
                 original_id: ce_fi_jar.id,
                 id: jar.id,
-                account_id: jar.account_id,
+                account_id: jar.account_id.clone(),
             });
+
+            account_jars.push(jar);
         }
 
         require!(

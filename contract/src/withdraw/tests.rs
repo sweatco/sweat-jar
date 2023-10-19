@@ -213,6 +213,7 @@ fn test_failed_withdraw_promise() {
 fn test_failed_withdraw_internal() {
     let product = generate_product();
     let (alice, reference_jar, mut context) = prepare_jar(&product);
+    let withdrawn_amount = 1_234;
 
     let jar_view = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
     let jar = context
@@ -223,14 +224,19 @@ fn test_failed_withdraw_internal() {
         .iter()
         .next()
         .unwrap();
-    let withdraw = context
-        .contract
-        .after_withdraw_internal(jar.clone(), true, 1234, None, false);
+
+    let withdraw =
+        context
+            .contract
+            .after_withdraw_internal(jar.account_id.clone(), jar.id, true, withdrawn_amount, None, false);
 
     assert_eq!(withdraw.withdrawn_amount, U128(0));
     assert_eq!(withdraw.fee, U128(0));
 
-    assert_eq!(jar_view, context.contract.get_jar(alice, U32(0)));
+    assert_eq!(
+        jar_view.principal.0 + withdrawn_amount,
+        context.contract.get_jar(alice, U32(0)).principal.0
+    );
 }
 
 pub(crate) fn generate_product() -> Product {

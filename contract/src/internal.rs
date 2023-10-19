@@ -1,6 +1,7 @@
+use std::collections::HashMap;
+
 use model::{jar::JarIdView, ProductId};
 use near_sdk::require;
-use std::collections::HashMap;
 
 use crate::{env, jar::model::JarId, AccountId, Contract, Jar, Product};
 

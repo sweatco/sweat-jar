@@ -200,7 +200,8 @@ impl JarApi for Contract {
             now,
         );
 
-        let (should_be_closed, withdraw_jar) = jar.withdrawn(product, principal, now);
+        let withdraw_jar = jar.withdrawn(product, principal, now);
+        let should_be_closed = withdraw_jar.should_be_closed(product, now);
 
         if should_be_closed {
             self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);

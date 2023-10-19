@@ -9,6 +9,7 @@ use crate::{
     assert::{assert_is_liquidable, assert_not_locked, assert_sufficient_balance},
     assert_ownership, env,
     event::{emit, EventKind, WithdrawData},
+    jar::model::JarId,
     product::model::WithdrawalFee,
     AccountId, Contract, ContractExt, Jar, Product,
 };
@@ -45,7 +46,8 @@ pub trait WithdrawApi {
 pub trait WithdrawCallbacks {
     fn after_withdraw(
         &mut self,
-        jar_before_transfer: Jar,
+        account_id: AccountId,
+        jar_id: JarId,
         close_jar: bool,
         withdrawn_amount: TokenAmount,
         fee: Option<Fee>,
@@ -71,7 +73,8 @@ impl WithdrawApi for Contract {
 
         assert_is_liquidable(&jar, product, now);
 
-        let (close_jar, mut withdrawn_jar) = jar.withdrawn(product, amount, now);
+        let mut withdrawn_jar = jar.withdrawn(product, amount, now);
+        let close_jar = withdrawn_jar.should_be_closed(product, now);
 
         withdrawn_jar.lock();
         *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
@@ -83,7 +86,8 @@ impl WithdrawApi for Contract {
 impl Contract {
     pub(crate) fn after_withdraw_internal(
         &mut self,
-        original_jar: Jar,
+        account_id: AccountId,
+        jar_id: JarId,
         close_jar: bool,
         withdrawn_amount: TokenAmount,
         fee: Option<Fee>,
@@ -91,25 +95,24 @@ impl Contract {
     ) -> WithdrawView {
         if is_promise_success {
             if close_jar {
-                self.delete_jar(&original_jar.account_id, original_jar.id);
+                self.delete_jar(&account_id, jar_id);
             } else {
-                self.get_jar_mut_internal(&original_jar.account_id, original_jar.id)
-                    .unlock();
+                self.get_jar_mut_internal(&account_id, jar_id).unlock();
             }
 
             let withdrawal_result = WithdrawView::new(withdrawn_amount, fee);
 
             emit(EventKind::Withdraw(WithdrawData {
-                id: original_jar.id,
+                id: jar_id,
                 withdrawn_amount: withdrawal_result.withdrawn_amount,
                 fee_amount: withdrawal_result.fee,
             }));
 
             withdrawal_result
         } else {
-            let stored_jar = self.get_jar_mut_internal(&original_jar.account_id, original_jar.id);
-
-            *stored_jar = original_jar.unlocked();
+            let jar = self.get_jar_mut_internal(&account_id, jar_id);
+            jar.principal += withdrawn_amount;
+            jar.unlock();
 
             WithdrawView::new(0, None)
         }
@@ -144,19 +147,26 @@ impl Contract {
 
         self.ft_contract()
             .transfer(account_id, amount, "withdraw", &fee)
-            .then(Self::after_withdraw_call(jar.clone(), close_jar, amount, &fee))
+            .then(Self::after_withdraw_call(
+                account_id.clone(),
+                jar.id,
+                close_jar,
+                amount,
+                &fee,
+            ))
             .into()
     }
 
     fn after_withdraw_call(
-        jar_before_transfer: Jar,
+        account_id: AccountId,
+        jar_id: JarId,
         close_jar: bool,
         withdrawn_balance: TokenAmount,
         fee: &Option<Fee>,
     ) -> Promise {
         ext_self::ext(env::current_account_id())
             .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_WITHDRAW)
-            .after_withdraw(jar_before_transfer, close_jar, withdrawn_balance, fee.clone())
+            .after_withdraw(account_id, jar_id, close_jar, withdrawn_balance, fee.clone())
     }
 }
 
@@ -164,7 +174,7 @@ impl Contract {
 impl Contract {
     fn transfer_withdraw(
         &mut self,
-        _: &AccountId,
+        account_id: &AccountId,
         amount: TokenAmount,
         jar: &Jar,
         close_jar: bool,
@@ -173,7 +183,8 @@ impl Contract {
         let fee = self.get_fee(product, jar);
 
         let withdrawn = self.after_withdraw_internal(
-            jar.clone(),
+            account_id.clone(),
+            jar.id,
             close_jar,
             amount,
             fee,
@@ -189,13 +200,15 @@ impl WithdrawCallbacks for Contract {
     #[private]
     fn after_withdraw(
         &mut self,
-        jar_before_transfer: Jar,
+        account_id: AccountId,
+        jar_id: JarId,
         close_jar: bool,
         withdrawn_amount: TokenAmount,
         fee: Option<Fee>,
     ) -> WithdrawView {
         self.after_withdraw_internal(
-            jar_before_transfer,
+            account_id,
+            jar_id,
             close_jar,
             withdrawn_amount,
             fee,

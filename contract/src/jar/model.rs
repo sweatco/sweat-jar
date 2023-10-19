@@ -155,20 +155,19 @@ impl Jar {
         self
     }
 
-    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> (bool, Self) {
-        let current_interest = self.get_interest(product, now);
+    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
+        Self {
+            principal: self.principal - withdrawn_amount,
+            cache: Some(JarCache {
+                updated_at: now,
+                interest: self.get_interest(product, now),
+            }),
+            ..self.clone()
+        }
+    }
 
-        (
-            should_be_closed(product, self, withdrawn_amount) && current_interest == 0,
-            Self {
-                principal: self.principal - withdrawn_amount,
-                cache: Some(JarCache {
-                    updated_at: now,
-                    interest: current_interest,
-                }),
-                ..self.clone()
-            },
-        )
+    pub(crate) fn should_be_closed(&self, product: &Product, now: Timestamp) -> bool {
+        !product.is_flexible() && self.principal == 0 && self.get_interest(product, now) == 0
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -226,10 +225,6 @@ impl Jar {
             Terms::Flexible => now,
         }
     }
-}
-
-fn should_be_closed(product: &Product, original_jar: &Jar, withdrawn_amount: TokenAmount) -> bool {
-    !(product.is_flexible() || original_jar.principal - withdrawn_amount > 0)
 }
 
 impl Contract {
@@ -318,7 +313,7 @@ impl Contract {
         ticket: &JarTicket,
         signature: Option<Base64VecU8>,
     ) {
-        let last_jar_id = self.account_jars.entry(account_id.clone()).or_default().last_id;
+        let last_jar_id = self.account_jars.get(account_id).map(|jars| jars.last_id);
         let product = self.get_product(&ticket.product_id);
 
         if let Some(pk) = &product.public_key {
@@ -328,10 +323,6 @@ impl Contract {
 
             let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
             require!(is_time_valid, "Ticket is outdated");
-
-            // If this is the first jar for this user ever, oracle will send empty string as nonce.
-            // Which is equivalent to `None` value here.
-            let last_jar_id = if last_jar_id == 0 { None } else { Some(last_jar_id) };
 
             let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
