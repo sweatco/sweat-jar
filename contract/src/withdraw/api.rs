@@ -7,7 +7,7 @@ use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen,
 
 use crate::{
     assert::{assert_is_liquidable, assert_not_locked, assert_sufficient_balance},
-    assert_ownership, env,
+    env,
     event::{emit, EventKind, WithdrawData},
     jar::model::JarId,
     product::model::WithdrawalFee,
@@ -63,8 +63,6 @@ impl WithdrawApi for Contract {
         assert_not_locked(&jar.clone());
 
         let amount = amount.map_or(jar.principal, |value| value.0);
-
-        assert_ownership(&jar, &account_id);
 
         assert_sufficient_balance(&jar, amount);
 
