@@ -7,7 +7,6 @@ use model::{
 use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 
 use crate::{
-    assert_ownership,
     event::{emit, EventKind, RestakeData},
     jar::view::{AggregatedInterestView, AggregatedTokenAmountView},
     Contract, ContractExt, Jar,
@@ -178,8 +177,6 @@ impl JarApi for Contract {
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 
         let jar = self.get_jar_internal(&account_id, jar_id);
-
-        assert_ownership(jar, &account_id);
 
         let product = self.get_product(&jar.product_id);
 

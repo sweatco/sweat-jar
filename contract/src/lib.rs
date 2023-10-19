@@ -14,10 +14,7 @@ use near_sdk::{
 use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
 
-use crate::{
-    assert::assert_ownership,
-    jar::model::{Jar, JarId},
-};
+use crate::jar::model::{Jar, JarId};
 
 mod assert;
 mod claim;
