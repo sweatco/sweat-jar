@@ -1,5 +1,5 @@
 use model::{withdraw::Fee, TokenAmount};
-use near_sdk::{near_bindgen, serde_json::json, AccountId, Promise};
+use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Promise};
 
 use crate::{common::tgas, Contract, ContractExt};
 
@@ -44,14 +44,12 @@ trait FtTransferPromise {
 
 impl FtTransferPromise for Promise {
     fn ft_transfer(self, receiver_id: &AccountId, amount: TokenAmount, memo: Option<String>) -> Promise {
-        let args = json!({
+        let args = serde_json::to_vec(&json!({
             "receiver_id": receiver_id,
             "amount": amount.to_string(),
             "memo": memo.unwrap_or_default(),
-        })
-        .to_string()
-        .as_bytes()
-        .to_vec();
+        }))
+        .expect("Failed to serialize arguments");
 
         self.function_call("ft_transfer".to_string(), args, 1, tgas(5))
     }
