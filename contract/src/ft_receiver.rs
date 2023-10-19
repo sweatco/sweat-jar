@@ -1,3 +1,4 @@
+use model::jar::JarId;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
     json_types::U128,
@@ -8,7 +9,6 @@ use near_sdk::{
 
 use crate::{
     jar::model::JarTicket, migration::model::CeFiJar, near_bindgen, AccountId, Base64VecU8, Contract, ContractExt,
-    JarId,
 };
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account

@@ -9,18 +9,20 @@ pub(crate) enum RegisterProductCommand {
     Flexible6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
     Locked10Minutes6Percents,
+    Locked10Minutes6PercentsTopUp,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
     Locked10Minutes6PercentsWithPercentWithdrawFee,
 }
 
 impl RegisterProductCommand {
-    pub(crate) fn all() -> [Self; 7] {
+    pub(crate) fn all() -> [Self; 8] {
         [
             Self::Locked12Months12Percents,
             Self::Locked6Months6Percents,
             Self::Flexible6Months6Percents,
             Self::Locked6Months6PercentsWithWithdrawFee,
             Self::Locked10Minutes6Percents,
+            Self::Locked10Minutes6PercentsTopUp,
             Self::Locked10Minutes6PercentsWithFixedWithdrawFee,
             Self::Locked10Minutes6PercentsWithPercentWithdrawFee,
         ]
@@ -108,6 +110,21 @@ impl RegisterProductCommand {
                     "data": {
                         "lockup_term": "600000",
                         "allows_top_up": false,
+                        "allows_restaking": true,
+                    }
+                },
+                "is_enabled": true,
+            }),
+            RegisterProductCommand::Locked10Minutes6PercentsTopUp => json!({
+                "id": "locked_10_minutes_6_percents",
+                "apy_default": ["6", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
+                "terms": {
+                    "type": "fixed",
+                    "data": {
+                        "lockup_term": "600000",
+                        "allows_top_up": true,
                         "allows_restaking": true,
                     }
                 },

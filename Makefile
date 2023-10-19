@@ -9,6 +9,9 @@ install: ##@Miscellaneous Install dependencies
 measure: ##@Miscellaneous Measure gas cost.
 	./scripts/measure.sh
 
+check: ##@Miscellaneous Run all checks.
+	make fmt && make lint && make build && make test && make int
+
 build: ##@Build Build the contract locally.
 	./scripts/build.sh
 
@@ -37,7 +40,6 @@ fmt: ##@Chores Format the code using rustfmt nightly.
 
 lint: ##@Chores Run lint checks with Clippy.
 	./scripts/lint.sh
-
 
 HELP_FUN = \
     %help; while(<>){push@{$$help{$$2//'options'}},[$$1,$$3] \

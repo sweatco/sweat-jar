@@ -7,5 +7,6 @@ pub(crate) mod random_element;
 mod register_product;
 mod restake;
 mod stake;
+mod top_up;
 pub(crate) mod utils;
 mod withdraw;

@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
-use model::ProductId;
+use model::{jar::JarId, ProductId};
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
@@ -14,7 +14,7 @@ use near_sdk::{
 use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
 
-use crate::jar::model::{Jar, JarId};
+use crate::jar::model::Jar;
 
 mod assert;
 mod claim;

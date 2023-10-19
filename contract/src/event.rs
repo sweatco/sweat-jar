@@ -1,4 +1,4 @@
-use model::ProductId;
+use model::{jar::JarId, ProductId};
 use near_sdk::{
     json_types::{Base64VecU8, U128},
     log,
@@ -6,12 +6,7 @@ use near_sdk::{
     serde_json, AccountId,
 };
 
-use crate::{
-    env,
-    jar::model::{Jar, JarId},
-    product::model::Product,
-    PACKAGE_NAME, VERSION,
-};
+use crate::{env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(
