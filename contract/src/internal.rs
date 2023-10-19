@@ -1,6 +1,7 @@
 use model::{jar::JarIdView, ProductId};
 use near_sdk::require;
 use std::collections::HashMap;
+use std::ptr::read;
 
 use crate::{env, jar::model::JarId, AccountId, Contract, Jar, Product};
 
@@ -49,6 +50,46 @@ impl Contract {
                 *jars
                     .get(&id.0)
                     .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0)))
+            })
+            .collect()
+    }
+
+    pub(crate) fn account_jars_with_ids_mut(
+        &mut self,
+        account_id: &AccountId,
+        ids: &[JarIdView],
+    ) -> Vec<(&Product, &mut Jar)> {
+        let Some(jars) = self
+            .account_jars
+            .get_mut(account_id)
+            .map(|jars| jars.jars.as_mut_slice()) else {
+            return vec![];
+        } ;
+
+        // iterates once over jars and once over ids
+        let jars: HashMap<JarId, (&Product, &mut Jar)> = jars
+            .iter_mut()
+            .map(|jar| {
+                (
+                    jar.id,
+                    (
+                        self.products
+                            .get(&jar.product_id)
+                            .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id))),
+                        jar,
+                    ),
+                )
+            })
+            .collect();
+
+        ids.iter()
+            .map(|id| {
+                let reference = jars
+                    .get(&id.0)
+                    .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0)))
+                    as *const _;
+
+                unsafe { read(reference) }
             })
             .collect()
     }

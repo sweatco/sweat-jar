@@ -3,6 +3,7 @@ use std::cmp;
 use model::{jar::JarIdView, TokenAmount, U32};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
+use crate::product::model::Product;
 use crate::{
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
@@ -53,28 +54,26 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
 
-        let unlocked_jars: Vec<Jar> = self
-            .account_jars(&account_id)
-            .iter()
-            .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&U32(jar.id)))
-            .cloned()
+        let mut unlocked_jars: Vec<(&Product, &mut Jar)> = self
+            .account_jars_with_ids_mut(&account_id, &jar_ids)
+            .into_iter()
+            .filter(|(_product, jar)| !jar.is_pending_withdraw)
             .collect();
 
         let mut total_interest_to_claim: TokenAmount = 0;
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
-        for jar in &unlocked_jars {
-            let product = self.get_product(&jar.product_id);
+        let unlocked_jars_before_claim = unlocked_jars.iter().map(|a| a.1.clone()).collect();
+
+        for (product, jar) in &mut unlocked_jars {
             let available_interest = jar.get_interest(product, now);
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - total_interest_to_claim)
             });
 
             if interest_to_claim > 0 {
-                self.get_jar_mut_internal(&jar.account_id, jar.id)
-                    .claim(available_interest, interest_to_claim, now)
-                    .lock();
+                jar.claim(available_interest, interest_to_claim, now).lock();
 
                 total_interest_to_claim += interest_to_claim;
 
@@ -89,7 +88,7 @@ impl ClaimApi for Contract {
             self.claim_interest(
                 &account_id,
                 U128(total_interest_to_claim),
-                unlocked_jars,
+                unlocked_jars_before_claim,
                 EventKind::Claim(event_data),
             )
         } else {
