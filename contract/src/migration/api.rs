@@ -1,5 +1,5 @@
-use model::{ProductId, TokenAmount};
-use near_sdk::{__private::schemars::Set, json_types::U128, require};
+use model::TokenAmount;
+use near_sdk::{json_types::U128, require};
 
 use crate::{
     event::{emit, EventKind, MigrationEventItem},
