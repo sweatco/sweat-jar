@@ -194,14 +194,14 @@ impl Jar {
         let effective_term = if until_date > base_date {
             until_date - base_date
         } else {
-            0
+            return base_interest;
         };
 
-        let term_in_minutes = u128::from(effective_term);
+        let term_in_miliseconds = u128::from(effective_term);
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let interest = (term_in_minutes * total_interest) / u128::from(MS_IN_YEAR);
+        let interest = (term_in_miliseconds * total_interest) / u128::from(MS_IN_YEAR);
 
         base_interest + interest
     }
