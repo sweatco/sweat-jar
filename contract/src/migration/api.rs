@@ -42,11 +42,9 @@ impl Contract {
         let mut event_data: Vec<MigrationEventItem> = vec![];
         let mut total_amount: TokenAmount = 0;
 
-        let product_ids: Set<ProductId> = self.products.keys().cloned().collect();
-
         for ce_fi_jar in jars {
             require!(
-                product_ids.contains(&ce_fi_jar.product_id),
+                self.products.contains_key(&ce_fi_jar.product_id),
                 format!("Product {} is not registered", ce_fi_jar.product_id),
             );
 
