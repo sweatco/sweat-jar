@@ -3,8 +3,9 @@ use near_sdk::{json_types::U128, require};
 
 use crate::{
     event::{emit, EventKind, MigrationEventItem},
+    jar::model::Jar,
     migration::model::CeFiJar,
-    Contract, Jar,
+    Contract,
 };
 
 impl Contract {

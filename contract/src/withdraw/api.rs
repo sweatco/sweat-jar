@@ -1,5 +1,5 @@
 use model::{
-    jar::JarIdView,
+    jar::{JarId, JarIdView},
     withdraw::{Fee, WithdrawView},
     TokenAmount,
 };
@@ -9,9 +9,9 @@ use crate::{
     assert::{assert_is_liquidable, assert_not_locked, assert_sufficient_balance},
     env,
     event::{emit, EventKind, WithdrawData},
-    jar::model::JarId,
+    jar::model::Jar,
     product::model::WithdrawalFee,
-    AccountId, Contract, ContractExt, Jar, Product,
+    AccountId, Contract, ContractExt, Product,
 };
 #[cfg(not(test))]
 use crate::{ft_interface::FungibleTokenInterface, Promise};

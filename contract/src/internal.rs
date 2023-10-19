@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
-use model::{jar::JarIdView, ProductId};
+use model::{
+    jar::{JarId, JarIdView},
+    ProductId,
+};
 use near_sdk::require;
 
-use crate::{env, jar::model::JarId, AccountId, Contract, Jar, Product};
+use crate::{env, jar::model::Jar, AccountId, Contract, Product};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {

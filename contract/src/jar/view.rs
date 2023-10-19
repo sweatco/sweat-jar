@@ -9,7 +9,7 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
 };
 
-use crate::{common::Timestamp, Jar};
+use crate::{common::Timestamp, jar::model::Jar};
 
 impl From<Jar> for JarView {
     fn from(value: Jar) -> Self {

@@ -6,6 +6,8 @@ use near_sdk::{
 
 use crate::{numbers::U32, ProductId};
 
+pub type JarId = u32;
+
 pub type JarIdView = U32;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

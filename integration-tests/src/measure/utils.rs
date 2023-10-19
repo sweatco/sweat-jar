@@ -24,8 +24,11 @@ fn measure_jars_multiplier() -> usize {
 }
 
 pub fn measure_jars_range() -> Vec<usize> {
-    let vals = (1..=number_of_jars_to_measure()).map(|i| i * measure_jars_multiplier() + 1);
+    generate_measure_jars_range(number_of_jars_to_measure(), measure_jars_multiplier())
+}
 
+pub fn generate_measure_jars_range(max: usize, multiplier: usize) -> Vec<usize> {
+    let vals = (1..=max).map(|i| i * multiplier + 1);
     once(1).chain(vals).collect()
 }
 

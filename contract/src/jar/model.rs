@@ -1,7 +1,10 @@
 use std::cmp;
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
-use model::{jar::JarView, ProductId, TokenAmount};
+use model::{
+    jar::{JarId, JarView},
+    ProductId, TokenAmount,
+};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
@@ -18,8 +21,6 @@ use crate::{
     product::model::{Apy, Product, Terms},
     Base64VecU8, Contract, JarsStorage, Signature,
 };
-
-pub type JarId = u32;
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///

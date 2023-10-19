@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use model::{
-    jar::{JarIdView, JarView},
+    jar::{JarId, JarIdView, JarView},
     withdraw::WithdrawView,
 };
 use near_sdk::json_types::U128;
@@ -74,6 +74,14 @@ pub(crate) trait JarContractInterface {
     async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>;
 
     async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>;
+
+    async fn top_up(
+        &self,
+        account: &Account,
+        jar_id: JarId,
+        amount: U128,
+        ft_contract_id: &AccountId,
+    ) -> anyhow::Result<U128>;
 }
 
 #[async_trait]
@@ -473,6 +481,55 @@ impl JarContractInterface for Contract {
         }
 
         Ok(())
+    }
+
+    async fn top_up(
+        &self,
+        account: &Account,
+        jar_id: JarId,
+        amount: U128,
+        ft_contract_id: &AccountId,
+    ) -> anyhow::Result<U128> {
+        let msg = json!({
+            "type": "top_up",
+            "data": jar_id,
+        });
+
+        println!("▶️ Top up with msg: {:?}", msg,);
+
+        let args = json!({
+            "receiver_id": self.as_account().id(),
+            "amount": amount.0.to_string(),
+            "msg": msg.to_string(),
+        });
+
+        let result = account
+            .call(ft_contract_id, "ft_transfer_call")
+            .args_json(args)
+            .max_gas()
+            .deposit(parse_near!("1 yocto"))
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        for failure in result.failures() {
+            println!("   ❌ {:?}", failure);
+        }
+
+        if let Some(failure) = result.failures().into_iter().next().cloned() {
+            let error = failure.into_result().err().unwrap();
+            return Err(error.into());
+        }
+
+        let result_value = result.json()?;
+
+        OutcomeStorage::add_result(result);
+
+        Ok(result_value)
     }
 }
 
