@@ -239,6 +239,27 @@ fn test_failed_withdraw_internal() {
     );
 }
 
+#[test]
+#[should_panic(expected = "Another operation on this Jar is in progress")]
+fn withdraw_from_locked_jar() {
+    let product = Product::generate("product")
+        .apy(Apy::Constant(UDecimal::new(1, 0)))
+        .lockup_term(MS_IN_YEAR);
+    let mut jar = Jar::generate(0, &accounts(0), &product.id).principal(MS_IN_YEAR as u128);
+
+    jar.lock();
+
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let mut context = Context::new(admin).with_products(&[product.clone()]).with_jars(&[jar]);
+
+    context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+    context.switch_account(&alice);
+
+    _ = context.contract.withdraw(U32(0), Some(U128(100_000)));
+}
+
 pub(crate) fn generate_product() -> Product {
     Product::generate("product").enabled(true)
 }

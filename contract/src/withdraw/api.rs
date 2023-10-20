@@ -60,7 +60,7 @@ impl WithdrawApi for Contract {
         let account_id = env::predecessor_account_id();
         let jar = self.get_jar_internal(&account_id, jar_id.0).clone();
 
-        assert_not_locked(&jar.clone());
+        assert_not_locked(&jar);
 
         let amount = amount.map_or(jar.principal, |value| value.0);
 
@@ -91,29 +91,29 @@ impl Contract {
         fee: Option<Fee>,
         is_promise_success: bool,
     ) -> WithdrawView {
-        if is_promise_success {
-            if close_jar {
-                self.delete_jar(&account_id, jar_id);
-            } else {
-                self.get_jar_mut_internal(&account_id, jar_id).unlock();
-            }
-
-            let withdrawal_result = WithdrawView::new(withdrawn_amount, fee);
-
-            emit(EventKind::Withdraw(WithdrawData {
-                id: jar_id,
-                withdrawn_amount: withdrawal_result.withdrawn_amount,
-                fee_amount: withdrawal_result.fee,
-            }));
-
-            withdrawal_result
-        } else {
+        if !is_promise_success {
             let jar = self.get_jar_mut_internal(&account_id, jar_id);
             jar.principal += withdrawn_amount;
             jar.unlock();
 
-            WithdrawView::new(0, None)
+            return WithdrawView::new(0, None);
         }
+
+        if close_jar {
+            self.delete_jar(&account_id, jar_id);
+        } else {
+            self.get_jar_mut_internal(&account_id, jar_id).unlock();
+        }
+
+        let withdrawal_result = WithdrawView::new(withdrawn_amount, fee);
+
+        emit(EventKind::Withdraw(WithdrawData {
+            id: jar_id,
+            withdrawn_amount: withdrawal_result.withdrawn_amount,
+            fee_amount: withdrawal_result.fee,
+        }));
+
+        withdrawal_result
     }
 
     fn get_fee(&self, product: &Product, jar: &Jar) -> Option<Fee> {
