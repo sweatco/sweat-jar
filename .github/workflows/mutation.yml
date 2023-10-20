@@ -16,3 +16,15 @@ jobs:
 
       - name: Mutation test
         run: make mutation
+
+      - name: Upload caught
+        uses: actions/upload-artifact@v3
+        with:
+          name: caught
+          path: mutants.out/caught.txt
+
+      - name: Upload missed
+        uses: actions/upload-artifact@v3
+        with:
+          name: missed
+          path: mutants.out/missed.txt
