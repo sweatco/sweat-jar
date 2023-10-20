@@ -8,6 +8,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[mutants::skip]
 async fn premium_product() -> anyhow::Result<()> {
     println!("👷🏽 Run test for premium product");
 

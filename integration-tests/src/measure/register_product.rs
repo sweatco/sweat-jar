@@ -8,6 +8,7 @@ use crate::{
     product::RegisterProductCommand,
 };
 
+#[mutants::skip]
 pub(crate) async fn measure_register_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
     let Prepared {
         context,

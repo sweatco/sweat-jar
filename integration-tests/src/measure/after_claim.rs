@@ -17,6 +17,7 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn measure_after_claim_total_test() -> anyhow::Result<()> {
     let measured = scoped_command_measure(
         generate_permutations(
@@ -61,6 +62,7 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn one_after_claim() -> anyhow::Result<()> {
     let gas = measure_after_claim_total((RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee, 1)).await?;
 
@@ -69,6 +71,7 @@ async fn one_after_claim() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 

@@ -17,6 +17,7 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn measure_claim_total_test() -> Result<()> {
     async fn claim() -> Result<()> {
         let measured = scoped_command_measure(
@@ -61,6 +62,7 @@ async fn measure_claim_total_test() -> Result<()> {
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn single_claim() -> anyhow::Result<()> {
     let gas = measure_claim((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
 
@@ -69,6 +71,7 @@ async fn single_claim() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 async fn measure_claim(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 

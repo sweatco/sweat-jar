@@ -11,6 +11,7 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn measure_withdraw_test() -> anyhow::Result<()> {
     let result = scoped_command_measure(
         generate_permutations(
@@ -38,6 +39,7 @@ async fn measure_withdraw_test() -> anyhow::Result<()> {
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn one_withdraw() -> anyhow::Result<()> {
     let gas = measure_one_withdraw((
         RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee,
@@ -50,6 +52,7 @@ async fn one_withdraw() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::Result<Gas> {
     let (product, anmount) = data;
 

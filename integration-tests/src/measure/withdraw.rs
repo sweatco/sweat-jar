@@ -18,6 +18,7 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn measure_withdraw_total_test() -> Result<()> {
     async fn withdraw() -> Result<()> {
         let measured = scoped_command_measure(
@@ -62,6 +63,7 @@ async fn measure_withdraw_total_test() -> Result<()> {
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn one_withdraw() -> anyhow::Result<()> {
     let gas = measure_withdraw((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
 
@@ -70,6 +72,7 @@ async fn one_withdraw() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 

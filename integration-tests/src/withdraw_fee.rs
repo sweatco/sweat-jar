@@ -4,6 +4,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[mutants::skip]
 async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     println!("👷🏽 Run fixed withdraw fee test");
 

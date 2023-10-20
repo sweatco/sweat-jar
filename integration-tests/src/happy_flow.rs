@@ -4,6 +4,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[mutants::skip]
 async fn happy_flow() -> anyhow::Result<()> {
     println!("👷🏽 Run happy flow test");
 
