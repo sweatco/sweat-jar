@@ -4,6 +4,7 @@ use model::U32;
 use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
 
 use crate::{
+    claim::api::ClaimApi,
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, MS_IN_YEAR},
     jar::{api::JarApi, model::Jar},
     product::model::{Apy, Product, WithdrawalFee},
@@ -78,6 +79,7 @@ fn withdraw_flexible_jar_by_owner_full() {
     context.switch_account(&alice);
 
     context.contract.withdraw(U32(reference_jar.id), None);
+    context.contract.claim_total();
     let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
     assert_eq!(0, jar.principal.0);
 }
