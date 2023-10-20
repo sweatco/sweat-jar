@@ -1,4 +1,4 @@
-name: Measure
+name: Mutation
 
 on:
   workflow_dispatch:
