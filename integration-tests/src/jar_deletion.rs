@@ -33,32 +33,20 @@ async fn jar_deletion() -> anyhow::Result<()> {
         .next()
         .unwrap();
 
-    dbg!(&jar_view);
-
     context.fast_forward_minutes(11).await?;
 
-    let alice_interest = context.jar_contract.get_total_interest(&alice).await?;
-    dbg!(&alice_interest.get_interest());
-
-    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
-    dbg!(&jars);
-
     let withdrawn_amount = context.jar_contract.withdraw(&alice, jar_view.id).await?;
-    dbg!(&withdrawn_amount);
+    assert_eq!(withdrawn_amount.withdrawn_amount.0, 1_000_000);
 
-    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
-    dbg!(&jars);
-
+    let alice_interest = context.jar_contract.get_total_interest(&alice).await?.get_interest();
     let claimed_amount = context.jar_contract.claim_total(&alice).await?;
-    dbg!(&claimed_amount);
-
-    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
-    dbg!(&jars);
+    assert_eq!(alice_interest, claimed_amount);
 
     let alice_interest = context.jar_contract.get_total_interest(&alice).await?;
-    dbg!(&alice_interest.get_interest());
+    assert_eq!(alice_interest.get_interest(), 0);
 
-    // assert!(jars.is_empty());
+    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
+    assert!(jars.is_empty());
 
     Ok(())
 }

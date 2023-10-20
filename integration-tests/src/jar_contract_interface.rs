@@ -328,6 +328,15 @@ impl JarContractInterface for Contract {
 
         println!("   ✅ {result_value:?}");
 
+        for failure in result.failures() {
+            println!("   ❌ {:?}", failure);
+        }
+
+        if let Some(failure) = result.failures().into_iter().next().cloned() {
+            let error = failure.into_result().err().unwrap();
+            return Err(error.into());
+        }
+
         OutcomeStorage::add_result(result);
 
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)

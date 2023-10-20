@@ -1,7 +1,7 @@
 use std::cmp;
 
 use model::{jar::JarIdView, TokenAmount, U32};
-use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, log, near_bindgen, AccountId, PromiseOrValue};
+use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
     common::Timestamp,
@@ -149,9 +149,6 @@ impl Contract {
         now: Timestamp,
         is_promise_success: bool,
     ) -> U128 {
-        log!("after_claim_internal");
-        log!("is_promise_success {}", is_promise_success);
-
         if is_promise_success {
             for jar_before_transfer in jars_before_transfer {
                 let product = self.products.get(&jar_before_transfer.product_id).unwrap_or_else(|| {
@@ -174,8 +171,6 @@ impl Contract {
             }
 
             emit(event);
-
-            log!("claimed_amount: {:?}", claimed_amount);
 
             claimed_amount
         } else {
