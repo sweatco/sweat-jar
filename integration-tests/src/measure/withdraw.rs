@@ -93,8 +93,7 @@ async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Res
 
     let jar = jars.random_element();
 
-    let (gas, _) =
-        OutcomeStorage::measure_total(&alice, context.jar_contract.withdraw(&alice, &jar.id.0.to_string())).await?;
+    let (gas, _) = OutcomeStorage::measure_total(&alice, context.jar_contract.withdraw(&alice, jar.id)).await?;
 
     Ok(gas)
 }

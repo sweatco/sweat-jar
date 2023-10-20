@@ -79,7 +79,17 @@ fn withdraw_flexible_jar_by_owner_full() {
     context.switch_account(&alice);
 
     context.contract.withdraw(U32(reference_jar.id), None);
-    context.contract.claim_total();
+
+    let interest = context
+        .contract
+        .get_interest(vec![reference_jar.id.into()], alice.clone());
+
+    let PromiseOrValue::Value(claimed) = context.contract.claim_total() else {
+        panic!();
+    };
+
+    assert_eq!(interest.amount.total, claimed);
+
     let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
     assert_eq!(0, jar.principal.0);
 }

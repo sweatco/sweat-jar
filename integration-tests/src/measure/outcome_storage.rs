@@ -93,6 +93,7 @@ impl OutcomeStorage {
         assert!(existing.is_none());
     }
 
+    #[mutants::skip]
     fn get_total_gas(account: &Account) -> Gas {
         let data = Self::get_data();
         let success = data.get(account.id().as_str()).unwrap();
