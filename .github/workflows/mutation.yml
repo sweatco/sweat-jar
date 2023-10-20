@@ -4,10 +4,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  measure:
+  mutation:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install tool
+        run: cargo install --locked cargo-mutants
+
       - name: Checkout
         uses: actions/checkout@v4
 
