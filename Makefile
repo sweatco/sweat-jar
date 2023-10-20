@@ -12,6 +12,9 @@ measure: ##@Miscellaneous Measure gas cost.
 check: ##@Miscellaneous Run all checks.
 	make fmt && make lint && make build && make test && make int
 
+mutation: ##@Miscellaneous Run mutation test.
+	./scripts/mutation.sh
+
 build: ##@Build Build the contract locally.
 	./scripts/build.sh
 
