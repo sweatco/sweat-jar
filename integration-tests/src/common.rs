@@ -1,3 +1,4 @@
+use anyhow::bail;
 use std::{
     process::{Command, Stdio},
     sync::Mutex,
@@ -54,12 +55,16 @@ pub fn build_contract() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    Command::new("make")
+    let output = Command::new("make")
         .arg("build")
         .current_dir("..")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()?;
+
+    if !output.status.success() {
+        bail!("Failed to build contract. Output: {output:?}");
+    }
 
     *ready = true;
 
