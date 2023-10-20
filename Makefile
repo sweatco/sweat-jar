@@ -10,7 +10,7 @@ measure: ##@Miscellaneous Measure gas cost.
 	./scripts/measure.sh
 
 check: ##@Miscellaneous Run all checks.
-	make fmt && make lint && make build && make test && make int
+	make fmt && make lint && make build && make test && make int && make mutation
 
 mutation: ##@Miscellaneous Run mutation test.
 	./scripts/mutation.sh

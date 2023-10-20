@@ -1,9 +1,9 @@
-use anyhow::bail;
 use std::{
     process::{Command, Stdio},
     sync::Mutex,
 };
 
+use anyhow::bail;
 use ed25519_dalek::{SigningKey, VerifyingKey};
 use rand::rngs::OsRng;
 use serde_json::Value;

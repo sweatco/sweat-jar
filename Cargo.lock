@@ -3056,6 +3056,7 @@ dependencies = [
  "ed25519-dalek 2.0.0",
  "fake",
  "model",
+ "mutants",
  "near-contract-standards",
  "near-sdk",
  "near-self-update",

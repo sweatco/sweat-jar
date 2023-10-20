@@ -132,6 +132,7 @@ impl Contract {
 }
 
 #[cfg(not(test))]
+#[mutants::skip] // TODO: make integration tests work with mutants
 impl Contract {
     fn transfer_withdraw(
         &mut self,

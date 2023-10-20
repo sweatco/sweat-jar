@@ -1,1 +1,1 @@
-#exclude_globs = ["integration-tests/**"]
+exclude_globs = ["integration-tests/**"]
