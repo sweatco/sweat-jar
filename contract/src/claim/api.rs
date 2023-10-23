@@ -126,7 +126,7 @@ impl Contract {
     }
 
     #[cfg(not(test))]
-    #[mutants::skip] // TODO: make integration tests work with mutants
+    #[mutants::skip] // Covered by integration tests
     fn claim_interest(
         &mut self,
         account_id: &AccountId,
@@ -202,7 +202,7 @@ impl ClaimCallbacks for Contract {
 }
 
 #[cfg(not(test))]
-#[mutants::skip] // TODO: make integration tests work with mutants
+#[mutants::skip] // Covered by integration tests
 fn after_claim_call(
     claimed_amount: U128,
     jars_before_transfer: Vec<Jar>,
