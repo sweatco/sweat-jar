@@ -52,7 +52,8 @@ impl ClaimApi for Contract {
     fn claim_total(&mut self) -> PromiseOrValue<U128> {
         let account_id = env::predecessor_account_id();
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
-        self.claim_jars(jar_ids, None)
+
+        self.claim_jars_internal(jar_ids, None, |acc: U128, value: U128| U128(acc.0 + value.0))
     }
 
     // fn claim_jars(
@@ -114,7 +115,7 @@ impl Contract {
         jar_ids: Vec<JarIdView>,
         amount: Option<U128>,
         aggregation_function: F,
-    ) -> PromiseOrValue<AggregatedTokenAmountView>
+    ) -> PromiseOrValue<T>
     where
         T: TokenAmountRepresentation + Default,
         F: FnMut(T, T) -> T,
@@ -162,7 +163,7 @@ impl Contract {
                 EventKind::Claim(event_data),
             )
         } else {
-            PromiseOrValue::Value(U128(0))
+            PromiseOrValue::Value(T::default())
         }
     }
 }
@@ -273,5 +274,11 @@ impl TokenAmountRepresentation for U128 {
 impl TokenAmountRepresentation for AggregatedTokenAmountView {
     fn get_total(&self) -> U128 {
         self.total
+    }
+}
+
+impl Default for U128 {
+    fn default() -> Self {
+        Self(0)
     }
 }
