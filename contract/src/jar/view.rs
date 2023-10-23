@@ -39,7 +39,7 @@ impl From<&Jar> for JarView {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default)]
 #[serde(crate = "near_sdk::serde")]
 pub struct AggregatedTokenAmountView {
     pub detailed: HashMap<JarIdView, U128>,
