@@ -1,6 +1,6 @@
-use std::cmp;
+use std::{cmp, collections::HashMap};
 
-use model::{jar::JarIdView, TokenAmount, U32};
+use model::{jar::JarIdView, U32};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
@@ -35,11 +35,7 @@ pub trait ClaimApi {
     ///
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
     /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(
-        &mut self,
-        jar_ids: Vec<JarIdView>,
-        amount: Option<U128>,
-    ) -> PromiseOrValue<AggregatedTokenAmountView>;
+    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128>;
 }
 
 #[ext_contract(ext_self)]
@@ -53,60 +49,27 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
 
-        self.claim_jars_internal(jar_ids, None, |acc: U128, value: U128| U128(acc.0 + value.0))
+        self.claim_jars_internal(jar_ids, None, |_, acc: U128, value| U128(acc.0 + value))
     }
 
-    // fn claim_jars(
-    //     &mut self,
-    //     jar_ids: Vec<JarIdView>,
-    //     amount: Option<U128>,
-    // ) -> PromiseOrValue<AggregatedTokenAmountView> {
-    //     let account_id = env::predecessor_account_id();
-    //     let now = env::block_timestamp_ms();
-    //
-    //     let unlocked_jars: Vec<Jar> = self
-    //         .account_jars(&account_id)
-    //         .iter()
-    //         .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&U32(jar.id)))
-    //         .cloned()
-    //         .collect();
-    //
-    //     let mut total_interest_to_claim: TokenAmount = 0;
-    //
-    //     let mut event_data: Vec<ClaimEventItem> = vec![];
-    //
-    //     for jar in &unlocked_jars {
-    //         let product = self.get_product(&jar.product_id);
-    //         let available_interest = jar.get_interest(product, now);
-    //         let interest_to_claim = amount.map_or(available_interest, |amount| {
-    //             cmp::min(available_interest, amount.0 - total_interest_to_claim)
-    //         });
-    //
-    //         if interest_to_claim > 0 {
-    //             self.get_jar_mut_internal(&jar.account_id, jar.id)
-    //                 .claim(available_interest, interest_to_claim, now)
-    //                 .lock();
-    //
-    //             total_interest_to_claim += interest_to_claim;
-    //
-    //             event_data.push(ClaimEventItem {
-    //                 id: jar.id,
-    //                 interest_to_claim: U128(interest_to_claim),
-    //             });
-    //         }
-    //     }
-    //
-    //     if total_interest_to_claim > 0 {
-    //         self.claim_interest(
-    //             &account_id,
-    //             U128(total_interest_to_claim),
-    //             unlocked_jars,
-    //             EventKind::Claim(event_data),
-    //         )
-    //     } else {
-    //         PromiseOrValue::Value(U128(0))
-    //     }
-    // }
+    fn claim_total_detailed(&mut self) -> PromiseOrValue<AggregatedTokenAmountView> {
+        let account_id = env::predecessor_account_id();
+        let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
+
+        self.claim_jars_internal(jar_ids, None, |jar_id, acc: AggregatedTokenAmountView, value| {
+            let mut detailed = acc.detailed.clone();
+            detailed.insert(jar_id, U128(value));
+
+            AggregatedTokenAmountView {
+                total: U128(acc.total.0 + value),
+                detailed,
+            }
+        })
+    }
+
+    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128> {
+        self.claim_jars_internal(jar_ids, amount, |_, acc: U128, value| U128(acc.0 + value))
+    }
 }
 
 impl Contract {
@@ -117,8 +80,8 @@ impl Contract {
         aggregation_function: F,
     ) -> PromiseOrValue<T>
     where
-        T: TokenAmountRepresentation + Default,
-        F: FnMut(T, T) -> T,
+        T: TokenAmountRepresentation,
+        F: Fn(JarIdView, T, u128) -> T,
     {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
@@ -130,7 +93,7 @@ impl Contract {
             .cloned()
             .collect();
 
-        let mut total_interest_to_claim: T = Default::default();
+        let mut total_interest_to_claim: T = T::default();
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
@@ -146,7 +109,7 @@ impl Contract {
                     .claim(available_interest, interest_to_claim, now)
                     .lock();
 
-                total_interest_to_claim = aggregation_function(total_interest_to_claim, interest_to_claim);
+                total_interest_to_claim = aggregation_function(U32(jar.id), total_interest_to_claim, interest_to_claim);
 
                 event_data.push(ClaimEventItem {
                     id: jar.id,
@@ -241,7 +204,7 @@ impl Contract {
                 *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
             }
 
-            value_to_return
+            T::default()
         }
     }
 }
@@ -262,23 +225,29 @@ fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event:
 }
 
 trait TokenAmountRepresentation {
+    fn default() -> Self;
     fn get_total(&self) -> U128;
 }
 
 impl TokenAmountRepresentation for U128 {
+    fn default() -> Self {
+        Self(0)
+    }
+
     fn get_total(&self) -> U128 {
-        self.clone()
+        *self
     }
 }
 
 impl TokenAmountRepresentation for AggregatedTokenAmountView {
+    fn default() -> Self {
+        Self {
+            detailed: HashMap::default(),
+            total: U128::default(),
+        }
+    }
+
     fn get_total(&self) -> U128 {
         self.total
-    }
-}
-
-impl Default for U128 {
-    fn default() -> Self {
-        Self(0)
     }
 }
