@@ -1,6 +1,6 @@
 use std::{cmp, collections::HashMap};
 
-use model::{jar::JarIdView, U32};
+use model::{jar::JarIdView, TokenAmount, U32};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
@@ -19,6 +19,14 @@ pub trait ClaimApi {
     /// interest across all jars is zero, the returned value will also be zero.
     fn claim_total(&mut self) -> PromiseOrValue<U128>;
 
+    /// Claims all available interest from all deposit jars belonging to the calling account.
+    ///
+    /// # Returns
+    ///
+    /// A `PromiseOrValue<AggregatedTokenAmountView>` representing the total amount of tokens claimed
+    /// and a map containing amount of tokens claimed from each Jar.
+    /// If the total available interest across all jars is zero, the total amount in returned object
+    /// will also be zero and the detailed map will be empty.
     fn claim_total_detailed(&mut self) -> PromiseOrValue<AggregatedTokenAmountView>;
 
     /// Claims interest from specific deposit jars with provided IDs.
@@ -33,9 +41,15 @@ pub trait ClaimApi {
     ///
     /// # Returns
     ///
-    /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
-    /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128>;
+    /// A `PromiseOrValue<AggregatedTokenAmountView>` representing the total amount of tokens claimed
+    /// and a map containing amount of tokens claimed from each Jar.
+    /// If the total available interest across the specified jars is zero or the provided `amount`
+    /// is zero, the total amount in returned object will also be zero and the detailed map will be empty.
+    fn claim_jars(
+        &mut self,
+        jar_ids: Vec<JarIdView>,
+        amount: Option<U128>,
+    ) -> PromiseOrValue<AggregatedTokenAmountView>;
 }
 
 #[ext_contract(ext_self)]
@@ -49,31 +63,35 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
 
-        self.claim_jars_internal(jar_ids, None, |_, acc: U128, value| U128(acc.0 + value))
+        self.claim_jars_internal(jar_ids, None, |_, acc: &mut U128, value| {
+            acc.0 += value;
+        })
     }
 
     fn claim_total_detailed(&mut self) -> PromiseOrValue<AggregatedTokenAmountView> {
         let account_id = env::predecessor_account_id();
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
 
-        self.claim_jars_internal(jar_ids, None, |jar_id, acc: AggregatedTokenAmountView, value| {
-            let mut detailed = acc.detailed.clone();
-            detailed.insert(jar_id, U128(value));
-
-            AggregatedTokenAmountView {
-                total: U128(acc.total.0 + value),
-                detailed,
-            }
+        self.claim_jars_internal(jar_ids, None, |jar_id, acc: &mut AggregatedTokenAmountView, value| {
+            acc.total.0 += value;
+            acc.detailed.insert(jar_id, U128(value));
         })
     }
 
-    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128> {
-        self.claim_jars_internal(jar_ids, amount, |_, acc: U128, value| U128(acc.0 + value))
+    fn claim_jars(
+        &mut self,
+        jar_ids: Vec<JarIdView>,
+        amount: Option<U128>,
+    ) -> PromiseOrValue<AggregatedTokenAmountView> {
+        self.claim_jars_internal(jar_ids, amount, |jar_id, acc: &mut AggregatedTokenAmountView, value| {
+            acc.total.0 += value;
+            acc.detailed.insert(jar_id, U128(value));
+        })
     }
 }
 
 impl Contract {
-    fn claim_jars_internal<F, T>(
+    fn claim_jars_internal<T, F>(
         &mut self,
         jar_ids: Vec<JarIdView>,
         amount: Option<U128>,
@@ -81,7 +99,7 @@ impl Contract {
     ) -> PromiseOrValue<T>
     where
         T: TokenAmountRepresentation,
-        F: Fn(JarIdView, T, u128) -> T,
+        F: Fn(JarIdView, &mut T, TokenAmount),
     {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
@@ -109,7 +127,7 @@ impl Contract {
                     .claim(available_interest, interest_to_claim, now)
                     .lock();
 
-                total_interest_to_claim = aggregation_function(U32(jar.id), total_interest_to_claim, interest_to_claim);
+                aggregation_function(U32(jar.id), &mut total_interest_to_claim, interest_to_claim);
 
                 event_data.push(ClaimEventItem {
                     id: jar.id,
