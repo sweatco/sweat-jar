@@ -204,11 +204,11 @@ impl Jar {
             return base_interest;
         };
 
-        let term_in_miliseconds = u128::from(effective_term);
+        let term_in_milliseconds = u128::from(effective_term);
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let interest = (term_in_miliseconds * total_interest) / u128::from(MS_IN_YEAR);
+        let interest = (term_in_milliseconds * total_interest) / u128::from(MS_IN_YEAR);
 
         base_interest + interest
     }

@@ -71,6 +71,13 @@ pub(crate) trait JarContractInterface {
         value: bool,
     ) -> anyhow::Result<()>;
 
+    async fn batch_set_penalty(
+        &mut self,
+        admin: &Account,
+        jars: Vec<(AccountId, Vec<JarIdView>)>,
+        value: bool,
+    ) -> anyhow::Result<()>;
+
     async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>;
 
     async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>;
@@ -438,6 +445,36 @@ impl JarContractInterface for Contract {
         for log in result.logs() {
             println!("   📖 {log}");
         }
+
+        Ok(())
+    }
+
+    async fn batch_set_penalty(
+        &mut self,
+        admin: &Account,
+        jars: Vec<(AccountId, Vec<JarIdView>)>,
+        value: bool,
+    ) -> anyhow::Result<()> {
+        println!("▶️ batch_set_penalty");
+
+        let args = json!({
+            "jars": jars,
+            "value": value,
+        });
+
+        let result = admin
+            .call(self.id(), "batch_set_penalty")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        OutcomeStorage::add_result(result);
 
         Ok(())
     }
