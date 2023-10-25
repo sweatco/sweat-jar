@@ -4,7 +4,7 @@ use model::U32;
 use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};
 
 use crate::{
-    claim::api::ClaimApi,
+    claim::{api::ClaimApi, view::ClaimedAmountView},
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, MS_IN_YEAR},
     jar::{api::JarApi, model::Jar},
     product::model::{Apy, Product},
@@ -28,6 +28,112 @@ fn claim_total_when_nothing_to_claim() {
     };
 
     assert_eq!(0, value.get_total().0);
+}
+
+#[test]
+fn claim_total_detailed_when_having_tokens() {
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let product = generate_product();
+    let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
+    let jar_1 = Jar::generate(1, &alice, &product.id).principal(200_000_000);
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&[jar_0.clone(), jar_1.clone()]);
+
+    let product_term = product.get_lockup_term().unwrap();
+    let test_duration = product_term + 100;
+
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration);
+
+    context.set_block_timestamp_in_ms(test_duration);
+
+    context.switch_account(&alice);
+    let result = context.contract.claim_total(Some(true));
+
+    let PromiseOrValue::Value(ClaimedAmountView::Detailed(value)) = result else {
+        panic!();
+    };
+
+    assert_eq!(jar_0_expected_interest + jar_1_expected_interest, value.total.0);
+
+    assert_eq!(jar_0_expected_interest, value.detailed.get(&U32(jar_0.id)).unwrap().0);
+    assert_eq!(jar_1_expected_interest, value.detailed.get(&U32(jar_1.id)).unwrap().0);
+}
+
+#[test]
+fn claim_partially_detailed_when_having_tokens() {
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let product = generate_product();
+    let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
+    let jar_1 = Jar::generate(1, &alice, &product.id).principal(200_000_000);
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&[jar_0.clone(), jar_1.clone()]);
+
+    let product_term = product.get_lockup_term().unwrap();
+    let test_duration = product_term + 100;
+
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration) - 1;
+
+    context.set_block_timestamp_in_ms(test_duration);
+
+    context.switch_account(&alice);
+    let result = context.contract.claim_jars(
+        vec![U32(jar_0.id), U32(jar_1.id)],
+        Some(U128(jar_0_expected_interest + jar_1_expected_interest)),
+        Some(true),
+    );
+
+    let PromiseOrValue::Value(ClaimedAmountView::Detailed(value)) = result else {
+        panic!();
+    };
+
+    assert_eq!(jar_0_expected_interest + jar_1_expected_interest, value.total.0);
+
+    assert_eq!(jar_0_expected_interest, value.detailed.get(&U32(jar_0.id)).unwrap().0);
+    assert_eq!(jar_1_expected_interest, value.detailed.get(&U32(jar_1.id)).unwrap().0);
+}
+
+#[test]
+fn claim_partially_detailed_when_having_tokens_and_request_sum_of_single_deposit() {
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let product = generate_product();
+    let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
+    let jar_1 = Jar::generate(1, &alice, &product.id).principal(200_000_000);
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&[jar_0.clone(), jar_1.clone()]);
+
+    let product_term = product.get_lockup_term().unwrap();
+    let test_duration = product_term + 100;
+
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
+
+    context.set_block_timestamp_in_ms(test_duration);
+
+    context.switch_account(&alice);
+    let result = context.contract.claim_jars(
+        vec![U32(jar_0.id), U32(jar_1.id)],
+        Some(U128(jar_0_expected_interest)),
+        Some(true),
+    );
+
+    let PromiseOrValue::Value(ClaimedAmountView::Detailed(value)) = result else {
+        panic!();
+    };
+
+    assert_eq!(jar_0_expected_interest, value.total.0);
+
+    assert_eq!(jar_0_expected_interest, value.detailed.get(&U32(jar_0.id)).unwrap().0);
+    assert!(!value.detailed.contains_key(&U32(jar_1.id)));
 }
 
 #[test]
