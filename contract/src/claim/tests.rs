@@ -21,13 +21,13 @@ fn claim_total_when_nothing_to_claim() {
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar]);
 
     context.switch_account(&alice);
-    let result = context.contract.claim_total();
+    let result = context.contract.claim_total(None);
 
     let PromiseOrValue::Value(value) = result else {
         panic!();
     };
 
-    assert_eq!(0, value.0);
+    assert_eq!(0, value.get_total().0);
 }
 
 #[test]
@@ -42,11 +42,11 @@ fn claim_partially_when_having_tokens_to_claim() {
     context.set_block_timestamp_in_days(365);
 
     context.switch_account(&alice);
-    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(100))) else {
+    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(100)), None) else {
         panic!()
     };
 
-    assert_eq!(claimed.0, 100);
+    assert_eq!(claimed.get_total().0, 100);
 
     let jar = context.contract.get_jar(alice, U32(jar.id));
     assert_eq!(100, jar.claimed_balance.0);
@@ -64,7 +64,9 @@ fn dont_delete_jar_on_all_interest_claim() {
     context.set_block_timestamp_in_days(365);
 
     context.switch_account(&alice);
-    context.contract.claim_jars(vec![U32(jar.id)], Some(U128(200_000)));
+    context
+        .contract
+        .claim_jars(vec![U32(jar.id)], Some(U128(200_000)), None);
 
     let jar = context.contract.get_jar_internal(&alice, jar.id);
     assert_eq!(200_000, jar.claimed_balance);
@@ -93,7 +95,9 @@ fn claim_all_withdraw_all_and_delete_jar() {
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
     context.switch_account(&alice);
-    context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000)));
+    context
+        .contract
+        .claim_jars(vec![U32(jar_id)], Some(U128(200_000)), None);
 
     let jar = context.contract.get_jar_internal(&alice, jar_id);
     assert_eq!(200_000, jar.claimed_balance);
@@ -143,11 +147,14 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     assert_eq!(jar.principal, 0);
 
-    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000))) else {
+    let PromiseOrValue::Value(claimed) = context
+        .contract
+        .claim_jars(vec![U32(jar_id)], Some(U128(200_000)), None)
+    else {
         panic!();
     };
 
-    assert_eq!(claimed, U128(200_000));
+    assert_eq!(claimed.get_total(), U128(200_000));
 
     let _jar = context.contract.get_jar_internal(&alice, jar_id);
 }
@@ -169,11 +176,14 @@ fn failed_future_claim() {
 
     let jar_before_claim = context.contract.get_jar_internal(&alice, jar.id).clone();
 
-    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(200_000))) else {
+    let PromiseOrValue::Value(claimed) = context
+        .contract
+        .claim_jars(vec![U32(jar.id)], Some(U128(200_000)), None)
+    else {
         panic!()
     };
 
-    assert_eq!(claimed.0, 0);
+    assert_eq!(claimed.get_total().0, 0);
 
     let jar_after_claim = context.contract.get_jar_internal(&alice, jar.id);
 
