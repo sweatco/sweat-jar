@@ -39,8 +39,6 @@ pub mod gas_data {
     pub(crate) const GAS_FOR_AFTER_CLAIM: Gas =
         Gas(INITIAL_GAS_FOR_AFTER_CLAIM + ADDITIONAL_AFTER_CLAIM_JAR_COST * 200);
 
-    pub(crate) const GAS_FOR_AFTER_CLAIM_SUM: Gas = Gas(INITIAL_GAS_FOR_AFTER_CLAIM);
-
     /// Value is measured with `measure_withdraw_test`
     /// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
     pub(crate) const GAS_FOR_AFTER_WITHDRAW: Gas = tgas(4);
