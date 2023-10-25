@@ -391,17 +391,17 @@ mod signature_tests {
 }
 
 mod helpers {
-    use model::{ProductId, TokenAmount};
+    use model::TokenAmount;
     use near_sdk::AccountId;
 
     use crate::jar::model::Jar;
 
     impl Jar {
-        pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &ProductId) -> Jar {
+        pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &str) -> Jar {
             Self {
                 id,
                 account_id: account_id.clone(),
-                product_id: product_id.clone(),
+                product_id: product_id.to_string(),
                 created_at: 0,
                 principal: 0,
                 cache: None,

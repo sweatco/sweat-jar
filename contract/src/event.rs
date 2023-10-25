@@ -23,6 +23,7 @@ pub enum EventKind {
     Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
     ApplyPenalty(PenaltyData),
+    BatchApplyPenalty(Vec<PenaltyData>),
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),

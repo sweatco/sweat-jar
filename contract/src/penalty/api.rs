@@ -1,10 +1,11 @@
 use model::jar::JarIdView;
 use near_sdk::{env, near_bindgen, AccountId};
 
+use crate::event::EventKind::BatchApplyPenalty;
 use crate::{
     event::{emit, EventKind::ApplyPenalty, PenaltyData},
     product::model::Apy,
-    Contract, ContractExt,
+    Contract, ContractExt, JarsStorage,
 };
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
@@ -17,6 +18,7 @@ pub trait PenaltyApi {
     ///
     /// # Arguments
     ///
+    /// * `account_id` - The account of user which owns this jar.
     /// * `jar_id` - The ID of the jar for which the penalty status is being modified.
     /// * `value` - A boolean value indicating whether the penalty should be applied (`true`) or canceled (`false`).
     ///
@@ -24,6 +26,18 @@ pub trait PenaltyApi {
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
     fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool);
+
+    /// Behaves the same as `set_penalty`
+    ///
+    /// # Arguments
+    ///
+    /// * `jars` - Array containing `AccountId` and `Vec<JarIdView>` for each user and each jar.
+    /// * `value` - A boolean value indicating whether the penalty should be applied (`true`) or canceled (`false`).
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
+    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool);
 }
 
 #[near_bindgen]
@@ -47,5 +61,41 @@ impl PenaltyApi for Contract {
             id: jar_id,
             is_applied: value,
         }));
+    }
+
+    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) {
+        self.assert_manager();
+
+        let mut events = vec![];
+
+        for (account_id, jars) in jars {
+            let account_jars = self
+                .account_jars
+                .get_mut(&account_id)
+                .unwrap_or_else(|| env::panic_str(&format!("Account '{account_id}' doesn't exist")));
+
+            for jar_id in jars {
+                let jar_id = jar_id.0;
+
+                let jar = account_jars.get_jar_mut(jar_id);
+
+                let product = self
+                    .products
+                    .get(&jar.product_id)
+                    .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
+
+                match product.apy {
+                    Apy::Downgradable(_) => jar.apply_penalty(value),
+                    Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
+                };
+
+                events.push(PenaltyData {
+                    id: jar_id,
+                    is_applied: value,
+                });
+            }
+        }
+
+        emit(BatchApplyPenalty(events));
     }
 }
