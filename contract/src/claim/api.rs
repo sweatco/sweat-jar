@@ -67,14 +67,7 @@ impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
-
-        let accumulator = &mut if detailed.unwrap_or(false) {
-            ClaimedAmountView::Detailed(AggregatedTokenAmountView::default())
-        } else {
-            ClaimedAmountView::Total(U128(0))
-        };
-
-        self.claim_jars_internal(jar_ids, None, accumulator)
+        self.claim_jars_internal(jar_ids, None, detailed)
     }
 
     fn claim_jars(
@@ -83,13 +76,7 @@ impl ClaimApi for Contract {
         amount: Option<U128>,
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        let accumulator = &mut if detailed.unwrap_or(false) {
-            ClaimedAmountView::Detailed(AggregatedTokenAmountView::default())
-        } else {
-            ClaimedAmountView::Total(U128(0))
-        };
-
-        self.claim_jars_internal(jar_ids, amount, accumulator)
+        self.claim_jars_internal(jar_ids, amount, detailed)
     }
 }
 
@@ -98,10 +85,11 @@ impl Contract {
         &mut self,
         jar_ids: Vec<JarIdView>,
         amount: Option<U128>,
-        accumulator: &mut ClaimedAmountView,
+        detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
+        let mut accumulator = ClaimedAmountView::new(detailed);
 
         let unlocked_jars: Vec<Jar> = self
             .account_jars(&account_id)
@@ -134,14 +122,9 @@ impl Contract {
         }
 
         if accumulator.get_total().0 > 0 {
-            self.claim_interest(
-                &account_id,
-                accumulator.clone(),
-                unlocked_jars,
-                EventKind::Claim(event_data),
-            )
+            self.claim_interest(&account_id, accumulator, unlocked_jars, EventKind::Claim(event_data))
         } else {
-            PromiseOrValue::Value(accumulator.clone())
+            PromiseOrValue::Value(accumulator)
         }
     }
 }

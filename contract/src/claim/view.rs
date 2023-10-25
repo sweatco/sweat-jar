@@ -12,6 +12,14 @@ pub enum ClaimedAmountView {
 }
 
 impl ClaimedAmountView {
+    pub(crate) fn new(detailed: Option<bool>) -> Self {
+        if detailed.unwrap_or(false) {
+            Self::Detailed(AggregatedTokenAmountView::default())
+        } else {
+            Self::Total(U128(0))
+        }
+    }
+
     pub(crate) fn get_total(&self) -> U128 {
         match self {
             ClaimedAmountView::Total(value) => *value,

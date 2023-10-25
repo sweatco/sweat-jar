@@ -27,7 +27,7 @@ pub struct AggregatedTokenAmountView {
 impl Default for AggregatedTokenAmountView {
     fn default() -> Self {
         Self {
-            detailed: Default::default(),
+            detailed: HashMap::default(),
             total: U128(0),
         }
     }
