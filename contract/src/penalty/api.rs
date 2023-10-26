@@ -27,11 +27,11 @@ pub trait PenaltyApi {
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
     fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool);
 
-    /// Behaves the same as `set_penalty`
+    /// Batched version of `set_penalty`
     ///
     /// # Arguments
     ///
-    /// * `jars` - Array containing `AccountId` and `Vec<JarIdView>` for each user and each jar.
+    /// * `jars` - List of Account IDs and their Jar IDs to which penalty must be applied.
     /// * `value` - A boolean value indicating whether the penalty should be applied (`true`) or canceled (`false`).
     ///
     /// # Panics
@@ -50,12 +50,9 @@ impl PenaltyApi for Contract {
         let product = self.get_product(&jar.product_id).clone();
         let now = env::block_timestamp_ms();
 
-        match product.apy {
-            Apy::Downgradable(_) => self
-                .get_jar_mut_internal(&account_id, jar_id)
-                .apply_penalty(&product, value, now),
-            Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
-        };
+        assert_penalty_apy(&product.apy);
+        self.get_jar_mut_internal(&account_id, jar_id)
+            .apply_penalty(&product, value, now);
 
         emit(ApplyPenalty(PenaltyData {
             id: jar_id,
@@ -67,6 +64,8 @@ impl PenaltyApi for Contract {
         self.assert_manager();
 
         let mut events = vec![];
+
+        let now = env::block_timestamp_ms();
 
         for (account_id, jars) in jars {
             let account_jars = self
@@ -84,10 +83,8 @@ impl PenaltyApi for Contract {
                     .get(&jar.product_id)
                     .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
 
-                match product.apy {
-                    Apy::Downgradable(_) => jar.apply_penalty(value),
-                    Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
-                };
+                assert_penalty_apy(&product.apy);
+                jar.apply_penalty(product, value, now);
 
                 events.push(PenaltyData {
                     id: jar_id,
@@ -97,5 +94,12 @@ impl PenaltyApi for Contract {
         }
 
         emit(BatchApplyPenalty(events));
+    }
+}
+
+fn assert_penalty_apy(apy: &Apy) {
+    match apy {
+        Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
+        Apy::Downgradable(_) => (),
     }
 }

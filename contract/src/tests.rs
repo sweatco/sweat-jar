@@ -348,10 +348,10 @@ fn apply_penalty_in_batch() {
     context.set_block_timestamp_in_days(365);
 
     let interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
-    assert_eq!(interest, 1_000_000_000);
+    assert_eq!(interest, 1_498_630_000);
 
     let interest = context.contract.get_total_interest(bob.clone()).amount.total.0;
-    assert_eq!(interest, 500_000_000);
+    assert_eq!(interest, 749_315_000);
 
     assert!(context
         .contract
