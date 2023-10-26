@@ -9,6 +9,14 @@ env:
 
 jobs:
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Lint
+        run: make lint
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -18,16 +26,7 @@ jobs:
       - name: Build
         run: make build
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Lint
-        run: make lint
-
   unit-tests:
-    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -36,7 +35,6 @@ jobs:
         run: make test
 
   integration-tests:
-    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -46,7 +44,6 @@ jobs:
         run: make integration
 
   mutation-tests:
-    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - name: Install tool

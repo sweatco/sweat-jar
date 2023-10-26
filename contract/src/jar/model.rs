@@ -127,7 +127,13 @@ impl Jar {
         self.is_pending_withdraw = false;
     }
 
-    pub(crate) fn apply_penalty(&mut self, is_applied: bool) {
+    pub(crate) fn apply_penalty(&mut self, product: &Product, is_applied: bool, now: Timestamp) {
+        let current_interest = self.get_interest(product, now);
+
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: current_interest,
+        });
         self.is_penalty_applied = is_applied;
     }
 

@@ -33,10 +33,13 @@ impl PenaltyApi for Contract {
 
         let jar_id = jar_id.0;
         let jar = self.get_jar_internal(&account_id, jar_id);
-        let product = self.get_product(&jar.product_id);
+        let product = self.get_product(&jar.product_id).clone();
+        let now = env::block_timestamp_ms();
 
         match product.apy {
-            Apy::Downgradable(_) => self.get_jar_mut_internal(&account_id, jar_id).apply_penalty(value),
+            Apy::Downgradable(_) => self
+                .get_jar_mut_internal(&account_id, jar_id)
+                .apply_penalty(&product, value, now),
             Apy::Constant(_) => env::panic_str("Penalty is not applicable for constant APY"),
         };
 
