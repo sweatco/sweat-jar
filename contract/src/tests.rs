@@ -243,18 +243,55 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
         .with_products(&[reference_product])
         .with_jars(&[reference_jar]);
 
-    context.set_block_timestamp_in_days(182);
+    context.set_block_timestamp_in_ms(15_768_000_000);
 
     let mut interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
-    assert_eq!(interest, 9_972_602);
+    assert_eq!(interest, 10_000_000);
 
     context.switch_account(&admin);
     context.contract.set_penalty(alice.clone(), U32(0), true);
 
-    context.set_block_timestamp_in_days(365);
+    context.set_block_timestamp_in_ms(31_536_000_000);
 
     interest = context.contract.get_total_interest(alice).amount.total.0;
-    assert_eq!(interest, 10_000_000);
+    assert_eq!(interest, 15_000_000);
+}
+
+#[test]
+fn get_total_interest_for_premium_with_multiple_penalties_applied() {
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let signer = MessageSigner::new();
+    let reference_product = Product::generate("lux_product")
+        .enabled(true)
+        .apy(Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(23, 2),
+            fallback: UDecimal::new(10, 2),
+        }))
+        .lockup_term(3_600_000)
+        .public_key(signer.public_key());
+    let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000_000_000_000_000_000);
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[reference_product])
+        .with_jars(&[reference_jar]);
+
+    context.switch_account(&admin);
+
+    context.set_block_timestamp_in_ms(270_000);
+    context.contract.set_penalty(alice.clone(), U32(0), true);
+
+    context.set_block_timestamp_in_ms(390_000);
+    context.contract.set_penalty(alice.clone(), U32(0), false);
+
+    context.set_block_timestamp_in_ms(1_264_000);
+    context.contract.set_penalty(alice.clone(), U32(0), true);
+
+    context.set_block_timestamp_in_ms(3_700_000);
+
+    let interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
+    assert_eq!(interest, 1_613_140_537_798_072_042);
 }
 
 #[test]
