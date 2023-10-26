@@ -9,6 +9,14 @@ env:
 
 jobs:
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Lint
+        run: make lint
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -27,16 +35,7 @@ jobs:
           name: sweat-jar
           path: res/sweat_jar.wasm
 
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Lint
-        run: make lint
-
   unit-tests:
-    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -45,7 +44,6 @@ jobs:
         run: make test
 
   integration-tests:
-    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -55,7 +53,6 @@ jobs:
         run: make integration
 
   mutation-tests:
-    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - name: Install tool
@@ -68,7 +65,6 @@ jobs:
         run: make mutation
 
   measure:
-    needs: [ build, lint ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -84,7 +80,7 @@ jobs:
           path: measured.txt
 
   push:
-    needs: [ unit-tests, integration-tests, measure, mutation-tests ]
+    needs: [ build, lint, unit-tests, integration-tests, measure, mutation-tests ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

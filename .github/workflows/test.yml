@@ -9,6 +9,14 @@ env:
 
 jobs:
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Lint
+        run: make lint
+
   build:
     runs-on: ubuntu-latest
     steps:
@@ -17,14 +25,6 @@ jobs:
 
       - name: Build
         run: make build
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Lint
-        run: make lint
 
   unit-tests:
     runs-on: ubuntu-latest
