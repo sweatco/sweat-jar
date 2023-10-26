@@ -105,15 +105,12 @@ impl From<EventKind> for SweatJarEvent {
     }
 }
 
+#[mutants::skip]
 pub(crate) fn emit(event: EventKind) {
-    SweatJarEvent::from(event).emit();
+    log!(SweatJarEvent::from(event).to_json_event_string());
 }
 
 impl SweatJarEvent {
-    pub(crate) fn emit(&self) {
-        log!(self.to_json_event_string());
-    }
-
     fn to_json_string(&self) -> String {
         serde_json::to_string_pretty(self)
             .unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")))
@@ -121,5 +118,32 @@ impl SweatJarEvent {
 
     fn to_json_event_string(&self) -> String {
         format!("EVENT_JSON:{}", self.to_json_string())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use near_sdk::json_types::U128;
+
+    use crate::event::{EventKind, SweatJarEvent, TopUpData};
+
+    #[test]
+    fn event_to_string() {
+        assert_eq!(
+            SweatJarEvent::from(EventKind::TopUp(TopUpData {
+                id: 10,
+                amount: U128(50)
+            }))
+            .to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "1.0.0",
+  "event": "top_up",
+  "data": {
+    "id": 10,
+    "amount": "50"
+  }
+}"#
+        )
     }
 }

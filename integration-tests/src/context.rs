@@ -10,6 +10,7 @@ use crate::{
 const EPOCH_BLOCKS_HEIGHT: u64 = 43_200;
 const HOURS_PER_EPOCH: u64 = 12;
 const ONE_HOUR_BLOCKS_HEIGHT: u64 = EPOCH_BLOCKS_HEIGHT / HOURS_PER_EPOCH;
+const ONE_MINUTE_BLOCKS_HEIGHT: u64 = ONE_HOUR_BLOCKS_HEIGHT / 60;
 
 pub(crate) struct Context {
     worker: Worker<Sandbox>,
@@ -66,12 +67,13 @@ impl Context {
     }
 
     pub(crate) async fn fast_forward_hours(&self, hours: u64) -> anyhow::Result<()> {
-        let blocks_to_advance = ONE_HOUR_BLOCKS_HEIGHT * hours;
+        self.fast_forward_minutes(hours * 60).await
+    }
 
-        println!("⏳ Fast forward to {hours} hours ({blocks_to_advance} blocks)...");
-
+    pub(crate) async fn fast_forward_minutes(&self, minutes: u64) -> anyhow::Result<()> {
+        let blocks_to_advance = ONE_MINUTE_BLOCKS_HEIGHT * minutes;
+        println!("⏳ Fast forward to {minutes} minutes ({blocks_to_advance} blocks)...");
         self.worker.fast_forward(blocks_to_advance).await?;
-
         Ok(())
     }
 

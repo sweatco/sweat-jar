@@ -4,9 +4,10 @@ use model::{jar::JarIdView, TokenAmount, U32};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
+    common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
-    Contract, ContractExt,
+    Contract, ContractExt, JarsStorage,
 };
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
@@ -38,7 +39,13 @@ pub trait ClaimApi {
 
 #[ext_contract(ext_self)]
 pub trait ClaimCallbacks {
-    fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128;
+    fn after_claim(
+        &mut self,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+        now: Timestamp,
+    ) -> U128;
 }
 
 #[near_bindgen]
@@ -91,6 +98,7 @@ impl ClaimApi for Contract {
                 U128(total_interest_to_claim),
                 unlocked_jars,
                 EventKind::Claim(event_data),
+                now,
             )
         } else {
             PromiseOrValue::Value(U128(0))
@@ -106,27 +114,31 @@ impl Contract {
         claimed_amount: U128,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
+        now: Timestamp,
     ) -> PromiseOrValue<U128> {
         PromiseOrValue::Value(self.after_claim_internal(
             claimed_amount,
             jars_before_transfer,
             event,
+            now,
             crate::common::test_data::get_test_future_success(),
         ))
     }
 
     #[cfg(not(test))]
+    #[mutants::skip] // Covered by integration tests
     fn claim_interest(
         &mut self,
         account_id: &AccountId,
         claimed_amount: U128,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
+        now: Timestamp,
     ) -> PromiseOrValue<U128> {
         use crate::ft_interface::FungibleTokenInterface;
         self.ft_contract()
             .transfer(account_id, claimed_amount.0, "claim", &None)
-            .then(after_claim_call(claimed_amount, jars_before_transfer, event))
+            .then(after_claim_call(claimed_amount, jars_before_transfer, event, now))
             .into()
     }
 
@@ -135,18 +147,27 @@ impl Contract {
         claimed_amount: U128,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
+        now: Timestamp,
         is_promise_success: bool,
     ) -> U128 {
         if is_promise_success {
             for jar_before_transfer in jars_before_transfer {
-                let jar = self.get_jar_mut_internal(&jar_before_transfer.account_id, jar_before_transfer.id);
+                let product = self.products.get(&jar_before_transfer.product_id).unwrap_or_else(|| {
+                    env::panic_str(&format!("Product '{}' doesn't exist", jar_before_transfer.product_id))
+                });
+
+                let jar = self
+                    .account_jars
+                    .get_mut(&jar_before_transfer.account_id)
+                    .unwrap_or_else(|| {
+                        env::panic_str(&format!("Account '{}' doesn't exist", jar_before_transfer.account_id))
+                    })
+                    .get_jar_mut(jar_before_transfer.id);
 
                 jar.unlock();
 
-                if let Some(ref cache) = jar.cache {
-                    if cache.interest == 0 && jar.principal == 0 {
-                        self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
-                    }
+                if jar.should_be_closed(product, now) {
+                    self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
                 }
             }
 
@@ -169,14 +190,26 @@ impl Contract {
 #[near_bindgen]
 impl ClaimCallbacks for Contract {
     #[private]
-    fn after_claim(&mut self, claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> U128 {
-        self.after_claim_internal(claimed_amount, jars_before_transfer, event, is_promise_success())
+    fn after_claim(
+        &mut self,
+        claimed_amount: U128,
+        jars_before_transfer: Vec<Jar>,
+        event: EventKind,
+        now: Timestamp,
+    ) -> U128 {
+        self.after_claim_internal(claimed_amount, jars_before_transfer, event, now, is_promise_success())
     }
 }
 
 #[cfg(not(test))]
-fn after_claim_call(claimed_amount: U128, jars_before_transfer: Vec<Jar>, event: EventKind) -> crate::Promise {
+#[mutants::skip] // Covered by integration tests
+fn after_claim_call(
+    claimed_amount: U128,
+    jars_before_transfer: Vec<Jar>,
+    event: EventKind,
+    now: Timestamp,
+) -> crate::Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_CLAIM)
-        .after_claim(claimed_amount, jars_before_transfer, event)
+        .after_claim(claimed_amount, jars_before_transfer, event, now)
 }

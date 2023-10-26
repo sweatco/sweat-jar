@@ -6,6 +6,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[mutants::skip]
 async fn product_actions() -> anyhow::Result<()> {
     println!("👷🏽 Run test for product actions");
 

@@ -9,19 +9,21 @@ pub(crate) enum RegisterProductCommand {
     Flexible6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
     Locked10Minutes6Percents,
+    Locked10Minutes60000Percents,
     Locked10Minutes6PercentsTopUp,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
     Locked10Minutes6PercentsWithPercentWithdrawFee,
 }
 
 impl RegisterProductCommand {
-    pub(crate) fn all() -> [Self; 8] {
+    pub(crate) fn all() -> [Self; 9] {
         [
             Self::Locked12Months12Percents,
             Self::Locked6Months6Percents,
             Self::Flexible6Months6Percents,
             Self::Locked6Months6PercentsWithWithdrawFee,
             Self::Locked10Minutes6Percents,
+            Self::Locked10Minutes60000Percents,
             Self::Locked10Minutes6PercentsTopUp,
             Self::Locked10Minutes6PercentsWithFixedWithdrawFee,
             Self::Locked10Minutes6PercentsWithPercentWithdrawFee,
@@ -81,6 +83,7 @@ impl RegisterProductCommand {
                 },
                 "is_enabled": true,
             }),
+
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee => json!({
                 "id": "locked_6_months_6_percents_with_withdraw_fee",
                 "apy_default": ["6", 2],
@@ -111,6 +114,21 @@ impl RegisterProductCommand {
                         "lockup_term": "600000",
                         "allows_top_up": false,
                         "allows_restaking": true,
+                    }
+                },
+                "is_enabled": true,
+            }),
+            RegisterProductCommand::Locked10Minutes60000Percents => json!({
+                "id": "flexible_6_months_60000_percents",
+                "apy_default": ["60000", 2],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
+                "terms": {
+                    "type": "fixed",
+                    "data": {
+                        "lockup_term": "600000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
                     }
                 },
                 "is_enabled": true,

@@ -3,6 +3,7 @@ use serde_json::json;
 use crate::{common::ValueGetters, context::Context, product::RegisterProductCommand};
 
 #[tokio::test]
+#[mutants::skip]
 async fn migration() -> anyhow::Result<()> {
     println!("👷🏽 Run migration test");
 

@@ -32,12 +32,14 @@ impl OutcomeStorage {
         STORAGE.data.lock().unwrap()
     }
 
+    #[mutants::skip]
     pub fn start_measuring(account: &Account) {
         let mut measuring = Self::get_measuring();
         assert!(measuring.iter().find(|a| a == &account.id().as_str()).is_none());
         measuring.push(account.id().to_string());
     }
 
+    #[mutants::skip]
     fn stop_measuring(account: &Account) {
         let mut measuring = Self::get_measuring();
 
@@ -79,6 +81,7 @@ impl OutcomeStorage {
 
 impl OutcomeStorage {
     /// Store successful execution result
+    #[mutants::skip]
     pub fn add_result(result: ExecutionSuccess) {
         let execution = result.outcome().executor_id.clone();
 
@@ -90,6 +93,7 @@ impl OutcomeStorage {
         assert!(existing.is_none());
     }
 
+    #[mutants::skip]
     fn get_total_gas(account: &Account) -> Gas {
         let data = Self::get_data();
         let success = data.get(account.id().as_str()).unwrap();

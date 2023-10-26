@@ -19,6 +19,7 @@ async fn measure_register_product_test() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 pub(crate) async fn scoped_command_measure<Input, Inputs, Command, Fut>(
     inputs: Inputs,
     mut command: Command,

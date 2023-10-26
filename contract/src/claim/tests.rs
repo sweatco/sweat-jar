@@ -93,7 +93,11 @@ fn claim_all_withdraw_all_and_delete_jar() {
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
     context.switch_account(&alice);
-    context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000)));
+    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar_id)], Some(U128(200_000))) else {
+        panic!()
+    };
+
+    assert_eq!(200_000, claimed.0);
 
     let jar = context.contract.get_jar_internal(&alice, jar_id);
     assert_eq!(200_000, jar.claimed_balance);

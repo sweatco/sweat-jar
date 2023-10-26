@@ -53,7 +53,7 @@ pub(crate) trait JarContractInterface {
 
     async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Vec<JarView>>;
 
-    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<WithdrawView>;
+    async fn withdraw(&self, user: &Account, jar_id: JarIdView) -> anyhow::Result<WithdrawView>;
 
     async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
 
@@ -275,8 +275,8 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<WithdrawView> {
-        println!("▶️ Withdraw jar #{jar_id}");
+    async fn withdraw(&self, user: &Account, jar_id: JarIdView) -> anyhow::Result<WithdrawView> {
+        println!("▶️ Withdraw jar #{jar_id:?}");
 
         let args = json!({
             "jar_id": jar_id,
@@ -327,6 +327,15 @@ impl JarContractInterface for Contract {
         let result_value = result.json::<Value>()?;
 
         println!("   ✅ {result_value:?}");
+
+        for failure in result.failures() {
+            println!("   ❌ {:?}", failure);
+        }
+
+        if let Some(failure) = result.failures().into_iter().next().cloned() {
+            let error = failure.into_result().err().unwrap();
+            return Err(error.into());
+        }
 
         OutcomeStorage::add_result(result);
 

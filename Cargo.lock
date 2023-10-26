@@ -1418,6 +1418,7 @@ dependencies = [
  "itertools",
  "maplit",
  "model",
+ "mutants",
  "near-sdk",
  "near-units",
  "num-format",
@@ -1603,6 +1604,12 @@ version = "1.0.0"
 dependencies = [
  "near-sdk",
 ]
+
+[[package]]
+name = "mutants"
+version = "0.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc0287524726960e07b119cebd01678f852f147742ae0d925e6a520dca956126"
 
 [[package]]
 name = "native-tls"
@@ -3049,6 +3056,7 @@ dependencies = [
  "ed25519-dalek 2.0.0",
  "fake",
  "model",
+ "mutants",
  "near-contract-standards",
  "near-sdk",
  "near-self-update",

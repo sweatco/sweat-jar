@@ -18,6 +18,7 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn measure_top_up_test() -> Result<()> {
     async fn top_up() -> Result<()> {
         let measured = scoped_command_measure(
@@ -58,6 +59,7 @@ async fn measure_top_up_test() -> Result<()> {
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn single_top_up() -> anyhow::Result<()> {
     let gas = measure_top_up((RegisterProductCommand::Locked10Minutes6PercentsTopUp, 1)).await?;
 
@@ -66,6 +68,7 @@ async fn single_top_up() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 async fn measure_top_up(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
