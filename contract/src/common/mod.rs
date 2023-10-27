@@ -46,6 +46,8 @@ pub mod gas_data {
 
 #[cfg(test)]
 mod test {
+    use coverage_helper::test;
+
     use crate::common::tgas;
 
     #[test]

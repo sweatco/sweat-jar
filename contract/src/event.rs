@@ -123,6 +123,7 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
+    use coverage_helper::test;
     use near_sdk::json_types::U128;
 
     use crate::event::{EventKind, SweatJarEvent, TopUpData};

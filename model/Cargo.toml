@@ -9,3 +9,6 @@ name = "model"
 
 [dependencies]
 near-sdk = { workspace = true }
+
+[dev-dependencies]
+coverage-helper = { workspace = true }

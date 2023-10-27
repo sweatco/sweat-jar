@@ -31,6 +31,7 @@ impl WithdrawView {
 
 #[cfg(test)]
 mod test {
+    use coverage_helper::test;
     use near_sdk::{json_types::U128, AccountId};
 
     use crate::withdraw::{Fee, WithdrawView};

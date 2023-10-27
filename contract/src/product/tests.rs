@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use coverage_helper::test;
 use near_sdk::{
     json_types::{Base64VecU8, U128},
     test_utils::accounts,

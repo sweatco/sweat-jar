@@ -5,6 +5,8 @@ use std::{
     sync::{Mutex, MutexGuard},
 };
 
+use coverage_helper::test;
+
 type ThreadId = String;
 type ValueKey = String;
 type Value = String;

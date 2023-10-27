@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
+use coverage_helper::test;
 use model::{jar::JarView, U32};
 use near_sdk::{json_types::U128, test_utils::accounts};
 

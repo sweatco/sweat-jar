@@ -55,6 +55,8 @@ impl UDecimal {
 
 #[cfg(test)]
 mod tests {
+    use coverage_helper::test;
+
     use crate::common::udecimal::UDecimal;
 
     #[test]

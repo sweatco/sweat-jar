@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use coverage_helper::test;
 use fake::Fake;
 use near_sdk::{test_utils::accounts, Timestamp};
 

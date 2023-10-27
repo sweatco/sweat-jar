@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use coverage_helper::test;
 use model::U32;
 use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};
 
