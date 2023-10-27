@@ -1,8 +1,8 @@
 use model::jar::JarIdView;
 use near_sdk::{env, near_bindgen, AccountId};
 
+use crate::event::BatchPenaltyData;
 use crate::{
-    common::Timestamp,
     event::{
         emit,
         EventKind::{ApplyPenalty, BatchApplyPenalty},
@@ -29,7 +29,7 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) -> Timestamp;
+    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool);
 
     /// Batched version of `set_penalty`
     ///
@@ -41,12 +41,12 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) -> Timestamp;
+    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool);
 }
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) -> Timestamp {
+    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
         self.assert_manager();
 
         let jar_id = jar_id.0;
@@ -61,15 +61,14 @@ impl PenaltyApi for Contract {
         emit(ApplyPenalty(PenaltyData {
             id: jar_id,
             is_applied: value,
+            timestamp: now,
         }));
-
-        now
     }
 
-    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) -> Timestamp {
+    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) {
         self.assert_manager();
 
-        let mut events = vec![];
+        let mut applied_jars = vec![];
 
         let now = env::block_timestamp_ms();
 
@@ -92,16 +91,15 @@ impl PenaltyApi for Contract {
                 assert_penalty_apy(&product.apy);
                 jar.apply_penalty(product, value, now);
 
-                events.push(PenaltyData {
-                    id: jar_id,
-                    is_applied: value,
-                });
+                applied_jars.push(jar_id);
             }
         }
 
-        emit(BatchApplyPenalty(events));
-
-        now
+        emit(BatchApplyPenalty(BatchPenaltyData {
+            jars: applied_jars,
+            is_applied: value,
+            timestamp: now,
+        }));
     }
 }
 
