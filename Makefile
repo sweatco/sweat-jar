@@ -18,6 +18,9 @@ mutation: ##@Miscellaneous Run mutation test.
 build: ##@Build Build the contract locally.
 	./scripts/build.sh
 
+build-integration: ##@Build Build the contract for integration tests.
+	./scripts/build-integration.sh
+
 build-in-docker: ##@Build Build reproducible artifact in Docker.
 	./scripts/build-in-docker.sh
 

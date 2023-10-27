@@ -5,9 +5,9 @@ use std::{
 
 use anyhow::bail;
 use ed25519_dalek::{SigningKey, VerifyingKey};
+use near_workspaces::Account;
 use rand::rngs::OsRng;
 use serde_json::Value;
-use workspaces::Account;
 
 use crate::{context::Context, product::RegisterProductCommand};
 
@@ -56,7 +56,7 @@ pub fn build_contract() -> anyhow::Result<()> {
     }
 
     let output = Command::new("make")
-        .arg("build")
+        .arg("build-integration")
         .current_dir("..")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())

@@ -22,6 +22,7 @@ mod common;
 mod event;
 mod ft_interface;
 mod ft_receiver;
+mod integration_test;
 mod internal;
 mod jar;
 mod migration;

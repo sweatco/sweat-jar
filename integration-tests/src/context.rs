@@ -1,16 +1,13 @@
 use std::{collections::HashMap, env, fs};
 
 use near_units::parse_near;
-use workspaces::{network::Sandbox, Account, Worker};
+use near_workspaces::{network::Sandbox, Account, Worker};
 
 use crate::{
     common::build_contract, ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface,
 };
 
-const EPOCH_BLOCKS_HEIGHT: u64 = 43_200;
-const HOURS_PER_EPOCH: u64 = 12;
-const ONE_HOUR_BLOCKS_HEIGHT: u64 = EPOCH_BLOCKS_HEIGHT / HOURS_PER_EPOCH;
-const ONE_MINUTE_BLOCKS_HEIGHT: u64 = ONE_HOUR_BLOCKS_HEIGHT / 60;
+const ONE_MINUTE_BLOCKS_HEIGHT: u64 = 240;
 
 pub(crate) struct Context {
     worker: Worker<Sandbox>,
@@ -26,7 +23,7 @@ impl Context {
 
         build_contract()?;
 
-        let worker = workspaces::sandbox().await?;
+        let worker = near_workspaces::sandbox().await?;
         let root_account = worker.dev_create_account().await?;
 
         let jar_contract = worker.dev_deploy(&Self::load_wasm("../res/sweat_jar.wasm")).await?;
