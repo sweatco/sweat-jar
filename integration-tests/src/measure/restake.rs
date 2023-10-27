@@ -3,7 +3,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use workspaces::types::Gas;
+use itertools::Itertools;
+use near_workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},
@@ -53,6 +54,24 @@ async fn measure_restake_total_test() -> Result<()> {
     }
 
     retry_until_ok(restake).await?;
+    dbg!(&map);
+
+    let map: HashMap<RegisterProductCommand, _> = map
+        .into_iter()
+        .map(|(key, gas_cost)| {
+            let mut differences: Vec<Gas> = Vec::new();
+            for i in 1..gas_cost.len() {
+                let gas1: Gas = gas_cost[i];
+                let gas2: Gas = gas_cost[i - 1];
+                let diff: Gas = gas1.checked_sub(gas2).unwrap();
+                differences.push(diff);
+            }
+
+            (key, (gas_cost, differences))
+        })
+        .collect();
+
+    dbg!(&map);
 
     Ok(())
 }

@@ -5,8 +5,8 @@ use model::{
 };
 use near_sdk::json_types::U128;
 use near_units::parse_near;
+use near_workspaces::{Account, AccountId, Contract};
 use serde_json::{json, Value};
-use workspaces::{Account, AccountId, Contract};
 
 use crate::measure::outcome_storage::OutcomeStorage;
 
@@ -89,6 +89,8 @@ pub(crate) trait JarContractInterface {
         amount: U128,
         ft_contract_id: &AccountId,
     ) -> anyhow::Result<U128>;
+
+    async fn get_coverage(&self) -> anyhow::Result<Vec<u8>>;
 }
 
 #[async_trait]
@@ -576,6 +578,14 @@ impl JarContractInterface for Contract {
         OutcomeStorage::add_result(result);
 
         Ok(result_value)
+    }
+
+    async fn get_coverage(&self) -> anyhow::Result<Vec<u8>> {
+        println!("▶️ Get coverage");
+
+        let result = self.view("get_coverage").await?.result;
+
+        Ok(result)
     }
 }
 

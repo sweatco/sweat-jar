@@ -21,6 +21,11 @@ build: ##@Build Build the contract locally.
 build-in-docker: ##@Build Build reproducible artifact in Docker.
 	./scripts/build-in-docker.sh
 
+wasmcov: ##@Build Measure the integration test coverage
+	./scripts/build-with-coverage.sh
+	make integration
+	./scripts/measure-coverage.sh
+
 dock: build-in-docker ##@Build Shorthand for `build-in-docker`
 
 deploy: ##@Deploy Deploy the contract to dev account on Testnet.

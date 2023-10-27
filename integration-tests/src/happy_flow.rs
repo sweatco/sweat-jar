@@ -20,6 +20,10 @@ async fn happy_flow() -> anyhow::Result<()> {
     ])
     .await?;
 
+    let coverage = context.jar_contract.get_coverage().await?;
+
+    std::fs::write("output.profraw", coverage).unwrap();
+
     let products = context.jar_contract.get_products().await?;
     assert_eq!(3, products.as_array().unwrap().len());
 

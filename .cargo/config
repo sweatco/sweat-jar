@@ -7,3 +7,12 @@ lto = true
 debug = false
 panic = "abort"
 overflow-checks = true
+
+[profile.coverage]
+inherits = "release"
+strip = true
+codegen-units = 1
+opt-level = "z"
+debug = false
+panic = "abort"
+overflow-checks = true

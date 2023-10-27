@@ -1,7 +1,10 @@
-use std::{collections::HashMap, env, fs};
+use std::{collections::HashMap, env, fs, path::PathBuf};
 
 use near_units::parse_near;
-use workspaces::{network::Sandbox, Account, Worker};
+use near_workspaces::{
+    network::{Sandbox, ValidatorKey},
+    Account, Worker,
+};
 
 use crate::{
     common::build_contract, ft_contract_interface::FtContractInterface, jar_contract_interface::JarContractInterface,
@@ -24,12 +27,17 @@ impl Context {
     pub(crate) async fn new() -> anyhow::Result<Context> {
         println!("🏭 Initializing context");
 
-        build_contract()?;
+        // build_contract()?;
 
-        let worker = workspaces::sandbox().await?;
+        let worker = near_workspaces::sandbox()
+            .rpc_addr("http://localhost:3030")
+            .validator_key(ValidatorKey::HomeDir(PathBuf::from("/home/noah/.near")))
+            .await?;
         let root_account = worker.dev_create_account().await?;
 
-        let jar_contract = worker.dev_deploy(&Self::load_wasm("../res/sweat_jar.wasm")).await?;
+        let jar_contract = worker
+            .dev_deploy(&Self::load_wasm("../res/sweat_jar_coverage.wasm"))
+            .await?;
         let ft_contract = worker.dev_deploy(&Self::load_wasm("../res/sweat.wasm")).await?;
 
         println!("@@ jar contract deployed to {}", jar_contract.id());

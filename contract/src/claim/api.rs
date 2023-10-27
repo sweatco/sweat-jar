@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, str::from_utf8_unchecked};
 
 use model::{jar::JarIdView, TokenAmount, U32};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
@@ -19,6 +19,8 @@ pub trait ClaimApi {
     /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available
     /// interest across all jars is zero, the returned value will also be zero.
     fn claim_total(&mut self) -> PromiseOrValue<U128>;
+
+    fn get_coverage(&self) -> Vec<u8>;
 
     /// Claims interest from specific deposit jars with provided IDs.
     ///
@@ -54,6 +56,16 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars(jar_ids, None)
+    }
+
+    fn get_coverage(&self) -> Vec<u8> {
+        let mut coverage = vec![];
+        unsafe {
+            // Note that this function is not thread-safe! Use a lock if needed.
+            minicov::capture_coverage(&mut coverage).unwrap();
+        }
+
+        coverage
     }
 
     fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128> {

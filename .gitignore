@@ -42,3 +42,10 @@ generated
 target
 
 mutants.out*
+res/sweat_jar_coverage.*
+
+**/*.profraw
+**/*.profdata
+
+cov_report
+coverage

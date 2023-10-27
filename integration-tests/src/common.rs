@@ -5,9 +5,9 @@ use std::{
 
 use anyhow::bail;
 use ed25519_dalek::{SigningKey, VerifyingKey};
+use near_workspaces::Account;
 use rand::rngs::OsRng;
 use serde_json::Value;
-use workspaces::Account;
 
 use crate::{context::Context, product::RegisterProductCommand};
 

@@ -23,6 +23,8 @@ mutants = { workspace = true }
 
 model = { workspace = true }
 
+wasmcov = { workspace = true }
+
 borsh = "0.10.3"
 maplit = "1.0"
 near-units = "0.2.0"
@@ -31,6 +33,6 @@ serde_json = { version = "1.0", features = ["arbitrary_precision"] }
 tokio = { version = "1.18.1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3.11", features = ["env-filter"] }
-workspaces = "0.7.0"
+near-workspaces = { git = "https://github.com/near/near-workspaces-rs.git", features = ["unstable"] }
 pkg-config = "0.3.1"
 async-trait = "0.1.71"

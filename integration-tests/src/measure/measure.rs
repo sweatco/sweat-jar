@@ -4,8 +4,8 @@ use std::future::Future;
 
 use futures::future::join_all;
 use itertools::Itertools;
+use near_workspaces::types::Gas;
 use tokio::spawn;
-use workspaces::types::Gas;
 
 use crate::{measure::register_product::measure_register_product, product::RegisterProductCommand};
 

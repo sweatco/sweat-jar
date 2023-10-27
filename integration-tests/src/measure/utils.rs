@@ -2,9 +2,9 @@ use std::{env::var, fs::OpenOptions, future::Future, io::Write, iter::once};
 
 use anyhow::{bail, Result};
 use near_sdk::serde::Serialize;
+use near_workspaces::{types::Gas, Account};
 use num_format::{Buffer, CustomFormat};
 use serde_json::{to_string_pretty, to_value, Map, Value};
-use workspaces::{types::Gas, Account};
 
 use crate::{context::Context, product::RegisterProductCommand};
 

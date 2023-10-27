@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use near_sdk::json_types::U128;
 use near_units::parse_near;
+use near_workspaces::{Account, AccountId, Contract};
 use serde_json::json;
-use workspaces::{Account, AccountId, Contract};
 
 #[async_trait]
 pub(crate) trait FtContractInterface {

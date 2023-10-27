@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use near_sdk::json_types::U128;
-use workspaces::types::Gas;
+use near_workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},

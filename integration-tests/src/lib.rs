@@ -2,6 +2,7 @@
 
 mod common;
 mod context;
+mod coverage;
 mod ft_contract_interface;
 mod happy_flow;
 mod jar_contract_interface;
