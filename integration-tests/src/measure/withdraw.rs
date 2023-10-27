@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use workspaces::types::Gas;
+use near_workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},
@@ -45,7 +45,7 @@ async fn measure_withdraw_total_test() -> Result<()> {
             .map(|(key, gas_cost)| {
                 let mut differences: Vec<i128> = Vec::new();
                 for i in 1..gas_cost.len() {
-                    let diff = gas_cost[i].0 as i128 - gas_cost[i - 1].0 as i128;
+                    let diff = gas_cost[i].0.as_gas() as i128 - gas_cost[i - 1].0.as_gas() as i128;
                     differences.push(diff);
                 }
 

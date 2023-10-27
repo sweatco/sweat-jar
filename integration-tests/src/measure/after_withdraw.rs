@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use itertools::Itertools;
-use workspaces::types::Gas;
+use near_workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},

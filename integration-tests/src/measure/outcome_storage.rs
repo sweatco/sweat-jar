@@ -5,7 +5,7 @@ use std::{
 };
 
 use itertools::Itertools;
-use workspaces::{
+use near_workspaces::{
     result::{ExecutionOutcome, ExecutionSuccess},
     types::Gas,
     Account,
