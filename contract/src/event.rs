@@ -6,6 +6,7 @@ use near_sdk::{
     serde_json, AccountId,
 };
 
+use crate::common::Timestamp;
 use crate::{env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -23,6 +24,7 @@ pub enum EventKind {
     Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
     ApplyPenalty(PenaltyData),
+    BatchApplyPenalty(BatchPenaltyData),
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
@@ -72,6 +74,15 @@ pub struct RestakeData {
 pub struct PenaltyData {
     pub id: JarId,
     pub is_applied: bool,
+    pub timestamp: Timestamp,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct BatchPenaltyData {
+    pub jars: Vec<JarId>,
+    pub is_applied: bool,
+    pub timestamp: Timestamp,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

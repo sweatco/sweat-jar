@@ -295,6 +295,73 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
 }
 
 #[test]
+fn apply_penalty_in_batch() {
+    let admin = accounts(0);
+    let alice = accounts(1);
+    let bob = accounts(2);
+
+    let product_id = "premium_product";
+
+    let signer = MessageSigner::new();
+    let reference_product = Product::generate(product_id)
+        .enabled(true)
+        .apy(Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        }))
+        .public_key(signer.public_key());
+
+    let alice_jars = (0..100).map(|id| Jar::generate(id, &alice, product_id).principal(100_000_000));
+    let bob_jars = (0..50).map(|id| Jar::generate(id + 200, &bob, product_id).principal(100_000_000));
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[reference_product])
+        .with_jars(&alice_jars.chain(bob_jars).collect::<Vec<_>>());
+
+    context.set_block_timestamp_in_days(182);
+
+    let interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
+    assert_eq!(interest, 997_260_200);
+
+    let interest = context.contract.get_total_interest(bob.clone()).amount.total.0;
+    assert_eq!(interest, 498_630_100);
+
+    context.switch_account(&admin);
+
+    let alice_jars = context
+        .contract
+        .get_jars_for_account(alice.clone())
+        .into_iter()
+        .map(|j| j.id)
+        .collect();
+    let bob_jars = context
+        .contract
+        .get_jars_for_account(bob.clone())
+        .into_iter()
+        .map(|j| j.id)
+        .collect();
+
+    context
+        .contract
+        .batch_set_penalty(vec![(alice.clone(), alice_jars), (bob.clone(), bob_jars)], true);
+
+    context.set_block_timestamp_in_days(365);
+
+    let interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
+    assert_eq!(interest, 1_498_630_000);
+
+    let interest = context.contract.get_total_interest(bob.clone()).amount.total.0;
+    assert_eq!(interest, 749_315_000);
+
+    assert!(context
+        .contract
+        .get_jars_for_account(alice)
+        .into_iter()
+        .chain(context.contract.get_jars_for_account(bob).into_iter())
+        .all(|jar| jar.is_penalty_applied == true))
+}
+
+#[test]
 fn get_interest_after_withdraw() {
     let alice = accounts(0);
     let admin = accounts(1);

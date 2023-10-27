@@ -1,5 +1,6 @@
 mod after_claim;
 mod after_withdraw;
+mod batch_penalty;
 mod claim;
 pub(crate) mod measure;
 pub(crate) mod outcome_storage;
