@@ -5,13 +5,12 @@ use std::collections::HashMap;
 use anyhow::Result;
 use workspaces::types::Gas;
 
-use crate::measure::utils::measure_jars_range;
 use crate::{
     common::{prepare_contract, Prepared},
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
-        utils::{add_jar, append_measure, generate_permutations, retry_until_ok, MeasureData},
+        utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
     product::RegisterProductCommand,
 };

@@ -1,9 +1,13 @@
 use model::jar::JarIdView;
 use near_sdk::{env, near_bindgen, AccountId};
 
-use crate::event::EventKind::BatchApplyPenalty;
 use crate::{
-    event::{emit, EventKind::ApplyPenalty, PenaltyData},
+    common::Timestamp,
+    event::{
+        emit,
+        EventKind::{ApplyPenalty, BatchApplyPenalty},
+        PenaltyData,
+    },
     product::model::Apy,
     Contract, ContractExt, JarsStorage,
 };
@@ -25,7 +29,7 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool);
+    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) -> Timestamp;
 
     /// Batched version of `set_penalty`
     ///
@@ -37,12 +41,12 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool);
+    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) -> Timestamp;
 }
 
 #[near_bindgen]
 impl PenaltyApi for Contract {
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
+    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) -> Timestamp {
         self.assert_manager();
 
         let jar_id = jar_id.0;
@@ -58,9 +62,11 @@ impl PenaltyApi for Contract {
             id: jar_id,
             is_applied: value,
         }));
+
+        now
     }
 
-    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) {
+    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) -> Timestamp {
         self.assert_manager();
 
         let mut events = vec![];
@@ -94,6 +100,8 @@ impl PenaltyApi for Contract {
         }
 
         emit(BatchApplyPenalty(events));
+
+        now
     }
 }
 
