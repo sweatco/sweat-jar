@@ -10,6 +10,7 @@ pub trait IntegrationTestMethods {
 
 #[near_bindgen]
 impl IntegrationTestMethods for Contract {
+    #[mutants::skip]
     fn block_timestamp_ms(&self) -> Timestamp {
         env::block_timestamp_ms()
     }
