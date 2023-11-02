@@ -1,14 +1,15 @@
 #![cfg(test)]
 
-use model::U32;
+use model::{
+    api::{ClaimApi, JarApi, WithdrawApi},
+    MS_IN_YEAR, U32,
+};
 use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
 
 use crate::{
-    claim::api::ClaimApi,
-    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, MS_IN_YEAR},
-    jar::{api::JarApi, model::Jar},
+    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal},
+    jar::model::Jar,
     product::model::{Apy, Product, WithdrawalFee},
-    withdraw::api::WithdrawApi,
 };
 
 fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {

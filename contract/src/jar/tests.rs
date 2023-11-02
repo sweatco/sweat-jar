@@ -1,10 +1,11 @@
 #![cfg(test)]
 
 use fake::Fake;
+use model::MS_IN_YEAR;
 use near_sdk::{test_utils::accounts, Timestamp};
 
 use crate::{
-    common::{udecimal::UDecimal, MS_IN_YEAR},
+    common::udecimal::UDecimal,
     jar::model::Jar,
     product::model::{Apy, Product},
 };
@@ -49,20 +50,19 @@ fn interest_precision() {
 
 #[cfg(test)]
 mod signature_tests {
-    use model::U32;
+    use model::{
+        api::{JarApi, ProductApi},
+        MS_IN_YEAR, U32,
+    };
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         test_utils::accounts,
     };
 
     use crate::{
-        common::{tests::Context, udecimal::UDecimal, MS_IN_YEAR},
-        jar::{
-            api::JarApi,
-            model::{Jar, JarTicket},
-        },
+        common::{tests::Context, udecimal::UDecimal},
+        jar::model::{Jar, JarTicket},
         product::{
-            api::*,
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
         },

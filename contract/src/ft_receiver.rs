@@ -1,15 +1,13 @@
-use model::jar::JarId;
+use model::jar::{CeFiJar, JarId};
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
     json_types::U128,
     require,
     serde::{Deserialize, Serialize},
-    serde_json, PromiseOrValue,
+    serde_json, AccountId, PromiseOrValue,
 };
 
-use crate::{
-    jar::model::JarTicket, migration::model::CeFiJar, near_bindgen, AccountId, Base64VecU8, Contract, ContractExt,
-};
+use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -37,7 +35,7 @@ pub struct StakeMessage {
     signature: Option<Base64VecU8>,
 
     /// An optional account ID representing the intended owner of the created jar.
-    receiver_id: Option<AccountId>,
+    receiver_id: Option<crate::AccountId>,
 }
 
 #[near_bindgen]
@@ -70,13 +68,13 @@ impl FungibleTokenReceiver for Contract {
 mod tests {
     use std::panic::catch_unwind;
 
-    use model::U32;
+    use model::{api::JarApi, U32};
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
     use near_sdk::{json_types::U128, serde_json::json, test_utils::accounts};
 
     use crate::{
         common::{tests::Context, udecimal::UDecimal},
-        jar::{api::JarApi, model::Jar},
+        jar::model::Jar,
         product::{
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},

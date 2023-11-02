@@ -1,5 +1,5 @@
 use near_sdk::serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{from_value, json, Value};
 
 #[derive(Serialize, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 #[serde(crate = "near_sdk::serde")]
@@ -40,7 +40,11 @@ impl RegisterProductCommand {
         json
     }
 
-    pub(crate) fn json(&self) -> Value {
+    pub(crate) fn get(self) -> model::product::RegisterProductCommand {
+        from_value(self.json()).unwrap()
+    }
+
+    fn json(&self) -> Value {
         match self {
             RegisterProductCommand::Locked12Months12Percents => json!({
                 "id": "locked_12_months_12_percents",

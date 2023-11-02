@@ -3,10 +3,12 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
+use model::api::{JarApiIntegration, PenaltyApiIntegration};
 use near_workspaces::types::Gas;
 
 use crate::{
-    common::{prepare_contract, Prepared},
+    context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
@@ -68,20 +70,18 @@ async fn single_batch_penalty() -> anyhow::Result<()> {
 async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let Prepared {
-        mut context,
-        manager,
-        alice,
-        fee_account: _,
-    } = prepare_contract([product]).await?;
+    let mut context = prepare_contract([product]).await?;
+
+    let alice = context.alice().await?;
+    let manager = context.manager().await?;
 
     for _ in 0..jars_count {
         add_jar(&context, &alice, product, 100_000).await?;
     }
 
     let jars = context
-        .jar_contract
-        .get_jars_for_account(&alice)
+        .sweat_jar()
+        .get_jars_for_account(alice.to_near())
         .await?
         .into_iter()
         .map(|j| j.id)
@@ -90,8 +90,9 @@ async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow
     let (gas, _) = OutcomeStorage::measure_total(
         &manager,
         context
-            .jar_contract
-            .batch_set_penalty(&manager, vec![(alice.id().clone(), jars)], true),
+            .sweat_jar()
+            .with_user(&manager)
+            .batch_set_penalty(vec![(alice.to_near(), jars)], true),
     )
     .await?;
 

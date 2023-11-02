@@ -13,11 +13,11 @@ integration-test = []
 
 [dependencies]
 ed25519-dalek = { workspace = true }
-near-sdk = { workspace = true }
 mutants = { workspace = true }
 
-near-contract-standards = "4.1.1"
-near-self-update = { git = "https://github.com/sweatco/near-self-update.git", rev = "7064db3cdd924efc7fa7c00664920a2b482e7bcf" }
+near-sdk = { workspace = true }
+near-self-update = { workspace = true }
+near-contract-standards = { workspace = true }
 
 model = { workspace = true }
 

@@ -124,6 +124,7 @@ Here is an overview of the project structure:
 ├── contract
 ├── docs
 ├── integration-tests
+├── model
 └── scripts
 ```
 
@@ -180,8 +181,13 @@ These tests work with both FT and DeFi Jars contracts, covering the following sc
 In addition to these files, it also contains utilities and testing data, with the most significant being:
 
 - **context.rs:** This provides context for a test suite, loading artifacts, granting access to smart contract interfaces, and enabling time travel.
-- **ft_contract_interface.rs:** This offers an interface for the FT Contract API.
 - **jar_contract_interface.rs:** This provides an interface for the DeFi Jar Contract API.
+
+- FT contract interface is described in https://github.com/sweatco/sweat-near repository and used as a dependency for this crate:
+  
+   `sweat-model` - contains API traits for FT token contract.
+
+   `sweat-integration` - implementation of FT token contract methods to be used specifically in context of integration tests.
 
 ## 3.2. 📐 Architecture overview
 

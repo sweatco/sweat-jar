@@ -41,6 +41,9 @@ integration: ##@Testing Run integration tests.
 
 int: integration ##@Testing Shorthand for `integration`
 
+state: ##@Testing Test for contract state change`
+	./scripts/test_state.sh
+
 fmt: ##@Chores Format the code using rustfmt nightly.
 	cargo +nightly fmt --all
 

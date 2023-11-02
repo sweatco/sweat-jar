@@ -1,24 +1,12 @@
-use model::ProductId;
-use near_sdk::{
-    json_types::{U128, U64},
-    serde::{Deserialize, Serialize},
+use model::product::{
+    ApyView, CapView, DowngradableApyView, FixedProductTermsView, ProductView, TermsView, WithdrawalFeeView,
 };
+use near_sdk::json_types::{U128, U64};
 
 use crate::{
     product::model::{Cap, DowngradableApy, Terms, WithdrawalFee},
     Apy, Product,
 };
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct ProductView {
-    pub id: ProductId,
-    pub apy: ApyView,
-    pub cap: CapView,
-    pub terms: TermsView,
-    pub withdrawal_fee: Option<WithdrawalFeeView>,
-    pub is_enabled: bool,
-}
 
 impl From<Product> for ProductView {
     fn from(value: Product) -> Self {
@@ -31,21 +19,6 @@ impl From<Product> for ProductView {
             is_enabled: value.is_enabled,
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
-pub enum TermsView {
-    Fixed(FixedProductTermsView),
-    Flexible,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct FixedProductTermsView {
-    pub lockup_term: U64,
-    pub allows_top_up: bool,
-    pub allows_restaking: bool,
 }
 
 impl From<Terms> for TermsView {
@@ -61,13 +34,6 @@ impl From<Terms> for TermsView {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
-pub enum WithdrawalFeeView {
-    Fix(U128),
-    Percent(f32),
-}
-
 impl From<WithdrawalFee> for WithdrawalFeeView {
     fn from(value: WithdrawalFee) -> Self {
         match value {
@@ -75,13 +41,6 @@ impl From<WithdrawalFee> for WithdrawalFeeView {
             WithdrawalFee::Percent(value) => WithdrawalFeeView::Percent(value.to_f32()),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub enum ApyView {
-    Constant(f32),
-    Downgradable(DowngradableApyView),
 }
 
 impl From<Apy> for ApyView {
@@ -93,13 +52,6 @@ impl From<Apy> for ApyView {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct DowngradableApyView {
-    pub default: f32,
-    pub fallback: f32,
-}
-
 impl From<DowngradableApy> for DowngradableApyView {
     fn from(value: DowngradableApy) -> Self {
         Self {
@@ -107,13 +59,6 @@ impl From<DowngradableApy> for DowngradableApyView {
             fallback: value.fallback.to_f32(),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct CapView {
-    pub min: U128,
-    pub max: U128,
 }
 
 impl From<Cap> for CapView {

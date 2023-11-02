@@ -1,12 +1,7 @@
-use std::fmt::Debug;
+use model::{jar::JarView, U32};
+use near_sdk::json_types::{U128, U64};
 
-use model::{jar::JarView, AggregatedTokenAmountView, U32};
-use near_sdk::{
-    json_types::{U128, U64},
-    serde::{Deserialize, Serialize},
-};
-
-use crate::{common::Timestamp, jar::model::Jar};
+use crate::jar::model::Jar;
 
 impl From<Jar> for JarView {
     fn from(value: Jar) -> Self {
@@ -34,11 +29,4 @@ impl From<&Jar> for JarView {
             is_penalty_applied: value.is_penalty_applied,
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
-pub struct AggregatedInterestView {
-    pub amount: AggregatedTokenAmountView,
-    pub timestamp: Timestamp,
 }

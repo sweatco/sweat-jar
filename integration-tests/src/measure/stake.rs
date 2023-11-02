@@ -3,10 +3,11 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use integration_utils::integration_contract::IntegrationContract;
 use near_workspaces::types::Gas;
 
 use crate::{
-    common::{prepare_contract, Prepared},
+    context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
@@ -79,12 +80,9 @@ async fn one_stake() -> anyhow::Result<()> {
 pub(crate) async fn measure_stake(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let Prepared {
-        context,
-        manager: _,
-        alice,
-        fee_account: _,
-    } = prepare_contract([product]).await?;
+    let mut context = prepare_contract([product]).await?;
+
+    let alice = context.alice().await?;
 
     for _ in 0..jars_count {
         add_jar(&context, &alice, product, 100_000).await?;
@@ -92,9 +90,12 @@ pub(crate) async fn measure_stake(input: (RegisterProductCommand, usize)) -> any
 
     let (gas, _) = OutcomeStorage::measure_total(
         &alice,
-        context
-            .jar_contract
-            .create_jar(&alice, product.id(), 100_000, context.ft_contract.account().id()),
+        context.sweat_jar().create_jar(
+            &alice,
+            product.id(),
+            100_000,
+            context.ft_contract().contract().as_account().id(),
+        ),
     )
     .await?;
 

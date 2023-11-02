@@ -1,7 +1,11 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
+use integration_utils::integration_contract::IntegrationContract;
+use itertools::Itertools;
+use model::api::ProductApiIntegration;
 
 use crate::{
-    common::{generate_keypair, prepare_contract, Prepared},
+    common::generate_keypair,
+    context::{prepare_contract, IntegrationContext},
     product::RegisterProductCommand,
 };
 
@@ -10,39 +14,38 @@ use crate::{
 async fn product_actions() -> anyhow::Result<()> {
     println!("👷🏽 Run test for product actions");
 
-    let Prepared {
-        context,
-        manager,
-        alice,
-        fee_account: _,
-    } = prepare_contract([RegisterProductCommand::Locked12Months12Percents]).await?;
+    let mut context = prepare_contract([RegisterProductCommand::Locked12Months12Percents]).await?;
+
+    let alice = context.alice().await?;
+    let manager = context.manager().await?;
 
     let product_id = RegisterProductCommand::Locked12Months12Percents.id();
 
     let result = context
-        .jar_contract
+        .sweat_jar()
         .create_jar(
             &alice,
             product_id.clone(),
             1_000_000,
-            context.ft_contract.account().id(),
+            context.ft_contract().contract().as_account().id(),
         )
         .await?;
 
     assert_eq!(result.0, 1_000_000);
 
     context
-        .jar_contract
-        .set_enabled(&manager, RegisterProductCommand::Locked12Months12Percents.id(), false)
+        .sweat_jar()
+        .with_user(&manager)
+        .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), false)
         .await?;
 
     let result = context
-        .jar_contract
+        .sweat_jar()
         .create_jar(
             &alice,
             product_id.clone(),
             1_000_000,
-            context.ft_contract.account().id(),
+            context.ft_contract().contract().as_account().id(),
         )
         .await;
 
@@ -55,25 +58,31 @@ async fn product_actions() -> anyhow::Result<()> {
         .contains("It's not possible to create new jars for this product"));
 
     context
-        .jar_contract
-        .set_enabled(&manager, RegisterProductCommand::Locked12Months12Percents.id(), true)
+        .sweat_jar()
+        .with_user(&manager)
+        .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), true)
         .await?;
 
     let (_, verifying_key) = generate_keypair();
     let pk_base64 = STANDARD.encode(verifying_key.as_bytes());
 
     context
-        .jar_contract
+        .sweat_jar()
+        .with_user(&manager)
         .set_public_key(
-            &manager,
             RegisterProductCommand::Locked12Months12Percents.id(),
-            pk_base64,
+            pk_base64.as_bytes().into_iter().copied().collect_vec().into(),
         )
         .await?;
 
     let result = context
-        .jar_contract
-        .create_jar(&alice, product_id, 1_000_000, context.ft_contract.account().id())
+        .sweat_jar()
+        .create_jar(
+            &alice,
+            product_id,
+            1_000_000,
+            context.ft_contract().contract().as_account().id(),
+        )
         .await;
 
     assert!(result.is_err());

@@ -1,4 +1,5 @@
 use model::{
+    api::WithdrawApi,
     jar::{JarId, JarIdView},
     withdraw::{Fee, WithdrawView},
     TokenAmount,
@@ -15,32 +16,6 @@ use crate::{
 };
 #[cfg(not(test))]
 use crate::{ft_interface::FungibleTokenInterface, Promise};
-
-/// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.
-pub trait WithdrawApi {
-    /// Allows the owner of a deposit jar to withdraw a specified amount of tokens from it.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_id` - The ID of the deposit jar from which the withdrawal is being made.
-    /// * `amount` - An optional `U128` value indicating the amount of tokens to withdraw. If `None` is provided,
-    ///              the entire balance of the jar will be withdrawn.
-    ///
-    /// # Returns
-    ///
-    /// A `PromiseOrValue<WithdrawView>` which represents the result of the withdrawal. If the withdrawal is successful,
-    /// it returns the withdrawn amount and probably fee, if it's defined by the associated Product.
-    /// If there are insufficient funds or other conditions are not met, the contract might panic or
-    /// return 0 for both withdrawn amount and fee.
-    ///
-    /// # Panics
-    ///
-    /// This function may panic under the following conditions:
-    /// - If the caller is not the owner of the specified jar.
-    /// - If the withdrawal amount exceeds the available balance in the jar.
-    /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
-}
 
 #[ext_contract(ext_self)]
 pub trait WithdrawCallbacks {

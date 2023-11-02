@@ -3,10 +3,12 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
+use model::api::{JarApiIntegration, WithdrawApiIntegration};
 use near_workspaces::types::Gas;
 
 use crate::{
-    common::{prepare_contract, Prepared},
+    context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
@@ -76,12 +78,9 @@ async fn one_withdraw() -> anyhow::Result<()> {
 async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let Prepared {
-        context,
-        manager: _,
-        alice,
-        fee_account: _,
-    } = prepare_contract([product]).await?;
+    let mut context = prepare_contract([product]).await?;
+
+    let alice = context.alice().await?;
 
     for _ in 0..jars_count {
         add_jar(&context, &alice, product, 100_000).await?;
@@ -89,11 +88,12 @@ async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Res
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
 
     let jar = jars.random_element();
 
-    let (gas, _) = OutcomeStorage::measure_total(&alice, context.jar_contract.withdraw(&alice, jar.id)).await?;
+    let (gas, _) =
+        OutcomeStorage::measure_total(&alice, context.sweat_jar().with_user(&alice).withdraw(jar.id, None)).await?;
 
     Ok(gas)
 }

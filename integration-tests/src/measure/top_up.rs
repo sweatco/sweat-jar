@@ -3,11 +3,12 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use integration_utils::integration_contract::IntegrationContract;
 use near_sdk::json_types::U128;
 use near_workspaces::types::Gas;
 
 use crate::{
-    common::{prepare_contract, Prepared},
+    context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
@@ -72,12 +73,9 @@ async fn single_top_up() -> anyhow::Result<()> {
 async fn measure_top_up(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let Prepared {
-        context,
-        manager: _,
-        alice,
-        fee_account: _,
-    } = prepare_contract([product]).await?;
+    let mut context = prepare_contract([product]).await?;
+
+    let alice = context.alice().await?;
 
     for _ in 0..jars_count {
         add_jar(&context, &alice, product, 100_000).await?;
@@ -85,9 +83,12 @@ async fn measure_top_up(input: (RegisterProductCommand, usize)) -> anyhow::Resul
 
     let (gas, _) = OutcomeStorage::measure_total(
         &alice,
-        context
-            .jar_contract
-            .top_up(&alice, 1, U128(1_000), context.ft_contract.account().id()),
+        context.sweat_jar().top_up(
+            &alice,
+            1,
+            U128(1_000),
+            context.ft_contract().contract().as_account().id(),
+        ),
     )
     .await?;
 
