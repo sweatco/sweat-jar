@@ -4,6 +4,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[mutants::skip]
 async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     println!("👷🏽 Run fixed withdraw fee test");
 
@@ -31,7 +32,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
 
     context.fast_forward_hours(1).await?;
 
-    let withdraw_result = context.jar_contract.withdraw(&alice, "1").await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, 1.into()).await?;
     let withdrawn_amount = withdraw_result.withdrawn_amount;
     let fee_amount = withdraw_result.fee;
 
@@ -75,7 +76,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
 
     context.fast_forward_hours(1).await?;
 
-    let withdraw_result = context.jar_contract.withdraw(&alice, "1").await?;
+    let withdraw_result = context.jar_contract.withdraw(&alice, 1.into()).await?;
     let withdrawn_amount = withdraw_result.withdrawn_amount;
     let fee_amount = withdraw_result.fee;
 

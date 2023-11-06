@@ -6,7 +6,7 @@ use near_sdk::{
     serde_json, AccountId,
 };
 
-use crate::{env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
+use crate::{common::Timestamp, env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(
@@ -23,6 +23,7 @@ pub enum EventKind {
     Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
     ApplyPenalty(PenaltyData),
+    BatchApplyPenalty(BatchPenaltyData),
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
@@ -72,6 +73,15 @@ pub struct RestakeData {
 pub struct PenaltyData {
     pub id: JarId,
     pub is_applied: bool,
+    pub timestamp: Timestamp,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct BatchPenaltyData {
+    pub jars: Vec<JarId>,
+    pub is_applied: bool,
+    pub timestamp: Timestamp,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -105,15 +115,12 @@ impl From<EventKind> for SweatJarEvent {
     }
 }
 
+#[mutants::skip]
 pub(crate) fn emit(event: EventKind) {
-    SweatJarEvent::from(event).emit();
+    log!(SweatJarEvent::from(event).to_json_event_string());
 }
 
 impl SweatJarEvent {
-    pub(crate) fn emit(&self) {
-        log!(self.to_json_event_string());
-    }
-
     fn to_json_string(&self) -> String {
         serde_json::to_string_pretty(self)
             .unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")))
@@ -121,5 +128,32 @@ impl SweatJarEvent {
 
     fn to_json_event_string(&self) -> String {
         format!("EVENT_JSON:{}", self.to_json_string())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use near_sdk::json_types::U128;
+
+    use crate::event::{EventKind, SweatJarEvent, TopUpData};
+
+    #[test]
+    fn event_to_string() {
+        assert_eq!(
+            SweatJarEvent::from(EventKind::TopUp(TopUpData {
+                id: 10,
+                amount: U128(50)
+            }))
+            .to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "1.0.0",
+  "event": "top_up",
+  "data": {
+    "id": 10,
+    "amount": "50"
+  }
+}"#
+        )
     }
 }

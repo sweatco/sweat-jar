@@ -2,9 +2,9 @@ use std::{env::var, fs::OpenOptions, future::Future, io::Write, iter::once};
 
 use anyhow::{bail, Result};
 use near_sdk::serde::Serialize;
+use near_workspaces::{types::Gas, Account};
 use num_format::{Buffer, CustomFormat};
 use serde_json::{to_string_pretty, to_value, Map, Value};
-use workspaces::{types::Gas, Account};
 
 use crate::{context::Context, product::RegisterProductCommand};
 
@@ -27,7 +27,7 @@ pub fn measure_jars_range() -> Vec<usize> {
     generate_measure_jars_range(number_of_jars_to_measure(), measure_jars_multiplier())
 }
 
-pub fn generate_measure_jars_range(max: usize, multiplier: usize) -> Vec<usize> {
+fn generate_measure_jars_range(max: usize, multiplier: usize) -> Vec<usize> {
     let vals = (1..=max).map(|i| i * multiplier + 1);
     once(1).chain(vals).collect()
 }
@@ -43,10 +43,10 @@ pub struct MeasureData {
 impl MeasureData {
     pub fn new(cost: Vec<(Gas, usize)>, diff: Vec<i128>) -> Self {
         MeasureData {
-            total: cost.iter().map(|a| a.0).sum(),
+            total: cost.iter().map(|a| a.0.as_gas()).sum(),
             cost: cost
                 .into_iter()
-                .map(|a| format!("  {} - number of jars: {}  ", format_number(a.0), a.1))
+                .map(|a| format!("  {} - number of jars: {}  ", format_number(a.0.as_gas()), a.1))
                 .collect(),
             diff: diff
                 .into_iter()

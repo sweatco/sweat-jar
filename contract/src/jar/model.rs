@@ -127,7 +127,13 @@ impl Jar {
         self.is_pending_withdraw = false;
     }
 
-    pub(crate) fn apply_penalty(&mut self, is_applied: bool) {
+    pub(crate) fn apply_penalty(&mut self, product: &Product, is_applied: bool, now: Timestamp) {
+        let current_interest = self.get_interest(product, now);
+
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: current_interest,
+        });
         self.is_penalty_applied = is_applied;
     }
 
@@ -198,11 +204,11 @@ impl Jar {
             return base_interest;
         };
 
-        let term_in_miliseconds = u128::from(effective_term);
+        let term_in_milliseconds = u128::from(effective_term);
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let interest = (term_in_miliseconds * total_interest) / u128::from(MS_IN_YEAR);
+        let interest = (term_in_milliseconds * total_interest) / u128::from(MS_IN_YEAR);
 
         base_interest + interest
     }

@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use workspaces::types::Gas;
+use near_workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},
@@ -8,6 +8,7 @@ use crate::{
     product::RegisterProductCommand,
 };
 
+#[mutants::skip]
 pub(crate) async fn measure_register_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
     let Prepared {
         context,

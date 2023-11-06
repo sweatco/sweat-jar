@@ -4,12 +4,27 @@ on:
   workflow_dispatch:
 
 jobs:
-  measure:
+  mutation:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Install tool
+        run: cargo install --locked cargo-mutants
+
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Mutation test
         run: make mutation
+
+      - name: Upload caught
+        uses: actions/upload-artifact@v3
+        with:
+          name: caught
+          path: mutants.out/caught.txt
+
+      - name: Upload missed
+        uses: actions/upload-artifact@v3
+        with:
+          name: missed
+          path: mutants.out/missed.txt

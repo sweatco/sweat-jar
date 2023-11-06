@@ -4,8 +4,8 @@ use std::future::Future;
 
 use futures::future::join_all;
 use itertools::Itertools;
+use near_workspaces::types::Gas;
 use tokio::spawn;
-use workspaces::types::Gas;
 
 use crate::{measure::register_product::measure_register_product, product::RegisterProductCommand};
 
@@ -19,6 +19,7 @@ async fn measure_register_product_test() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 pub(crate) async fn scoped_command_measure<Input, Inputs, Command, Fut>(
     inputs: Inputs,
     mut command: Command,

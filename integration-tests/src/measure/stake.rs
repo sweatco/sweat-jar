@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use workspaces::types::Gas;
+use near_workspaces::types::Gas;
 
 use crate::{
     common::{prepare_contract, Prepared},
@@ -17,6 +17,7 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn measure_stake_total_test() -> Result<()> {
     use RegisterProductCommand::*;
 
@@ -47,7 +48,7 @@ async fn measure_stake_total_test() -> Result<()> {
             .map(|(key, gas_cost)| {
                 let mut differences: Vec<i128> = Vec::new();
                 for i in 1..gas_cost.len() {
-                    let diff = gas_cost[i].0 as i128 - gas_cost[i - 1].0 as i128;
+                    let diff = gas_cost[i].0.as_gas() as i128 - gas_cost[i - 1].0.as_gas() as i128;
                     differences.push(diff);
                 }
 
@@ -65,6 +66,7 @@ async fn measure_stake_total_test() -> Result<()> {
 
 #[ignore]
 #[tokio::test]
+#[mutants::skip]
 async fn one_stake() -> anyhow::Result<()> {
     let gas = measure_stake((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
 
@@ -73,6 +75,7 @@ async fn one_stake() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[mutants::skip]
 pub(crate) async fn measure_stake(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 

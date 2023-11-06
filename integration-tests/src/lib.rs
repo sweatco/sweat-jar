@@ -3,9 +3,11 @@
 mod claim_detailed;
 mod common;
 mod context;
+mod fast_forward;
 mod ft_contract_interface;
 mod happy_flow;
 mod jar_contract_interface;
+mod jar_deletion;
 mod measure;
 mod migration;
 mod premium_product;

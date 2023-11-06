@@ -10,7 +10,6 @@ use crate::{
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
-        random_element::RandomElement,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
     product::RegisterProductCommand,
@@ -18,19 +17,14 @@ use crate::{
 
 #[ignore]
 #[tokio::test]
-#[mutants::skip]
-async fn measure_withdraw_total_test() -> Result<()> {
-    async fn withdraw() -> Result<()> {
+async fn measure_batch_penalty_test() -> Result<()> {
+    async fn batch_penalty() -> Result<()> {
         let measured = scoped_command_measure(
             generate_permutations(
-                &[
-                    RegisterProductCommand::Locked10Minutes6Percents,
-                    RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee,
-                    RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee,
-                ],
+                &[RegisterProductCommand::Flexible6Months6Percents],
                 &measure_jars_range(),
             ),
-            measure_withdraw,
+            measure_batch_penalty,
         )
         .await?;
 
@@ -53,32 +47,30 @@ async fn measure_withdraw_total_test() -> Result<()> {
             })
             .collect();
 
-        append_measure("withdraw", map)
+        append_measure("batch_penalty", map)
     }
 
-    retry_until_ok(withdraw).await?;
+    retry_until_ok(batch_penalty).await?;
 
     Ok(())
 }
 
 #[ignore]
 #[tokio::test]
-#[mutants::skip]
-async fn one_withdraw() -> anyhow::Result<()> {
-    let gas = measure_withdraw((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
+async fn single_batch_penalty() -> anyhow::Result<()> {
+    let gas = measure_batch_penalty((RegisterProductCommand::Flexible6Months6Percents, 1)).await?;
 
     dbg!(&gas);
 
     Ok(())
 }
 
-#[mutants::skip]
-async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
+async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
     let Prepared {
-        context,
-        manager: _,
+        mut context,
+        manager,
         alice,
         fee_account: _,
     } = prepare_contract([product]).await?;
@@ -87,13 +79,21 @@ async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Res
         add_jar(&context, &alice, product, 100_000).await?;
     }
 
-    context.fast_forward_hours(2).await?;
+    let jars = context
+        .jar_contract
+        .get_jars_for_account(&alice)
+        .await?
+        .into_iter()
+        .map(|j| j.id)
+        .collect();
 
-    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
-
-    let jar = jars.random_element();
-
-    let (gas, _) = OutcomeStorage::measure_total(&alice, context.jar_contract.withdraw(&alice, jar.id)).await?;
+    let (gas, _) = OutcomeStorage::measure_total(
+        &manager,
+        context
+            .jar_contract
+            .batch_set_penalty(&manager, vec![(alice.id().clone(), jars)], true),
+    )
+    .await?;
 
     Ok(gas)
 }

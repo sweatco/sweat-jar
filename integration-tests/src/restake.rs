@@ -4,6 +4,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[mutants::skip]
 async fn restake() -> anyhow::Result<()> {
     println!("👷🏽 Run test for restaking");
 

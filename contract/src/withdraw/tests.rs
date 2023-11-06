@@ -4,6 +4,7 @@ use model::U32;
 use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
 
 use crate::{
+    claim::api::ClaimApi,
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, MS_IN_YEAR},
     jar::{api::JarApi, model::Jar},
     product::model::{Apy, Product, WithdrawalFee},
@@ -78,6 +79,17 @@ fn withdraw_flexible_jar_by_owner_full() {
     context.switch_account(&alice);
 
     context.contract.withdraw(U32(reference_jar.id), None);
+
+    let interest = context
+        .contract
+        .get_interest(vec![reference_jar.id.into()], alice.clone());
+
+    let PromiseOrValue::Value(claimed) = context.contract.claim_total(None) else {
+        panic!();
+    };
+
+    assert_eq!(interest.amount.total, claimed.get_total());
+
     let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
     assert_eq!(0, jar.principal.0);
 }
@@ -237,6 +249,27 @@ fn test_failed_withdraw_internal() {
         jar_view.principal.0 + withdrawn_amount,
         context.contract.get_jar(alice, U32(0)).principal.0
     );
+}
+
+#[test]
+#[should_panic(expected = "Another operation on this Jar is in progress")]
+fn withdraw_from_locked_jar() {
+    let product = Product::generate("product")
+        .apy(Apy::Constant(UDecimal::new(1, 0)))
+        .lockup_term(MS_IN_YEAR);
+    let mut jar = Jar::generate(0, &accounts(0), &product.id).principal(MS_IN_YEAR as u128);
+
+    jar.lock();
+
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let mut context = Context::new(admin).with_products(&[product.clone()]).with_jars(&[jar]);
+
+    context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+    context.switch_account(&alice);
+
+    _ = context.contract.withdraw(U32(0), Some(U128(100_000)));
 }
 
 pub(crate) fn generate_product() -> Product {

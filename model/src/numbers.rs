@@ -6,6 +6,12 @@ use near_sdk::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, BorshDeserialize, BorshSerialize, Hash)]
 pub struct U32(pub u32);
 
+impl From<u32> for U32 {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+
 impl Serialize for U32 {
     fn serialize<S>(&self, serializer: S) -> Result<<S as Serializer>::Ok, <S as Serializer>::Error>
     where

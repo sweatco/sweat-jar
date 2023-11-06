@@ -3,10 +3,11 @@ use std::{
     sync::Mutex,
 };
 
+use anyhow::bail;
 use ed25519_dalek::{SigningKey, VerifyingKey};
+use near_workspaces::Account;
 use rand::rngs::OsRng;
 use serde_json::Value;
-use workspaces::Account;
 
 use crate::{context::Context, product::RegisterProductCommand};
 
@@ -54,12 +55,16 @@ pub fn build_contract() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    Command::new("make")
-        .arg("build")
+    let output = Command::new("make")
+        .arg("build-integration")
         .current_dir("..")
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()?;
+
+    if !output.status.success() {
+        bail!("Failed to build contract. Output: {output:?}");
+    }
 
     *ready = true;
 
@@ -96,6 +101,11 @@ pub(crate) async fn prepare_contract(
     context.ft_contract.storage_deposit(&fee_account).await?;
     context.ft_contract.storage_deposit(&alice).await?;
     context.ft_contract.mint_for_user(&alice, 100_000_000).await?;
+    context.ft_contract.mint_for_user(&manager, 100_000_000).await?;
+    context
+        .ft_contract
+        .mint_for_user(&context.jar_contract.account(), 100_000_000)
+        .await?;
 
     for product in products {
         context.jar_contract.register_product(&manager, product.json()).await?;

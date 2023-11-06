@@ -4,10 +4,10 @@ use model::{
     withdraw::WithdrawView,
     AggregatedTokenAmountView,
 };
-use near_sdk::json_types::U128;
+use near_sdk::{json_types::U128, Timestamp};
 use near_units::parse_near;
+use near_workspaces::{Account, AccountId, Contract};
 use serde_json::{json, Value};
-use workspaces::{Account, AccountId, Contract};
 
 use crate::measure::outcome_storage::OutcomeStorage;
 
@@ -54,7 +54,7 @@ pub(crate) trait JarContractInterface {
 
     async fn get_jars_for_account(&self, user: &Account) -> anyhow::Result<Vec<JarView>>;
 
-    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<WithdrawView>;
+    async fn withdraw(&self, user: &Account, jar_id: JarIdView) -> anyhow::Result<WithdrawView>;
 
     async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
 
@@ -79,6 +79,13 @@ pub(crate) trait JarContractInterface {
         value: bool,
     ) -> anyhow::Result<()>;
 
+    async fn batch_set_penalty(
+        &mut self,
+        admin: &Account,
+        jars: Vec<(AccountId, Vec<JarIdView>)>,
+        value: bool,
+    ) -> anyhow::Result<()>;
+
     async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()>;
 
     async fn set_public_key(&self, admin: &Account, product_id: String, public_key: String) -> anyhow::Result<()>;
@@ -90,6 +97,8 @@ pub(crate) trait JarContractInterface {
         amount: U128,
         ft_contract_id: &AccountId,
     ) -> anyhow::Result<U128>;
+
+    async fn block_timestamp_ms(&self) -> anyhow::Result<Timestamp>;
 }
 
 #[async_trait]
@@ -283,8 +292,8 @@ impl JarContractInterface for Contract {
         Ok(result)
     }
 
-    async fn withdraw(&self, user: &Account, jar_id: &str) -> anyhow::Result<WithdrawView> {
-        println!("▶️ Withdraw jar #{jar_id}");
+    async fn withdraw(&self, user: &Account, jar_id: JarIdView) -> anyhow::Result<WithdrawView> {
+        println!("▶️ Withdraw jar #{jar_id:?}");
 
         let args = json!({
             "jar_id": jar_id,
@@ -335,6 +344,15 @@ impl JarContractInterface for Contract {
         let result_value = result.json::<Value>()?;
 
         println!("   ✅ {result_value:?}");
+
+        for failure in result.failures() {
+            println!("   ❌ {:?}", failure);
+        }
+
+        if let Some(failure) = result.failures().into_iter().next().cloned() {
+            let error = failure.into_result().err().unwrap();
+            return Err(error.into());
+        }
 
         OutcomeStorage::add_result(result);
 
@@ -476,6 +494,36 @@ impl JarContractInterface for Contract {
         Ok(())
     }
 
+    async fn batch_set_penalty(
+        &mut self,
+        admin: &Account,
+        jars: Vec<(AccountId, Vec<JarIdView>)>,
+        value: bool,
+    ) -> anyhow::Result<()> {
+        println!("▶️ batch_set_penalty");
+
+        let args = json!({
+            "jars": jars,
+            "value": value,
+        });
+
+        let result = admin
+            .call(self.id(), "batch_set_penalty")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        OutcomeStorage::add_result(result);
+
+        Ok(())
+    }
+
     async fn set_enabled(&self, admin: &Account, product_id: String, is_enabled: bool) -> anyhow::Result<()> {
         println!("▶️ Set enabled for product #{product_id}");
 
@@ -573,6 +621,16 @@ impl JarContractInterface for Contract {
         OutcomeStorage::add_result(result);
 
         Ok(result_value)
+    }
+
+    async fn block_timestamp_ms(&self) -> anyhow::Result<Timestamp> {
+        println!("▶️ block_timestamp_ms");
+
+        let result = self.view("block_timestamp_ms").await?.json()?;
+
+        println!("   ✅ {:?}", result);
+
+        Ok(result)
     }
 }
 
