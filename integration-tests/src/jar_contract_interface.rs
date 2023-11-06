@@ -60,12 +60,7 @@ pub(crate) trait JarContractInterface {
 
     async fn claim_total_detailed(&self, user: &Account) -> anyhow::Result<AggregatedTokenAmountView>;
 
-    async fn claim_jars(
-        &self,
-        user: &Account,
-        jar_ids: Vec<JarIdView>,
-        amount: Option<U128>,
-    ) -> anyhow::Result<AggregatedTokenAmountView>;
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<U128>;
 
     async fn get_jar(&self, account_id: String, jar_id: JarIdView) -> anyhow::Result<JarView>;
 
@@ -389,12 +384,7 @@ impl JarContractInterface for Contract {
         Ok(result_value)
     }
 
-    async fn claim_jars(
-        &self,
-        user: &Account,
-        jar_ids: Vec<JarIdView>,
-        amount: Option<U128>,
-    ) -> anyhow::Result<AggregatedTokenAmountView> {
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<U128> {
         println!("▶️ Claim jars: {:?}", jar_ids);
 
         let args = json!({
