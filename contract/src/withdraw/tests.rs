@@ -84,11 +84,11 @@ fn withdraw_flexible_jar_by_owner_full() {
         .contract
         .get_interest(vec![reference_jar.id.into()], alice.clone());
 
-    let PromiseOrValue::Value(claimed) = context.contract.claim_total() else {
+    let PromiseOrValue::Value(claimed) = context.contract.claim_total(None) else {
         panic!();
     };
 
-    assert_eq!(interest.amount.total, claimed);
+    assert_eq!(interest.amount.total, claimed.get_total());
 
     let jar = context.contract.get_jar(alice.clone(), U32(reference_jar.id));
     assert_eq!(0, jar.principal.0);

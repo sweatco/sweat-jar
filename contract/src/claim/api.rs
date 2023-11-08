@@ -1,9 +1,10 @@
 use std::cmp;
 
-use model::{jar::JarIdView, TokenAmount, U32};
+use model::{jar::JarIdView, AggregatedTokenAmountView, U32};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
+    claim::view::ClaimedAmountView,
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
@@ -14,11 +15,16 @@ use crate::{
 pub trait ClaimApi {
     /// Claims all available interest from all deposit jars belonging to the calling account.
     ///
+    /// * `detailed` – An optional boolean value specifying if the method must return only total amount of claimed tokens
+    ///                or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
+    ///                or `None` it returns only the total claimed amount.
+    ///
     /// # Returns
     ///
-    /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available
-    /// interest across all jars is zero, the returned value will also be zero.
-    fn claim_total(&mut self) -> PromiseOrValue<U128>;
+    /// A `PromiseOrValue<ClaimedAmountView>` representing the amount of tokens claimed
+    /// and probably a map containing amount of tokens claimed from each Jar. If the total available
+    /// interest across all jars is zero, the returned value will also be zero and the detailed map will be empty (if requested).
+    fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView>;
 
     /// Claims interest from specific deposit jars with provided IDs.
     ///
@@ -29,36 +35,63 @@ pub trait ClaimApi {
     ///              will attempt to claim this specific amount of tokens. If not provided or if the specified amount
     ///              is greater than the total available interest in the provided jars, the method will claim the maximum
     ///              available amount.
+    /// * `detailed` – An optional boolean value specifying if the method must return only total amount of claimed tokens
+    ///                or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
+    ///                or `None` it returns only the total claimed amount.
     ///
     /// # Returns
     ///
-    /// A `PromiseOrValue<TokenAmount>` representing the amount of tokens claimed. If the total available interest
-    /// across the specified jars is zero or the provided `amount` is zero, the returned value will also be zero.
-    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128>;
+    /// A `PromiseOrValue<ClaimedAmountView>` representing the total amount of tokens claimed
+    /// and probably a map containing amount of tokens claimed from each Jar.
+    /// If the total available interest across the specified jars is zero or the provided `amount`
+    /// is zero, the total amount in returned object will also be zero and the detailed map will be empty (if requested).
+    fn claim_jars(
+        &mut self,
+        jar_ids: Vec<JarIdView>,
+        amount: Option<U128>,
+        detailed: Option<bool>,
+    ) -> PromiseOrValue<ClaimedAmountView>;
 }
 
 #[ext_contract(ext_self)]
 pub trait ClaimCallbacks {
     fn after_claim(
         &mut self,
-        claimed_amount: U128,
+        claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
         now: Timestamp,
-    ) -> U128;
+    ) -> ClaimedAmountView;
 }
 
 #[near_bindgen]
 impl ClaimApi for Contract {
-    fn claim_total(&mut self) -> PromiseOrValue<U128> {
+    fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
-        self.claim_jars(jar_ids, None)
+        self.claim_jars_internal(jar_ids, None, detailed)
     }
 
-    fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> PromiseOrValue<U128> {
+    fn claim_jars(
+        &mut self,
+        jar_ids: Vec<JarIdView>,
+        amount: Option<U128>,
+        detailed: Option<bool>,
+    ) -> PromiseOrValue<ClaimedAmountView> {
+        self.claim_jars_internal(jar_ids, amount, detailed)
+    }
+}
+
+impl Contract {
+    fn claim_jars_internal(
+        &mut self,
+        jar_ids: Vec<JarIdView>,
+        amount: Option<U128>,
+        detailed: Option<bool>,
+    ) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
+        let mut accumulator = ClaimedAmountView::new(detailed);
 
         let unlocked_jars: Vec<Jar> = self
             .account_jars(&account_id)
@@ -67,15 +100,13 @@ impl ClaimApi for Contract {
             .cloned()
             .collect();
 
-        let mut total_interest_to_claim: TokenAmount = 0;
-
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
             let available_interest = jar.get_interest(product, now);
             let interest_to_claim = amount.map_or(available_interest, |amount| {
-                cmp::min(available_interest, amount.0 - total_interest_to_claim)
+                cmp::min(available_interest, amount.0 - accumulator.get_total().0)
             });
 
             if interest_to_claim > 0 {
@@ -83,7 +114,7 @@ impl ClaimApi for Contract {
                     .claim(available_interest, interest_to_claim, now)
                     .lock();
 
-                total_interest_to_claim += interest_to_claim;
+                accumulator.add(jar.id, interest_to_claim);
 
                 event_data.push(ClaimEventItem {
                     id: jar.id,
@@ -92,16 +123,16 @@ impl ClaimApi for Contract {
             }
         }
 
-        if total_interest_to_claim > 0 {
+        if accumulator.get_total().0 > 0 {
             self.claim_interest(
                 &account_id,
-                U128(total_interest_to_claim),
+                accumulator,
                 unlocked_jars,
                 EventKind::Claim(event_data),
                 now,
             )
         } else {
-            PromiseOrValue::Value(U128(0))
+            PromiseOrValue::Value(accumulator)
         }
     }
 }
@@ -111,11 +142,11 @@ impl Contract {
     fn claim_interest(
         &mut self,
         _account_id: &AccountId,
-        claimed_amount: U128,
+        claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
         now: Timestamp,
-    ) -> PromiseOrValue<U128> {
+    ) -> PromiseOrValue<ClaimedAmountView> {
         PromiseOrValue::Value(self.after_claim_internal(
             claimed_amount,
             jars_before_transfer,
@@ -130,26 +161,26 @@ impl Contract {
     fn claim_interest(
         &mut self,
         account_id: &AccountId,
-        claimed_amount: U128,
+        claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
         now: Timestamp,
-    ) -> PromiseOrValue<U128> {
+    ) -> PromiseOrValue<ClaimedAmountView> {
         use crate::ft_interface::FungibleTokenInterface;
         self.ft_contract()
-            .transfer(account_id, claimed_amount.0, "claim", &None)
+            .transfer(account_id, claimed_amount.get_total().0, "claim", &None)
             .then(after_claim_call(claimed_amount, jars_before_transfer, event, now))
             .into()
     }
 
     fn after_claim_internal(
         &mut self,
-        claimed_amount: U128,
+        claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
         now: Timestamp,
         is_promise_success: bool,
-    ) -> U128 {
+    ) -> ClaimedAmountView {
         if is_promise_success {
             for jar_before_transfer in jars_before_transfer {
                 let product = self.products.get(&jar_before_transfer.product_id).unwrap_or_else(|| {
@@ -182,7 +213,10 @@ impl Contract {
                 *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
             }
 
-            U128(0)
+            match claimed_amount {
+                ClaimedAmountView::Total(_) => ClaimedAmountView::Total(U128(0)),
+                ClaimedAmountView::Detailed(_) => ClaimedAmountView::Detailed(AggregatedTokenAmountView::default()),
+            }
         }
     }
 }
@@ -192,11 +226,11 @@ impl ClaimCallbacks for Contract {
     #[private]
     fn after_claim(
         &mut self,
-        claimed_amount: U128,
+        claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
         event: EventKind,
         now: Timestamp,
-    ) -> U128 {
+    ) -> ClaimedAmountView {
         self.after_claim_internal(claimed_amount, jars_before_transfer, event, now, is_promise_success())
     }
 }
@@ -204,7 +238,7 @@ impl ClaimCallbacks for Contract {
 #[cfg(not(test))]
 #[mutants::skip] // Covered by integration tests
 fn after_claim_call(
-    claimed_amount: U128,
+    claimed_amount: ClaimedAmountView,
     jars_before_transfer: Vec<Jar>,
     event: EventKind,
     now: Timestamp,

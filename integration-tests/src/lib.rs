@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+mod claim_detailed;
 mod common;
 mod context;
 mod fast_forward;

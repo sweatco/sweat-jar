@@ -3,14 +3,14 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
-use model::{jar::JarView, U32};
+use model::{jar::JarView, AggregatedTokenAmountView, U32};
 use near_sdk::{json_types::U128, test_utils::accounts};
 
 use super::*;
 use crate::{
     claim::api::ClaimApi,
     common::{udecimal::UDecimal, MS_IN_YEAR},
-    jar::{api::JarApi, view::AggregatedTokenAmountView},
+    jar::api::JarApi,
     penalty::api::PenaltyApi,
     product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
     withdraw::api::WithdrawApi,
@@ -195,7 +195,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
     assert_eq!(interest, 5_983_561);
 
     context.switch_account(&alice);
-    context.contract.claim_total();
+    context.contract.claim_total(None);
 
     context.set_block_timestamp_in_days(365);
 

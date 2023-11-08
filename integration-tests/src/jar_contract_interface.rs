@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use model::{
     jar::{JarId, JarIdView, JarView},
     withdraw::WithdrawView,
+    AggregatedTokenAmountView,
 };
 use near_sdk::{json_types::U128, Timestamp};
 use near_units::parse_near;
@@ -57,7 +58,9 @@ pub(crate) trait JarContractInterface {
 
     async fn claim_total(&self, user: &Account) -> anyhow::Result<u128>;
 
-    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<u128>;
+    async fn claim_total_detailed(&self, user: &Account) -> anyhow::Result<AggregatedTokenAmountView>;
+
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<U128>;
 
     async fn get_jar(&self, account_id: String, jar_id: JarIdView) -> anyhow::Result<JarView>;
 
@@ -351,7 +354,37 @@ impl JarContractInterface for Contract {
         Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
     }
 
-    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<u128> {
+    async fn claim_total_detailed(&self, user: &Account) -> anyhow::Result<AggregatedTokenAmountView> {
+        println!("▶️ Claim total detailed");
+
+        let args = json!({
+            "detailed": true
+        });
+
+        let result = user
+            .call(self.id(), "claim_total")
+            .args_json(args)
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+
+        for log in result.logs() {
+            println!("   📖 {log}");
+        }
+
+        println!("   📟 {result:#?}");
+
+        let result_value: AggregatedTokenAmountView = result.json()?;
+
+        println!("   ✅ {result_value:?}");
+
+        OutcomeStorage::add_result(result);
+
+        Ok(result_value)
+    }
+
+    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<U128> {
         println!("▶️ Claim jars: {:?}", jar_ids);
 
         let args = json!({
@@ -373,13 +406,13 @@ impl JarContractInterface for Contract {
 
         println!("   📟 {result:#?}");
 
-        let result_value = result.json::<Value>()?;
+        let result_value: Value = result.json()?;
 
         println!("   ✅ {result_value:?}");
 
         OutcomeStorage::add_result(result);
 
-        Ok(result_value.as_str().unwrap().to_string().parse::<u128>()?)
+        Ok(serde_json::from_value(result_value).unwrap())
     }
 
     async fn get_jar(&self, account_id: String, jar_id: JarIdView) -> anyhow::Result<JarView> {

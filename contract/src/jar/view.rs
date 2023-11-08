@@ -1,9 +1,6 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::fmt::Debug;
 
-use model::{
-    jar::{JarIdView, JarView},
-    U32,
-};
+use model::{jar::JarView, AggregatedTokenAmountView, U32};
 use near_sdk::{
     json_types::{U128, U64},
     serde::{Deserialize, Serialize},
@@ -37,13 +34,6 @@ impl From<&Jar> for JarView {
             is_penalty_applied: value.is_penalty_applied,
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
-pub struct AggregatedTokenAmountView {
-    pub detailed: HashMap<JarIdView, U128>,
-    pub total: U128,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

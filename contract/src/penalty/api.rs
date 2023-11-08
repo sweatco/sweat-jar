@@ -1,10 +1,9 @@
 use model::jar::JarIdView;
 use near_sdk::{env, near_bindgen, AccountId};
 
-use crate::event::BatchPenaltyData;
 use crate::{
     event::{
-        emit,
+        emit, BatchPenaltyData,
         EventKind::{ApplyPenalty, BatchApplyPenalty},
         PenaltyData,
     },

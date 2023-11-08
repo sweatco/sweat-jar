@@ -6,8 +6,7 @@ use near_sdk::{
     serde_json, AccountId,
 };
 
-use crate::common::Timestamp;
-use crate::{env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
+use crate::{common::Timestamp, env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(
