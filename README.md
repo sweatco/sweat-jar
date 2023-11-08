@@ -6,7 +6,8 @@ $SWEAT staking smart contract.
 
 ## 1. Exploring the project
 
-Read the [**Project documentation**](docs/requirements.md) page.
+- Read the [**Product description**](https://docs.google.com/document/d/1S2tnOrbaq1iMlBvKMeoGNGzCg0HcEG1tjNfEM5UT-vs/edit?usp=sharing).
+- Read the [**Project documentation**](docs/requirements.md) page.
 
 ## 2. Quickstart
 
