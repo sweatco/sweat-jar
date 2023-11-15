@@ -90,7 +90,7 @@ pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, us
     let (gas, _claimed) = OutcomeStorage::measure_operation(
         "interest_to_claim",
         &alice,
-        context.sweat_jar().with_user(&alice).claim_total(),
+        context.sweat_jar().with_user(&alice).claim_total(None),
     )
     .await?;
 

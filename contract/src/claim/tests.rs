@@ -2,6 +2,7 @@
 
 use model::{
     api::{ClaimApi, JarApi, WithdrawApi},
+    claimed_amount_view::ClaimedAmountView,
     MS_IN_YEAR, U32,
 };
 use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};

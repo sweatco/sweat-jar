@@ -59,7 +59,7 @@ async fn restake() -> anyhow::Result<()> {
     context
         .sweat_jar()
         .with_user(&alice)
-        .claim_jars(vec![original_jar_id], None)
+        .claim_jars(vec![original_jar_id], None, None)
         .await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;

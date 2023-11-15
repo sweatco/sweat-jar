@@ -43,7 +43,13 @@ async fn jar_deletion() -> anyhow::Result<()> {
     assert_eq!(withdrawn_amount.withdrawn_amount.0, 1_000_000);
 
     let alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).await?;
-    let claimed_amount = context.sweat_jar().with_user(&alice).claim_total().await?.0;
+    let claimed_amount = context
+        .sweat_jar()
+        .with_user(&alice)
+        .claim_total(None)
+        .await?
+        .get_total()
+        .0;
     assert_eq!(alice_interest.amount.total.0, claimed_amount);
 
     let alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).await?;

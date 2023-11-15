@@ -6,11 +6,11 @@ use model::{
         ClaimApiIntegration, InitApiIntegration, JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration,
         WithdrawApiIntegration,
     },
+    claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
     product::{ProductView, RegisterProductCommand},
     withdraw::WithdrawView,
     ProductId,
-    AggregatedTokenAmountView,
 };
 use near_sdk::{
     json_types::{Base64VecU8, U128},
@@ -51,10 +51,12 @@ impl InitApiIntegration for SweatJar<'_> {
 
 #[async_trait]
 impl ClaimApiIntegration for SweatJar<'_> {
-    async fn claim_total(&mut self) -> Result<U128> {
+    async fn claim_total(&mut self, detailed: Option<bool>) -> Result<ClaimedAmountView> {
         println!("▶️ Claim total");
 
-        let args = json!({});
+        let args = json!({
+            "detailed": detailed,
+        });
 
         let result = self
             .user_account()
@@ -87,17 +89,19 @@ impl ClaimApiIntegration for SweatJar<'_> {
         Ok(ret)
     }
 
-    async fn claim_jars(&mut self, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> Result<U128> {
+    async fn claim_jars(
+        &mut self,
+        jar_ids: Vec<JarIdView>,
+        amount: Option<U128>,
+        detailed: Option<bool>,
+    ) -> Result<ClaimedAmountView> {
         println!("▶️ Claim jars: {:?}", jar_ids);
-    async fn claim_total_detailed(&self, user: &Account) -> anyhow::Result<AggregatedTokenAmountView>;
 
         let args = json!({
             "jar_ids": jar_ids,
             "amount": amount,
+            "detailed": detailed,
         });
-    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<U128>;
-
-    async fn get_jar(&self, account_id: String, jar_id: JarIdView) -> anyhow::Result<JarView>;
 
         let result = self
             .user_account()
@@ -321,39 +325,7 @@ impl PenaltyApiIntegration for SweatJar<'_> {
 #[async_trait]
 impl ProductApiIntegration for SweatJar<'_> {
     async fn register_product(&mut self, command: RegisterProductCommand) -> Result<()> {
-        println!("▶️ Register product: {command:?}");
-    async fn claim_total_detailed(&self, user: &Account) -> anyhow::Result<AggregatedTokenAmountView> {
-        println!("▶️ Claim total detailed");
-
-        let args = json!({
-            "detailed": true
-        });
-
-        let result = user
-            .call(self.id(), "claim_total")
-            .args_json(args)
-            .max_gas()
-            .transact()
-            .await?
-            .into_result()?;
-
-        for log in result.logs() {
-            println!("   📖 {log}");
-        }
-
-        println!("   📟 {result:#?}");
-
-        let result_value: AggregatedTokenAmountView = result.json()?;
-
-        println!("   ✅ {result_value:?}");
-
-        OutcomeStorage::add_result(result);
-
-        Ok(result_value)
-    }
-
-    async fn claim_jars(&self, user: &Account, jar_ids: Vec<JarIdView>, amount: Option<U128>) -> anyhow::Result<U128> {
-        println!("▶️ Claim jars: {:?}", jar_ids);
+        println!("▶️ register_product {command:?}");
 
         let args = json!({
             "command": command,
@@ -374,14 +346,9 @@ impl ProductApiIntegration for SweatJar<'_> {
 
         println!("   📟 {result:#?}");
 
-        let result_value: Value = result.json()?;
-
-        println!("   ✅ {result_value:?}");
-
         OutcomeStorage::add_result(result);
 
         Ok(())
-        Ok(serde_json::from_value(result_value).unwrap())
     }
 
     async fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool) -> Result<()> {

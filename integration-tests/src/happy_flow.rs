@@ -44,7 +44,13 @@ async fn happy_flow() -> anyhow::Result<()> {
     alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).await?;
     assert!(alice_interest.amount.total.0 > 0);
 
-    let claimed_amount = context.sweat_jar().with_user(&alice).claim_total().await?.0;
+    let claimed_amount = context
+        .sweat_jar()
+        .with_user(&alice)
+        .claim_total(None)
+        .await?
+        .get_total()
+        .0;
     assert!(15 < claimed_amount && claimed_amount < 20);
 
     let alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?.0;

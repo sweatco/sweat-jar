@@ -26,11 +26,20 @@ pub struct JarView {
     pub is_penalty_applied: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct AggregatedTokenAmountView {
     pub detailed: HashMap<JarIdView, U128>,
     pub total: U128,
+}
+
+impl Default for AggregatedTokenAmountView {
+    fn default() -> Self {
+        Self {
+            detailed: HashMap::default(),
+            total: U128(0),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]

@@ -1,10 +1,14 @@
 use std::cmp;
 
-use model::{api::ClaimApi, jar::JarIdView, TokenAmount, U32};
+use model::{
+    api::ClaimApi,
+    claimed_amount_view::ClaimedAmountView,
+    jar::{AggregatedTokenAmountView, JarIdView},
+    U32,
+};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
-    claim::view::ClaimedAmountView,
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,

@@ -87,7 +87,8 @@ async fn measure_claim(input: (RegisterProductCommand, usize)) -> anyhow::Result
 
     context.fast_forward_hours(2).await?;
 
-    let (gas, _) = OutcomeStorage::measure_total(&alice, context.sweat_jar().with_user(&alice).claim_total()).await?;
+    let (gas, _) =
+        OutcomeStorage::measure_total(&alice, context.sweat_jar().with_user(&alice).claim_total(None)).await?;
 
     Ok(gas)
 }
