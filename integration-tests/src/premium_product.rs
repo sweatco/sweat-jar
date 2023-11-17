@@ -1,9 +1,13 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::Signer;
+use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
+use model::api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration};
 use near_sdk::env::sha256;
+use serde_json::from_value;
 
 use crate::{
-    common::{generate_keypair, prepare_contract, Prepared},
+    common::generate_keypair,
+    context::{prepare_contract, IntegrationContext},
     product::RegisterProductCommand,
 };
 
@@ -15,17 +19,19 @@ async fn premium_product() -> anyhow::Result<()> {
     let (signing_key, verifying_key) = generate_keypair();
     let pk_base64 = STANDARD.encode(verifying_key.as_bytes());
 
-    let Prepared {
-        context,
-        manager,
-        alice,
-        fee_account: _,
-    } = prepare_contract([]).await?;
+    let mut context = prepare_contract([]).await?;
+
+    let manager = context.manager().await?;
+    let alice = context.alice().await?;
 
     let register_product_command = RegisterProductCommand::Flexible6Months6Percents;
     let command_json = register_product_command.json_for_premium(pk_base64);
 
-    context.jar_contract.register_product(&manager, command_json).await?;
+    context
+        .sweat_jar()
+        .with_user(&manager)
+        .register_product(from_value(command_json).unwrap())
+        .await?;
 
     let product_id = register_product_command.id();
     let valid_until = 43_012_170_000_000;
@@ -36,6 +42,7 @@ async fn premium_product() -> anyhow::Result<()> {
             .sign(
                 sha256(
                     context
+                        .sweat_jar()
                         .get_signature_material(&alice, &product_id, valid_until, amount, None)
                         .as_bytes(),
                 )
@@ -45,57 +52,49 @@ async fn premium_product() -> anyhow::Result<()> {
     );
 
     let result = context
-        .jar_contract
+        .sweat_jar()
         .create_premium_jar(
             &alice,
             product_id.clone(),
             amount,
             signature.to_string(),
             valid_until,
-            context.ft_contract.account().id(),
+            context.ft_contract().contract().as_account().id(),
         )
         .await?;
 
     assert_eq!(result.0, amount);
 
-    let jars = context.jar_contract.get_jars_for_account(&alice).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     let jar_id = jars.first().unwrap().id;
 
-    let jar = context
-        .jar_contract
-        .get_jar(alice.id().to_string(), jar_id.clone())
-        .await?;
+    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id.clone()).await?;
 
     assert_eq!(jar.principal.0, amount);
     assert!(!jar.is_penalty_applied);
 
     context
-        .jar_contract
-        .set_penalty(&manager, alice.id(), jar_id, true)
+        .sweat_jar()
+        .with_user(&manager)
+        .set_penalty(alice.to_near(), jar_id, true)
         .await?;
 
-    let jar = context.jar_contract.get_jar(alice.id().to_string(), jar_id).await?;
+    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id).await?;
 
     assert!(jar.is_penalty_applied);
 
-    let unauthorized_penalty_change = context.jar_contract.set_penalty(&alice, alice.id(), jar_id, true).await;
+    let unauthorized_penalty_change = context
+        .sweat_jar()
+        .with_user(&alice)
+        .set_penalty(alice.to_near(), jar_id, true)
+        .await;
 
     assert!(unauthorized_penalty_change.is_err());
 
-    let principal_result = context.jar_contract.get_principal(&alice, vec![jar_id]).await?;
-    assert_eq!(
-        principal_result
-            .as_object()
-            .unwrap()
-            .get("total")
-            .unwrap()
-            .as_str()
-            .unwrap()
-            .to_string(),
-        amount.to_string()
-    );
+    let principal_result = context.sweat_jar().get_principal(vec![jar_id], alice.to_near()).await?;
+    assert_eq!(principal_result.total.0, amount);
 
-    let interest_result = context.jar_contract.get_interest(&alice, vec![jar_id]).await;
+    let interest_result = context.sweat_jar().get_interest(vec![jar_id], alice.to_near()).await;
     assert!(interest_result.is_ok());
 
     Ok(())

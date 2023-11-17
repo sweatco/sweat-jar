@@ -1,57 +1,19 @@
 use std::cmp;
 
-use model::{jar::JarIdView, AggregatedTokenAmountView, U32};
+use model::{
+    api::ClaimApi,
+    claimed_amount_view::ClaimedAmountView,
+    jar::{AggregatedTokenAmountView, JarIdView},
+    U32,
+};
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
-    claim::view::ClaimedAmountView,
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
     Contract, ContractExt, JarsStorage,
 };
-
-/// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
-pub trait ClaimApi {
-    /// Claims all available interest from all deposit jars belonging to the calling account.
-    ///
-    /// * `detailed` – An optional boolean value specifying if the method must return only total amount of claimed tokens
-    ///                or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
-    ///                or `None` it returns only the total claimed amount.
-    ///
-    /// # Returns
-    ///
-    /// A `PromiseOrValue<ClaimedAmountView>` representing the amount of tokens claimed
-    /// and probably a map containing amount of tokens claimed from each Jar. If the total available
-    /// interest across all jars is zero, the returned value will also be zero and the detailed map will be empty (if requested).
-    fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView>;
-
-    /// Claims interest from specific deposit jars with provided IDs.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_ids` - A `Vec<JarId>` containing the IDs of the deposit jars from which interest is being claimed.
-    /// * `amount` - An optional `TokenAmount` specifying the desired amount of tokens to claim. If provided, the method
-    ///              will attempt to claim this specific amount of tokens. If not provided or if the specified amount
-    ///              is greater than the total available interest in the provided jars, the method will claim the maximum
-    ///              available amount.
-    /// * `detailed` – An optional boolean value specifying if the method must return only total amount of claimed tokens
-    ///                or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
-    ///                or `None` it returns only the total claimed amount.
-    ///
-    /// # Returns
-    ///
-    /// A `PromiseOrValue<ClaimedAmountView>` representing the total amount of tokens claimed
-    /// and probably a map containing amount of tokens claimed from each Jar.
-    /// If the total available interest across the specified jars is zero or the provided `amount`
-    /// is zero, the total amount in returned object will also be zero and the detailed map will be empty (if requested).
-    fn claim_jars(
-        &mut self,
-        jar_ids: Vec<JarIdView>,
-        amount: Option<U128>,
-        detailed: Option<bool>,
-    ) -> PromiseOrValue<ClaimedAmountView>;
-}
 
 #[ext_contract(ext_self)]
 pub trait ClaimCallbacks {

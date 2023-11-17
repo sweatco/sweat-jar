@@ -9,11 +9,6 @@ pub type Timestamp = u64;
 /// Duration in milliseconds
 pub type Duration = u64;
 
-pub(crate) const MS_IN_SECOND: u64 = 1000;
-pub(crate) const MS_IN_MINUTE: u64 = MS_IN_SECOND * 60;
-pub(crate) const MINUTES_IN_YEAR: u64 = 365 * 24 * 60;
-pub(crate) const MS_IN_YEAR: Duration = MINUTES_IN_YEAR * MS_IN_MINUTE;
-
 const TERA: u64 = Gas::ONE_TERA.0;
 
 pub const fn tgas(val: u64) -> Gas {

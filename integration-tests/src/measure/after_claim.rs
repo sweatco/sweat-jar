@@ -2,11 +2,13 @@
 
 use std::collections::HashMap;
 
+use integration_utils::integration_contract::IntegrationContract;
 use itertools::Itertools;
+use model::api::ClaimApiIntegration;
 use near_workspaces::types::Gas;
 
 use crate::{
-    common::{prepare_contract, Prepared},
+    context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
@@ -75,12 +77,9 @@ async fn one_after_claim() -> anyhow::Result<()> {
 pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let Prepared {
-        context,
-        manager: _,
-        alice,
-        fee_account: _,
-    } = prepare_contract([product]).await?;
+    let mut context = prepare_contract([product]).await?;
+
+    let alice = context.alice().await?;
 
     for _ in 0..jars_count {
         add_jar(&context, &alice, product, 100_000).await?;
@@ -88,9 +87,12 @@ pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, us
 
     context.fast_forward_hours(2).await?;
 
-    let (gas, _claimed) =
-        OutcomeStorage::measure_operation("interest_to_claim", &alice, context.jar_contract.claim_total(&alice))
-            .await?;
+    let (gas, _claimed) = OutcomeStorage::measure_operation(
+        "interest_to_claim",
+        &alice,
+        context.sweat_jar().with_user(&alice).claim_total(None),
+    )
+    .await?;
 
     Ok(gas)
 }

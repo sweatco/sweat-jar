@@ -1,14 +1,16 @@
 #![cfg(test)]
 
-use model::U32;
+use model::{
+    api::{ClaimApi, JarApi, WithdrawApi},
+    claimed_amount_view::ClaimedAmountView,
+    MS_IN_YEAR, U32,
+};
 use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};
 
 use crate::{
-    claim::{api::ClaimApi, view::ClaimedAmountView},
-    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, MS_IN_YEAR},
-    jar::{api::JarApi, model::Jar},
+    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal},
+    jar::model::Jar,
     product::model::{Apy, Product},
-    withdraw::api::WithdrawApi,
 };
 
 #[test]

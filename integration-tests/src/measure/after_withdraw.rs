@@ -1,10 +1,12 @@
 #![cfg(test)]
 
+use integration_utils::integration_contract::IntegrationContract;
 use itertools::Itertools;
+use model::{api::WithdrawApiIntegration, U32};
 use near_workspaces::types::Gas;
 
 use crate::{
-    common::{prepare_contract, Prepared},
+    context::{prepare_contract, IntegrationContext},
     measure::{measure::scoped_command_measure, outcome_storage::OutcomeStorage, utils::generate_permutations},
     product::RegisterProductCommand,
 };
@@ -56,16 +58,18 @@ async fn one_withdraw() -> anyhow::Result<()> {
 async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::Result<Gas> {
     let (product, anmount) = data;
 
-    let Prepared {
-        context,
-        manager: _,
-        alice,
-        fee_account: _,
-    } = prepare_contract([product]).await?;
+    let mut context = prepare_contract([product]).await?;
+
+    let alice = context.alice().await?;
 
     context
-        .jar_contract
-        .create_jar(&alice, product.id(), anmount, context.ft_contract.account().id())
+        .sweat_jar()
+        .create_jar(
+            &alice,
+            product.id(),
+            anmount,
+            context.ft_contract().contract().as_account().id(),
+        )
         .await?;
 
     context.fast_forward_hours(1).await?;
@@ -75,7 +79,7 @@ async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::R
     let (gas, _withdraw_result) = OutcomeStorage::measure_operation(
         "after_withdraw_internal",
         &alice,
-        context.jar_contract.withdraw(&alice, 0.into()),
+        context.sweat_jar().with_user(&alice).withdraw(U32(0), None),
     )
     .await?;
 

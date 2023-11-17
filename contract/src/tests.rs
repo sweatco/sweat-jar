@@ -3,17 +3,22 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
-use model::{jar::JarView, AggregatedTokenAmountView, U32};
-use near_sdk::{json_types::U128, test_utils::accounts};
+use model::{
+    api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
+    jar::{AggregatedTokenAmountView, JarView},
+    product::ApyView,
+    MS_IN_YEAR, U32,
+};
+use near_sdk::{
+    json_types::U128,
+    serde_json::{from_str, to_string},
+    test_utils::accounts,
+};
 
 use super::*;
 use crate::{
-    claim::api::ClaimApi,
-    common::{udecimal::UDecimal, MS_IN_YEAR},
-    jar::api::JarApi,
-    penalty::api::PenaltyApi,
-    product::{api::*, helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
-    withdraw::api::WithdrawApi,
+    common::udecimal::UDecimal,
+    product::{helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
 };
 
 #[test]
@@ -277,6 +282,9 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
         .with_products(&[reference_product])
         .with_jars(&[reference_jar]);
 
+    let products = context.contract.get_products();
+    assert!(matches!(products.first().unwrap().apy, ApyView::Downgradable(_)));
+
     context.switch_account(&admin);
 
     context.set_block_timestamp_in_ms(270_000);
@@ -378,6 +386,14 @@ fn get_interest_after_withdraw() {
 
     let interest = context.contract.get_total_interest(alice.clone());
     assert_eq!(12_000_000, interest.amount.total.0);
+}
+
+#[test]
+fn test_u32() {
+    let n = U32(12345678);
+
+    assert_eq!(n, from_str(&to_string(&n).unwrap()).unwrap());
+    assert_eq!(U32::from(12345678_u32), n);
 }
 
 fn generate_product() -> Product {

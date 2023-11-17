@@ -3,7 +3,7 @@ use std::cmp;
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use model::{
     jar::{JarId, JarView},
-    ProductId, TokenAmount,
+    ProductId, TokenAmount, MS_IN_YEAR,
 };
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
@@ -16,7 +16,7 @@ use near_sdk::{
 };
 
 use crate::{
-    common::{udecimal::UDecimal, Timestamp, MS_IN_YEAR},
+    common::{udecimal::UDecimal, Timestamp},
     event::{emit, EventKind, TopUpData},
     product::model::{Apy, Product, Terms},
     Base64VecU8, Contract, JarsStorage, Signature,

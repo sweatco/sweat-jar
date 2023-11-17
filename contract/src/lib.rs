@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
-use model::{jar::JarId, ProductId};
+use model::{api::InitApi, jar::JarId, ProductId};
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
@@ -30,9 +30,6 @@ mod penalty;
 mod product;
 mod tests;
 mod withdraw;
-
-// TODO: document all the numbers
-// TODO: document gas amounts and how we got these numbers
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -88,11 +85,10 @@ pub(crate) enum StorageKey {
 }
 
 #[near_bindgen]
-impl Contract {
+impl InitApi for Contract {
     #[init]
     #[private]
-    #[must_use]
-    pub fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
+    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
         Self {
             token_account_id,
             fee_account_id,

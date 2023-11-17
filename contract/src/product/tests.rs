@@ -1,15 +1,21 @@
 #![cfg(test)]
 
+use model::{
+    api::ProductApi,
+    product::{
+        ApyView, DowngradableApyView, FixedProductTermsDto, ProductView, RegisterProductCommand, TermsDto, TermsView,
+        WithdrawalFeeDto, WithdrawalFeeView,
+    },
+    MS_IN_YEAR,
+};
 use near_sdk::{
-    json_types::{Base64VecU8, U128},
+    json_types::{Base64VecU8, U128, U64},
     test_utils::accounts,
 };
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal, MS_IN_YEAR},
+    common::{tests::Context, udecimal::UDecimal},
     product::{
-        api::ProductApi,
-        command::{RegisterProductCommand, TermsDto, WithdrawalFeeDto},
         helpers::MessageSigner,
         model::{Apy, DowngradableApy, Product, Terms, WithdrawalFee},
     },
@@ -78,19 +84,23 @@ fn register_product_with_existing_id() {
     });
 }
 
-fn register_product(command: RegisterProductCommand) -> Product {
+fn register_product(command: RegisterProductCommand) -> (Product, ProductView) {
     let admin = accounts(1);
 
     let mut context = Context::new(admin.clone());
 
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| context.contract.register_product(command));
-    context.contract.products.into_iter().last().unwrap().1.clone()
+
+    let product = context.contract.products.into_iter().last().unwrap().1.clone();
+    let view = context.contract.get_products().first().unwrap().clone();
+
+    (product, view)
 }
 
 #[test]
 fn register_downgradable_product() {
-    let product = register_product(RegisterProductCommand {
+    let (product, view) = register_product(RegisterProductCommand {
         id: "downgradable_product".to_string(),
         apy_fallback: Some((U128(10), 3)),
         ..Default::default()
@@ -109,6 +119,14 @@ fn register_downgradable_product() {
             },
         })
     );
+
+    assert_eq!(
+        view.apy,
+        ApyView::Downgradable(DowngradableApyView {
+            default: 0.12,
+            fallback: 0.01
+        })
+    )
 }
 
 #[test]
@@ -119,6 +137,11 @@ fn register_product_with_too_high_fixed_fee() {
     register_product(RegisterProductCommand {
         id: "product_with_fixed_fee".to_string(),
         withdrawal_fee: WithdrawalFeeDto::Fix(U128(200)).into(),
+        terms: TermsDto::Fixed(FixedProductTermsDto {
+            lockup_term: U64(MS_IN_YEAR),
+            allows_top_up: false,
+            allows_restaking: false,
+        }),
         ..Default::default()
     });
 }
@@ -137,7 +160,7 @@ fn register_product_with_too_high_percent_fee() {
 
 #[test]
 fn register_product_with_fee() {
-    let product = register_product(RegisterProductCommand {
+    let (product, view) = register_product(RegisterProductCommand {
         id: "product_with_fixed_fee".to_string(),
         withdrawal_fee: WithdrawalFeeDto::Fix(U128(10)).into(),
         ..Default::default()
@@ -145,7 +168,9 @@ fn register_product_with_fee() {
 
     assert_eq!(product.withdrawal_fee, Some(WithdrawalFee::Fix(10)));
 
-    let product = register_product(RegisterProductCommand {
+    assert_eq!(view.withdrawal_fee, Some(WithdrawalFeeView::Fix(U128(10))));
+
+    let (product, view) = register_product(RegisterProductCommand {
         id: "product_with_percent_fee".to_string(),
         withdrawal_fee: WithdrawalFeeDto::Percent(U128(12), 2).into(),
         ..Default::default()
@@ -158,17 +183,20 @@ fn register_product_with_fee() {
             exponent: 2
         }))
     );
+
+    assert_eq!(view.withdrawal_fee, Some(WithdrawalFeeView::Percent(0.12)));
 }
 
 #[test]
 fn register_product_with_flexible_terms() {
-    let product = register_product(RegisterProductCommand {
+    let (product, view) = register_product(RegisterProductCommand {
         id: "product_with_fixed_fee".to_string(),
         terms: TermsDto::Flexible,
         ..Default::default()
     });
 
     assert_eq!(product.terms, Terms::Flexible);
+    assert_eq!(view.terms, TermsView::Flexible);
 }
 
 #[test]
