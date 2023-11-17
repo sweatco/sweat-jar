@@ -53,7 +53,7 @@ jobs:
         run: make integration
 
   mutation-tests:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Install tool
         run: cargo install --locked cargo-mutants
@@ -65,7 +65,7 @@ jobs:
         run: make mutation
 
   measure:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
