@@ -1829,7 +1829,7 @@ dependencies = [
 [[package]]
 name = "integration-trait"
 version = "0.1.0"
-source = "git+https://github.com/sweatco/integration-utils.git?rev=ef119de488d32759497b4029f2b8315019e03081#ef119de488d32759497b4029f2b8315019e03081"
+source = "git+https://github.com/sweatco/integration-utils.git?rev=26876acf2c93e29463a83e550ff408f4cf404bd6#26876acf2c93e29463a83e550ff408f4cf404bd6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1839,7 +1839,7 @@ dependencies = [
 [[package]]
 name = "integration-utils"
 version = "0.1.0"
-source = "git+https://github.com/sweatco/integration-utils.git?rev=ef119de488d32759497b4029f2b8315019e03081#ef119de488d32759497b4029f2b8315019e03081"
+source = "git+https://github.com/sweatco/integration-utils.git?rev=26876acf2c93e29463a83e550ff408f4cf404bd6#26876acf2c93e29463a83e550ff408f4cf404bd6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4085,7 +4085,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 [[package]]
 name = "sweat-model"
 version = "0.1.0"
-source = "git+https://github.com/sweatco/sweat-near?rev=605ec92619c5b96ec0580fcb921c0f24b79b1afe#605ec92619c5b96ec0580fcb921c0f24b79b1afe"
+source = "git+https://github.com/sweatco/sweat-near?rev=8334043a5ea85f4ab5227e8fa8862d0c8dea45f6#8334043a5ea85f4ab5227e8fa8862d0c8dea45f6"
 dependencies = [
  "anyhow",
  "async-trait",
