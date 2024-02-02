@@ -1,4 +1,4 @@
-use model::product::{
+use jar_model::product::{
     ApyView, CapView, DowngradableApyView, FixedProductTermsView, ProductView, TermsView, WithdrawalFeeView,
 };
 use near_sdk::json_types::{U128, U64};

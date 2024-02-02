@@ -1,11 +1,11 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use integration_utils::integration_contract::IntegrationContract;
 use itertools::Itertools;
-use model::api::ProductApiIntegration;
+use jar_model::api::ProductApiIntegration;
 
 use crate::{
     common::generate_keypair,
     context::{prepare_contract, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
 };
 
@@ -27,7 +27,7 @@ async fn product_actions() -> anyhow::Result<()> {
             &alice,
             product_id.clone(),
             1_000_000,
-            context.ft_contract().contract().as_account().id(),
+            context.ft_contract().contract.as_account().id(),
         )
         .await?;
 
@@ -35,8 +35,9 @@ async fn product_actions() -> anyhow::Result<()> {
 
     context
         .sweat_jar()
-        .with_user(&manager)
         .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), false)
+        .with_user(&manager)
+        .call()
         .await?;
 
     let result = context
@@ -45,7 +46,7 @@ async fn product_actions() -> anyhow::Result<()> {
             &alice,
             product_id.clone(),
             1_000_000,
-            context.ft_contract().contract().as_account().id(),
+            context.ft_contract().contract.as_account().id(),
         )
         .await;
 
@@ -59,8 +60,9 @@ async fn product_actions() -> anyhow::Result<()> {
 
     context
         .sweat_jar()
-        .with_user(&manager)
         .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), true)
+        .with_user(&manager)
+        .call()
         .await?;
 
     let (_, verifying_key) = generate_keypair();
@@ -68,11 +70,12 @@ async fn product_actions() -> anyhow::Result<()> {
 
     context
         .sweat_jar()
-        .with_user(&manager)
         .set_public_key(
             RegisterProductCommand::Locked12Months12Percents.id(),
             pk_base64.as_bytes().into_iter().copied().collect_vec().into(),
         )
+        .with_user(&manager)
+        .call()
         .await?;
 
     let result = context
@@ -81,7 +84,7 @@ async fn product_actions() -> anyhow::Result<()> {
             &alice,
             product_id,
             1_000_000,
-            context.ft_contract().contract().as_account().id(),
+            context.ft_contract().contract.as_account().id(),
         )
         .await;
 

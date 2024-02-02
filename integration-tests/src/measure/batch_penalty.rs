@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
-use model::api::{JarApiIntegration, PenaltyApiIntegration};
+use integration_utils::misc::ToNear;
+use jar_model::api::{JarApiIntegration, PenaltyApiIntegration};
 use near_workspaces::types::Gas;
 
 use crate::{
@@ -82,6 +82,7 @@ async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow
     let jars = context
         .sweat_jar()
         .get_jars_for_account(alice.to_near())
+        .call()
         .await?
         .into_iter()
         .map(|j| j.id)
@@ -91,8 +92,9 @@ async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow
         &manager,
         context
             .sweat_jar()
+            .batch_set_penalty(vec![(alice.to_near(), jars)], true)
             .with_user(&manager)
-            .batch_set_penalty(vec![(alice.to_near(), jars)], true),
+            .call(),
     )
     .await?;
 

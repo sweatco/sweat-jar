@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use model::{
+use jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     MS_IN_YEAR, U32,
 };

@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
-use model::{
+use jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::{AggregatedTokenAmountView, JarView},
     product::ApyView,

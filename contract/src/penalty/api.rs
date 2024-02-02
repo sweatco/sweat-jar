@@ -1,4 +1,4 @@
-use model::{api::PenaltyApi, jar::JarIdView};
+use jar_model::{api::PenaltyApi, jar::JarIdView};
 use near_sdk::{env, near_bindgen, AccountId};
 
 use crate::{

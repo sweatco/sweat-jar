@@ -1,4 +1,4 @@
-use model::jar::{CeFiJar, JarId};
+use jar_model::jar::{CeFiJar, JarId};
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
     json_types::U128,
@@ -68,7 +68,7 @@ impl FungibleTokenReceiver for Contract {
 mod tests {
     use std::panic::catch_unwind;
 
-    use model::{api::JarApi, U32};
+    use jar_model::{api::JarApi, U32};
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
     use near_sdk::{json_types::U128, serde_json::json, test_utils::accounts};
 

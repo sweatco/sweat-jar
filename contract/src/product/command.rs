@@ -1,4 +1,4 @@
-use model::product::{RegisterProductCommand, TermsDto, WithdrawalFeeDto};
+use jar_model::product::{RegisterProductCommand, TermsDto, WithdrawalFeeDto};
 
 use crate::{
     common::udecimal::UDecimal,

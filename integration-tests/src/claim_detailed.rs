@@ -1,11 +1,12 @@
-use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
-use model::{
+use integration_utils::misc::ToNear;
+use jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration},
     claimed_amount_view::ClaimedAmountView,
 };
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
 };
 
@@ -22,7 +23,7 @@ async fn claim_detailed() -> anyhow::Result<()> {
 
     let alice = context.alice().await?;
 
-    let products = context.sweat_jar().get_products().await?;
+    let products = context.sweat_jar().get_products().call().await?;
     assert_eq!(3, products.len());
 
     context
@@ -31,18 +32,23 @@ async fn claim_detailed() -> anyhow::Result<()> {
             &alice,
             RegisterProductCommand::Locked12Months12Percents.id(),
             1_000_000,
-            context.ft_contract().contract().as_account().id(),
+            context.ft_contract().contract.as_account().id(),
         )
         .await?;
 
-    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).await?;
-    let alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).await?;
+    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).call().await?;
+    let alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).call().await?;
     assert_eq!(1_000_000, alice_principal.total.0);
     assert_eq!(0, alice_interest.amount.total.0);
 
     context.fast_forward_hours(1).await?;
 
-    let claimed_details = context.sweat_jar().with_user(&alice).claim_total(Some(true)).await?;
+    let claimed_details = context
+        .sweat_jar()
+        .claim_total(Some(true))
+        .with_user(&alice)
+        .call()
+        .await?;
 
     let ClaimedAmountView::Detailed(claimed_details) = claimed_details else {
         panic!()

@@ -1,4 +1,4 @@
-use model::TokenAmount;
+use jar_model::TokenAmount;
 use near_sdk::require;
 
 use crate::{common::Timestamp, jar::model::Jar, product::model::Product};

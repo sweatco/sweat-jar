@@ -1,4 +1,4 @@
-use model::{
+use jar_model::{
     api::ProductApi,
     product::{ProductView, RegisterProductCommand},
     ProductId,

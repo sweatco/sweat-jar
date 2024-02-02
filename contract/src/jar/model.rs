@@ -1,7 +1,7 @@
 use std::cmp;
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
-use model::{
+use jar_model::{
     jar::{JarId, JarView},
     ProductId, TokenAmount, MS_IN_YEAR,
 };

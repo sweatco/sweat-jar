@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use model::{
+use jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     TokenAmount, U32,

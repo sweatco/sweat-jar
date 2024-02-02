@@ -1,6 +1,6 @@
 use std::cmp;
 
-use model::{
+use jar_model::{
     api::ClaimApi,
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedTokenAmountView, JarIdView},

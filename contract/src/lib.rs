@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
-use model::{api::InitApi, jar::JarId, ProductId};
+use jar_model::{api::InitApi, jar::JarId, ProductId};
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},

@@ -1,6 +1,9 @@
 use near_sdk::Timestamp;
 
-use crate::context::{prepare_contract, IntegrationContext};
+use crate::{
+    context::{prepare_contract, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
+};
 
 #[tokio::test]
 #[mutants::skip]

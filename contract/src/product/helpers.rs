@@ -5,7 +5,7 @@ use crypto_hash::{digest, Algorithm};
 use ed25519_dalek::{Signer, SigningKey};
 use fake::{Fake, Faker};
 use general_purpose::STANDARD;
-use model::{TokenAmount, MS_IN_YEAR};
+use jar_model::{TokenAmount, MS_IN_YEAR};
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
 

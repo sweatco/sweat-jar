@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use model::{
+use jar_model::{
     api::ProductApi,
     product::{
         ApyView, DowngradableApyView, FixedProductTermsDto, ProductView, RegisterProductCommand, TermsDto, TermsView,

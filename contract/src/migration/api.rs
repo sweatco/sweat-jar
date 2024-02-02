@@ -1,4 +1,4 @@
-use model::{jar::CeFiJar, TokenAmount};
+use jar_model::{jar::CeFiJar, TokenAmount};
 use near_sdk::{json_types::U128, require};
 
 use crate::{

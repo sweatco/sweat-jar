@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
-use model::api::{JarApiIntegration, WithdrawApiIntegration};
+use integration_utils::misc::ToNear;
+use jar_model::api::{JarApiIntegration, WithdrawApiIntegration};
 use near_workspaces::types::Gas;
 
 use crate::{
@@ -88,12 +88,15 @@ async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Res
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
 
     let jar = jars.random_element();
 
-    let (gas, _) =
-        OutcomeStorage::measure_total(&alice, context.sweat_jar().with_user(&alice).withdraw(jar.id, None)).await?;
+    let (gas, _) = OutcomeStorage::measure_total(
+        &alice,
+        context.sweat_jar().withdraw(jar.id, None).with_user(&alice).call(),
+    )
+    .await?;
 
     Ok(gas)
 }

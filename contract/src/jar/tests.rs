@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use fake::Fake;
-use model::MS_IN_YEAR;
+use jar_model::MS_IN_YEAR;
 use near_sdk::{test_utils::accounts, Timestamp};
 
 use crate::{
@@ -50,7 +50,7 @@ fn interest_precision() {
 
 #[cfg(test)]
 mod signature_tests {
-    use model::{
+    use jar_model::{
         api::{JarApi, ProductApi},
         MS_IN_YEAR, U32,
     };
@@ -391,7 +391,7 @@ mod signature_tests {
 }
 
 mod helpers {
-    use model::TokenAmount;
+    use jar_model::TokenAmount;
     use near_sdk::AccountId;
 
     use crate::jar::model::Jar;

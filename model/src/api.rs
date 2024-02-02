@@ -12,6 +12,11 @@ use crate::{
     ProductId,
 };
 
+#[cfg(feature = "integration-test")]
+pub struct JarContract<'a> {
+    pub contract: &'a near_workspaces::Contract,
+}
+
 #[make_integration_version]
 pub trait InitApi {
     fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self;

@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use model::{
+use jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     claimed_amount_view::ClaimedAmountView,
     MS_IN_YEAR, U32,

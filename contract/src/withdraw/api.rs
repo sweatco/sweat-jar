@@ -1,4 +1,4 @@
-use model::{
+use jar_model::{
     api::WithdrawApi,
     jar::{JarId, JarIdView},
     withdraw::{Fee, WithdrawView},

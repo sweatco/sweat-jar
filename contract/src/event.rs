@@ -1,4 +1,4 @@
-use model::{jar::JarId, ProductId};
+use jar_model::{jar::JarId, ProductId};
 use near_sdk::{
     json_types::{Base64VecU8, U128},
     log,

@@ -2,9 +2,8 @@
 
 use std::collections::HashMap;
 
-use integration_utils::integration_contract::IntegrationContract;
 use itertools::Itertools;
-use model::api::ClaimApiIntegration;
+use jar_model::api::ClaimApiIntegration;
 use near_workspaces::types::Gas;
 
 use crate::{
@@ -90,7 +89,7 @@ pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, us
     let (gas, _claimed) = OutcomeStorage::measure_operation(
         "interest_to_claim",
         &alice,
-        context.sweat_jar().with_user(&alice).claim_total(None),
+        context.sweat_jar().claim_total(None).with_user(&alice).call(),
     )
     .await?;
 

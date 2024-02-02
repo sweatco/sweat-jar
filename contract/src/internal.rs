@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use model::{
+use jar_model::{
     jar::{JarId, JarIdView},
     ProductId,
 };

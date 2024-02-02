@@ -1,4 +1,4 @@
-use model::{ProductId, TokenAmount};
+use jar_model::{ProductId, TokenAmount};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     require,

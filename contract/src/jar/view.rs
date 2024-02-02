@@ -1,4 +1,4 @@
-use model::{jar::JarView, U32};
+use jar_model::{jar::JarView, U32};
 use near_sdk::json_types::{U128, U64};
 
 use crate::jar::model::Jar;
