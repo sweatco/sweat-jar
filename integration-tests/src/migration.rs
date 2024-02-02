@@ -1,5 +1,6 @@
 use integration_utils::misc::ToNear;
 use jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration};
+use near_workspaces::types::NearToken;
 use serde_json::json;
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration};
 
@@ -116,6 +117,7 @@ async fn migration() -> anyhow::Result<()> {
             })
             .to_string(),
         )
+        .deposit(NearToken::from_yoctonear(1))
         .with_user(&manager)
         .call()
         .await?;
