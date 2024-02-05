@@ -181,7 +181,7 @@ impl Jar {
     /// For a Flexible product withdrawal is always possible.
     /// For Fixed product it's defined by the lockup term.
     pub(crate) fn is_liquidable(&self, product: &Product, now: Timestamp) -> bool {
-        match product.clone().terms {
+        match &product.terms {
             Terms::Fixed(value) => now - self.created_at > value.lockup_term,
             Terms::Flexible => true,
         }

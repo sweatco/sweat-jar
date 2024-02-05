@@ -394,7 +394,7 @@ mod helpers {
     use jar_model::TokenAmount;
     use near_sdk::AccountId;
 
-    use crate::jar::model::Jar;
+    use crate::{common::Timestamp, jar::model::Jar};
 
     impl Jar {
         pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &str) -> Jar {
@@ -413,6 +413,16 @@ mod helpers {
 
         pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {
             self.principal = principal;
+            self
+        }
+
+        pub(crate) fn created_at(mut self, created_at: Timestamp) -> Jar {
+            self.created_at = created_at;
+            self
+        }
+
+        pub(crate) fn pending_withdraw(mut self) -> Jar {
+            self.is_pending_withdraw = true;
             self
         }
     }

@@ -27,6 +27,7 @@ pub(crate) trait FungibleTokenInterface {
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
+    #[mutants::skip] // Covered by integration tests
     fn transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())

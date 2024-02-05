@@ -53,7 +53,7 @@ impl Product {
                 max: (1_000_000..1_000_000_000).fake(),
             },
             terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: (1..3).fake::<u64>() * 31_536_000_000,
+                lockup_term: 31_536_000_000,
                 allows_top_up: Faker.fake(),
                 allows_restaking: Faker.fake(),
             }),
