@@ -12,6 +12,8 @@ default = []
 integration-test = []
 
 [dependencies]
+f256 = "0.2.0"
+rust_decimal = { workspace = true }
 ed25519-dalek = { workspace = true }
 mutants = { workspace = true }
 

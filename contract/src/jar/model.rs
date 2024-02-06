@@ -10,9 +10,9 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     AccountId,
 };
-use sweat_jar_model::{
-    jar::{JarId, JarView},
-    ProductId, TokenAmount, MS_IN_YEAR,
+use rust_decimal::{
+    prelude::{FromPrimitive, ToPrimitive},
+    Decimal,
 };
 
 use crate::{
@@ -77,6 +77,9 @@ pub struct Jar {
 
     /// Indicates whether a penalty has been applied to the jar's owner due to violating product terms.
     pub is_penalty_applied: bool,
+
+    /// ADD DOCUMENT
+    pub claim_roundings: u64,
 }
 
 /// A cached value that stores calculated interest based on the current state of the jar.
@@ -109,6 +112,7 @@ impl Jar {
             claimed_balance: 0,
             is_pending_withdraw: false,
             is_penalty_applied: false,
+            claim_roundings: 0,
         }
     }
 
@@ -128,7 +132,7 @@ impl Jar {
     }
 
     pub(crate) fn apply_penalty(&mut self, product: &Product, is_applied: bool, now: Timestamp) {
-        let current_interest = self.get_interest(product, now);
+        let current_interest = self.get_interest(product, now).0;
 
         self.cache = Some(JarCache {
             updated_at: now,
@@ -138,7 +142,7 @@ impl Jar {
     }
 
     pub(crate) fn top_up(&mut self, amount: TokenAmount, product: &Product, now: Timestamp) -> &mut Self {
-        let current_interest = self.get_interest(product, now);
+        let current_interest = self.get_interest(product, now).0;
 
         self.principal += amount;
         self.cache = Some(JarCache {
@@ -167,14 +171,14 @@ impl Jar {
             principal: self.principal - withdrawn_amount,
             cache: Some(JarCache {
                 updated_at: now,
-                interest: self.get_interest(product, now),
+                interest: self.get_interest(product, now).0,
             }),
             ..self.clone()
         }
     }
 
     pub(crate) fn should_be_closed(&self, product: &Product, now: Timestamp) -> bool {
-        !product.is_flexible() && self.principal == 0 && self.get_interest(product, now) == 0
+        !product.is_flexible() && self.principal == 0 && self.get_interest(product, now).0 == 0
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -191,7 +195,7 @@ impl Jar {
         self.principal == 0
     }
 
-    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> TokenAmount {
+    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> (TokenAmount, f64) {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
             (cache.updated_at, cache.interest)
         } else {
@@ -201,16 +205,27 @@ impl Jar {
         let effective_term = if until_date > base_date {
             until_date - base_date
         } else {
-            return base_interest;
+            return (base_interest, Default::default());
         };
 
         let term_in_milliseconds = u128::from(effective_term);
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let interest = (term_in_milliseconds * total_interest) / u128::from(MS_IN_YEAR);
+        let ms_in_year = Decimal::from_u64(MS_IN_YEAR).unwrap();
 
-        base_interest + interest
+        let interest = Decimal::from_u128(term_in_milliseconds * total_interest).unwrap() / ms_in_year;
+
+        let previous_rounding = f64::from_le_bytes(self.claim_roundings.to_le_bytes());
+
+        let current_rounding = interest.fract().to_f64().unwrap();
+
+        let rounding = previous_rounding + current_rounding;
+
+        (
+            base_interest + interest.to_u128().unwrap() + rounding.trunc() as u128,
+            rounding.fract(),
+        )
     }
 
     fn get_apy(&self, product: &Product) -> UDecimal {

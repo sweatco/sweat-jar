@@ -17,7 +17,7 @@ fn get_interest_before_maturity() {
         .lockup_term(2 * MS_IN_YEAR);
     let jar = Jar::generate(0, &accounts(0), &product.id).principal(100_000_000);
 
-    let interest = jar.get_interest(&product, MS_IN_YEAR);
+    let interest = jar.get_interest(&product, MS_IN_YEAR).0;
     assert_eq!(12_000_000, interest);
 }
 
@@ -28,7 +28,7 @@ fn get_interest_after_maturity() {
         .lockup_term(MS_IN_YEAR);
     let jar = Jar::generate(0, &accounts(0), &product.id).principal(100_000_000);
 
-    let interest = jar.get_interest(&product, 400 * 24 * 60 * 60 * 1000);
+    let interest = jar.get_interest(&product, 400 * 24 * 60 * 60 * 1000).0;
     assert_eq!(12_000_000, interest);
 }
 
@@ -39,12 +39,12 @@ fn interest_precision() {
         .lockup_term(MS_IN_YEAR);
     let jar = Jar::generate(0, &accounts(0), &product.id).principal(MS_IN_YEAR as u128);
 
-    assert_eq!(jar.get_interest(&product, 10000000000), 10000000000);
-    assert_eq!(jar.get_interest(&product, 10000000001), 10000000001);
+    assert_eq!(jar.get_interest(&product, 10000000000).0, 10000000000);
+    assert_eq!(jar.get_interest(&product, 10000000001).0, 10000000001);
 
     for _ in 0..100 {
         let time: Timestamp = (10..MS_IN_YEAR).fake();
-        assert_eq!(jar.get_interest(&product, time), time as u128);
+        assert_eq!(jar.get_interest(&product, time).0, time as u128);
     }
 }
 
@@ -408,6 +408,7 @@ mod helpers {
                 claimed_balance: 0,
                 is_pending_withdraw: false,
                 is_penalty_applied: false,
+                claim_roundings: 0,
             }
         }
 

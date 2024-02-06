@@ -23,6 +23,10 @@ pub struct UDecimal {
 }
 
 impl UDecimal {
+    pub(crate) fn new(significand: u128, exponent: u32) -> Self {
+        Self { significand, exponent }
+    }
+
     /// Use this method only for View structures because
     /// it can cause a loss of precision
     #[allow(clippy::cast_precision_loss)]
@@ -33,28 +37,24 @@ impl UDecimal {
 
 impl Mul<u128> for UDecimal {
     type Output = u128;
-
     fn mul(self, value: u128) -> Self::Output {
-        value * self.significand / 10u128.pow(self.exponent)
+        (&self).mul(value)
     }
 }
 
 impl Mul<u128> for &UDecimal {
     type Output = u128;
-
     fn mul(self, value: u128) -> Self::Output {
         value * self.significand / 10u128.pow(self.exponent)
     }
 }
 
-impl UDecimal {
-    pub(crate) fn new(significand: u128, exponent: u32) -> Self {
-        Self { significand, exponent }
-    }
-}
-
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
+    use rust_decimal::Decimal;
+
     use crate::common::udecimal::UDecimal;
 
     #[test]
@@ -71,5 +71,13 @@ mod tests {
         assert_eq!(UDecimal::new(14, 1) * 10, UDecimal::new(14, 0) * 1);
         assert_eq!(UDecimal::new(16, 2) * 100, UDecimal::new(16, 0) * 1);
         assert_eq!(UDecimal::new(18, 3) * 1000, UDecimal::new(18, 0) * 1);
+    }
+
+    #[test]
+    fn decimal_div() {
+        assert_eq!(
+            Decimal::from_str("10.5").unwrap() / Decimal::from_str("2").unwrap(),
+            Decimal::from_str("5.250").unwrap()
+        );
     }
 }

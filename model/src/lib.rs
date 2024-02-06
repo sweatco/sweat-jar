@@ -14,5 +14,6 @@ pub type TokenAmount = u128;
 
 pub const MS_IN_SECOND: u64 = 1000;
 pub const MS_IN_MINUTE: u64 = MS_IN_SECOND * 60;
-pub const MINUTES_IN_YEAR: u64 = 365 * 24 * 60;
-pub const MS_IN_YEAR: u64 = MINUTES_IN_YEAR * MS_IN_MINUTE;
+pub const MS_IN_HOUR: u64 = MS_IN_MINUTE * 60;
+pub const MS_IN_DAY: u64 = MS_IN_HOUR * 24;
+pub const MS_IN_YEAR: u64 = MS_IN_DAY * 365;

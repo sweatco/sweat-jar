@@ -47,8 +47,8 @@ fn claim_total_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
-    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration);
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -80,8 +80,8 @@ fn claim_partially_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
-    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration) - 1;
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration).0 - 1;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -157,7 +157,7 @@ fn claim_partially_detailed_when_having_tokens_and_request_sum_of_single_deposit
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 

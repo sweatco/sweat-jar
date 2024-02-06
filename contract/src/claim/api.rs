@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, mem::transmute};
 
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
@@ -66,15 +66,18 @@ impl Contract {
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let available_interest = jar.get_interest(product, now);
+            let (available_interest, rounding) = jar.get_interest(product, now);
+
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - accumulator.get_total().0)
             });
 
             if interest_to_claim > 0 {
-                self.get_jar_mut_internal(&jar.account_id, jar.id)
-                    .claim(available_interest, interest_to_claim, now)
-                    .lock();
+                let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
+
+                jar.claim_roundings = unsafe { transmute(rounding.to_le_bytes()) };
+
+                jar.claim(available_interest, interest_to_claim, now).lock();
 
                 accumulator.add(jar.id, interest_to_claim);
 

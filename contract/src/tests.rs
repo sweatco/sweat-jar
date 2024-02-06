@@ -7,6 +7,7 @@ use near_sdk::{
     json_types::U128,
     serde_json::{from_str, to_string},
     test_utils::accounts,
+    PromiseOrValue,
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
@@ -205,7 +206,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
     context.set_block_timestamp_in_days(365);
 
     interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
-    assert_eq!(interest, 6_016_438);
+    assert_eq!(interest, 6_016_439);
 }
 
 #[test]
@@ -401,4 +402,48 @@ fn generate_product() -> Product {
         .enabled(true)
         .lockup_term(MS_IN_YEAR)
         .apy(Apy::Constant(UDecimal::new(12, 2)))
+}
+
+#[test]
+fn claim_often_vs_claim_once() {
+    let alice = accounts(0);
+    let bob = accounts(1);
+    let admin = accounts(2);
+
+    let product = generate_product();
+    let alice_jar = Jar::generate(0, &alice, &product.id).principal(1_000_000_000_000_000_000);
+    let bob_jar = Jar::generate(1, &bob, &product.id).principal(1_000_000_000_000_000_000);
+
+    let mut context = Context::new(admin)
+        .with_products(&[product])
+        .with_jars(&[alice_jar.clone(), bob_jar.clone()]);
+
+    context.set_block_timestamp_in_years(1);
+
+    let mut bobs_claimed = 0;
+
+    for day in 0..365 {
+        context.set_block_timestamp_in_days(day);
+
+        context.switch_account(&bob);
+
+        let PromiseOrValue::Value(claimed) = context.contract.claim_total(None) else {
+            panic!()
+        };
+
+        dbg!(&claimed.get_total().0);
+
+        let _interest = context.contract.get_total_interest(bob.clone());
+
+        bobs_claimed += claimed.get_total().0;
+    }
+
+    let alice_interest = context.contract.get_total_interest(alice.clone());
+
+    dbg!(&alice_interest.amount.total.0);
+
+    dbg!(&bobs_claimed);
+
+    dbg!(u128::MAX);
+    dbg!(f64::MAX);
 }

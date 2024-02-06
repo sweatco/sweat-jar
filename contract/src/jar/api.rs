@@ -62,7 +62,7 @@ impl JarApi for Contract {
         let mut total_amount: TokenAmount = 0;
 
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let interest = jar.get_interest(self.get_product(&jar.product_id), now);
+            let interest = jar.get_interest(self.get_product(&jar.product_id), now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
