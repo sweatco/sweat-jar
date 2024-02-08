@@ -408,7 +408,7 @@ mod helpers {
                 claimed_balance: 0,
                 is_pending_withdraw: false,
                 is_penalty_applied: false,
-                claim_roundings: Default::default(),
+                claim_remainder: Default::default(),
             }
         }
 

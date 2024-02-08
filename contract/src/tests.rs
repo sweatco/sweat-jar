@@ -441,7 +441,7 @@ fn claim_often_vs_claim_once() {
 
         let alice_interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
 
-        // Difference in 1 is possible and expected when bob's rounding error is less than 1.
+        // Difference of 1 is possible and expected when bob's rounding error is less than 1.
         // But on the next claim it will be even.
         assert!(alice_interest.abs_diff(bobs_claimed) <= 1);
     }

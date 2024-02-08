@@ -1,8 +1,7 @@
-use std::{cmp, ops::Deref};
+use std::cmp;
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use model::{
-    f64::F64,
     jar::{JarId, JarView},
     ProductId, TokenAmount, MS_IN_YEAR,
 };
@@ -81,7 +80,7 @@ pub struct Jar {
     pub is_penalty_applied: bool,
 
     /// ADD DOCUMENT
-    pub claim_roundings: F64,
+    pub claim_remainder: u64,
 }
 
 /// A cached value that stores calculated interest based on the current state of the jar.
@@ -114,7 +113,7 @@ impl Jar {
             claimed_balance: 0,
             is_pending_withdraw: false,
             is_penalty_applied: false,
-            claim_roundings: Default::default(),
+            claim_remainder: 0,
         }
     }
 
@@ -197,7 +196,7 @@ impl Jar {
         self.principal == 0
     }
 
-    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> (TokenAmount, F64) {
+    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
             (cache.updated_at, cache.interest)
         } else {
@@ -207,7 +206,7 @@ impl Jar {
         let effective_term = if until_date > base_date {
             until_date - base_date
         } else {
-            return (base_interest, Default::default());
+            return (base_interest, 0);
         };
 
         let term_in_milliseconds = u128::from(effective_term);
@@ -218,19 +217,19 @@ impl Jar {
 
         let interest = term_in_milliseconds * total_interest;
 
-        let remainder = interest % ms_in_year;
-
-        let remainder: f64 = remainder as f64 / ms_in_year as f64;
+        // This will never fail because `MS_IN_YEAR` is u64
+        // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
+        let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
 
         let interest = interest / ms_in_year;
 
-        let previous_rounding = self.claim_roundings.deref();
+        let previous_remainder = self.claim_remainder;
 
-        let total_rounding = previous_rounding + remainder;
+        let total_remainder = previous_remainder + remainder;
 
         (
-            base_interest + interest.to_u128().unwrap() + total_rounding.trunc() as u128,
-            total_rounding.fract().into(),
+            base_interest + interest.to_u128().unwrap() + u128::from(total_remainder / MS_IN_YEAR),
+            total_remainder % MS_IN_YEAR,
         )
     }
 

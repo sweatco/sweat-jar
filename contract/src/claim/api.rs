@@ -66,7 +66,7 @@ impl Contract {
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let (available_interest, rounding) = jar.get_interest(product, now);
+            let (available_interest, remainder) = jar.get_interest(product, now);
 
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - accumulator.get_total().0)
@@ -75,7 +75,7 @@ impl Contract {
             if interest_to_claim > 0 {
                 let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
 
-                jar.claim_roundings = rounding;
+                jar.claim_remainder = remainder;
 
                 jar.claim(available_interest, interest_to_claim, now).lock();
 

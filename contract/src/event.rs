@@ -115,9 +115,9 @@ impl From<EventKind> for SweatJarEvent {
 }
 
 #[mutants::skip]
-pub(crate) fn emit(_event: EventKind) {
+pub(crate) fn emit(#[allow(unused)] event: EventKind) {
     #[cfg(not(test))]
-    near_sdk::log!(SweatJarEvent::from(_event).to_json_event_string());
+    near_sdk::log!(SweatJarEvent::from(event).to_json_event_string());
 }
 
 impl SweatJarEvent {
