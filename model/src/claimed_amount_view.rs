@@ -31,14 +31,14 @@ impl ClaimedAmountView {
         }
     }
 
-    pub fn add(&mut self, jar_id: JarId, amout: TokenAmount) {
+    pub fn add(&mut self, jar_id: JarId, amount: TokenAmount) {
         match self {
             ClaimedAmountView::Total(value) => {
-                value.0 += amout;
+                value.0 += amount;
             }
             ClaimedAmountView::Detailed(value) => {
-                value.total.0 += amout;
-                value.detailed.insert(U32(jar_id), U128(amout));
+                value.total.0 += amount;
+                value.detailed.insert(U32(jar_id), U128(amount));
             }
         }
     }
