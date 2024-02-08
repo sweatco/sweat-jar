@@ -32,7 +32,7 @@ impl Contract {
                 claimed_balance: 0,
                 is_pending_withdraw: false,
                 is_penalty_applied: false,
-                claim_roundings: 0,
+                claim_roundings: Default::default(),
             };
 
             total_amount += jar.principal;

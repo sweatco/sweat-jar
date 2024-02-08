@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR};
+use model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
 use sweat_jar_model::api::InitApi;
 
@@ -58,10 +58,6 @@ impl Context {
         }
 
         self
-    }
-
-    pub(crate) fn set_block_timestamp_in_years(&mut self, years: u64) {
-        self.set_block_timestamp(Duration::from_millis(years * MS_IN_YEAR));
     }
 
     pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {

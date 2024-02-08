@@ -3,6 +3,13 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
+use fake::Fake;
+use model::{
+    api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
+    jar::{AggregatedTokenAmountView, JarView},
+    product::ApyView,
+    TokenAmount, MS_IN_YEAR, U32,
+};
 use near_sdk::{
     json_types::U128,
     serde_json::{from_str, to_string},
@@ -406,44 +413,49 @@ fn generate_product() -> Product {
 
 #[test]
 fn claim_often_vs_claim_once() {
-    let alice = accounts(0);
-    let bob = accounts(1);
-    let admin = accounts(2);
+    fn test(product: &Product, principal: TokenAmount, days: u64, n: usize) {
+        let alice = AccountId::new_unchecked(format!("alice_{principal}_{days}_{n}"));
+        let bob = AccountId::new_unchecked(format!("bob_{principal}_{days}_{n}"));
+        let admin = AccountId::new_unchecked(format!("admin_{principal}_{days}_{n}"));
 
-    let product = generate_product();
-    let alice_jar = Jar::generate(0, &alice, &product.id).principal(1_000_000_000_000_000_000);
-    let bob_jar = Jar::generate(1, &bob, &product.id).principal(1_000_000_000_000_000_000);
+        let alice_jar = Jar::generate(0, &alice, &product.id).principal(principal);
+        let bob_jar = Jar::generate(1, &bob, &product.id).principal(principal);
 
-    let mut context = Context::new(admin)
-        .with_products(&[product])
-        .with_jars(&[alice_jar.clone(), bob_jar.clone()]);
+        let mut context = Context::new(admin)
+            .with_products(&[product.clone()])
+            .with_jars(&[alice_jar.clone(), bob_jar.clone()]);
 
-    context.set_block_timestamp_in_years(1);
+        let mut bobs_claimed = 0;
 
-    let mut bobs_claimed = 0;
+        for day in 0..days {
+            context.set_block_timestamp_in_days(day);
 
-    for day in 0..365 {
-        context.set_block_timestamp_in_days(day);
+            context.switch_account(&bob);
 
-        context.switch_account(&bob);
+            let PromiseOrValue::Value(claimed) = context.contract.claim_total(None) else {
+                panic!()
+            };
 
-        let PromiseOrValue::Value(claimed) = context.contract.claim_total(None) else {
-            panic!()
-        };
+            bobs_claimed += claimed.get_total().0;
+        }
 
-        dbg!(&claimed.get_total().0);
+        let alice_interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
 
-        let _interest = context.contract.get_total_interest(bob.clone());
-
-        bobs_claimed += claimed.get_total().0;
+        // Difference in 1 is possible and expected when bob's rounding error is less than 1.
+        // But on the next claim it will be even.
+        assert!(alice_interest.abs_diff(bobs_claimed) <= 1);
     }
 
-    let alice_interest = context.contract.get_total_interest(alice.clone());
+    let product = generate_product();
 
-    dbg!(&alice_interest.amount.total.0);
+    test(&product, 10_000_000_000_000_000_000_000_000_000, 365, 0);
 
-    dbg!(&bobs_claimed);
-
-    dbg!(u128::MAX);
-    dbg!(f64::MAX);
+    for n in 1..1000 {
+        test(
+            &product,
+            (1..10_000_000_000_000_000_000_000_000_000).fake(),
+            (1..365).fake(),
+            n,
+        );
+    }
 }

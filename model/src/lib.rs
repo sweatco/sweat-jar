@@ -1,5 +1,6 @@
 pub mod api;
 pub mod claimed_amount_view;
+pub mod f64;
 pub mod jar;
 mod numbers;
 pub mod product;

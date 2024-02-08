@@ -1,4 +1,4 @@
-use std::{cmp, mem::transmute};
+use std::cmp;
 
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
@@ -75,7 +75,7 @@ impl Contract {
             if interest_to_claim > 0 {
                 let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
 
-                jar.claim_roundings = unsafe { transmute(rounding.to_le_bytes()) };
+                jar.claim_roundings = rounding;
 
                 jar.claim(available_interest, interest_to_claim, now).lock();
 

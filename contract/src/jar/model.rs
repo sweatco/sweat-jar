@@ -1,6 +1,11 @@
-use std::cmp;
+use std::{cmp, ops::Deref};
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
+use model::{
+    f64::F64,
+    jar::{JarId, JarView},
+    ProductId, TokenAmount, MS_IN_YEAR,
+};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
@@ -10,10 +15,7 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     AccountId,
 };
-use rust_decimal::{
-    prelude::{FromPrimitive, ToPrimitive},
-    Decimal,
-};
+use rust_decimal::prelude::ToPrimitive;
 
 use crate::{
     common::{udecimal::UDecimal, Timestamp},
@@ -79,7 +81,7 @@ pub struct Jar {
     pub is_penalty_applied: bool,
 
     /// ADD DOCUMENT
-    pub claim_roundings: u64,
+    pub claim_roundings: F64,
 }
 
 /// A cached value that stores calculated interest based on the current state of the jar.
@@ -112,7 +114,7 @@ impl Jar {
             claimed_balance: 0,
             is_pending_withdraw: false,
             is_penalty_applied: false,
-            claim_roundings: 0,
+            claim_roundings: Default::default(),
         }
     }
 
@@ -195,7 +197,7 @@ impl Jar {
         self.principal == 0
     }
 
-    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> (TokenAmount, f64) {
+    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> (TokenAmount, F64) {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
             (cache.updated_at, cache.interest)
         } else {
@@ -212,19 +214,23 @@ impl Jar {
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let ms_in_year = Decimal::from_u64(MS_IN_YEAR).unwrap();
+        let ms_in_year: u128 = MS_IN_YEAR.into();
 
-        let interest = Decimal::from_u128(term_in_milliseconds * total_interest).unwrap() / ms_in_year;
+        let interest = term_in_milliseconds * total_interest;
 
-        let previous_rounding = f64::from_le_bytes(self.claim_roundings.to_le_bytes());
+        let remainder = interest % ms_in_year;
 
-        let current_rounding = interest.fract().to_f64().unwrap();
+        let remainder: f64 = remainder as f64 / ms_in_year as f64;
 
-        let rounding = previous_rounding + current_rounding;
+        let interest = interest / ms_in_year;
+
+        let previous_rounding = self.claim_roundings.deref();
+
+        let total_rounding = previous_rounding + remainder;
 
         (
-            base_interest + interest.to_u128().unwrap() + rounding.trunc() as u128,
-            rounding.fract(),
+            base_interest + interest.to_u128().unwrap() + total_rounding.trunc() as u128,
+            total_rounding.fract().into(),
         )
     }
 

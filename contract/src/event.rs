@@ -1,6 +1,5 @@
 use near_sdk::{
     json_types::{Base64VecU8, U128},
-    log,
     serde::{Deserialize, Serialize},
     serde_json, AccountId,
 };
@@ -116,8 +115,9 @@ impl From<EventKind> for SweatJarEvent {
 }
 
 #[mutants::skip]
-pub(crate) fn emit(event: EventKind) {
-    log!(SweatJarEvent::from(event).to_json_event_string());
+pub(crate) fn emit(_event: EventKind) {
+    #[cfg(not(test))]
+    near_sdk::log!(SweatJarEvent::from(_event).to_json_event_string());
 }
 
 impl SweatJarEvent {
