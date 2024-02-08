@@ -51,9 +51,6 @@ impl Mul<u128> for &UDecimal {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use rust_decimal::Decimal;
 
     use crate::common::udecimal::UDecimal;
 
@@ -71,13 +68,5 @@ mod tests {
         assert_eq!(UDecimal::new(14, 1) * 10, UDecimal::new(14, 0) * 1);
         assert_eq!(UDecimal::new(16, 2) * 100, UDecimal::new(16, 0) * 1);
         assert_eq!(UDecimal::new(18, 3) * 1000, UDecimal::new(18, 0) * 1);
-    }
-
-    #[test]
-    fn decimal_div() {
-        assert_eq!(
-            Decimal::from_str("10.5").unwrap() / Decimal::from_str("2").unwrap(),
-            Decimal::from_str("5.250").unwrap()
-        );
     }
 }

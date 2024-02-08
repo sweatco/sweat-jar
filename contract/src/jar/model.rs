@@ -14,7 +14,6 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     AccountId,
 };
-use rust_decimal::prelude::ToPrimitive;
 
 use crate::{
     common::{udecimal::UDecimal, Timestamp},
@@ -228,7 +227,7 @@ impl Jar {
         let total_remainder = previous_remainder + remainder;
 
         (
-            base_interest + interest.to_u128().unwrap() + u128::from(total_remainder / MS_IN_YEAR),
+            base_interest + interest + u128::from(total_remainder / MS_IN_YEAR),
             total_remainder % MS_IN_YEAR,
         )
     }
