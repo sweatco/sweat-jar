@@ -1,5 +1,5 @@
-use jar_model::{withdraw::Fee, TokenAmount};
 use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Promise};
+use sweat_jar_model::{withdraw::Fee, TokenAmount};
 
 use crate::{common::tgas, Contract, ContractExt};
 

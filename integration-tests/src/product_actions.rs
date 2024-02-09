@@ -1,6 +1,6 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use itertools::Itertools;
-use jar_model::api::ProductApiIntegration;
+use sweat_jar_model::api::ProductApiIntegration;
 
 use crate::{
     common::generate_keypair,

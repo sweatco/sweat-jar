@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use jar_model::{
+use near_sdk::require;
+use sweat_jar_model::{
     jar::{JarId, JarIdView},
     ProductId,
 };
-use near_sdk::require;
 
 use crate::{env, jar::model::Jar, AccountId, Contract, Product};
 

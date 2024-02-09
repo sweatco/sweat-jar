@@ -1,5 +1,5 @@
 use integration_utils::misc::ToNear;
-use jar_model::{api::WithdrawApiIntegration, U32};
+use sweat_jar_model::{api::WithdrawApiIntegration, U32};
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{

@@ -1,10 +1,10 @@
 #![cfg(test)]
 
-use jar_model::{
+use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
+use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     MS_IN_YEAR, U32,
 };
-use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
 
 use crate::{
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, Timestamp},

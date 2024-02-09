@@ -2,8 +2,8 @@ use std::{fs, path::PathBuf, process::Command};
 
 use anyhow::Result;
 use integration_utils::misc::ToNear;
-use jar_model::api::{InitApiIntegration, JarApiIntegration, JarContract, ProductApiIntegration};
 use near_sdk::json_types::U128;
+use sweat_jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract};
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::{jar_contract_extensions::JarContractExtensions, product::RegisterProductCommand};
@@ -45,7 +45,7 @@ async fn test_stage_change() -> Result<()> {
 
     let jar_account = worker.dev_create_account().await?;
     let old_jar_contract = jar_account.deploy(&jar_old_code).await?.into_result()?;
-    let old_jar_contract = JarContract {
+    let old_jar_contract = SweatJarContract {
         contract: &old_jar_contract,
     };
 
@@ -99,7 +99,7 @@ async fn test_stage_change() -> Result<()> {
     drop(old_jar_contract);
 
     let new_jar_contract = jar_account.deploy(&jar_new_code).await?.into_result()?;
-    let new_jar_contract = JarContract {
+    let new_jar_contract = SweatJarContract {
         contract: &new_jar_contract,
     };
 

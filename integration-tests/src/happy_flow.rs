@@ -1,5 +1,5 @@
 use integration_utils::misc::ToNear;
-use jar_model::api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration};
+use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration};
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{

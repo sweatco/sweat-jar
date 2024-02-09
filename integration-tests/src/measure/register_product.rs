@@ -1,7 +1,7 @@
 #![cfg(test)]
 
-use jar_model::api::ProductApiIntegration;
 use near_workspaces::types::Gas;
+use sweat_jar_model::api::ProductApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

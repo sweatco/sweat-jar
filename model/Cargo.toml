@@ -1,11 +1,11 @@
 [package]
-name = "jar-model"
+name = "sweat-jar-model"
 version = "1.0.0"
 publish = false
 edition = "2021"
 
 [lib]
-name = "jar_model"
+name = "sweat_jar_model"
 
 
 [features]

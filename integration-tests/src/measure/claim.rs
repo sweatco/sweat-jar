@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use jar_model::api::ClaimApiIntegration;
 use near_workspaces::types::Gas;
+use sweat_jar_model::api::ClaimApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

@@ -5,9 +5,9 @@ use crypto_hash::{digest, Algorithm};
 use ed25519_dalek::{Signer, SigningKey};
 use fake::{Fake, Faker};
 use general_purpose::STANDARD;
-use jar_model::{TokenAmount, MS_IN_YEAR};
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
+use sweat_jar_model::{TokenAmount, MS_IN_YEAR};
 
 use crate::{
     common::{tests::Context, udecimal::UDecimal, Duration},

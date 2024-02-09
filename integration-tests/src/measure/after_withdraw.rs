@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 use itertools::Itertools;
-use jar_model::{api::WithdrawApiIntegration, U32};
 use near_workspaces::types::Gas;
+use sweat_jar_model::{api::WithdrawApiIntegration, U32};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

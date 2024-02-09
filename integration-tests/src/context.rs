@@ -1,8 +1,8 @@
 use async_trait::async_trait;
 use integration_utils::misc::ToNear;
-use jar_model::api::{InitApiIntegration, JarContract, ProductApiIntegration};
 use near_sdk::json_types::U128;
 use near_workspaces::Account;
+use sweat_jar_model::api::{InitApiIntegration, ProductApiIntegration, SweatJarContract};
 use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::product::RegisterProductCommand;
@@ -17,7 +17,7 @@ pub trait IntegrationContext {
     async fn manager(&mut self) -> anyhow::Result<Account>;
     async fn alice(&mut self) -> anyhow::Result<Account>;
     async fn fee(&mut self) -> anyhow::Result<Account>;
-    fn sweat_jar(&self) -> JarContract;
+    fn sweat_jar(&self) -> SweatJarContract;
     fn ft_contract(&self) -> SweatContract;
 }
 
@@ -35,8 +35,8 @@ impl IntegrationContext for Context {
         self.account("fee").await
     }
 
-    fn sweat_jar(&self) -> JarContract {
-        JarContract {
+    fn sweat_jar(&self) -> SweatJarContract {
+        SweatJarContract {
             contract: &self.contracts[SWEAT_JAR],
         }
     }

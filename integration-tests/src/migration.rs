@@ -1,7 +1,7 @@
 use integration_utils::misc::ToNear;
-use jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration};
 use near_workspaces::types::NearToken;
 use serde_json::json;
+use sweat_jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration};
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration};
 
 use crate::{

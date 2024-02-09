@@ -1,5 +1,5 @@
-use jar_model::{jar::CeFiJar, TokenAmount};
 use near_sdk::{json_types::U128, require};
+use sweat_jar_model::{jar::CeFiJar, TokenAmount};
 
 use crate::{
     event::{emit, EventKind, MigrationEventItem},

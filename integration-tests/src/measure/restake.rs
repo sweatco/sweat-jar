@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use integration_utils::misc::ToNear;
-use jar_model::api::JarApiIntegration;
 use near_workspaces::types::Gas;
+use sweat_jar_model::api::JarApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

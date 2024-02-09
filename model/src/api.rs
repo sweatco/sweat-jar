@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[cfg(feature = "integration-test")]
-pub struct JarContract<'a> {
+pub struct SweatJarContract<'a> {
     pub contract: &'a near_workspaces::Contract,
 }
 

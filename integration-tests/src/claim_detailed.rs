@@ -1,5 +1,5 @@
 use integration_utils::misc::ToNear;
-use jar_model::{
+use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration},
     claimed_amount_view::ClaimedAmountView,
 };

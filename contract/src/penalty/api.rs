@@ -1,5 +1,5 @@
-use jar_model::{api::PenaltyApi, jar::JarIdView};
 use near_sdk::{env, near_bindgen, AccountId};
+use sweat_jar_model::{api::PenaltyApi, jar::JarIdView};
 
 use crate::{
     event::{

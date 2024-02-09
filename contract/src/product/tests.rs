@@ -1,16 +1,16 @@
 #![cfg(test)]
 
-use jar_model::{
+use near_sdk::{
+    json_types::{Base64VecU8, U128, U64},
+    test_utils::accounts,
+};
+use sweat_jar_model::{
     api::ProductApi,
     product::{
         ApyView, DowngradableApyView, FixedProductTermsDto, ProductView, RegisterProductCommand, TermsDto, TermsView,
         WithdrawalFeeDto, WithdrawalFeeView,
     },
     MS_IN_YEAR,
-};
-use near_sdk::{
-    json_types::{Base64VecU8, U128, U64},
-    test_utils::accounts,
 };
 
 use crate::{

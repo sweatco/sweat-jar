@@ -21,7 +21,7 @@ mutants = "0.0.3"
 integration-trait = { git = "https://github.com/sweatco/integration-utils.git", rev = "26876acf2c93e29463a83e550ff408f4cf404bd6" }
 integration-utils = { git = "https://github.com/sweatco/integration-utils.git", rev = "26876acf2c93e29463a83e550ff408f4cf404bd6" }
 
-jar-model = { path = "model" }
+sweat-jar-model = { path = "model" }
 sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "8334043a5ea85f4ab5227e8fa8862d0c8dea45f6" }
 
 near-workspaces = "0.10.0"

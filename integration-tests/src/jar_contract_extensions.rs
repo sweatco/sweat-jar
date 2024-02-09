@@ -1,8 +1,8 @@
 use anyhow::Result;
-use jar_model::{api::JarContract, jar::JarId};
 use near_sdk::{json_types::U128, Timestamp};
 use near_workspaces::{types::NearToken, Account};
 use serde_json::{json, Value};
+use sweat_jar_model::{api::SweatJarContract, jar::JarId};
 
 use crate::measure::outcome_storage::OutcomeStorage;
 
@@ -16,7 +16,7 @@ trait Internal {
     ) -> Result<U128>;
 }
 
-impl Internal for JarContract<'_> {
+impl Internal for SweatJarContract<'_> {
     async fn create_jar_internal(
         &self,
         user: &Account,
@@ -101,7 +101,7 @@ pub trait JarContractExtensions {
     ) -> String;
 }
 
-impl JarContractExtensions for JarContract<'_> {
+impl JarContractExtensions for SweatJarContract<'_> {
     async fn create_jar(
         &self,
         user: &Account,

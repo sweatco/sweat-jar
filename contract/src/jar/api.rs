@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use jar_model::{
+use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
+use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     TokenAmount, U32,
 };
-use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 
 use crate::{
     event::{emit, EventKind, RestakeData},

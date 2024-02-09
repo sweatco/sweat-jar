@@ -1,5 +1,5 @@
 use integration_utils::misc::ToNear;
-use jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
+use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

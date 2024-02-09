@@ -1,10 +1,6 @@
 use std::cmp;
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
-use jar_model::{
-    jar::{JarId, JarView},
-    ProductId, TokenAmount, MS_IN_YEAR,
-};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
@@ -13,6 +9,10 @@ use near_sdk::{
     require,
     serde::{Deserialize, Serialize},
     AccountId,
+};
+use sweat_jar_model::{
+    jar::{JarId, JarView},
+    ProductId, TokenAmount, MS_IN_YEAR,
 };
 
 use crate::{

@@ -1,4 +1,3 @@
-use jar_model::jar::{CeFiJar, JarId};
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
     json_types::U128,
@@ -6,6 +5,7 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     serde_json, AccountId, PromiseOrValue,
 };
+use sweat_jar_model::jar::{CeFiJar, JarId};
 
 use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
 
@@ -68,9 +68,9 @@ impl FungibleTokenReceiver for Contract {
 mod tests {
     use std::panic::catch_unwind;
 
-    use jar_model::{api::JarApi, U32};
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
     use near_sdk::{json_types::U128, serde_json::json, test_utils::accounts};
+    use sweat_jar_model::{api::JarApi, U32};
 
     use crate::{
         common::{tests::Context, udecimal::UDecimal},

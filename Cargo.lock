@@ -1810,7 +1810,6 @@ dependencies = [
  "futures",
  "integration-utils",
  "itertools 0.12.1",
- "jar-model",
  "maplit",
  "mutants",
  "near-sdk 4.1.1 (git+https://github.com/sweatco/near-sdk-rs?rev=8c48b26cc48d969c1e5f3162141fe9c824fccecd)",
@@ -1820,6 +1819,7 @@ dependencies = [
  "pkg-config",
  "rand 0.8.5",
  "serde_json",
+ "sweat-jar-model",
  "sweat-model",
  "tokio",
  "tracing",
@@ -1901,18 +1901,6 @@ name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
-
-[[package]]
-name = "jar-model"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "integration-trait",
- "integration-utils",
- "near-sdk 4.1.1 (git+https://github.com/sweatco/near-sdk-rs?rev=8c48b26cc48d969c1e5f3162141fe9c824fccecd)",
- "near-workspaces",
-]
 
 [[package]]
 name = "jobserver"
@@ -4083,6 +4071,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
+name = "sweat-jar-model"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "integration-trait",
+ "integration-utils",
+ "near-sdk 4.1.1 (git+https://github.com/sweatco/near-sdk-rs?rev=8c48b26cc48d969c1e5f3162141fe9c824fccecd)",
+ "near-workspaces",
+]
+
+[[package]]
 name = "sweat-model"
 version = "0.1.0"
 source = "git+https://github.com/sweatco/sweat-near?rev=8334043a5ea85f4ab5227e8fa8862d0c8dea45f6#8334043a5ea85f4ab5227e8fa8862d0c8dea45f6"
@@ -4104,13 +4104,13 @@ dependencies = [
  "crypto-hash",
  "ed25519-dalek 2.1.0",
  "fake",
- "jar-model",
  "mutants",
  "near-contract-standards",
  "near-sdk 4.1.1 (git+https://github.com/sweatco/near-sdk-rs?rev=8c48b26cc48d969c1e5f3162141fe9c824fccecd)",
  "near-self-update",
  "rand 0.8.5",
  "sha256",
+ "sweat-jar-model",
 ]
 
 [[package]]

@@ -3,16 +3,16 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
-use jar_model::{
-    api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
-    jar::{AggregatedTokenAmountView, JarView},
-    product::ApyView,
-    MS_IN_YEAR, U32,
-};
 use near_sdk::{
     json_types::U128,
     serde_json::{from_str, to_string},
     test_utils::accounts,
+};
+use sweat_jar_model::{
+    api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
+    jar::{AggregatedTokenAmountView, JarView},
+    product::ApyView,
+    MS_IN_YEAR, U32,
 };
 
 use super::*;
