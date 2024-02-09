@@ -3,11 +3,11 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use integration_utils::integration_contract::IntegrationContract;
 use near_workspaces::types::Gas;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
     measure::{
         measure::scoped_command_measure,
         outcome_storage::OutcomeStorage,
@@ -94,7 +94,7 @@ pub(crate) async fn measure_stake(input: (RegisterProductCommand, usize)) -> any
             &alice,
             product.id(),
             100_000,
-            context.ft_contract().contract().as_account().id(),
+            context.ft_contract().contract.as_account().id(),
         ),
     )
     .await?;

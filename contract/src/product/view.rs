@@ -1,7 +1,7 @@
-use model::product::{
+use near_sdk::json_types::{U128, U64};
+use sweat_jar_model::product::{
     ApyView, CapView, DowngradableApyView, FixedProductTermsView, ProductView, TermsView, WithdrawalFeeView,
 };
-use near_sdk::json_types::{U128, U64};
 
 use crate::{
     product::model::{Cap, DowngradableApy, Terms, WithdrawalFee},

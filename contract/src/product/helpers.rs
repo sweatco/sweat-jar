@@ -5,9 +5,9 @@ use crypto_hash::{digest, Algorithm};
 use ed25519_dalek::{Signer, SigningKey};
 use fake::{Fake, Faker};
 use general_purpose::STANDARD;
-use model::{TokenAmount, MS_IN_YEAR};
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
+use sweat_jar_model::{TokenAmount, MS_IN_YEAR};
 
 use crate::{
     common::{tests::Context, udecimal::UDecimal, Duration},
@@ -53,7 +53,7 @@ impl Product {
                 max: (1_000_000..1_000_000_000).fake(),
             },
             terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: (1..3).fake::<u64>() * 31_536_000_000,
+                lockup_term: 31_536_000_000,
                 allows_top_up: Faker.fake(),
                 allows_restaking: Faker.fake(),
             }),

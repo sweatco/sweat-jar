@@ -19,7 +19,7 @@ near-sdk = { workspace = true }
 near-self-update = { workspace = true }
 near-contract-standards = { workspace = true }
 
-model = { workspace = true }
+sweat-jar-model = { workspace = true }
 
 [dev-dependencies]
 fake = { workspace = true }

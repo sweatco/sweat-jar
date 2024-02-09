@@ -1,12 +1,12 @@
 use std::cmp;
 
-use model::{
+use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
+use sweat_jar_model::{
     api::ClaimApi,
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedTokenAmountView, JarIdView},
     U32,
 };
-use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 
 use crate::{
     common::Timestamp,

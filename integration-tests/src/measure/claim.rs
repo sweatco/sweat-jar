@@ -3,9 +3,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use integration_utils::integration_contract::IntegrationContract;
-use model::api::ClaimApiIntegration;
 use near_workspaces::types::Gas;
+use sweat_jar_model::api::ClaimApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -88,7 +87,7 @@ async fn measure_claim(input: (RegisterProductCommand, usize)) -> anyhow::Result
     context.fast_forward_hours(2).await?;
 
     let (gas, _) =
-        OutcomeStorage::measure_total(&alice, context.sweat_jar().with_user(&alice).claim_total(None)).await?;
+        OutcomeStorage::measure_total(&alice, context.sweat_jar().claim_total(None).with_user(&alice).call()).await?;
 
     Ok(gas)
 }

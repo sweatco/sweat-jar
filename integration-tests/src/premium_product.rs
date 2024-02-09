@@ -1,13 +1,14 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::Signer;
-use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
-use model::api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration};
+use integration_utils::misc::ToNear;
 use near_sdk::env::sha256;
 use serde_json::from_value;
+use sweat_jar_model::api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration};
 
 use crate::{
     common::generate_keypair,
     context::{prepare_contract, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
 };
 
@@ -29,8 +30,9 @@ async fn premium_product() -> anyhow::Result<()> {
 
     context
         .sweat_jar()
-        .with_user(&manager)
         .register_product(from_value(command_json).unwrap())
+        .with_user(&manager)
+        .call()
         .await?;
 
     let product_id = register_product_command.id();
@@ -59,42 +61,56 @@ async fn premium_product() -> anyhow::Result<()> {
             amount,
             signature.to_string(),
             valid_until,
-            context.ft_contract().contract().as_account().id(),
+            context.ft_contract().contract.as_account().id(),
         )
         .await?;
 
     assert_eq!(result.0, amount);
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
     let jar_id = jars.first().unwrap().id;
 
-    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id.clone()).await?;
+    let jar = context
+        .sweat_jar()
+        .get_jar(alice.to_near(), jar_id.clone())
+        .call()
+        .await?;
 
     assert_eq!(jar.principal.0, amount);
     assert!(!jar.is_penalty_applied);
 
     context
         .sweat_jar()
-        .with_user(&manager)
         .set_penalty(alice.to_near(), jar_id, true)
+        .with_user(&manager)
+        .call()
         .await?;
 
-    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id).await?;
+    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id).call().await?;
 
     assert!(jar.is_penalty_applied);
 
     let unauthorized_penalty_change = context
         .sweat_jar()
-        .with_user(&alice)
         .set_penalty(alice.to_near(), jar_id, true)
+        .with_user(&alice)
+        .call()
         .await;
 
     assert!(unauthorized_penalty_change.is_err());
 
-    let principal_result = context.sweat_jar().get_principal(vec![jar_id], alice.to_near()).await?;
+    let principal_result = context
+        .sweat_jar()
+        .get_principal(vec![jar_id], alice.to_near())
+        .call()
+        .await?;
     assert_eq!(principal_result.total.0, amount);
 
-    let interest_result = context.sweat_jar().get_interest(vec![jar_id], alice.to_near()).await;
+    let interest_result = context
+        .sweat_jar()
+        .get_interest(vec![jar_id], alice.to_near())
+        .call()
+        .await;
     assert!(interest_result.is_ok());
 
     Ok(())

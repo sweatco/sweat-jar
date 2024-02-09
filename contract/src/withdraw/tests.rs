@@ -1,13 +1,13 @@
 #![cfg(test)]
 
-use model::{
+use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
+use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     MS_IN_YEAR, U32,
 };
-use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
 
 use crate::{
-    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal},
+    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, Timestamp},
     jar::model::Jar,
     product::model::{Apy, Product, WithdrawalFee},
 };
@@ -17,6 +17,20 @@ fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
     let admin = accounts(1);
 
     let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&[jar.clone()]);
+
+    (alice, jar, context)
+}
+
+fn prepare_jar_created_at(product: &Product, created_at: Timestamp) -> (AccountId, Jar, Context) {
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let jar = Jar::generate(0, &alice, &product.id)
+        .created_at(created_at)
+        .principal(1_000_000);
     let context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&[jar.clone()]);
@@ -35,7 +49,9 @@ fn withdraw_locked_jar_before_maturity_by_not_owner() {
 #[test]
 #[should_panic(expected = "The jar is not mature yet")]
 fn withdraw_locked_jar_before_maturity_by_owner() {
-    let (alice, jar, mut context) = prepare_jar(&generate_product());
+    let (alice, jar, mut context) = prepare_jar_created_at(&generate_product().lockup_term(200), 100);
+
+    context.set_block_timestamp_in_ms(120);
 
     context.switch_account(&alice);
     context.contract.withdraw(U32(jar.id), None);

@@ -1,8 +1,9 @@
-use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
-use model::api::{ClaimApiIntegration, JarApiIntegration};
+use integration_utils::misc::ToNear;
+use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
 };
 
@@ -25,18 +26,23 @@ async fn restake() -> anyhow::Result<()> {
             &alice,
             product_id,
             amount,
-            context.ft_contract().contract().as_account().id(),
+            context.ft_contract().contract.as_account().id(),
         )
         .await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
     let original_jar_id = jars.first().unwrap().id;
 
     context.fast_forward_hours(1).await?;
 
-    context.sweat_jar().with_user(&alice).restake(original_jar_id).await?;
+    context
+        .sweat_jar()
+        .restake(original_jar_id)
+        .with_user(&alice)
+        .call()
+        .await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
     assert_eq!(jars.len(), 2);
 
     let mut has_original_jar = false;
@@ -58,11 +64,12 @@ async fn restake() -> anyhow::Result<()> {
 
     context
         .sweat_jar()
-        .with_user(&alice)
         .claim_jars(vec![original_jar_id], None, None)
+        .with_user(&alice)
+        .call()
         .await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
     assert_eq!(jars.len(), 1);
 
     Ok(())

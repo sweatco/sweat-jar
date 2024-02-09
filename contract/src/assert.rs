@@ -1,5 +1,5 @@
-use model::TokenAmount;
 use near_sdk::require;
+use sweat_jar_model::TokenAmount;
 
 use crate::{common::Timestamp, jar::model::Jar, product::model::Product};
 

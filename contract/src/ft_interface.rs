@@ -1,5 +1,5 @@
-use model::{withdraw::Fee, TokenAmount};
 use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Promise};
+use sweat_jar_model::{withdraw::Fee, TokenAmount};
 
 use crate::{common::tgas, Contract, ContractExt};
 
@@ -27,6 +27,7 @@ pub(crate) trait FungibleTokenInterface {
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
+    #[mutants::skip] // Covered by integration tests
     fn transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())

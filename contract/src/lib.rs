@@ -1,7 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
-use model::{api::InitApi, jar::JarId, ProductId};
 use near_sdk::{
     assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
@@ -13,6 +12,7 @@ use near_sdk::{
 };
 use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
+use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::jar::model::Jar;
 

@@ -1,7 +1,6 @@
 use std::{env::var, fs::OpenOptions, future::Future, io::Write, iter::once};
 
 use anyhow::{bail, Result};
-use integration_utils::integration_contract::IntegrationContract;
 use near_sdk::serde::Serialize;
 use near_workspaces::{types::Gas, Account};
 use num_format::{Buffer, CustomFormat};
@@ -9,6 +8,7 @@ use serde_json::{to_string_pretty, to_value, Map, Value};
 
 use crate::{
     context::{Context, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
 };
 
@@ -198,14 +198,14 @@ pub(crate) async fn add_jar(
     account: &Account,
     product: RegisterProductCommand,
     amount: u128,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     context
         .sweat_jar()
         .create_jar(
             account,
             product.id(),
             amount,
-            &context.ft_contract().contract().as_account().id(),
+            &context.ft_contract().contract.as_account().id(),
         )
         .await?;
 

@@ -1,14 +1,23 @@
 [package]
-name = "model"
+name = "sweat-jar-model"
 version = "1.0.0"
 publish = false
 edition = "2021"
 
 [lib]
-name = "model"
+name = "sweat_jar_model"
+
+
+[features]
+default = []
+integration-test = ["dep:integration-utils", "dep:near-workspaces"]
+
 
 [dependencies]
 anyhow = { workspace = true }
 near-sdk = { workspace = true }
 async-trait = { workspace = true }
 integration-trait = { workspace = true }
+
+integration-utils = { workspace = true, optional = true }
+near-workspaces = { workspace = true, optional = true }

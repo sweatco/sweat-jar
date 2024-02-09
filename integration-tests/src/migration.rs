@@ -1,12 +1,11 @@
-use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
-use model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration};
+use integration_utils::misc::ToNear;
+use near_workspaces::types::NearToken;
 use serde_json::json;
-use sweat_integration::FT_CONTRACT;
+use sweat_jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration};
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration};
 
 use crate::{
-    context::{Context, IntegrationContext},
-    jar_contract_interface::SWEAT_JAR,
+    context::{Context, IntegrationContext, FT_CONTRACT, SWEAT_JAR},
     product::RegisterProductCommand,
 };
 
@@ -15,67 +14,79 @@ use crate::{
 async fn migration() -> anyhow::Result<()> {
     println!("👷🏽 Run migration test");
 
-    let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], "build-integration".into()).await?;
+    let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
 
     let manager = &context.account("manager").await?;
     let alice = &context.account("alice").await?;
     let bob = &context.account("bob").await?;
     let fee_account = &context.account("fee").await?;
 
-    context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
+    context
+        .ft_contract()
+        .new(".u.sweat.testnet".to_string().into())
+        .call()
+        .await?;
     context
         .sweat_jar()
         .init(
-            context.ft_contract().contract().as_account().to_near(),
+            context.ft_contract().contract.as_account().to_near(),
             fee_account.to_near(),
             manager.to_near(),
         )
+        .call()
         .await?;
 
     context
         .ft_contract()
-        .storage_deposit(context.sweat_jar().contract().as_account().to_near().into(), None)
+        .storage_deposit(context.sweat_jar().contract.as_account().to_near().into(), None)
+        .call()
         .await?;
 
     context
         .ft_contract()
         .storage_deposit(manager.to_near().into(), None)
+        .call()
         .await?;
     context
         .ft_contract()
         .storage_deposit(alice.to_near().into(), None)
+        .call()
         .await?;
     context
         .ft_contract()
         .storage_deposit(bob.to_near().into(), None)
+        .call()
         .await?;
 
     context
         .ft_contract()
         .tge_mint(&manager.to_near(), 3_000_000.into())
+        .call()
         .await?;
     context
         .ft_contract()
         .tge_mint(&alice.to_near(), 100_000_000.into())
+        .call()
         .await?;
     context
         .ft_contract()
         .tge_mint(&bob.to_near(), 100_000_000_000.into())
+        .call()
         .await?;
 
     context
         .sweat_jar()
-        .with_user(&manager)
         .register_product(RegisterProductCommand::Locked12Months12Percents.get())
+        .with_user(&manager)
+        .call()
         .await?;
 
     context.fast_forward_hours(1).await?;
 
     context
         .ft_contract()
-        .with_user(&manager)
         .ft_transfer_call(
-            context.sweat_jar().contract().as_account().to_near(),
+            context.sweat_jar().contract.as_account().to_near(),
             3_000_000.into(),
             None,
             json!({
@@ -106,12 +117,15 @@ async fn migration() -> anyhow::Result<()> {
             })
             .to_string(),
         )
+        .deposit(NearToken::from_yoctonear(1))
+        .with_user(&manager)
+        .call()
         .await?;
 
-    let manager_balance = context.ft_contract().ft_balance_of(manager.to_near()).await?;
+    let manager_balance = context.ft_contract().ft_balance_of(manager.to_near()).call().await?;
     assert_eq!(0, manager_balance.0);
 
-    let alice_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let alice_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
     assert_eq!(2, alice_jars.len());
 
     let alice_first_jar = alice_jars.first().unwrap();
@@ -122,10 +136,10 @@ async fn migration() -> anyhow::Result<()> {
     assert_eq!(2, alice_second_jar.id.0);
     assert_eq!(700000, alice_second_jar.principal.0);
 
-    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).await?;
+    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).call().await?;
     assert_eq!(2_700_000, alice_principal.total.0);
 
-    let bob_principal = context.sweat_jar().get_total_principal(bob.to_near()).await?;
+    let bob_principal = context.sweat_jar().get_total_principal(bob.to_near()).call().await?;
     assert_eq!(300_000, bob_principal.total.0);
 
     Ok(())

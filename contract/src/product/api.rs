@@ -1,9 +1,9 @@
-use model::{
+use near_sdk::{assert_one_yocto, near_bindgen, require};
+use sweat_jar_model::{
     api::ProductApi,
     product::{ProductView, RegisterProductCommand},
     ProductId,
 };
-use near_sdk::{assert_one_yocto, near_bindgen, require};
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},

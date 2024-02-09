@@ -1,8 +1,8 @@
 #![cfg(test)]
 
 use fake::Fake;
-use model::MS_IN_YEAR;
 use near_sdk::{test_utils::accounts, Timestamp};
+use sweat_jar_model::MS_IN_YEAR;
 
 use crate::{
     common::udecimal::UDecimal,
@@ -50,13 +50,13 @@ fn interest_precision() {
 
 #[cfg(test)]
 mod signature_tests {
-    use model::{
-        api::{JarApi, ProductApi},
-        MS_IN_YEAR, U32,
-    };
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         test_utils::accounts,
+    };
+    use sweat_jar_model::{
+        api::{JarApi, ProductApi},
+        MS_IN_YEAR, U32,
     };
 
     use crate::{
@@ -391,10 +391,10 @@ mod signature_tests {
 }
 
 mod helpers {
-    use model::TokenAmount;
     use near_sdk::AccountId;
+    use sweat_jar_model::TokenAmount;
 
-    use crate::jar::model::Jar;
+    use crate::{common::Timestamp, jar::model::Jar};
 
     impl Jar {
         pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &str) -> Jar {
@@ -413,6 +413,16 @@ mod helpers {
 
         pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {
             self.principal = principal;
+            self
+        }
+
+        pub(crate) fn created_at(mut self, created_at: Timestamp) -> Jar {
+            self.created_at = created_at;
+            self
+        }
+
+        pub(crate) fn pending_withdraw(mut self) -> Jar {
+            self.is_pending_withdraw = true;
             self
         }
     }

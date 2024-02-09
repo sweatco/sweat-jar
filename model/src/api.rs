@@ -12,6 +12,11 @@ use crate::{
     ProductId,
 };
 
+#[cfg(feature = "integration-test")]
+pub struct SweatJarContract<'a> {
+    pub contract: &'a near_workspaces::Contract,
+}
+
 #[make_integration_version]
 pub trait InitApi {
     fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self;
@@ -226,6 +231,7 @@ pub trait PenaltyApi {
 /// The `ProductApi` trait defines methods for managing products within the smart contract.
 #[make_integration_version]
 pub trait ProductApi {
+    #[deposit_one_yocto]
     /// Registers a new product in the contract. This function can only be called by the administrator.
     ///
     /// # Arguments
@@ -237,6 +243,7 @@ pub trait ProductApi {
     /// This method will panic if a product with the same id already exists.
     fn register_product(&mut self, command: RegisterProductCommand);
 
+    #[deposit_one_yocto]
     /// Sets the enabled status of a specific product.
     ///
     /// This method allows modifying the enabled status of a product, which determines whether users can create
@@ -253,6 +260,7 @@ pub trait ProductApi {
     /// This method will panic if the provided `is_enabled` value matches the current enabled status of the product.
     fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool);
 
+    #[deposit_one_yocto]
     /// Sets a new public key for the specified product.
     ///
     /// This method allows replacing the existing public key associated with a product. This might be necessary

@@ -1,10 +1,10 @@
-use model::{
+use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
+use sweat_jar_model::{
     api::WithdrawApi,
     jar::{JarId, JarIdView},
     withdraw::{Fee, WithdrawView},
     TokenAmount,
 };
-use near_sdk::{ext_contract, is_promise_success, json_types::U128, near_bindgen, PromiseOrValue};
 
 use crate::{
     assert::{assert_is_liquidable, assert_not_locked, assert_sufficient_balance},

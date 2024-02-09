@@ -1,11 +1,11 @@
 #![cfg(test)]
 
-use model::{
+use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};
+use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     claimed_amount_view::ClaimedAmountView,
     MS_IN_YEAR, U32,
 };
-use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};
 
 use crate::{
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal},
@@ -100,6 +100,46 @@ fn claim_partially_detailed_when_having_tokens() {
 
     assert_eq!(jar_0_expected_interest, value.detailed.get(&U32(jar_0.id)).unwrap().0);
     assert_eq!(jar_1_expected_interest, value.detailed.get(&U32(jar_1.id)).unwrap().0);
+}
+
+#[test]
+fn claim_pending_withdraw_jar() {
+    let alice = accounts(0);
+    let admin = accounts(1);
+
+    let product = generate_product();
+    let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
+    let jar_1 = Jar::generate(1, &alice, &product.id)
+        .principal(200_000_000)
+        .pending_withdraw();
+
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&[jar_0.clone(), jar_1.clone()]);
+
+    let product_term = product.get_lockup_term().unwrap();
+    let test_duration = product_term + 100;
+
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration) - 1;
+
+    context.set_block_timestamp_in_ms(test_duration);
+
+    context.switch_account(&alice);
+    let result = context.contract.claim_jars(
+        vec![U32(jar_0.id), U32(jar_1.id)],
+        Some(U128(jar_0_expected_interest + jar_1_expected_interest)),
+        Some(true),
+    );
+
+    let PromiseOrValue::Value(ClaimedAmountView::Detailed(value)) = result else {
+        panic!();
+    };
+
+    assert_eq!(jar_0_expected_interest, value.total.0);
+
+    assert_eq!(jar_0_expected_interest, value.detailed.get(&U32(jar_0.id)).unwrap().0);
+    assert_eq!(None, value.detailed.get(&U32(jar_1.id)));
 }
 
 #[test]

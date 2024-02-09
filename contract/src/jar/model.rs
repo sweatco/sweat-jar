@@ -1,10 +1,6 @@
 use std::cmp;
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
-use model::{
-    jar::{JarId, JarView},
-    ProductId, TokenAmount, MS_IN_YEAR,
-};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
@@ -13,6 +9,10 @@ use near_sdk::{
     require,
     serde::{Deserialize, Serialize},
     AccountId,
+};
+use sweat_jar_model::{
+    jar::{JarId, JarView},
+    ProductId, TokenAmount, MS_IN_YEAR,
 };
 
 use crate::{
@@ -181,7 +181,7 @@ impl Jar {
     /// For a Flexible product withdrawal is always possible.
     /// For Fixed product it's defined by the lockup term.
     pub(crate) fn is_liquidable(&self, product: &Product, now: Timestamp) -> bool {
-        match product.clone().terms {
+        match &product.terms {
             Terms::Fixed(value) => now - self.created_at > value.lockup_term,
             Terms::Flexible => true,
         }

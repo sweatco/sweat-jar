@@ -1,9 +1,9 @@
-use model::{ProductId, TokenAmount};
 use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     require,
     serde::{Deserialize, Serialize},
 };
+use sweat_jar_model::{ProductId, TokenAmount};
 
 use crate::{
     common::{udecimal::UDecimal, Duration},

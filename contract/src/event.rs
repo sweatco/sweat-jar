@@ -1,10 +1,10 @@
-use model::{jar::JarId, ProductId};
 use near_sdk::{
     json_types::{Base64VecU8, U128},
     log,
     serde::{Deserialize, Serialize},
     serde_json, AccountId,
 };
+use sweat_jar_model::{jar::JarId, ProductId};
 
 use crate::{common::Timestamp, env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
 

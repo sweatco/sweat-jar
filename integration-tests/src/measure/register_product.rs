@@ -1,8 +1,7 @@
 #![cfg(test)]
 
-use integration_utils::integration_contract::IntegrationContract;
-use model::api::ProductApiIntegration;
 use near_workspaces::types::Gas;
+use sweat_jar_model::api::ProductApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -19,7 +18,11 @@ pub(crate) async fn measure_register_product(command: RegisterProductCommand) ->
     let (gas, _) = OutcomeStorage::measure_operation(
         "register_product",
         &manager,
-        context.sweat_jar().with_user(&manager).register_product(command.get()),
+        context
+            .sweat_jar()
+            .register_product(command.get())
+            .with_user(&manager)
+            .call(),
     )
     .await?;
 

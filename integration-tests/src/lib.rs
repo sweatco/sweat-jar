@@ -5,7 +5,7 @@ mod common;
 mod context;
 mod fast_forward;
 mod happy_flow;
-mod jar_contract_interface;
+mod jar_contract_extensions;
 mod jar_deletion;
 mod measure;
 mod migration;

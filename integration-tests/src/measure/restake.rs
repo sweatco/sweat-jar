@@ -3,9 +3,9 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use integration_utils::{integration_contract::IntegrationContract, misc::ToNear};
-use model::api::JarApiIntegration;
+use integration_utils::misc::ToNear;
 use near_workspaces::types::Gas;
+use sweat_jar_model::api::JarApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -84,11 +84,15 @@ pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> a
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
 
     let (gas, _) = OutcomeStorage::measure_total(
         &alice,
-        context.sweat_jar().with_user(&alice).restake(jars.random_element().id),
+        context
+            .sweat_jar()
+            .restake(jars.random_element().id)
+            .with_user(&alice)
+            .call(),
     )
     .await?;
 
