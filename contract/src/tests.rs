@@ -427,10 +427,10 @@ fn claim_often_vs_claim_once() {
 
         let mut bobs_claimed = 0;
 
+        context.switch_account(&bob);
+
         for day in 0..days {
             context.set_block_timestamp_in_days(day);
-
-            context.switch_account(&bob);
 
             let PromiseOrValue::Value(claimed) = context.contract.claim_total(None) else {
                 panic!()
@@ -441,9 +441,7 @@ fn claim_often_vs_claim_once() {
 
         let alice_interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
 
-        // Difference of 1 is possible and expected when bob's rounding error is less than 1.
-        // But on the next claim it will be even.
-        assert!(alice_interest.abs_diff(bobs_claimed) <= 1);
+        assert_eq!(alice_interest, bobs_claimed);
     }
 
     let product = generate_product();
