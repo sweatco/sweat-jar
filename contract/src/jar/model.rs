@@ -222,9 +222,7 @@ impl Jar {
 
         let interest = interest / ms_in_year;
 
-        let previous_remainder = self.claim_remainder;
-
-        let total_remainder = previous_remainder + remainder;
+        let total_remainder = self.claim_remainder + remainder;
 
         (
             base_interest + interest + u128::from(total_remainder / MS_IN_YEAR),
