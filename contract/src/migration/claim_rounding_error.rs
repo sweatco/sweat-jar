@@ -1,7 +1,7 @@
 use near_sdk::{
     borsh,
     borsh::{BorshDeserialize, BorshSerialize},
-    env, near_bindgen, require,
+    env, log, near_bindgen, require,
     serde::{Deserialize, Serialize},
     store::{LookupMap, UnorderedMap},
     AccountId, PanicOnDefault,
@@ -75,8 +75,15 @@ pub struct ContractBeforeRoundingError {
 impl MigrationToJarWithRoundingErrorApi for Contract {
     #[init(ignore_state)]
     fn migrate_to_jars_with_rounding_error(users: Vec<AccountId>) -> Self {
+        log!("Helloy?");
+
         let old_state: ContractBeforeRoundingError = env::state_read().expect("failed");
+
+        log!("Parsed old state");
+
         let mut new_state: Contract = env::state_read().expect("failed");
+
+        log!("Parsed new state");
 
         require!(
             old_state.manager == env::predecessor_account_id(),
