@@ -55,6 +55,9 @@ pub struct Contract {
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
+
+    #[cfg(feature = "integration-test")]
+    pub total_jars_count: usize,
 }
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
@@ -96,6 +99,8 @@ impl InitApi for Contract {
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJars),
             last_jar_id: 0,
+            #[cfg(feature = "integration-test")]
+            total_jars_count: 0,
         }
     }
 }

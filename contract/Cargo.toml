@@ -9,7 +9,7 @@ crate-type = ["cdylib"]
 
 [features]
 default = []
-integration-test = []
+integration-test = ["sweat-jar-model/integration-methods"]
 
 [dependencies]
 ed25519-dalek = { workspace = true }

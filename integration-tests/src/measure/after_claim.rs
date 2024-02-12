@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, future::IntoFuture};
 
 use itertools::Itertools;
 use near_workspaces::types::Gas;
@@ -89,7 +89,7 @@ pub(crate) async fn measure_after_claim_total(input: (RegisterProductCommand, us
     let (gas, _claimed) = OutcomeStorage::measure_operation(
         "interest_to_claim",
         &alice,
-        context.sweat_jar().claim_total(None).with_user(&alice).call(),
+        context.sweat_jar().claim_total(None).with_user(&alice).into_future(),
     )
     .await?;
 

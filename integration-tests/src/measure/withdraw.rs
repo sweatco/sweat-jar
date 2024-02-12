@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, future::IntoFuture};
 
 use anyhow::Result;
 use integration_utils::misc::ToNear;
@@ -88,13 +88,17 @@ async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Res
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
 
     let jar = jars.random_element();
 
     let (gas, _) = OutcomeStorage::measure_total(
         &alice,
-        context.sweat_jar().withdraw(jar.id, None).with_user(&alice).call(),
+        context
+            .sweat_jar()
+            .withdraw(jar.id, None)
+            .with_user(&alice)
+            .into_future(),
     )
     .await?;
 

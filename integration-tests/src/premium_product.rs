@@ -32,7 +32,6 @@ async fn premium_product() -> anyhow::Result<()> {
         .sweat_jar()
         .register_product(from_value(command_json).unwrap())
         .with_user(&manager)
-        .call()
         .await?;
 
     let product_id = register_product_command.id();
@@ -67,14 +66,10 @@ async fn premium_product() -> anyhow::Result<()> {
 
     assert_eq!(result.0, amount);
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     let jar_id = jars.first().unwrap().id;
 
-    let jar = context
-        .sweat_jar()
-        .get_jar(alice.to_near(), jar_id.clone())
-        .call()
-        .await?;
+    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id.clone()).await?;
 
     assert_eq!(jar.principal.0, amount);
     assert!(!jar.is_penalty_applied);
@@ -83,10 +78,9 @@ async fn premium_product() -> anyhow::Result<()> {
         .sweat_jar()
         .set_penalty(alice.to_near(), jar_id, true)
         .with_user(&manager)
-        .call()
         .await?;
 
-    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id).call().await?;
+    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id).await?;
 
     assert!(jar.is_penalty_applied);
 
@@ -94,23 +88,14 @@ async fn premium_product() -> anyhow::Result<()> {
         .sweat_jar()
         .set_penalty(alice.to_near(), jar_id, true)
         .with_user(&alice)
-        .call()
         .await;
 
     assert!(unauthorized_penalty_change.is_err());
 
-    let principal_result = context
-        .sweat_jar()
-        .get_principal(vec![jar_id], alice.to_near())
-        .call()
-        .await?;
+    let principal_result = context.sweat_jar().get_principal(vec![jar_id], alice.to_near()).await?;
     assert_eq!(principal_result.total.0, amount);
 
-    let interest_result = context
-        .sweat_jar()
-        .get_interest(vec![jar_id], alice.to_near())
-        .call()
-        .await;
+    let interest_result = context.sweat_jar().get_interest(vec![jar_id], alice.to_near()).await;
     assert!(interest_result.is_ok());
 
     Ok(())

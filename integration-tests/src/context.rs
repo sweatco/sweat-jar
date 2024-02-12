@@ -1,3 +1,4 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use integration_utils::misc::ToNear;
 use near_sdk::json_types::U128;
@@ -14,24 +15,24 @@ pub const SWEAT_JAR: &str = "sweat_jar";
 
 #[async_trait]
 pub trait IntegrationContext {
-    async fn manager(&mut self) -> anyhow::Result<Account>;
-    async fn alice(&mut self) -> anyhow::Result<Account>;
-    async fn fee(&mut self) -> anyhow::Result<Account>;
+    async fn manager(&mut self) -> Result<Account>;
+    async fn alice(&mut self) -> Result<Account>;
+    async fn fee(&mut self) -> Result<Account>;
     fn sweat_jar(&self) -> SweatJarContract;
     fn ft_contract(&self) -> SweatContract;
 }
 
 #[async_trait]
 impl IntegrationContext for Context {
-    async fn manager(&mut self) -> anyhow::Result<Account> {
+    async fn manager(&mut self) -> Result<Account> {
         self.account("manager").await
     }
 
-    async fn alice(&mut self) -> anyhow::Result<Account> {
+    async fn alice(&mut self) -> Result<Account> {
         self.account("alice").await
     }
 
-    async fn fee(&mut self) -> anyhow::Result<Account> {
+    async fn fee(&mut self) -> Result<Account> {
         self.account("fee").await
     }
 
@@ -48,9 +49,7 @@ impl IntegrationContext for Context {
     }
 }
 
-pub(crate) async fn prepare_contract(
-    products: impl IntoIterator<Item = RegisterProductCommand>,
-) -> anyhow::Result<Context> {
+pub(crate) async fn prepare_contract(products: impl IntoIterator<Item = RegisterProductCommand>) -> Result<Context> {
     let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
 
     let alice = context.account("alice").await?;
@@ -58,11 +57,7 @@ pub(crate) async fn prepare_contract(
     let manager = context.account("manager").await?;
     let fee_account = context.account("fee").await?;
 
-    context
-        .ft_contract()
-        .new(".u.sweat.testnet".to_string().into())
-        .call()
-        .await?;
+    context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
     context
         .sweat_jar()
         .init(
@@ -70,50 +65,41 @@ pub(crate) async fn prepare_contract(
             fee_account.to_near(),
             manager.to_near(),
         )
-        .call()
         .await?;
 
     context
         .ft_contract()
         .storage_deposit(context.sweat_jar().contract.as_account().to_near().into(), None)
-        .call()
         .await?;
 
     context
         .ft_contract()
         .tge_mint(&context.sweat_jar().contract.as_account().to_near(), U128(100_000_000))
-        .call()
         .await?;
 
     context
         .ft_contract()
         .storage_deposit(fee_account.to_near().into(), None)
-        .call()
         .await?;
     context
         .ft_contract()
         .storage_deposit(alice.to_near().into(), None)
-        .call()
         .await?;
     context
         .ft_contract()
         .tge_mint(&alice.to_near(), U128(100_000_000))
-        .call()
         .await?;
     context
         .ft_contract()
         .storage_deposit(bob.to_near().into(), None)
-        .call()
         .await?;
     context
         .ft_contract()
         .tge_mint(&bob.to_near(), U128(100_000_000))
-        .call()
         .await?;
     context
         .ft_contract()
         .tge_mint(&manager.to_near(), U128(100_000_000))
-        .call()
         .await?;
 
     for product in products {
@@ -121,7 +107,6 @@ pub(crate) async fn prepare_contract(
             .sweat_jar()
             .register_product(product.get())
             .with_user(&manager)
-            .call()
             .await?;
     }
 

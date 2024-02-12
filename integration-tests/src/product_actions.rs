@@ -37,7 +37,6 @@ async fn product_actions() -> anyhow::Result<()> {
         .sweat_jar()
         .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), false)
         .with_user(&manager)
-        .call()
         .await?;
 
     let result = context
@@ -62,7 +61,6 @@ async fn product_actions() -> anyhow::Result<()> {
         .sweat_jar()
         .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), true)
         .with_user(&manager)
-        .call()
         .await?;
 
     let (_, verifying_key) = generate_keypair();
@@ -75,7 +73,6 @@ async fn product_actions() -> anyhow::Result<()> {
             pk_base64.as_bytes().into_iter().copied().collect_vec().into(),
         )
         .with_user(&manager)
-        .call()
         .await?;
 
     let result = context

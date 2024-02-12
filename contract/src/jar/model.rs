@@ -249,6 +249,11 @@ impl Jar {
             Terms::Flexible => now,
         }
     }
+
+    pub fn with_id(mut self, id: JarId) -> Self {
+        self.id = id;
+        self
+    }
 }
 
 impl Contract {

@@ -11,7 +11,7 @@ use crate::{
 
 #[tokio::test]
 #[mutants::skip]
-async fn migration() -> anyhow::Result<()> {
+async fn defi_migration() -> anyhow::Result<()> {
     println!("👷🏽 Run migration test");
 
     let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
@@ -21,11 +21,7 @@ async fn migration() -> anyhow::Result<()> {
     let bob = &context.account("bob").await?;
     let fee_account = &context.account("fee").await?;
 
-    context
-        .ft_contract()
-        .new(".u.sweat.testnet".to_string().into())
-        .call()
-        .await?;
+    context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
     context
         .sweat_jar()
         .init(
@@ -33,52 +29,43 @@ async fn migration() -> anyhow::Result<()> {
             fee_account.to_near(),
             manager.to_near(),
         )
-        .call()
         .await?;
 
     context
         .ft_contract()
         .storage_deposit(context.sweat_jar().contract.as_account().to_near().into(), None)
-        .call()
         .await?;
 
     context
         .ft_contract()
         .storage_deposit(manager.to_near().into(), None)
-        .call()
         .await?;
     context
         .ft_contract()
         .storage_deposit(alice.to_near().into(), None)
-        .call()
         .await?;
     context
         .ft_contract()
         .storage_deposit(bob.to_near().into(), None)
-        .call()
         .await?;
 
     context
         .ft_contract()
         .tge_mint(&manager.to_near(), 3_000_000.into())
-        .call()
         .await?;
     context
         .ft_contract()
         .tge_mint(&alice.to_near(), 100_000_000.into())
-        .call()
         .await?;
     context
         .ft_contract()
         .tge_mint(&bob.to_near(), 100_000_000_000.into())
-        .call()
         .await?;
 
     context
         .sweat_jar()
         .register_product(RegisterProductCommand::Locked12Months12Percents.get())
         .with_user(&manager)
-        .call()
         .await?;
 
     context.fast_forward_hours(1).await?;
@@ -119,13 +106,12 @@ async fn migration() -> anyhow::Result<()> {
         )
         .deposit(NearToken::from_yoctonear(1))
         .with_user(&manager)
-        .call()
         .await?;
 
-    let manager_balance = context.ft_contract().ft_balance_of(manager.to_near()).call().await?;
+    let manager_balance = context.ft_contract().ft_balance_of(manager.to_near()).await?;
     assert_eq!(0, manager_balance.0);
 
-    let alice_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
+    let alice_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     assert_eq!(2, alice_jars.len());
 
     let alice_first_jar = alice_jars.first().unwrap();
@@ -136,10 +122,10 @@ async fn migration() -> anyhow::Result<()> {
     assert_eq!(2, alice_second_jar.id.0);
     assert_eq!(700000, alice_second_jar.principal.0);
 
-    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).call().await?;
+    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).await?;
     assert_eq!(2_700_000, alice_principal.total.0);
 
-    let bob_principal = context.sweat_jar().get_total_principal(bob.to_near()).call().await?;
+    let bob_principal = context.sweat_jar().get_total_principal(bob.to_near()).await?;
     assert_eq!(300_000, bob_principal.total.0);
 
     Ok(())

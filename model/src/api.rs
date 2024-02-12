@@ -306,3 +306,17 @@ pub trait WithdrawApi {
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
 }
+
+#[cfg(feature = "integration-methods")]
+#[make_integration_version]
+pub trait IntegrationTestMethods {
+    fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
+    fn bulk_create_jars(
+        &mut self,
+        account_id: AccountId,
+        product_id: ProductId,
+        locked_amount: crate::TokenAmount,
+        jars_count: u32,
+    );
+    fn total_jars_count(&self) -> usize;
+}

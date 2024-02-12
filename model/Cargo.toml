@@ -11,6 +11,7 @@ name = "sweat_jar_model"
 [features]
 default = []
 integration-test = ["dep:integration-utils", "dep:near-workspaces"]
+integration-methods = []
 
 
 [dependencies]
