@@ -2,9 +2,8 @@
 
 use std::time::Duration;
 
-use model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
-use sweat_jar_model::api::InitApi;
+use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 
 use crate::{jar::model::Jar, product::model::Product, Contract};
 

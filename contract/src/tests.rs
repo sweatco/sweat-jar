@@ -4,12 +4,6 @@ use std::collections::HashMap;
 
 use common::tests::Context;
 use fake::Fake;
-use model::{
-    api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
-    jar::{AggregatedTokenAmountView, JarView},
-    product::ApyView,
-    TokenAmount, MS_IN_YEAR, U32,
-};
 use near_sdk::{
     json_types::U128,
     serde_json::{from_str, to_string},
@@ -20,7 +14,7 @@ use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::{AggregatedTokenAmountView, JarView},
     product::ApyView,
-    MS_IN_YEAR, U32,
+    TokenAmount, MS_IN_YEAR, U32,
 };
 
 use super::*;
