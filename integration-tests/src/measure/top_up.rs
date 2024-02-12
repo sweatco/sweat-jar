@@ -73,7 +73,7 @@ async fn single_top_up() -> anyhow::Result<()> {
 async fn measure_top_up(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let mut context = prepare_contract([product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 

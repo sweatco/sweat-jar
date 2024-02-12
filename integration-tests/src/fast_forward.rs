@@ -10,7 +10,7 @@ use crate::{
 async fn fast_forward() -> anyhow::Result<()> {
     println!("👷🏽 Run fast forward test");
 
-    let context = prepare_contract([]).await?;
+    let context = prepare_contract(None, []).await?;
 
     let mut passed = vec![];
 

@@ -13,7 +13,11 @@ use crate::{
 async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     println!("👷🏽 Run fixed withdraw fee test");
 
-    let mut context = prepare_contract([RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee]).await?;
+    let mut context = prepare_contract(
+        None,
+        [RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee],
+    )
+    .await?;
 
     let alice = context.alice().await?;
     let fee_account = context.fee().await?;
@@ -55,8 +59,11 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
 async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
     println!("👷🏽 Run percent withdraw fee test");
 
-    let mut context =
-        prepare_contract([RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee]).await?;
+    let mut context = prepare_contract(
+        None,
+        [RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee],
+    )
+    .await?;
 
     let alice = context.alice().await?;
     let fee_account = context.fee().await?;

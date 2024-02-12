@@ -13,11 +13,14 @@ use crate::{
 async fn happy_flow() -> anyhow::Result<()> {
     println!("👷🏽 Run happy flow test");
 
-    let mut context = prepare_contract([
-        RegisterProductCommand::Locked12Months12Percents,
-        RegisterProductCommand::Locked6Months6Percents,
-        RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
-    ])
+    let mut context = prepare_contract(
+        None,
+        [
+            RegisterProductCommand::Locked12Months12Percents,
+            RegisterProductCommand::Locked6Months6Percents,
+            RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
+        ],
+    )
     .await?;
 
     let alice = context.alice().await?;

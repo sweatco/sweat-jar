@@ -20,7 +20,7 @@ async fn premium_product() -> anyhow::Result<()> {
     let (signing_key, verifying_key) = generate_keypair();
     let pk_base64 = STANDARD.encode(verifying_key.as_bytes());
 
-    let mut context = prepare_contract([]).await?;
+    let mut context = prepare_contract(None, []).await?;
 
     let manager = context.manager().await?;
     let alice = context.alice().await?;

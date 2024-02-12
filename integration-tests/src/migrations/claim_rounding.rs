@@ -34,22 +34,21 @@ async fn create_state_with_lots_of_jars(accounts: Vec<AccountId>, contract: Swea
 async fn migrate_to_claim_roundings() -> Result<()> {
     set_integration_logs_enabled(false);
 
-    let mut context = prepare_contract([
-        RegisterProductCommand::Locked12Months12Percents,
-        RegisterProductCommand::Locked6Months6Percents,
-        RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
-    ])
+    let jar_before_rounding = load_wasm("res/sweat_jar_before_rounding.wasm");
+
+    let mut context = prepare_contract(
+        jar_before_rounding.into(),
+        [
+            RegisterProductCommand::Locked12Months12Percents,
+            RegisterProductCommand::Locked6Months6Percents,
+            RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
+        ],
+    )
     .await?;
 
     let jar_account = context.sweat_jar().contract.as_account().clone();
 
-    let jar_before_rounding = load_wasm("res/sweat_jar_before_rounding.wasm");
-    let jar_before_rounding = jar_account.deploy(&jar_before_rounding).await?.into_result()?;
-    let jar_before_rounding = SweatJarContract {
-        contract: &jar_before_rounding,
-    };
-
-    let users_count = 2;
+    let users_count = 1;
 
     let mut accounts = Vec::with_capacity(users_count);
 
@@ -62,7 +61,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
         );
     }
 
-    create_state_with_lots_of_jars(accounts.clone(), jar_before_rounding).await?;
+    create_state_with_lots_of_jars(accounts.clone(), context.sweat_jar()).await?;
 
     let jar_after_rounding = load_wasm("res/sweat_jar.wasm");
     let jar_after_rounding = jar_account.deploy(&jar_after_rounding).await?.into_result()?;

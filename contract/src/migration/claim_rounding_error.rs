@@ -1,7 +1,9 @@
 use near_sdk::{
     borsh,
     borsh::{BorshDeserialize, BorshSerialize},
-    env, log, near_bindgen, require,
+    env,
+    env::storage_read,
+    log, near_bindgen, require,
     serde::{Deserialize, Serialize},
     store::{LookupMap, UnorderedMap},
     AccountId, PanicOnDefault,
@@ -10,6 +12,7 @@ use sweat_jar_model::{api::MigrationToJarWithRoundingErrorApi, jar::JarId, Produ
 
 use crate::{
     common::Timestamp, jar::model::JarCache, product::model::Product, AccountJars, Contract, ContractExt, Jar,
+    StorageKey,
 };
 
 #[derive(
@@ -77,25 +80,45 @@ impl MigrationToJarWithRoundingErrorApi for Contract {
     fn migrate_to_jars_with_rounding_error(users: Vec<AccountId>) -> Self {
         log!("Helloy?");
 
-        let old_state: ContractBeforeRoundingError = env::state_read().expect("failed");
+        log!(
+            "sizeof::<ContractBeforeRoundingError>()) - {}",
+            std::mem::size_of::<ContractBeforeRoundingError>()
+        );
+
+        let state_vec = storage_read(b"STATE").unwrap();
+
+        log!("state_vec.len() - {}", state_vec.len());
+
+        log!("sizeof::<Contract>()) - {}", std::mem::size_of::<Contract>());
+
+        let mut old_state: ContractBeforeRoundingError = env::state_read().expect("failed");
+
+        // require!(
+        //     old_state.manager == env::predecessor_account_id(),
+        //     "Can be performed only by admin"
+        // );
 
         log!("Parsed old state");
 
-        let mut new_state: Contract = env::state_read().expect("failed");
+        let mut new_state = Contract {
+            token_account_id: old_state.token_account_id,
+            fee_account_id: old_state.fee_account_id,
+            manager: old_state.manager,
+            products: old_state.products,
+            last_jar_id: old_state.last_jar_id,
+            account_jars: LookupMap::new(StorageKey::AccountJars),
+            total_jars_count: 0,
+        };
 
         log!("Parsed new state");
-
-        require!(
-            old_state.manager == env::predecessor_account_id(),
-            "Can be performed only by admin"
-        );
 
         for user in users {
             let jars = old_state
                 .account_jars
-                .get(&user)
+                .remove(&user)
                 .unwrap_or_else(|| panic!("User: {user} doesn't exist"));
-            new_state.account_jars.insert(user, jars.clone().into());
+
+            new_state.account_jars.insert(user, jars.into());
         }
 
         new_state
