@@ -1,12 +1,14 @@
+use std::mem::{forget, size_of, transmute};
+
 use near_sdk::{
     borsh,
     borsh::{BorshDeserialize, BorshSerialize},
     env,
-    env::storage_read,
-    log, near_bindgen, require,
+    env::used_gas,
+    log, near_bindgen,
     serde::{Deserialize, Serialize},
     store::{LookupMap, UnorderedMap},
-    AccountId, PanicOnDefault,
+    AccountId, Gas, IntoStorageKey, PanicOnDefault,
 };
 use sweat_jar_model::{api::MigrationToJarWithRoundingErrorApi, jar::JarId, ProductId, TokenAmount};
 
@@ -71,34 +73,29 @@ pub struct ContractBeforeRoundingError {
     pub manager: AccountId,
     pub products: UnorderedMap<ProductId, Product>,
     pub last_jar_id: JarId,
-    pub account_jars: LookupMap<AccountId, AccountJarsBeforeRoundingError>,
+    pub account_jars: AccountJarsMap,
+}
+
+type AccountJarsMap = LookupMap<AccountId, AccountJarsBeforeRoundingError>;
+
+const ACCOUNT_JARS_MAP_SIZE: usize = size_of::<AccountJarsMap>();
+const ACCOUNT_JARS_PREFIX_SIZE: usize = size_of::<Box<[u8]>>();
+const ACCOUNT_JARS_CACHE_SIZE: usize = ACCOUNT_JARS_MAP_SIZE - ACCOUNT_JARS_PREFIX_SIZE;
+
+struct LookupMapPrefix {
+    prefix: Box<[u8]>,
+    _cache: [u8; ACCOUNT_JARS_CACHE_SIZE],
 }
 
 #[near_bindgen]
 impl MigrationToJarWithRoundingErrorApi for Contract {
     #[init(ignore_state)]
     fn migrate_to_jars_with_rounding_error(users: Vec<AccountId>) -> Self {
-        log!("Helloy?");
-
-        log!(
-            "sizeof::<ContractBeforeRoundingError>()) - {}",
-            std::mem::size_of::<ContractBeforeRoundingError>()
-        );
-
-        let state_vec = storage_read(b"STATE").unwrap();
-
-        log!("state_vec.len() - {}", state_vec.len());
-
-        log!("sizeof::<Contract>()) - {}", std::mem::size_of::<Contract>());
+        log!("begin: {:?}", used_gas().0 / Gas::ONE_TERA.0);
 
         let mut old_state: ContractBeforeRoundingError = env::state_read().expect("failed");
 
-        // require!(
-        //     old_state.manager == env::predecessor_account_id(),
-        //     "Can be performed only by admin"
-        // );
-
-        log!("Parsed old state");
+        log!("parsed old state: {:?}", used_gas().0 / Gas::ONE_TERA.0);
 
         let mut new_state = Contract {
             token_account_id: old_state.token_account_id,
@@ -106,20 +103,48 @@ impl MigrationToJarWithRoundingErrorApi for Contract {
             manager: old_state.manager,
             products: old_state.products,
             last_jar_id: old_state.last_jar_id,
-            account_jars: LookupMap::new(StorageKey::AccountJars),
+            // account_jars: LookupMap::new(StorageKey::AccountJars),
+            account_jars: LookupMap::new(b"-"),
             total_jars_count: 0,
         };
 
-        log!("Parsed new state");
+        log!("Users: {:?} - {:?}", users, used_gas().0 / Gas::ONE_TERA.0);
 
         for user in users {
             let jars = old_state
                 .account_jars
-                .remove(&user)
-                .unwrap_or_else(|| panic!("User: {user} doesn't exist"));
+                .get(&user)
+                .unwrap_or_else(|| panic!("User: {user} doesn't exist"))
+                .clone();
 
-            new_state.account_jars.insert(user, jars.into());
+            log!("got jars - {:?}", used_gas().0 / Gas::ONE_TERA.0);
+
+            let jars = old_state
+                .account_jars
+                .get(&user)
+                .unwrap_or_else(|| panic!("User: {user} doesn't exist"))
+                .clone();
+
+            log!("got jars again - {:?}", used_gas().0 / Gas::ONE_TERA.0);
+
+            old_state.account_jars.flush();
+
+            log!("flushed old - {:?}", used_gas().0 / Gas::ONE_TERA.0);
+
+            new_state.account_jars.insert(user, jars.clone().into());
+
+            log!("inserted jars- {:?}", used_gas().0 / Gas::ONE_TERA.0);
         }
+
+        let editable_prefix: &mut LookupMapPrefix = unsafe { transmute(&mut new_state.account_jars) };
+        editable_prefix.prefix = StorageKey::AccountJars.into_storage_key().into_boxed_slice();
+        forget(old_state.account_jars);
+
+        log!("forget - {:?}", used_gas().0 / Gas::ONE_TERA.0);
+
+        new_state.account_jars.flush();
+
+        log!("flush - {:?}", used_gas().0 / Gas::ONE_TERA.0);
 
         new_state
     }

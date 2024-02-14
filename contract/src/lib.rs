@@ -85,6 +85,7 @@ impl DerefMut for AccountJars {
 pub(crate) enum StorageKey {
     Products,
     AccountJars,
+    AccountJarsWithClaimRemainder,
 }
 
 #[near_bindgen]
