@@ -84,8 +84,9 @@ impl DerefMut for AccountJars {
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Products,
+    /// DOCUMENT AND REMOVE
     AccountJars,
-    AccountJarsWithClaimRemainder,
+    AccountJarsRemainder,
 }
 
 #[near_bindgen]

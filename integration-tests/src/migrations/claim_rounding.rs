@@ -2,9 +2,7 @@ use anyhow::Result;
 use integration_utils::{contract_call::set_integration_logs_enabled, misc::ToNear};
 use near_sdk::AccountId;
 use near_workspaces::types::NearToken;
-use sweat_jar_model::api::{
-    IntegrationTestMethodsIntegration, MigrationToJarWithRoundingErrorApiIntegration, SweatJarContract,
-};
+use sweat_jar_model::api::{IntegrationTestMethodsIntegration, MigrationToClaimRemainderIntegration, SweatJarContract};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -13,16 +11,14 @@ use crate::{
 };
 
 async fn create_state_with_lots_of_jars(accounts: Vec<AccountId>, contract: SweatJarContract<'_>) -> Result<()> {
-    for account in accounts {
-        contract
-            .bulk_create_jars(
-                account,
-                RegisterProductCommand::Locked12Months12Percents.id(),
-                100_000,
-                28_000,
-            )
-            .await?;
-    }
+    contract
+        .bulk_create_jars(
+            accounts,
+            RegisterProductCommand::Locked12Months12Percents.id(),
+            100_000,
+            1_000,
+        )
+        .await?;
 
     dbg!(contract.total_jars_count().await?);
 
@@ -48,7 +44,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     let jar_account = context.sweat_jar().contract.as_account().clone();
 
-    let users_count = 1;
+    let users_count = 10;
 
     let mut accounts = Vec::with_capacity(users_count);
 
@@ -71,9 +67,9 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     set_integration_logs_enabled(true);
 
-    jar_after_rounding.migrate_to_jars_with_rounding_error(accounts).await?;
+    jar_after_rounding.migrate_state_to_claim_remainder().await?;
 
-    dbg!(jar_after_rounding.total_jars_count().await?);
+    jar_after_rounding.migrate_accounts_to_claim_remainder(accounts).await?;
 
     Ok(())
 }

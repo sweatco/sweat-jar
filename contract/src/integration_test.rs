@@ -13,28 +13,30 @@ impl IntegrationTestMethods for Contract {
 
     fn bulk_create_jars(
         &mut self,
-        account_id: AccountId,
+        accounts: Vec<AccountId>,
         product_id: ProductId,
         locked_amount: TokenAmount,
         jars_count: u32,
     ) {
         let now = env::block_timestamp_ms();
 
-        let jar = Jar::create(0, account_id.clone(), product_id.clone(), locked_amount, now);
+        for account in accounts {
+            let jar = Jar::create(0, account.clone(), product_id.clone(), locked_amount, now);
 
-        let jars = self.account_jars.entry(account_id.clone()).or_default();
+            let jars = self.account_jars.entry(account.clone()).or_default();
 
-        jars.jars.reserve(jars_count as usize);
+            jars.jars.reserve(jars_count as usize);
 
-        for _ in 0..jars_count {
-            self.last_jar_id += 1;
+            for _ in 0..jars_count {
+                self.last_jar_id += 1;
 
-            jars.last_id = jar.id;
-            jars.push(jar.clone().with_id(self.last_jar_id));
+                jars.last_id = jar.id;
+                jars.push(jar.clone().with_id(self.last_jar_id));
+            }
+
+            jars.last_id = jars_count - 1;
+            self.total_jars_count += jars_count as usize;
         }
-
-        jars.last_id = jars_count - 1;
-        self.total_jars_count += jars_count as usize;
     }
 
     fn total_jars_count(&self) -> usize {

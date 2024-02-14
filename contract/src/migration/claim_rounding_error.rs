@@ -1,5 +1,3 @@
-use std::mem::{forget, size_of, transmute};
-
 use near_sdk::{
     borsh,
     borsh::{BorshDeserialize, BorshSerialize},
@@ -8,9 +6,9 @@ use near_sdk::{
     log, near_bindgen,
     serde::{Deserialize, Serialize},
     store::{LookupMap, UnorderedMap},
-    AccountId, Gas, IntoStorageKey, PanicOnDefault,
+    AccountId, Gas, PanicOnDefault,
 };
-use sweat_jar_model::{api::MigrationToJarWithRoundingErrorApi, jar::JarId, ProductId, TokenAmount};
+use sweat_jar_model::{api::MigrationToClaimRemainder, jar::JarId, ProductId, TokenAmount};
 
 use crate::{
     common::Timestamp, jar::model::JarCache, product::model::Product, AccountJars, Contract, ContractExt, Jar,
@@ -21,7 +19,7 @@ use crate::{
     BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-pub struct JarBeforeRoundingError {
+pub struct JarBeforeClaimRemainder {
     pub id: JarId,
     pub account_id: AccountId,
     pub product_id: ProductId,
@@ -33,8 +31,8 @@ pub struct JarBeforeRoundingError {
     pub is_penalty_applied: bool,
 }
 
-impl From<JarBeforeRoundingError> for Jar {
-    fn from(value: JarBeforeRoundingError) -> Self {
+impl From<JarBeforeClaimRemainder> for Jar {
+    fn from(value: JarBeforeClaimRemainder) -> Self {
         Jar {
             id: value.id,
             account_id: value.account_id,
@@ -50,14 +48,14 @@ impl From<JarBeforeRoundingError> for Jar {
     }
 }
 
-#[derive(Default, Clone, BorshDeserialize, BorshSerialize)]
-pub struct AccountJarsBeforeRoundingError {
+#[derive(Default, Debug, Clone, BorshDeserialize, BorshSerialize)]
+pub struct AccountJarsBeforeClaimRemainder {
     pub last_id: JarId,
-    pub jars: Vec<JarBeforeRoundingError>,
+    pub jars: Vec<JarBeforeClaimRemainder>,
 }
 
-impl From<AccountJarsBeforeRoundingError> for AccountJars {
-    fn from(value: AccountJarsBeforeRoundingError) -> Self {
+impl From<AccountJarsBeforeClaimRemainder> for AccountJars {
+    fn from(value: AccountJarsBeforeClaimRemainder) -> Self {
         AccountJars {
             last_id: value.last_id,
             jars: value.jars.into_iter().map(Into::into).collect(),
@@ -65,87 +63,55 @@ impl From<AccountJarsBeforeRoundingError> for AccountJars {
     }
 }
 
+type AccountJarsBeforeRemainder = LookupMap<AccountId, AccountJarsBeforeClaimRemainder>;
+
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct ContractBeforeRoundingError {
+pub struct ContractBeforeClaimRemainder {
     pub token_account_id: AccountId,
     pub fee_account_id: AccountId,
     pub manager: AccountId,
     pub products: UnorderedMap<ProductId, Product>,
     pub last_jar_id: JarId,
-    pub account_jars: AccountJarsMap,
-}
-
-type AccountJarsMap = LookupMap<AccountId, AccountJarsBeforeRoundingError>;
-
-const ACCOUNT_JARS_MAP_SIZE: usize = size_of::<AccountJarsMap>();
-const ACCOUNT_JARS_PREFIX_SIZE: usize = size_of::<Box<[u8]>>();
-const ACCOUNT_JARS_CACHE_SIZE: usize = ACCOUNT_JARS_MAP_SIZE - ACCOUNT_JARS_PREFIX_SIZE;
-
-struct LookupMapPrefix {
-    prefix: Box<[u8]>,
-    _cache: [u8; ACCOUNT_JARS_CACHE_SIZE],
+    pub account_jars: AccountJarsBeforeRemainder,
 }
 
 #[near_bindgen]
-impl MigrationToJarWithRoundingErrorApi for Contract {
+impl MigrationToClaimRemainder for Contract {
     #[init(ignore_state)]
-    fn migrate_to_jars_with_rounding_error(users: Vec<AccountId>) -> Self {
-        log!("begin: {:?}", used_gas().0 / Gas::ONE_TERA.0);
+    fn migrate_state_to_claim_remainder() -> Self {
+        let old_state: ContractBeforeClaimRemainder = env::state_read().expect("failed");
 
-        let mut old_state: ContractBeforeRoundingError = env::state_read().expect("failed");
-
-        log!("parsed old state: {:?}", used_gas().0 / Gas::ONE_TERA.0);
-
-        let mut new_state = Contract {
+        Contract {
             token_account_id: old_state.token_account_id,
             fee_account_id: old_state.fee_account_id,
             manager: old_state.manager,
             products: old_state.products,
             last_jar_id: old_state.last_jar_id,
-            // account_jars: LookupMap::new(StorageKey::AccountJars),
-            account_jars: LookupMap::new(b"-"),
+            account_jars: LookupMap::new(StorageKey::AccountJarsRemainder),
             total_jars_count: 0,
-        };
-
-        log!("Users: {:?} - {:?}", users, used_gas().0 / Gas::ONE_TERA.0);
-
-        for user in users {
-            let jars = old_state
-                .account_jars
-                .get(&user)
-                .unwrap_or_else(|| panic!("User: {user} doesn't exist"))
-                .clone();
-
-            log!("got jars - {:?}", used_gas().0 / Gas::ONE_TERA.0);
-
-            let jars = old_state
-                .account_jars
-                .get(&user)
-                .unwrap_or_else(|| panic!("User: {user} doesn't exist"))
-                .clone();
-
-            log!("got jars again - {:?}", used_gas().0 / Gas::ONE_TERA.0);
-
-            old_state.account_jars.flush();
-
-            log!("flushed old - {:?}", used_gas().0 / Gas::ONE_TERA.0);
-
-            new_state.account_jars.insert(user, jars.clone().into());
-
-            log!("inserted jars- {:?}", used_gas().0 / Gas::ONE_TERA.0);
         }
-
-        let editable_prefix: &mut LookupMapPrefix = unsafe { transmute(&mut new_state.account_jars) };
-        editable_prefix.prefix = StorageKey::AccountJars.into_storage_key().into_boxed_slice();
-        forget(old_state.account_jars);
-
-        log!("forget - {:?}", used_gas().0 / Gas::ONE_TERA.0);
-
-        new_state.account_jars.flush();
-
-        log!("flush - {:?}", used_gas().0 / Gas::ONE_TERA.0);
-
-        new_state
     }
+
+    fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>) {
+        let mut old_account_jars: AccountJarsBeforeRemainder = LookupMap::new(StorageKey::AccountJars);
+
+        log_with_gas(format!("accounts: {accounts:?}"));
+
+        for account in accounts {
+            let jars = old_account_jars
+                .remove(&account)
+                .unwrap_or_else(|| panic!("User: {account} does not exits"));
+
+            self.account_jars.insert(account, jars.into());
+        }
+    }
+}
+
+fn log_with_gas(message: impl ToString) {
+    log!("{} - {} TGas", message.to_string(), tgas_used());
+}
+
+fn tgas_used() -> u64 {
+    used_gas().0 / Gas::ONE_TERA.0
 }

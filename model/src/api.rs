@@ -161,8 +161,9 @@ pub trait JarApi {
 }
 
 #[make_integration_version]
-pub trait MigrationToJarWithRoundingErrorApi {
-    fn migrate_to_jars_with_rounding_error(users: Vec<AccountId>) -> Self;
+pub trait MigrationToClaimRemainder {
+    fn migrate_state_to_claim_remainder() -> Self;
+    fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>);
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
@@ -283,7 +284,7 @@ pub trait IntegrationTestMethods {
     fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
     fn bulk_create_jars(
         &mut self,
-        account_id: AccountId,
+        accounts: Vec<AccountId>,
         product_id: ProductId,
         locked_amount: crate::TokenAmount,
         jars_count: u32,
