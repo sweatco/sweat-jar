@@ -289,5 +289,4 @@ pub trait IntegrationTestMethods {
         locked_amount: crate::TokenAmount,
         jars_count: u32,
     );
-    fn total_jars_count(&self, accounts: Vec<AccountId>) -> usize;
 }

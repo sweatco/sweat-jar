@@ -4085,7 +4085,7 @@ dependencies = [
 [[package]]
 name = "sweat-model"
 version = "0.1.0"
-source = "git+https://github.com/sweatco/sweat-near?rev=dbacde245e28f6e9ad0f580ca8d1bf16ef0d2f07#dbacde245e28f6e9ad0f580ca8d1bf16ef0d2f07"
+source = "git+https://github.com/sweatco/sweat-near?rev=bb9acde42fd6ef4f3e4c2a69d4ade8503df40f4a#bb9acde42fd6ef4f3e4c2a69d4ade8503df40f4a"
 dependencies = [
  "anyhow",
  "async-trait",

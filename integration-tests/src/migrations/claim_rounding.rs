@@ -1,7 +1,10 @@
 use anyhow::Result;
 use integration_utils::{contract_call::set_integration_logs_enabled, misc::ToNear};
+use near_sdk::AccountId;
 use near_workspaces::types::NearToken;
-use sweat_jar_model::api::{IntegrationTestMethodsIntegration, MigrationToClaimRemainderIntegration, SweatJarContract};
+use sweat_jar_model::api::{
+    IntegrationTestMethodsIntegration, JarApiIntegration, MigrationToClaimRemainderIntegration, SweatJarContract,
+};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -59,8 +62,6 @@ async fn migrate_to_claim_roundings() -> Result<()> {
         contract: &jar_after_rounding,
     };
 
-    dbg!(jar_after_rounding.total_jars_count(accounts.clone()).await?);
-
     set_integration_logs_enabled(true);
 
     jar_after_rounding.migrate_state_to_claim_remainder().await?;
@@ -69,6 +70,22 @@ async fn migrate_to_claim_roundings() -> Result<()> {
         jar_after_rounding
             .migrate_accounts_to_claim_remainder(accs.to_vec())
             .await?;
+    }
+
+    check_jars_after_migration(accounts, jar_after_rounding).await?;
+
+    Ok(())
+}
+
+async fn check_jars_after_migration(users: Vec<AccountId>, contract: SweatJarContract<'_>) -> Result<()> {
+    for user in users {
+        for jar in contract.get_jars_for_account(user.clone()).await? {
+            assert_eq!(jar.account_id, user);
+            assert_eq!(jar.product_id, RegisterProductCommand::Locked12Months12Percents.id());
+            assert_eq!(jar.principal.0, 100_000);
+            assert_eq!(jar.claimed_balance.0, 0);
+            assert_eq!(jar.is_penalty_applied, false);
+        }
     }
 
     Ok(())

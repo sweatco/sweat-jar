@@ -1,12 +1,10 @@
 use near_sdk::{
     borsh,
     borsh::{BorshDeserialize, BorshSerialize},
-    env,
-    env::used_gas,
-    log, near_bindgen,
+    env, near_bindgen,
     serde::{Deserialize, Serialize},
     store::{LookupMap, UnorderedMap},
-    AccountId, Gas, PanicOnDefault,
+    AccountId, PanicOnDefault,
 };
 use sweat_jar_model::{api::MigrationToClaimRemainder, jar::JarId, ProductId, TokenAmount};
 
@@ -19,7 +17,7 @@ use crate::{
     BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-pub struct JarBeforeClaimRemainder {
+struct JarBeforeClaimRemainder {
     pub id: JarId,
     pub account_id: AccountId,
     pub product_id: ProductId,
@@ -32,6 +30,7 @@ pub struct JarBeforeClaimRemainder {
 }
 
 impl From<JarBeforeClaimRemainder> for Jar {
+    #[mutants::skip]
     fn from(value: JarBeforeClaimRemainder) -> Self {
         Jar {
             id: value.id,
@@ -49,12 +48,13 @@ impl From<JarBeforeClaimRemainder> for Jar {
 }
 
 #[derive(Default, Debug, Clone, BorshDeserialize, BorshSerialize)]
-pub struct AccountJarsBeforeClaimRemainder {
-    pub last_id: JarId,
-    pub jars: Vec<JarBeforeClaimRemainder>,
+struct AccountJarsBeforeClaimRemainder {
+    last_id: JarId,
+    jars: Vec<JarBeforeClaimRemainder>,
 }
 
 impl From<AccountJarsBeforeClaimRemainder> for AccountJars {
+    #[mutants::skip]
     fn from(value: AccountJarsBeforeClaimRemainder) -> Self {
         AccountJars {
             last_id: value.last_id,
@@ -63,11 +63,11 @@ impl From<AccountJarsBeforeClaimRemainder> for AccountJars {
     }
 }
 
-pub type AccountJarsBeforeRemainder = LookupMap<AccountId, AccountJarsBeforeClaimRemainder>;
+type AccountJarsBeforeRemainder = LookupMap<AccountId, AccountJarsBeforeClaimRemainder>;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct ContractBeforeClaimRemainder {
+struct ContractBeforeClaimRemainder {
     pub token_account_id: AccountId,
     pub fee_account_id: AccountId,
     pub manager: AccountId,
@@ -79,6 +79,7 @@ pub struct ContractBeforeClaimRemainder {
 #[near_bindgen]
 impl MigrationToClaimRemainder for Contract {
     #[init(ignore_state)]
+    #[mutants::skip]
     fn migrate_state_to_claim_remainder() -> Self {
         let old_state: ContractBeforeClaimRemainder = env::state_read().expect("failed");
 
@@ -88,29 +89,20 @@ impl MigrationToClaimRemainder for Contract {
             manager: old_state.manager,
             products: old_state.products,
             last_jar_id: old_state.last_jar_id,
-            account_jars: LookupMap::new(StorageKey::AccountJarsRemainder),
+            account_jars: LookupMap::new(StorageKey::AccountJarsV2),
         }
     }
 
+    #[mutants::skip]
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>) {
         let mut old_account_jars: AccountJarsBeforeRemainder = LookupMap::new(StorageKey::AccountJars);
-
-        log_with_gas(format!("accounts: {accounts:?}"));
 
         for account in accounts {
             let jars = old_account_jars
                 .remove(&account)
-                .unwrap_or_else(|| panic!("User: {account} does not exits"));
+                .unwrap_or_else(|| panic!("User: {account} does not exist"));
 
             self.account_jars.insert(account, jars.into());
         }
     }
-}
-
-fn log_with_gas(message: impl ToString) {
-    log!("{} - {} TGas", message.to_string(), tgas_used());
-}
-
-fn tgas_used() -> u64 {
-    used_gas().0 / Gas::ONE_TERA.0
 }

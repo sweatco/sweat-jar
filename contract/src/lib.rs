@@ -81,9 +81,9 @@ impl DerefMut for AccountJars {
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Products,
-    /// DOCUMENT AND REMOVE
     AccountJars,
-    AccountJarsRemainder,
+    /// Jars with claim remainder
+    AccountJarsV2,
 }
 
 #[near_bindgen]
@@ -96,7 +96,7 @@ impl InitApi for Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::Products),
-            account_jars: LookupMap::new(StorageKey::AccountJars),
+            account_jars: LookupMap::new(StorageKey::AccountJarsV2),
             last_jar_id: 0,
         }
     }
