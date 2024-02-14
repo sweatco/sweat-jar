@@ -20,7 +20,6 @@ near-self-update = { workspace = true }
 near-contract-standards = { workspace = true }
 
 sweat-jar-model = { workspace = true }
-log = "0.4.20"
 
 [dev-dependencies]
 fake = { workspace = true }
