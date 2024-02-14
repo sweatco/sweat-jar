@@ -63,7 +63,7 @@ impl From<AccountJarsBeforeClaimRemainder> for AccountJars {
     }
 }
 
-type AccountJarsBeforeRemainder = LookupMap<AccountId, AccountJarsBeforeClaimRemainder>;
+pub type AccountJarsBeforeRemainder = LookupMap<AccountId, AccountJarsBeforeClaimRemainder>;
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -89,7 +89,6 @@ impl MigrationToClaimRemainder for Contract {
             products: old_state.products,
             last_jar_id: old_state.last_jar_id,
             account_jars: LookupMap::new(StorageKey::AccountJarsRemainder),
-            total_jars_count: 0,
         }
     }
 

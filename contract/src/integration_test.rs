@@ -1,9 +1,11 @@
 #![cfg(feature = "integration-test")]
 
-use near_sdk::{env, near_bindgen, AccountId, Timestamp};
+use near_sdk::{env, near_bindgen, store::LookupMap, AccountId, Timestamp};
 use sweat_jar_model::{api::IntegrationTestMethods, ProductId, TokenAmount};
 
-use crate::{jar::model::Jar, Contract, ContractExt};
+use crate::{
+    jar::model::Jar, migration::claim_rounding_error::AccountJarsBeforeRemainder, Contract, ContractExt, StorageKey,
+};
 
 #[near_bindgen]
 impl IntegrationTestMethods for Contract {
@@ -35,11 +37,14 @@ impl IntegrationTestMethods for Contract {
             }
 
             jars.last_id = jars_count - 1;
-            self.total_jars_count += jars_count as usize;
         }
     }
 
-    fn total_jars_count(&self) -> usize {
-        self.total_jars_count
+    fn total_jars_count(&self, accounts: Vec<AccountId>) -> usize {
+        let account_jars: AccountJarsBeforeRemainder = LookupMap::new(StorageKey::AccountJars);
+        accounts
+            .into_iter()
+            .map(|acc| account_jars.get(&acc).unwrap().jars.len())
+            .sum()
     }
 }
