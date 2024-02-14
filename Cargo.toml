@@ -18,15 +18,11 @@ base64 = "0.21.3"
 sha256 = "1.3.0"
 mutants = "0.0.3"
 
-#integration-trait = { git = "https://github.com/sweatco/integration-utils.git", rev = "e3e186319ec84d9ff92c67bb6a807eaf3f2d0977" }
-#integration-utils = { git = "https://github.com/sweatco/integration-utils.git", rev = "e3e186319ec84d9ff92c67bb6a807eaf3f2d0977" }
-
-integration-trait = { path = "../integration-utils/integration-trait" }
-integration-utils = { path = "../integration-utils/integration-utils" }
+integration-trait = { git = "https://github.com/sweatco/integration-utils.git", rev = "e54dc392ef42837123dd2c0ad19b6d6b815192d7" }
+integration-utils = { git = "https://github.com/sweatco/integration-utils.git", rev = "e54dc392ef42837123dd2c0ad19b6d6b815192d7" }
 
 sweat-jar-model = { path = "model" }
-#sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "39e2316b4526f9eaa687c26680180cd26f9565cb" }
-sweat-model = { path = "../sweat-near/model" }
+sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "dbacde245e28f6e9ad0f580ca8d1bf16ef0d2f07" }
 
 near-workspaces = "0.10.0"
 near-sdk = { git = "https://github.com/sweatco/near-sdk-rs", rev = "8c48b26cc48d969c1e5f3162141fe9c824fccecd" }

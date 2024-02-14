@@ -65,7 +65,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     jar_after_rounding.migrate_state_to_claim_remainder().await?;
 
-    for accs in accounts.chunks(24) {
+    for accs in accounts.chunks(20) {
         jar_after_rounding
             .migrate_accounts_to_claim_remainder(accs.to_vec())
             .await?;
