@@ -14,8 +14,10 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
-use crate::jar::{model::Jar, model_v1::AccountJarsLegacy};
-use crate::jar::model_v1::JarLegacy;
+use crate::jar::{
+    model::Jar,
+    model_v1::{AccountJarsLegacy, JarLegacy},
+};
 
 mod assert;
 mod claim;
@@ -138,4 +140,3 @@ impl JarsStorage<JarLegacy> for Vec<JarLegacy> {
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 }
-

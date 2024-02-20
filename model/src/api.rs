@@ -290,3 +290,11 @@ pub trait IntegrationTestMethods {
         jars_count: u32,
     );
 }
+
+#[cfg(feature = "integration-methods")]
+#[make_integration_version]
+pub trait TestIncreasedEnumSize {
+    fn store_small_enum(&mut self);
+    fn migrate_to_big_enum(&mut self);
+    fn check_big_enum(&mut self);
+}
