@@ -3,7 +3,7 @@ use sweat_jar_model::{jar::CeFiJar, TokenAmount};
 
 use crate::{
     event::{emit, EventKind, MigrationEventItem},
-    jar::model::Jar,
+    jar::model::JarV2,
     Contract,
 };
 
@@ -53,7 +53,7 @@ impl Contract {
             self.migrate_account_jars_if_needed(ce_fi_jar.account_id.clone());
             let account_jars = self.account_jars.entry(ce_fi_jar.account_id.clone()).or_default();
 
-            let jar = Jar {
+            let jar = JarV2 {
                 id,
                 account_id: ce_fi_jar.account_id,
                 product_id: ce_fi_jar.product_id,
@@ -74,7 +74,7 @@ impl Contract {
                 account_id: jar.account_id.clone(),
             });
 
-            account_jars.push(jar);
+            account_jars.push(jar.into());
         }
 
         require!(

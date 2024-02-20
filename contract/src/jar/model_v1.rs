@@ -10,7 +10,7 @@ use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 use crate::{
     borsh,
     common::Timestamp,
-    jar::model::{Jar, JarCache},
+    jar::model::{Jar, JarCache, JarV2},
     product::model::Product,
     AccountJars,
 };
@@ -34,7 +34,7 @@ pub struct JarLegacy {
 impl From<JarLegacy> for Jar {
     #[mutants::skip]
     fn from(value: JarLegacy) -> Self {
-        Jar {
+        JarV2 {
             id: value.id,
             account_id: value.account_id,
             product_id: value.product_id,
@@ -46,6 +46,7 @@ impl From<JarLegacy> for Jar {
             is_penalty_applied: value.is_penalty_applied,
             claim_remainder: 0,
         }
+        .into()
     }
 }
 

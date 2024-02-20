@@ -19,7 +19,7 @@ use crate::{
     common::{udecimal::UDecimal, Timestamp},
     event::{emit, EventKind, TopUpData},
     product::model::{Apy, Product, Terms},
-    Base64VecU8, Contract, JarsStorage, Signature,
+    Base64VecU8, Contract, Jar, JarsStorage, Signature,
 };
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
@@ -48,7 +48,7 @@ pub struct JarTicket {
     BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-pub struct Jar {
+pub struct JarV2 {
     /// The unique identifier for the jar.
     pub id: JarId,
 
@@ -96,37 +96,9 @@ pub struct JarCache {
     pub interest: TokenAmount,
 }
 
-impl Jar {
-    pub(crate) fn create(
-        id: JarId,
-        account_id: AccountId,
-        product_id: ProductId,
-        principal: TokenAmount,
-        created_at: Timestamp,
-    ) -> Self {
-        Self {
-            id,
-            account_id,
-            product_id,
-            principal,
-            created_at,
-            cache: None,
-            claimed_balance: 0,
-            is_pending_withdraw: false,
-            is_penalty_applied: false,
-            claim_remainder: 0,
-        }
-    }
-
+impl JarV2 {
     pub(crate) fn lock(&mut self) {
         self.is_pending_withdraw = true;
-    }
-
-    pub(crate) fn unlocked(&self) -> Self {
-        Self {
-            is_pending_withdraw: false,
-            ..self.clone()
-        }
     }
 
     pub(crate) fn unlock(&mut self) {
@@ -166,17 +138,6 @@ impl Jar {
             interest: available_yield - claimed_amount,
         });
         self
-    }
-
-    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
-        Self {
-            principal: self.principal - withdrawn_amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: self.get_interest(product, now).0,
-            }),
-            ..self.clone()
-        }
     }
 
     pub(crate) fn should_be_closed(&self, product: &Product, now: Timestamp) -> bool {
@@ -250,11 +211,6 @@ impl Jar {
             Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
             Terms::Flexible => now,
         }
-    }
-
-    pub fn with_id(mut self, id: JarId) -> Self {
-        self.id = id;
-        self
     }
 }
 

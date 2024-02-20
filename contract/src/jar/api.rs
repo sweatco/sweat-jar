@@ -9,7 +9,7 @@ use sweat_jar_model::{
 
 use crate::{
     event::{emit, EventKind, RestakeData},
-    jar::model_v2::Jar,
+    jar::model::Jar,
     Contract, ContractExt, JarsStorage,
 };
 
