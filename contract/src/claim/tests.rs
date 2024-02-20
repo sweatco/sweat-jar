@@ -340,7 +340,7 @@ fn failed_future_claim() {
 
     let jar_after_claim = context.contract.get_jar_internal(&alice, jar.id);
 
-    assert_eq!(&jar_before_claim, jar_after_claim);
+    assert_eq!(jar_before_claim, jar_after_claim);
 }
 
 fn generate_product() -> Product {

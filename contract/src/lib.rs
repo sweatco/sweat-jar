@@ -14,7 +14,8 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
-use crate::jar::model::Jar;
+use crate::jar::{model::Jar, model_v1::AccountJarsLegacy};
+use crate::jar::model_v1::JarLegacy;
 
 mod assert;
 mod claim;
@@ -55,6 +56,8 @@ pub struct Contract {
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
+
+    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 }
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
@@ -97,17 +100,18 @@ impl InitApi for Contract {
             manager,
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJarsV2),
+            account_jars_v1: LookupMap::new(StorageKey::AccountJars),
             last_jar_id: 0,
         }
     }
 }
 
-pub(crate) trait JarsStorage {
-    fn get_jar(&self, id: JarId) -> &Jar;
-    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar;
+pub(crate) trait JarsStorage<J> {
+    fn get_jar(&self, id: JarId) -> &J;
+    fn get_jar_mut(&mut self, id: JarId) -> &mut J;
 }
 
-impl JarsStorage for Vec<Jar> {
+impl JarsStorage<Jar> for Vec<Jar> {
     fn get_jar(&self, id: JarId) -> &Jar {
         self.iter()
             .find(|jar| jar.id == id)
@@ -120,3 +124,18 @@ impl JarsStorage for Vec<Jar> {
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 }
+
+impl JarsStorage<JarLegacy> for Vec<JarLegacy> {
+    fn get_jar(&self, id: JarId) -> &JarLegacy {
+        self.iter()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
+    }
+
+    fn get_jar_mut(&mut self, id: JarId) -> &mut JarLegacy {
+        self.iter_mut()
+            .find(|jar| jar.id == id)
+            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
+    }
+}
+

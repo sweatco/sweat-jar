@@ -30,6 +30,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
+        self.migrate_account_jars_if_needed(account_id.clone());
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars_internal(jar_ids, None, detailed)
     }
@@ -54,6 +55,8 @@ impl Contract {
         let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
         let mut accumulator = ClaimedAmountView::new(detailed);
+
+        self.migrate_account_jars_if_needed(account_id.clone());
 
         let unlocked_jars: Vec<Jar> = self
             .account_jars(&account_id)

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
+use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
@@ -9,14 +9,31 @@ use sweat_jar_model::{
 
 use crate::{
     event::{emit, EventKind, RestakeData},
-    jar::model::Jar,
-    Contract, ContractExt,
+    jar::model_v2::Jar,
+    Contract, ContractExt, JarsStorage,
 };
 
 #[near_bindgen]
 impl JarApi for Contract {
+    // TODO: restore previous version after V2 migration
+    #[mutants::skip]
     fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
-        self.get_jar_internal(&account_id, jar_id.0).into()
+        if let Some(record) = self.account_jars_v1.get(&account_id) {
+            let jar: Jar = record
+                .jars
+                .iter()
+                .find(|jar| jar.id == jar_id.0)
+                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
+                .clone()
+                .into();
+
+            return jar.into();
+        }
+        self.account_jars
+            .get(&account_id)
+            .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")))
+            .get_jar(jar_id.0)
+            .into()
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
@@ -80,6 +97,8 @@ impl JarApi for Contract {
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
+
+        self.migrate_account_jars_if_needed(account_id.clone());
 
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 

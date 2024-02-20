@@ -78,7 +78,9 @@ pub struct Jar {
     /// Indicates whether a penalty has been applied to the jar's owner due to violating product terms.
     pub is_penalty_applied: bool,
 
-    /// ADD DOCUMENT
+    /// Remainder of claim operation.
+    /// Needed to negate rounding error when user claims very often.
+    /// See `Jar::get_interest` method for implementation of this logic.
     pub claim_remainder: u64,
 }
 
@@ -284,7 +286,9 @@ impl Contract {
     }
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
-        let jar = self.get_jar_internal(account, jar_id);
+        self.migrate_account_jars_if_needed(account.clone());
+
+        let jar = self.get_jar_internal(account, jar_id).clone();
         let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
@@ -328,11 +332,16 @@ impl Contract {
             .get_jar_mut(id)
     }
 
-    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> &Jar {
+    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> Jar {
+        if let Some(jars) = self.account_jars_v1.get(account) {
+            return jars.jars.get_jar(id).clone().into();
+        }
+
         self.account_jars
             .get(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar(id)
+            .clone()
     }
 
     pub(crate) fn verify(
@@ -393,7 +402,7 @@ impl Contract {
             receiver_account_id,
             product_id,
             amount,
-            last_jar_id.map_or_else(String::new, |value| value.to_string(),),
+            last_jar_id.map_or_else(String::new, |value| value.to_string()),
             valid_until,
         )
     }

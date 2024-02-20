@@ -1,7 +1,7 @@
 use near_sdk::json_types::{U128, U64};
 use sweat_jar_model::{jar::JarView, U32};
 
-use crate::jar::model::Jar;
+use crate::jar::model_v2::Jar;
 
 impl From<Jar> for JarView {
     fn from(value: Jar) -> Self {

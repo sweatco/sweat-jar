@@ -19,7 +19,7 @@ use sweat_jar_model::{
 
 use super::*;
 use crate::{
-    common::udecimal::UDecimal,
+    common::{test_data::set_test_log_events, udecimal::UDecimal},
     product::{helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
 };
 
@@ -408,6 +408,8 @@ fn generate_product() -> Product {
 #[test]
 fn claim_often_vs_claim_once() {
     fn test(product: &Product, principal: TokenAmount, days: u64, n: usize) {
+        set_test_log_events(false);
+
         let alice = AccountId::new_unchecked(format!("alice_{principal}_{days}_{n}"));
         let bob = AccountId::new_unchecked(format!("bob_{principal}_{days}_{n}"));
         let admin = AccountId::new_unchecked(format!("admin_{principal}_{days}_{n}"));

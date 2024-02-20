@@ -1,11 +1,9 @@
 use anyhow::Result;
 use fake::Fake;
-use integration_utils::{contract_call::set_integration_logs_enabled, misc::ToNear};
+use integration_utils::contract_call::set_integration_logs_enabled;
 use near_sdk::AccountId;
 use near_workspaces::types::NearToken;
-use sweat_jar_model::api::{
-    IntegrationTestMethodsIntegration, JarApiIntegration, MigrationToClaimRemainderIntegration, SweatJarContract,
-};
+use sweat_jar_model::api::{IntegrationTestMethodsIntegration, MigrationToClaimRemainderIntegration, SweatJarContract};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -23,7 +21,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     let jar_before_rounding = load_wasm("res/sweat_jar_before_rounding.wasm");
 
-    let mut context = prepare_contract(
+    let context = prepare_contract(
         jar_before_rounding.into(),
         [
             RegisterProductCommand::Locked12Months12Percents,
@@ -46,7 +44,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     let mut accounts = Vec::with_capacity(users_count);
 
-    for i in 0..users_count {
+    for _ in 0..users_count {
         accounts.push(AccountId::new_unchecked(64.fake::<String>().to_ascii_lowercase()));
     }
 
@@ -89,25 +87,6 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     let elapsed = now.elapsed();
     println!("Migrated elapsed: {:.2?}", elapsed);
-
-    // check_jars_after_migration(accounts, jar_after_rounding).await?;
-    //
-    // let elapsed = now.elapsed();
-    // println!("Check elapsed: {:.2?}", elapsed);
-
-    Ok(())
-}
-
-async fn check_jars_after_migration(users: Vec<AccountId>, contract: SweatJarContract<'_>) -> Result<()> {
-    for user in users {
-        for jar in contract.get_jars_for_account(user.clone()).await? {
-            assert_eq!(jar.account_id, user);
-            assert_eq!(jar.product_id, RegisterProductCommand::Locked12Months12Percents.id());
-            assert_eq!(jar.principal.0, 100_000);
-            assert_eq!(jar.claimed_balance.0, 0);
-            assert_eq!(jar.is_penalty_applied, false);
-        }
-    }
 
     Ok(())
 }

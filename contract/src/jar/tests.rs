@@ -6,7 +6,7 @@ use sweat_jar_model::MS_IN_YEAR;
 
 use crate::{
     common::udecimal::UDecimal,
-    jar::model::Jar,
+    jar::model_v2::Jar,
     product::model::{Apy, Product},
 };
 
@@ -61,7 +61,7 @@ mod signature_tests {
 
     use crate::{
         common::{tests::Context, udecimal::UDecimal},
-        jar::model::{Jar, JarTicket},
+        jar::model_v2::{Jar, JarTicket},
         product::{
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
@@ -394,7 +394,7 @@ mod helpers {
     use near_sdk::AccountId;
     use sweat_jar_model::TokenAmount;
 
-    use crate::{common::Timestamp, jar::model::Jar};
+    use crate::{common::Timestamp, jar::model_v2::Jar};
 
     impl Jar {
         pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &str) -> Jar {
