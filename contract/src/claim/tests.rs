@@ -47,8 +47,8 @@ fn claim_total_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
-    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration);
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -80,8 +80,8 @@ fn claim_partially_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
-    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration) - 1;
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration).0 - 1;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -121,14 +121,14 @@ fn claim_pending_withdraw_jar() {
     let test_duration = product_term + 100;
 
     let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
-    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration) - 1;
+    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration).0 - 1;
 
     context.set_block_timestamp_in_ms(test_duration);
 
     context.switch_account(&alice);
     let result = context.contract.claim_jars(
         vec![U32(jar_0.id), U32(jar_1.id)],
-        Some(U128(jar_0_expected_interest + jar_1_expected_interest)),
+        Some(U128(jar_0_expected_interest.0 + jar_1_expected_interest)),
         Some(true),
     );
 
@@ -136,9 +136,9 @@ fn claim_pending_withdraw_jar() {
         panic!();
     };
 
-    assert_eq!(jar_0_expected_interest, value.total.0);
+    assert_eq!(jar_0_expected_interest.0, value.total.0);
 
-    assert_eq!(jar_0_expected_interest, value.detailed.get(&U32(jar_0.id)).unwrap().0);
+    assert_eq!(jar_0_expected_interest.0, value.detailed.get(&U32(jar_0.id)).unwrap().0);
     assert_eq!(None, value.detailed.get(&U32(jar_1.id)));
 }
 
@@ -157,7 +157,7 @@ fn claim_partially_detailed_when_having_tokens_and_request_sum_of_single_deposit
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
+    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -340,7 +340,7 @@ fn failed_future_claim() {
 
     let jar_after_claim = context.contract.get_jar_internal(&alice, jar.id);
 
-    assert_eq!(&jar_before_claim, jar_after_claim);
+    assert_eq!(jar_before_claim, jar_after_claim);
 }
 
 fn generate_product() -> Product {

@@ -6,7 +6,7 @@ use near_sdk::{
 
 use crate::{
     claimed_amount_view::ClaimedAmountView,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, CeFiJar, JarIdView, JarView},
+    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     product::{ProductView, RegisterProductCommand},
     withdraw::WithdrawView,
     ProductId,
@@ -161,38 +161,9 @@ pub trait JarApi {
 }
 
 #[make_integration_version]
-pub trait MigrationApi {
-    /// Migrates `CeFi Jars` to create `DeFi Jars`.
-    ///
-    /// This method receives a list of entities called `CeFiJar`, which represent token deposits
-    /// from a 3rd party service, and creates corresponding `DeFi Jars` for them. In order to support
-    /// the transition of deposit terms from the 3rd party to the contract, the `Product` with these
-    /// terms must be registered beforehand.
-    ///
-    /// # Arguments
-    ///
-    /// - `jars`: A vector of `CeFiJar` entities representing token deposits from a 3rd party service.
-    /// - `total_received`: The total amount of tokens received, ensuring that all tokens are distributed
-    ///   correctly.
-    ///
-    /// # Panics
-    ///
-    /// This method can panic in following cases:
-    ///
-    /// 1. If a `Product` required to create a Jar is not registered. In such a case, the migration
-    ///    process cannot proceed, and the method will panic.
-    ///
-    /// 2. If the total amount of tokens received is not equal to the sum of all `CeFiJar` entities.
-    ///    This panic ensures that all deposits are properly migrated, and any discrepancies will trigger
-    ///    an error.
-    ///
-    /// 3. Panics in case of unauthorized access by non-admin users.
-    ///
-    /// # Authorization
-    ///
-    /// This method can only be called by the Contract Admin. Unauthorized access will result in a panic.
-    ///
-    fn migrate_jars(&mut self, jars: Vec<CeFiJar>, total_received: U128);
+pub trait MigrationToClaimRemainder {
+    fn migrate_state_to_claim_remainder() -> Self;
+    fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>);
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
@@ -305,4 +276,17 @@ pub trait WithdrawApi {
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
+}
+
+#[cfg(feature = "integration-methods")]
+#[make_integration_version]
+pub trait IntegrationTestMethods {
+    fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
+    fn bulk_create_jars(
+        &mut self,
+        accounts: Vec<AccountId>,
+        product_id: ProductId,
+        locked_amount: crate::TokenAmount,
+        jars_count: u32,
+    );
 }

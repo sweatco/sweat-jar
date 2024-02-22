@@ -3,21 +3,23 @@
 use std::collections::HashMap;
 
 use common::tests::Context;
+use fake::Fake;
 use near_sdk::{
     json_types::U128,
     serde_json::{from_str, to_string},
     test_utils::accounts,
+    PromiseOrValue,
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::{AggregatedTokenAmountView, JarView},
     product::ApyView,
-    MS_IN_YEAR, U32,
+    TokenAmount, MS_IN_YEAR, U32,
 };
 
 use super::*;
 use crate::{
-    common::udecimal::UDecimal,
+    common::{test_data::set_test_log_events, udecimal::UDecimal},
     product::{helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
 };
 
@@ -205,7 +207,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
     context.set_block_timestamp_in_days(365);
 
     interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
-    assert_eq!(interest, 6_016_438);
+    assert_eq!(interest, 6_016_439);
 }
 
 #[test]
@@ -401,4 +403,53 @@ fn generate_product() -> Product {
         .enabled(true)
         .lockup_term(MS_IN_YEAR)
         .apy(Apy::Constant(UDecimal::new(12, 2)))
+}
+
+#[test]
+fn claim_often_vs_claim_once() {
+    fn test(product: &Product, principal: TokenAmount, days: u64, n: usize) {
+        set_test_log_events(false);
+
+        let alice = AccountId::new_unchecked(format!("alice_{principal}_{days}_{n}"));
+        let bob = AccountId::new_unchecked(format!("bob_{principal}_{days}_{n}"));
+        let admin = AccountId::new_unchecked(format!("admin_{principal}_{days}_{n}"));
+
+        let alice_jar = Jar::generate(0, &alice, &product.id).principal(principal);
+        let bob_jar = Jar::generate(1, &bob, &product.id).principal(principal);
+
+        let mut context = Context::new(admin)
+            .with_products(&[product.clone()])
+            .with_jars(&[alice_jar.clone(), bob_jar.clone()]);
+
+        let mut bobs_claimed = 0;
+
+        context.switch_account(&bob);
+
+        for day in 0..days {
+            context.set_block_timestamp_in_days(day);
+
+            let PromiseOrValue::Value(claimed) = context.contract.claim_total(None) else {
+                panic!()
+            };
+
+            bobs_claimed += claimed.get_total().0;
+        }
+
+        let alice_interest = context.contract.get_total_interest(alice.clone()).amount.total.0;
+
+        assert_eq!(alice_interest, bobs_claimed);
+    }
+
+    let product = generate_product();
+
+    test(&product, 10_000_000_000_000_000_000_000_000_000, 365, 0);
+
+    for n in 1..1000 {
+        test(
+            &product,
+            (1..10_000_000_000_000_000_000_000_000_000).fake(),
+            (1..365).fake(),
+            n,
+        );
+    }
 }

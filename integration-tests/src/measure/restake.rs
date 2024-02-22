@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, future::IntoFuture};
 
 use anyhow::Result;
 use integration_utils::misc::ToNear;
@@ -74,7 +74,7 @@ async fn one_restake() -> anyhow::Result<()> {
 pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let mut context = prepare_contract([product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 
@@ -84,7 +84,7 @@ pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> a
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
 
     let (gas, _) = OutcomeStorage::measure_total(
         &alice,
@@ -92,7 +92,7 @@ pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> a
             .sweat_jar()
             .restake(jars.random_element().id)
             .with_user(&alice)
-            .call(),
+            .into_future(),
     )
     .await?;
 

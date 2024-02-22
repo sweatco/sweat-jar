@@ -14,7 +14,7 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
-use crate::jar::model::Jar;
+use crate::jar::model::{AccountJarsLegacy, Jar};
 
 mod assert;
 mod claim;
@@ -55,6 +55,8 @@ pub struct Contract {
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
+
+    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 }
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
@@ -81,7 +83,9 @@ impl DerefMut for AccountJars {
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Products,
-    AccountJars,
+    AccountJarsLegacy,
+    /// Jars with claim remainder
+    AccountJarsV1,
 }
 
 #[near_bindgen]
@@ -94,18 +98,19 @@ impl InitApi for Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::Products),
-            account_jars: LookupMap::new(StorageKey::AccountJars),
+            account_jars: LookupMap::new(StorageKey::AccountJarsV1),
+            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
         }
     }
 }
 
-pub(crate) trait JarsStorage {
-    fn get_jar(&self, id: JarId) -> &Jar;
-    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar;
+pub(crate) trait JarsStorage<J> {
+    fn get_jar(&self, id: JarId) -> &J;
+    fn get_jar_mut(&mut self, id: JarId) -> &mut J;
 }
 
-impl JarsStorage for Vec<Jar> {
+impl JarsStorage<Jar> for Vec<Jar> {
     fn get_jar(&self, id: JarId) -> &Jar {
         self.iter()
             .find(|jar| jar.id == id)

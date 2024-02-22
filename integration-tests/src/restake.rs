@@ -15,7 +15,7 @@ async fn restake() -> anyhow::Result<()> {
     let product_command = RegisterProductCommand::Locked10Minutes6Percents;
     let product_id = product_command.id();
 
-    let mut context = prepare_contract([product_command]).await?;
+    let mut context = prepare_contract(None, [product_command]).await?;
 
     let alice = context.alice().await?;
 
@@ -30,19 +30,14 @@ async fn restake() -> anyhow::Result<()> {
         )
         .await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     let original_jar_id = jars.first().unwrap().id;
 
     context.fast_forward_hours(1).await?;
 
-    context
-        .sweat_jar()
-        .restake(original_jar_id)
-        .with_user(&alice)
-        .call()
-        .await?;
+    context.sweat_jar().restake(original_jar_id).with_user(&alice).await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     assert_eq!(jars.len(), 2);
 
     let mut has_original_jar = false;
@@ -66,10 +61,9 @@ async fn restake() -> anyhow::Result<()> {
         .sweat_jar()
         .claim_jars(vec![original_jar_id], None, None)
         .with_user(&alice)
-        .call()
         .await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).call().await?;
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     assert_eq!(jars.len(), 1);
 
     Ok(())

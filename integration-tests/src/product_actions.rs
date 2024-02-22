@@ -14,7 +14,7 @@ use crate::{
 async fn product_actions() -> anyhow::Result<()> {
     println!("👷🏽 Run test for product actions");
 
-    let mut context = prepare_contract([RegisterProductCommand::Locked12Months12Percents]).await?;
+    let mut context = prepare_contract(None, [RegisterProductCommand::Locked12Months12Percents]).await?;
 
     let alice = context.alice().await?;
     let manager = context.manager().await?;
@@ -37,7 +37,6 @@ async fn product_actions() -> anyhow::Result<()> {
         .sweat_jar()
         .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), false)
         .with_user(&manager)
-        .call()
         .await?;
 
     let result = context
@@ -62,7 +61,6 @@ async fn product_actions() -> anyhow::Result<()> {
         .sweat_jar()
         .set_enabled(RegisterProductCommand::Locked12Months12Percents.id(), true)
         .with_user(&manager)
-        .call()
         .await?;
 
     let (_, verifying_key) = generate_keypair();
@@ -75,7 +73,6 @@ async fn product_actions() -> anyhow::Result<()> {
             pk_base64.as_bytes().into_iter().copied().collect_vec().into(),
         )
         .with_user(&manager)
-        .call()
         .await?;
 
     let result = context

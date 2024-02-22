@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, future::IntoFuture};
 
 use anyhow::Result;
 use near_workspaces::types::Gas;
@@ -76,7 +76,7 @@ async fn single_claim() -> anyhow::Result<()> {
 async fn measure_claim(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let mut context = prepare_contract([product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 
@@ -86,8 +86,11 @@ async fn measure_claim(input: (RegisterProductCommand, usize)) -> anyhow::Result
 
     context.fast_forward_hours(2).await?;
 
-    let (gas, _) =
-        OutcomeStorage::measure_total(&alice, context.sweat_jar().claim_total(None).with_user(&alice).call()).await?;
+    let (gas, _) = OutcomeStorage::measure_total(
+        &alice,
+        context.sweat_jar().claim_total(None).with_user(&alice).into_future(),
+    )
+    .await?;
 
     Ok(gas)
 }

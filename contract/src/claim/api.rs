@@ -30,6 +30,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
+        self.migrate_account_jars_if_needed(account_id.clone());
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars_internal(jar_ids, None, detailed)
     }
@@ -55,6 +56,8 @@ impl Contract {
         let now = env::block_timestamp_ms();
         let mut accumulator = ClaimedAmountView::new(detailed);
 
+        self.migrate_account_jars_if_needed(account_id.clone());
+
         let unlocked_jars: Vec<Jar> = self
             .account_jars(&account_id)
             .iter()
@@ -66,15 +69,18 @@ impl Contract {
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let available_interest = jar.get_interest(product, now);
+            let (available_interest, remainder) = jar.get_interest(product, now);
+
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - accumulator.get_total().0)
             });
 
             if interest_to_claim > 0 {
-                self.get_jar_mut_internal(&jar.account_id, jar.id)
-                    .claim(available_interest, interest_to_claim, now)
-                    .lock();
+                let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
+
+                jar.claim_remainder = remainder;
+
+                jar.claim(available_interest, interest_to_claim, now).lock();
 
                 accumulator.add(jar.id, interest_to_claim);
 

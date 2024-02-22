@@ -22,6 +22,7 @@ static DATA: TestDataStorage = TestDataStorage {
 };
 
 const FUTURE_SUCCESS_KEY: &str = "FUTURE_SUCCESS_KEY";
+const LOG_EVENTS_KEY: &str = "LOG_EVENTS_KEY";
 
 fn data() -> MutexGuard<'static, Map> {
     DATA.data.lock().unwrap()
@@ -41,6 +42,28 @@ pub(crate) fn get_test_future_success() -> bool {
     };
 
     let Some(value) = map.get(FUTURE_SUCCESS_KEY) else {
+        return true;
+    };
+
+    value.parse().unwrap()
+}
+
+#[mutants::skip]
+pub(crate) fn set_test_log_events(enabled: bool) {
+    let mut data = data();
+    let map = data.entry(thread_name()).or_default();
+    map.insert(LOG_EVENTS_KEY.to_owned(), enabled.to_string());
+}
+
+#[mutants::skip]
+pub(crate) fn should_log_events() -> bool {
+    let data = data();
+
+    let Some(map) = data.get(&thread_name()) else {
+        return true;
+    };
+
+    let Some(value) = map.get(LOG_EVENTS_KEY) else {
         return true;
     };
 

@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, future::IntoFuture};
 
 use anyhow::Result;
 use integration_utils::misc::ToNear;
@@ -59,7 +59,7 @@ async fn measure_batch_penalty_test() -> Result<()> {
 
 #[ignore]
 #[tokio::test]
-async fn single_batch_penalty() -> anyhow::Result<()> {
+async fn single_batch_penalty() -> Result<()> {
     let gas = measure_batch_penalty((RegisterProductCommand::Flexible6Months6Percents, 1)).await?;
 
     dbg!(&gas);
@@ -67,10 +67,10 @@ async fn single_batch_penalty() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
+async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> Result<Gas> {
     let (product, jars_count) = input;
 
-    let mut context = prepare_contract([product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
     let manager = context.manager().await?;
@@ -82,7 +82,6 @@ async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow
     let jars = context
         .sweat_jar()
         .get_jars_for_account(alice.to_near())
-        .call()
         .await?
         .into_iter()
         .map(|j| j.id)
@@ -94,7 +93,7 @@ async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> anyhow
             .sweat_jar()
             .batch_set_penalty(vec![(alice.to_near(), jars)], true)
             .with_user(&manager)
-            .call(),
+            .into_future(),
     )
     .await?;
 

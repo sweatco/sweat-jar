@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use std::future::IntoFuture;
+
 use itertools::Itertools;
 use near_workspaces::types::Gas;
 use sweat_jar_model::{api::WithdrawApiIntegration, U32};
@@ -58,7 +60,7 @@ async fn one_withdraw() -> anyhow::Result<()> {
 async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::Result<Gas> {
     let (product, anmount) = data;
 
-    let mut context = prepare_contract([product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 
@@ -79,7 +81,11 @@ async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::R
     let (gas, _withdraw_result) = OutcomeStorage::measure_operation(
         "after_withdraw_internal",
         &alice,
-        context.sweat_jar().withdraw(U32(0), None).with_user(&alice).call(),
+        context
+            .sweat_jar()
+            .withdraw(U32(0), None)
+            .with_user(&alice)
+            .into_future(),
     )
     .await?;
 

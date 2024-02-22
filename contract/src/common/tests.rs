@@ -3,7 +3,7 @@
 use std::time::Duration;
 
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
-use sweat_jar_model::api::InitApi;
+use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 
 use crate::{jar::model::Jar, product::model::Product, Contract};
 
@@ -60,11 +60,11 @@ impl Context {
     }
 
     pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {
-        self.set_block_timestamp(Duration::from_secs(days * 24 * 60 * 60));
+        self.set_block_timestamp(Duration::from_millis(days * MS_IN_DAY));
     }
 
-    pub(crate) fn set_block_timestamp_in_minutes(&mut self, hours: u64) {
-        self.set_block_timestamp(Duration::from_secs(hours * 60));
+    pub(crate) fn set_block_timestamp_in_minutes(&mut self, minutes: u64) {
+        self.set_block_timestamp(Duration::from_millis(minutes * MS_IN_MINUTE));
     }
 
     pub(crate) fn set_block_timestamp_in_ms(&mut self, ms: u64) {

@@ -19,7 +19,7 @@ use crate::{
     common::{udecimal::UDecimal, Timestamp},
     event::{emit, EventKind, TopUpData},
     product::model::{Apy, Product, Terms},
-    Base64VecU8, Contract, JarsStorage, Signature,
+    Base64VecU8, Contract, Jar, JarsStorage, Signature,
 };
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
@@ -48,7 +48,7 @@ pub struct JarTicket {
     BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-pub struct Jar {
+pub struct JarV1 {
     /// The unique identifier for the jar.
     pub id: JarId,
 
@@ -77,6 +77,11 @@ pub struct Jar {
 
     /// Indicates whether a penalty has been applied to the jar's owner due to violating product terms.
     pub is_penalty_applied: bool,
+
+    /// Remainder of claim operation.
+    /// Needed to negate rounding error when user claims very often.
+    /// See `Jar::get_interest` method for implementation of this logic.
+    pub claim_remainder: u64,
 }
 
 /// A cached value that stores calculated interest based on the current state of the jar.
@@ -91,36 +96,9 @@ pub struct JarCache {
     pub interest: TokenAmount,
 }
 
-impl Jar {
-    pub(crate) fn create(
-        id: JarId,
-        account_id: AccountId,
-        product_id: ProductId,
-        principal: TokenAmount,
-        created_at: Timestamp,
-    ) -> Self {
-        Self {
-            id,
-            account_id,
-            product_id,
-            principal,
-            created_at,
-            cache: None,
-            claimed_balance: 0,
-            is_pending_withdraw: false,
-            is_penalty_applied: false,
-        }
-    }
-
+impl JarV1 {
     pub(crate) fn lock(&mut self) {
         self.is_pending_withdraw = true;
-    }
-
-    pub(crate) fn unlocked(&self) -> Self {
-        Self {
-            is_pending_withdraw: false,
-            ..self.clone()
-        }
     }
 
     pub(crate) fn unlock(&mut self) {
@@ -128,7 +106,7 @@ impl Jar {
     }
 
     pub(crate) fn apply_penalty(&mut self, product: &Product, is_applied: bool, now: Timestamp) {
-        let current_interest = self.get_interest(product, now);
+        let current_interest = self.get_interest(product, now).0;
 
         self.cache = Some(JarCache {
             updated_at: now,
@@ -138,7 +116,7 @@ impl Jar {
     }
 
     pub(crate) fn top_up(&mut self, amount: TokenAmount, product: &Product, now: Timestamp) -> &mut Self {
-        let current_interest = self.get_interest(product, now);
+        let current_interest = self.get_interest(product, now).0;
 
         self.principal += amount;
         self.cache = Some(JarCache {
@@ -162,19 +140,8 @@ impl Jar {
         self
     }
 
-    pub(crate) fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
-        Self {
-            principal: self.principal - withdrawn_amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: self.get_interest(product, now),
-            }),
-            ..self.clone()
-        }
-    }
-
     pub(crate) fn should_be_closed(&self, product: &Product, now: Timestamp) -> bool {
-        !product.is_flexible() && self.principal == 0 && self.get_interest(product, now) == 0
+        !product.is_flexible() && self.principal == 0 && self.get_interest(product, now).0 == 0
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -191,7 +158,7 @@ impl Jar {
         self.principal == 0
     }
 
-    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> TokenAmount {
+    pub(crate) fn get_interest(&self, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
         let (base_date, base_interest) = if let Some(cache) = &self.cache {
             (cache.updated_at, cache.interest)
         } else {
@@ -201,16 +168,29 @@ impl Jar {
         let effective_term = if until_date > base_date {
             until_date - base_date
         } else {
-            return base_interest;
+            return (base_interest, 0);
         };
 
         let term_in_milliseconds = u128::from(effective_term);
         let apy = self.get_apy(product);
         let total_interest = apy * self.principal;
 
-        let interest = (term_in_milliseconds * total_interest) / u128::from(MS_IN_YEAR);
+        let ms_in_year: u128 = MS_IN_YEAR.into();
 
-        base_interest + interest
+        let interest = term_in_milliseconds * total_interest;
+
+        // This will never fail because `MS_IN_YEAR` is u64
+        // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
+        let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
+
+        let interest = interest / ms_in_year;
+
+        let total_remainder = self.claim_remainder + remainder;
+
+        (
+            base_interest + interest + u128::from(total_remainder / MS_IN_YEAR),
+            total_remainder % MS_IN_YEAR,
+        )
     }
 
     fn get_apy(&self, product: &Product) -> UDecimal {
@@ -262,7 +242,9 @@ impl Contract {
     }
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
-        let jar = self.get_jar_internal(account, jar_id);
+        self.migrate_account_jars_if_needed(account.clone());
+
+        let jar = self.get_jar_internal(account, jar_id).clone();
         let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
@@ -306,11 +288,23 @@ impl Contract {
             .get_jar_mut(id)
     }
 
-    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> &Jar {
+    #[mutants::skip]
+    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> Jar {
+        if let Some(jars) = self.account_jars_v1.get(account) {
+            return jars
+                .jars
+                .iter()
+                .find(|jar| jar.id == id)
+                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
+                .clone()
+                .into();
+        }
+
         self.account_jars
             .get(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar(id)
+            .clone()
     }
 
     pub(crate) fn verify(
@@ -371,7 +365,7 @@ impl Contract {
             receiver_account_id,
             product_id,
             amount,
-            last_jar_id.map_or_else(String::new, |value| value.to_string(),),
+            last_jar_id.map_or_else(String::new, |value| value.to_string()),
             valid_until,
         )
     }

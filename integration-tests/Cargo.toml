@@ -21,7 +21,7 @@ ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
 mutants = { workspace = true }
 
-sweat-jar-model = { workspace = true, features = ["integration-test"] }
+sweat-jar-model = { workspace = true, features = ["integration-test", "integration-methods"] }
 sweat-model = { workspace = true, features = ["integration-test"] }
 integration-utils = { workspace = true }
 near-workspaces = { workspace = true }
