@@ -411,7 +411,7 @@ mod helpers {
                 is_penalty_applied: false,
                 claim_remainder: Default::default(),
             }
-                .into()
+            .into()
         }
 
         pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {

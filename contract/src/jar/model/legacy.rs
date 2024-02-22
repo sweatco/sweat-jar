@@ -14,7 +14,7 @@ use crate::{
 };
 
 #[derive(
-BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct JarLegacy {
@@ -44,7 +44,7 @@ impl From<JarLegacy> for Jar {
             is_penalty_applied: value.is_penalty_applied,
             claim_remainder: 0,
         }
-            .into()
+        .into()
     }
 }
 
