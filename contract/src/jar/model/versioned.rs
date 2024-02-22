@@ -10,7 +10,7 @@ use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
 use crate::{
     common::Timestamp,
-    jar::{model::JarCache, model_v1::JarV1},
+    jar::model::{JarCache, JarV1},
     product::model::Product,
 };
 

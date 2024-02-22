@@ -61,7 +61,7 @@ mod signature_tests {
 
     use crate::{
         common::{tests::Context, udecimal::UDecimal},
-        jar::model_v1::JarTicket,
+        jar::model::JarTicket,
         product::{
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
@@ -411,7 +411,7 @@ mod helpers {
                 is_penalty_applied: false,
                 claim_remainder: Default::default(),
             }
-            .into()
+                .into()
         }
 
         pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {

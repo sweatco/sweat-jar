@@ -290,7 +290,13 @@ impl Contract {
 
     pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> Jar {
         if let Some(jars) = self.account_jars_v1.get(account) {
-            return jars.jars.get_jar(id).clone().into();
+            return jars
+                .jars
+                .iter()
+                .find(|jar| jar.id == id)
+                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
+                .clone()
+                .into();
         }
 
         self.account_jars

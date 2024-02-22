@@ -64,4 +64,4 @@ impl From<AccountJarsLegacy> for AccountJars {
     }
 }
 
-pub type AccountJarsMapV1 = LookupMap<AccountId, AccountJarsLegacy>;
+pub type AccountJarsMapLegacy = LookupMap<AccountId, AccountJarsLegacy>;

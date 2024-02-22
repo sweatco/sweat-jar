@@ -7,7 +7,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{api::MigrationToClaimRemainder, jar::JarId, ProductId};
 
-use crate::{jar::model_legacy::AccountJarsMapV1, product::model::Product, Contract, ContractExt, StorageKey};
+use crate::{jar::model::AccountJarsMapLegacy, product::model::Product, Contract, ContractExt, StorageKey};
 
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
@@ -17,7 +17,7 @@ pub struct ContractLegacy {
     pub manager: AccountId,
     pub products: UnorderedMap<ProductId, Product>,
     pub last_jar_id: JarId,
-    pub account_jars: AccountJarsMapV1,
+    pub account_jars: AccountJarsMapLegacy,
 }
 
 #[near_bindgen]

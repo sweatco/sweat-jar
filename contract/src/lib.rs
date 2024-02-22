@@ -14,10 +14,7 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
-use crate::jar::{
-    model::Jar,
-    model_legacy::{AccountJarsLegacy, JarLegacy},
-};
+use crate::jar::model::{AccountJarsLegacy, Jar};
 
 mod assert;
 mod claim;
@@ -121,20 +118,6 @@ impl JarsStorage<Jar> for Vec<Jar> {
     }
 
     fn get_jar_mut(&mut self, id: JarId) -> &mut Jar {
-        self.iter_mut()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-    }
-}
-
-impl JarsStorage<JarLegacy> for Vec<JarLegacy> {
-    fn get_jar(&self, id: JarId) -> &JarLegacy {
-        self.iter()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-    }
-
-    fn get_jar_mut(&mut self, id: JarId) -> &mut JarLegacy {
         self.iter_mut()
             .find(|jar| jar.id == id)
             .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
