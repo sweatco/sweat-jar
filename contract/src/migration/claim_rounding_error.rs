@@ -1,7 +1,24 @@
-use near_sdk::{env, near_bindgen, store::LookupMap, AccountId};
-use sweat_jar_model::api::MigrationToClaimRemainder;
+use near_sdk::{
+    borsh,
+    borsh::{BorshDeserialize, BorshSerialize},
+    env, near_bindgen,
+    store::{LookupMap, UnorderedMap},
+    AccountId, PanicOnDefault,
+};
+use sweat_jar_model::{api::MigrationToClaimRemainder, jar::JarId, ProductId};
 
-use crate::{jar::model_v1::ContractLegacy, Contract, ContractExt, StorageKey};
+use crate::{jar::model_legacy::AccountJarsMapV1, product::model::Product, Contract, ContractExt, StorageKey};
+
+#[near_bindgen]
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+pub struct ContractLegacy {
+    pub token_account_id: AccountId,
+    pub fee_account_id: AccountId,
+    pub manager: AccountId,
+    pub products: UnorderedMap<ProductId, Product>,
+    pub last_jar_id: JarId,
+    pub account_jars: AccountJarsMapV1,
+}
 
 #[near_bindgen]
 impl MigrationToClaimRemainder for Contract {
@@ -16,8 +33,8 @@ impl MigrationToClaimRemainder for Contract {
             manager: old_state.manager,
             products: old_state.products,
             last_jar_id: old_state.last_jar_id,
-            account_jars: LookupMap::new(StorageKey::AccountJarsV2),
-            account_jars_v1: LookupMap::new(StorageKey::AccountJars),
+            account_jars: LookupMap::new(StorageKey::AccountJarsV1),
+            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
         }
     }
 

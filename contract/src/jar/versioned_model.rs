@@ -10,17 +10,19 @@ use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
 use crate::{
     common::Timestamp,
-    jar::{model::JarCache, model_v2::JarV2},
+    jar::{model::JarCache, model_v1::JarV1},
     product::model::Product,
 };
 
+pub type Jar = JarVersioned;
+
 #[derive(Clone, Debug, Serialize, Deserialize, BorshSerialize, BorshDeserialize, PartialEq)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-pub enum Jar {
-    V2(JarV2),
+pub enum JarVersioned {
+    V1(JarV1),
 }
 
-impl Jar {
+impl JarVersioned {
     pub fn create(
         id: JarId,
         account_id: AccountId,
@@ -28,7 +30,7 @@ impl Jar {
         principal: TokenAmount,
         created_at: Timestamp,
     ) -> Self {
-        JarV2 {
+        JarV1 {
             id,
             account_id,
             product_id,
@@ -44,7 +46,7 @@ impl Jar {
     }
 
     pub fn unlocked(&self) -> Self {
-        JarV2 {
+        JarV1 {
             is_pending_withdraw: false,
             ..self.inner()
         }
@@ -57,7 +59,7 @@ impl Jar {
     }
 
     pub fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
-        JarV2 {
+        JarV1 {
             principal: self.principal - withdrawn_amount,
             cache: Some(JarCache {
                 updated_at: now,
@@ -68,32 +70,32 @@ impl Jar {
         .into()
     }
 
-    fn inner(&self) -> JarV2 {
+    fn inner(&self) -> JarV1 {
         match self {
-            Self::V2(jar) => jar.clone(),
+            Self::V1(jar) => jar.clone(),
         }
     }
 }
 
-impl Deref for Jar {
-    type Target = JarV2;
+impl Deref for JarVersioned {
+    type Target = JarV1;
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::V2(jar) => jar,
+            Self::V1(jar) => jar,
         }
     }
 }
 
-impl DerefMut for Jar {
+impl DerefMut for JarVersioned {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::V2(jar) => jar,
+            Self::V1(jar) => jar,
         }
     }
 }
 
-impl From<JarV2> for Jar {
-    fn from(value: JarV2) -> Self {
-        Self::V2(value)
+impl From<JarV1> for JarVersioned {
+    fn from(value: JarV1) -> Self {
+        Self::V1(value)
     }
 }

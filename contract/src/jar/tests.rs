@@ -61,7 +61,7 @@ mod signature_tests {
 
     use crate::{
         common::{tests::Context, udecimal::UDecimal},
-        jar::model_v2::JarTicket,
+        jar::model_v1::JarTicket,
         product::{
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
@@ -395,11 +395,11 @@ mod helpers {
     use near_sdk::AccountId;
     use sweat_jar_model::TokenAmount;
 
-    use crate::{common::Timestamp, jar::model::JarV2, Jar};
+    use crate::{common::Timestamp, jar::model::JarV1, Jar};
 
     impl Jar {
         pub(crate) fn generate(id: u32, account_id: &AccountId, product_id: &str) -> Jar {
-            JarV2 {
+            JarV1 {
                 id,
                 account_id: account_id.clone(),
                 product_id: product_id.to_string(),

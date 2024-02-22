@@ -16,7 +16,7 @@ use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::jar::{
     model::Jar,
-    model_v1::{AccountJarsLegacy, JarLegacy},
+    model_legacy::{AccountJarsLegacy, JarLegacy},
 };
 
 mod assert;
@@ -86,9 +86,9 @@ impl DerefMut for AccountJars {
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Products,
-    AccountJars,
+    AccountJarsLegacy,
     /// Jars with claim remainder
-    AccountJarsV2,
+    AccountJarsV1,
 }
 
 #[near_bindgen]
@@ -101,8 +101,8 @@ impl InitApi for Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::Products),
-            account_jars: LookupMap::new(StorageKey::AccountJarsV2),
-            account_jars_v1: LookupMap::new(StorageKey::AccountJars),
+            account_jars: LookupMap::new(StorageKey::AccountJarsV1),
+            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
         }
     }
