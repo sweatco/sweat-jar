@@ -32,7 +32,7 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         self.migrate_account_jars_if_needed(account_id.clone());
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
-        self.claim_jars_internal(jar_ids, None, detailed)
+        self.claim_jars_internal(account_id, jar_ids, None, detailed)
     }
 
     fn claim_jars(
@@ -41,22 +41,22 @@ impl ClaimApi for Contract {
         amount: Option<U128>,
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        self.claim_jars_internal(jar_ids, amount, detailed)
+        let account_id = env::predecessor_account_id();
+        self.migrate_account_jars_if_needed(account_id.clone());
+        self.claim_jars_internal(account_id, jar_ids, amount, detailed)
     }
 }
 
 impl Contract {
     fn claim_jars_internal(
         &mut self,
+        account_id: AccountId,
         jar_ids: Vec<JarIdView>,
         amount: Option<U128>,
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        let account_id = env::predecessor_account_id();
         let now = env::block_timestamp_ms();
         let mut accumulator = ClaimedAmountView::new(detailed);
-
-        self.migrate_account_jars_if_needed(account_id.clone());
 
         let unlocked_jars: Vec<Jar> = self
             .account_jars(&account_id)

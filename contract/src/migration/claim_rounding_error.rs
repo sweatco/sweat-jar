@@ -22,10 +22,11 @@ pub struct ContractLegacy {
 
 #[near_bindgen]
 impl MigrationToClaimRemainder for Contract {
+    #[private]
     #[init(ignore_state)]
     #[mutants::skip]
     fn migrate_state_to_claim_remainder() -> Self {
-        let old_state: ContractLegacy = env::state_read().expect("failed");
+        let old_state: ContractLegacy = env::state_read().expect("Failed to extract old contract state.");
 
         Contract {
             token_account_id: old_state.token_account_id,

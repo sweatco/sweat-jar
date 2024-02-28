@@ -29,7 +29,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
         ],
     )
-    .await?;
+        .await?;
 
     let jar_account = context.sweat_jar().contract.as_account().clone();
 
