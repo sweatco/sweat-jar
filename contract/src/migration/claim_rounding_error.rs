@@ -1,9 +1,7 @@
 use near_sdk::{
     borsh,
     borsh::{BorshDeserialize, BorshSerialize},
-    env,
-    env::predecessor_account_id,
-    near_bindgen, require,
+    env, near_bindgen,
     store::{LookupMap, UnorderedMap},
     AccountId, PanicOnDefault,
 };
@@ -24,15 +22,11 @@ pub struct ContractLegacy {
 
 #[near_bindgen]
 impl MigrationToClaimRemainder for Contract {
+    #[private]
     #[init(ignore_state)]
     #[mutants::skip]
     fn migrate_state_to_claim_remainder() -> Self {
         let old_state: ContractLegacy = env::state_read().expect("Failed to extract old contract state.");
-
-        require!(
-            predecessor_account_id() == old_state.manager,
-            "Migration can be performed only by admin"
-        );
 
         Contract {
             token_account_id: old_state.token_account_id,

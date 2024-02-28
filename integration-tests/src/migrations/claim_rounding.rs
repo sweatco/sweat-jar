@@ -21,7 +21,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     let jar_before_rounding = load_wasm("res/sweat_jar_before_rounding.wasm");
 
-    let mut context = prepare_contract(
+    let context = prepare_contract(
         jar_before_rounding.into(),
         [
             RegisterProductCommand::Locked12Months12Percents,
@@ -30,8 +30,6 @@ async fn migrate_to_claim_roundings() -> Result<()> {
         ],
     )
         .await?;
-
-    let manager = context.manager().await?;
 
     let jar_account = context.sweat_jar().contract.as_account().clone();
 
@@ -79,10 +77,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     set_integration_logs_enabled(true);
 
-    jar_after_rounding
-        .migrate_state_to_claim_remainder()
-        .with_user(&manager)
-        .await?;
+    jar_after_rounding.migrate_state_to_claim_remainder().await?;
 
     for accs in accounts.chunks(600) {
         jar_after_rounding
