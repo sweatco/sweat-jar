@@ -38,6 +38,10 @@ async fn acc_2(worker: &Worker<Testnet>) -> Result<Account> {
     acc_from_file("sweat_testnet_2.json", worker).await
 }
 
+async fn acc_3(worker: &Worker<Testnet>) -> Result<Account> {
+    acc_from_file("sweat_testnet_3.json", worker).await
+}
+
 fn updated_code() -> Vec<u8> {
     #[allow(deprecated)]
     load_wasm(&format!(
@@ -252,6 +256,27 @@ async fn check_jar_creation_on_testnet() -> Result<()> {
 
     //
     // "locked_1_day_100_percents"
+
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore]
+async fn check_user_jars() -> Result<()> {
+    let worker = near_workspaces::testnet().await?;
+
+    let jar_account = testnet_jar_contract(&worker).await?;
+
+    let jar_contract = Contract::from_secret_key(jar_account.id().clone(), jar_account.secret_key().clone(), &worker);
+    let jar_contract = SweatJarContract {
+        contract: &jar_contract,
+    };
+
+    let bob = acc_3(&worker).await?;
+
+    dbg!(jar_contract.get_jars_for_account(bob.to_near()).await?);
+    dbg!(jar_contract.get_total_interest(bob.to_near()).await?);
+    dbg!(jar_contract.get_total_principal(bob.to_near()).await?);
 
     Ok(())
 }
