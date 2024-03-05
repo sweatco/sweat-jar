@@ -5,7 +5,8 @@ use near_sdk::AccountId;
 use near_workspaces::{network::Testnet, types::NearToken, Account, Contract, Worker};
 use sweat_jar_model::{
     api::{
-        IntegrationTestMethodsIntegration, JarApiIntegration, MigrationToClaimRemainderIntegration, SweatJarContract,
+        IntegrationTestMethodsIntegration, JarApiIntegration, MigrationToClaimRemainderIntegration,
+        ProductApiIntegration, SweatJarContract,
     },
     jar::JarView,
 };
@@ -218,11 +219,36 @@ async fn check_jar_creation_on_testnet() -> Result<()> {
     let jar_account = testnet_jar_contract(&worker).await?;
 
     let jar_contract = Contract::from_secret_key(jar_account.id().clone(), jar_account.secret_key().clone(), &worker);
-    let _jar_contract = SweatJarContract {
+    let jar_contract = SweatJarContract {
         contract: &jar_contract,
     };
 
-    let _bob = acc_1(&worker).await?;
+    let bob = acc_1(&worker).await?;
+
+    let jars = jar_contract.get_jars_for_account(bob.to_near()).await?;
+    dbg!(&jars.len());
+
+    let principal = jar_contract.get_total_principal(bob.to_near()).await?.total.0;
+    dbg!(&principal);
+
+    let products = jar_contract.get_products().await?;
+
+    dbg!(&products);
+
+    let token: near_workspaces::AccountId = "vfinal.token.sweat.testnet".to_string().try_into().unwrap();
+
+    jar_contract
+        .create_jar(&bob, "locked_1_day_100_percents".into(), 1000000000000000000, &token)
+        .await?;
+
+    let jars = jar_contract.get_jars_for_account(bob.to_near()).await?;
+    dbg!(&jars.len());
+
+    let principal = jar_contract.get_total_principal(bob.to_near()).await?.total.0;
+    dbg!(&principal);
+
+    //
+    // "locked_1_day_100_percents"
 
     Ok(())
 }
