@@ -2,13 +2,17 @@ use near_sdk::{
     json_types::{Base64VecU8, U128},
     log,
     serde::{Deserialize, Serialize},
-    serde_json,
-    serde_json::{to_value, Value},
-    AccountId,
+    serde_json, AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId};
+use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
-use crate::{common::Timestamp, env, jar::model::JarV1, product::model::Product, PACKAGE_NAME, VERSION};
+use crate::{
+    common::Timestamp,
+    env,
+    jar::model::{JarCache, JarV1},
+    product::model::Product,
+    PACKAGE_NAME, VERSION,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(
@@ -19,7 +23,7 @@ use crate::{common::Timestamp, env, jar::model::JarV1, product::model::Product, 
 )]
 pub enum EventKind {
     RegisterProduct(Product),
-    CreateJar(JarV1),
+    CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
     Migration(Vec<MigrationEventItem>),
@@ -29,6 +33,36 @@ pub enum EventKind {
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+pub struct EventJar {
+    id: JarId,
+    account_id: AccountId,
+    product_id: ProductId,
+    created_at: Timestamp,
+    principal: TokenAmount,
+    cache: Option<JarCache>,
+    claimed_balance: TokenAmount,
+    is_pending_withdraw: bool,
+    is_penalty_applied: bool,
+}
+
+impl From<JarV1> for EventJar {
+    fn from(value: JarV1) -> Self {
+        Self {
+            id: value.id,
+            account_id: value.account_id,
+            product_id: value.product_id,
+            created_at: value.created_at,
+            principal: value.principal,
+            cache: value.cache,
+            claimed_balance: value.claimed_balance,
+            is_pending_withdraw: value.is_pending_withdraw,
+            is_penalty_applied: value.is_penalty_applied,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -132,33 +166,13 @@ pub(crate) fn emit(event: EventKind) {
 }
 
 impl SweatJarEvent {
-    fn to_json_string(value: &Value) -> String {
-        serde_json::to_string_pretty(value)
+    fn to_json_string(&self) -> String {
+        serde_json::to_string_pretty(self)
             .unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")))
     }
 
     fn to_json_event_string(&self) -> String {
-        let value = self.skip_fields_if_needed();
-        format!("EVENT_JSON:{}", Self::to_json_string(&value))
-    }
-
-    // Events has a defined format and don't need all fields from the model
-    // #[serde(skip_serializing)] can't be used in our case beceuase Serde is also used
-    // for transferring data in cross contract calls
-    fn skip_fields_if_needed(&self) -> Value {
-        let mut value =
-            to_value(self).unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")));
-
-        let EventKind::CreateJar(_) = self.event_kind else {
-            return value;
-        };
-
-        value["data"]
-            .as_object_mut()
-            .unwrap_or_else(|| env::panic_str(&"Failed to skip claim_remainder field"))
-            .remove("claim_remainder");
-
-        value
+        format!("EVENT_JSON:{}", self.to_json_string())
     }
 }
 
@@ -172,7 +186,6 @@ mod test {
     };
 
     #[test]
-    /// Don't forget to notify backend team if these events format is changed
     fn event_to_string() {
         assert_eq!(
             SweatJarEvent::from(EventKind::TopUp(TopUpData {
@@ -181,45 +194,48 @@ mod test {
             }))
             .to_json_event_string(),
             r#"EVENT_JSON:{
-  "data": {
-    "amount": "50",
-    "id": 10
-  },
-  "event": "top_up",
   "standard": "sweat_jar",
-  "version": "1.0.0"
+  "version": "1.0.0",
+  "event": "top_up",
+  "data": {
+    "id": 10,
+    "amount": "50"
+  }
 }"#
         );
 
         assert_eq!(
-            SweatJarEvent::from(EventKind::CreateJar(JarV1 {
-                id: 555,
-                account_id: AccountId::new_unchecked("bob.near".to_string()),
-                product_id: "some_product".to_string(),
-                created_at: 1234324235,
-                principal: 78685678567,
-                cache: None,
-                claimed_balance: 4324,
-                is_pending_withdraw: false,
-                is_penalty_applied: false,
-                claim_remainder: 55555,
-            }))
+            SweatJarEvent::from(EventKind::CreateJar(
+                JarV1 {
+                    id: 555,
+                    account_id: AccountId::new_unchecked("bob.near".to_string()),
+                    product_id: "some_product".to_string(),
+                    created_at: 1234324235,
+                    principal: 78685678567,
+                    cache: None,
+                    claimed_balance: 4324,
+                    is_pending_withdraw: false,
+                    is_penalty_applied: false,
+                    claim_remainder: 55555,
+                }
+                .into()
+            ))
             .to_json_event_string(),
             r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "1.0.0",
+  "event": "create_jar",
   "data": {
+    "id": 555,
     "account_id": "bob.near",
+    "product_id": "some_product",
+    "created_at": 1234324235,
+    "principal": 78685678567,
     "cache": null,
     "claimed_balance": 4324,
-    "created_at": 1234324235,
-    "id": 555,
-    "is_penalty_applied": false,
     "is_pending_withdraw": false,
-    "principal": 78685678567,
-    "product_id": "some_product"
-  },
-  "event": "create_jar",
-  "standard": "sweat_jar",
-  "version": "1.0.0"
+    "is_penalty_applied": false
+  }
 }"#
         );
     }

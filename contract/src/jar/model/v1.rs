@@ -236,7 +236,7 @@ impl Contract {
 
         self.add_new_jar(&account_id, jar.clone());
 
-        emit(EventKind::CreateJar(jar.inner()));
+        emit(EventKind::CreateJar(jar.inner().into()));
 
         jar.into()
     }
