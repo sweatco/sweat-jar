@@ -2,22 +2,24 @@ use near_sdk::{
     json_types::{Base64VecU8, U128},
     log,
     serde::{Deserialize, Serialize},
-    serde_json, AccountId,
+    serde_json,
+    serde_json::{to_value, Value},
+    AccountId,
 };
 use sweat_jar_model::{jar::JarId, ProductId};
 
-use crate::{common::Timestamp, env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
+use crate::{common::Timestamp, env, jar::model::JarV1, product::model::Product, PACKAGE_NAME, VERSION};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(
-crate = "near_sdk::serde",
-tag = "event",
-content = "data",
-rename_all = "snake_case"
+    crate = "near_sdk::serde",
+    tag = "event",
+    content = "data",
+    rename_all = "snake_case"
 )]
 pub enum EventKind {
     RegisterProduct(Product),
-    CreateJar(Jar),
+    CreateJar(JarV1),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
     Migration(Vec<MigrationEventItem>),
@@ -130,13 +132,33 @@ pub(crate) fn emit(event: EventKind) {
 }
 
 impl SweatJarEvent {
-    fn to_json_string(&self) -> String {
-        serde_json::to_string_pretty(self)
+    fn to_json_string(value: &Value) -> String {
+        serde_json::to_string_pretty(value)
             .unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")))
     }
 
     fn to_json_event_string(&self) -> String {
-        format!("EVENT_JSON:{}", self.to_json_string())
+        let value = self.skip_fields_if_needed();
+        format!("EVENT_JSON:{}", Self::to_json_string(&value))
+    }
+
+    // Events has a defined format and don't need all fields from the model
+    // #[serde(skip_serializing)] can't be used in our case beceuase Serde is also used
+    // for transferring data in cross contract calls
+    fn skip_fields_if_needed(&self) -> Value {
+        let mut value =
+            to_value(self).unwrap_or_else(|err| env::panic_str(&format!("Failed to serialize SweatJarEvent: {err}")));
+
+        let EventKind::CreateJar(_) = self.event_kind else {
+            return value;
+        };
+
+        value["data"]
+            .as_object_mut()
+            .unwrap_or_else(|| env::panic_str(&"Failed to skip claim_remainder field"))
+            .remove("claim_remainder");
+
+        value
     }
 }
 
@@ -157,50 +179,47 @@ mod test {
                 id: 10,
                 amount: U128(50),
             }))
-                .to_json_event_string(),
+            .to_json_event_string(),
             r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "1.0.0",
-  "event": "top_up",
   "data": {
-    "id": 10,
-    "amount": "50"
-  }
+    "amount": "50",
+    "id": 10
+  },
+  "event": "top_up",
+  "standard": "sweat_jar",
+  "version": "1.0.0"
 }"#
         );
 
         assert_eq!(
-            SweatJarEvent::from(EventKind::CreateJar(
-                JarV1 {
-                    id: 555,
-                    account_id: AccountId::new_unchecked("bob.near".to_string()),
-                    product_id: "some_product".to_string(),
-                    created_at: 1234324235,
-                    principal: 78685678567,
-                    cache: None,
-                    claimed_balance: 4324,
-                    is_pending_withdraw: false,
-                    is_penalty_applied: false,
-                    claim_remainder: 55555,
-                }
-                    .into()
-            ))
-                .to_json_event_string(),
+            SweatJarEvent::from(EventKind::CreateJar(JarV1 {
+                id: 555,
+                account_id: AccountId::new_unchecked("bob.near".to_string()),
+                product_id: "some_product".to_string(),
+                created_at: 1234324235,
+                principal: 78685678567,
+                cache: None,
+                claimed_balance: 4324,
+                is_pending_withdraw: false,
+                is_penalty_applied: false,
+                claim_remainder: 55555,
+            }))
+            .to_json_event_string(),
             r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "1.0.0",
-  "event": "create_jar",
   "data": {
-    "id": 555,
     "account_id": "bob.near",
-    "product_id": "some_product",
-    "created_at": 1234324235,
-    "principal": 78685678567,
     "cache": null,
     "claimed_balance": 4324,
+    "created_at": 1234324235,
+    "id": 555,
+    "is_penalty_applied": false,
     "is_pending_withdraw": false,
-    "is_penalty_applied": false
-  }
+    "principal": 78685678567,
+    "product_id": "some_product"
+  },
+  "event": "create_jar",
+  "standard": "sweat_jar",
+  "version": "1.0.0"
 }"#
         );
     }

@@ -18,7 +18,6 @@ pub type Jar = JarVersioned;
 
 #[derive(Clone, Debug, Serialize, Deserialize, BorshSerialize, BorshDeserialize, PartialEq)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
-#[serde(untagged)]
 pub enum JarVersioned {
     V1(JarV1),
 }
@@ -71,7 +70,7 @@ impl JarVersioned {
         .into()
     }
 
-    fn inner(&self) -> JarV1 {
+    pub fn inner(&self) -> JarV1 {
         match self {
             Self::V1(jar) => jar.clone(),
         }

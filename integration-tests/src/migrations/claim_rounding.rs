@@ -20,7 +20,7 @@ use crate::{
 
 async fn acc_from_file(path: &str, worker: &Worker<Testnet>) -> Result<Account> {
     #[allow(deprecated)]
-        let home = std::env::home_dir().unwrap();
+    let home = std::env::home_dir().unwrap();
     let path = format!("{}/.near-credentials/testnet/{path}", home.to_string_lossy());
     let account = Account::from_file(path, &worker)?;
     Ok(account)
@@ -64,7 +64,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
         ],
     )
-        .await?;
+    .await?;
 
     let jar_account = context.sweat_jar().contract.as_account().clone();
 
