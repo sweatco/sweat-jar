@@ -10,10 +10,10 @@ use crate::{common::Timestamp, env, jar::model::Jar, product::model::Product, PA
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(
-    crate = "near_sdk::serde",
-    tag = "event",
-    content = "data",
-    rename_all = "snake_case"
+crate = "near_sdk::serde",
+tag = "event",
+content = "data",
+rename_all = "snake_case"
 )]
 pub enum EventKind {
     RegisterProduct(Product),
@@ -142,18 +142,21 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::json_types::U128;
+    use near_sdk::{json_types::U128, AccountId};
 
-    use crate::event::{EventKind, SweatJarEvent, TopUpData};
+    use crate::{
+        event::{EventKind, SweatJarEvent, TopUpData},
+        jar::model::JarV1,
+    };
 
     #[test]
     fn event_to_string() {
         assert_eq!(
             SweatJarEvent::from(EventKind::TopUp(TopUpData {
                 id: 10,
-                amount: U128(50)
+                amount: U128(50),
             }))
-            .to_json_event_string(),
+                .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
   "version": "1.0.0",
@@ -163,6 +166,41 @@ mod test {
     "amount": "50"
   }
 }"#
-        )
+        );
+
+        assert_eq!(
+            SweatJarEvent::from(EventKind::CreateJar(
+                JarV1 {
+                    id: 555,
+                    account_id: AccountId::new_unchecked("bob.near".to_string()),
+                    product_id: "some_product".to_string(),
+                    created_at: 1234324235,
+                    principal: 78685678567,
+                    cache: None,
+                    claimed_balance: 4324,
+                    is_pending_withdraw: false,
+                    is_penalty_applied: false,
+                    claim_remainder: 55555,
+                }
+                    .into()
+            ))
+                .to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "1.0.0",
+  "event": "create_jar",
+  "data": {
+    "id": 555,
+    "account_id": "bob.near",
+    "product_id": "some_product",
+    "created_at": 1234324235,
+    "principal": 78685678567,
+    "cache": null,
+    "claimed_balance": 4324,
+    "is_pending_withdraw": false,
+    "is_penalty_applied": false
+  }
+}"#
+        );
     }
 }

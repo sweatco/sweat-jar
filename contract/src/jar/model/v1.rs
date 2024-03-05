@@ -45,7 +45,7 @@ pub struct JarTicket {
 
 /// The `Jar` struct represents a deposit jar within the smart contract.
 #[derive(
-    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 pub struct JarV1 {
@@ -81,6 +81,7 @@ pub struct JarV1 {
     /// Remainder of claim operation.
     /// Needed to negate rounding error when user claims very often.
     /// See `Jar::get_interest` method for implementation of this logic.
+    #[serde(skip_serializing)]
     pub claim_remainder: u64,
 }
 
@@ -88,7 +89,7 @@ pub struct JarV1 {
 /// This cache is updated whenever properties that impact interest calculation change,
 /// allowing for efficient interest calculations between state changes.
 #[derive(
-    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
+BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
 )]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarCache {
@@ -347,7 +348,7 @@ impl Contract {
                 ticket.valid_until.0,
                 last_jar_id,
             )
-            .as_bytes(),
+                .as_bytes(),
         )
     }
 
