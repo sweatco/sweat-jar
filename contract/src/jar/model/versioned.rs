@@ -43,7 +43,7 @@ impl JarVersioned {
             is_penalty_applied: false,
             claim_remainder: 0,
         }
-            .into()
+        .into()
     }
 
     pub fn unlocked(&self) -> Self {
@@ -51,7 +51,7 @@ impl JarVersioned {
             is_pending_withdraw: false,
             ..self.inner()
         }
-            .into()
+        .into()
     }
 
     pub fn with_id(mut self, id: JarId) -> Self {
@@ -68,7 +68,7 @@ impl JarVersioned {
             }),
             ..self.inner().clone()
         }
-            .into()
+        .into()
     }
 
     fn inner(&self) -> JarV1 {

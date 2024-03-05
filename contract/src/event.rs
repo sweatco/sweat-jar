@@ -150,6 +150,7 @@ mod test {
     };
 
     #[test]
+    /// Don't forget to notify backend team if these events format is changed
     fn event_to_string() {
         assert_eq!(
             SweatJarEvent::from(EventKind::TopUp(TopUpData {

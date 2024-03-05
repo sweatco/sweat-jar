@@ -201,6 +201,9 @@ async fn check_roundings_migration() -> Result<()> {
 
     let _updated_code = updated_code();
 
+    let contract = jar_account.deploy(&_updated_code).await?.into_result()?;
+    let jar_contract = SweatJarContract { contract: &contract };
+
     jar_contract
         .migrate_accounts_to_claim_remainder(vec![manual_migrate_acc.to_near()])
         .await?;
