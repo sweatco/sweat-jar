@@ -1,18 +1,23 @@
 use anyhow::Result;
 use fake::Fake;
-use integration_utils::contract_call::set_integration_logs_enabled;
+use integration_utils::{contract_call::set_integration_logs_enabled, misc::ToNear};
 use near_sdk::AccountId;
 use near_workspaces::types::NearToken;
-use sweat_jar_model::api::{IntegrationTestMethodsIntegration, MigrationToClaimRemainderIntegration, SweatJarContract};
+use sweat_jar_model::{
+    api::{
+        IntegrationTestMethodsIntegration, JarApiIntegration, MigrationToClaimRemainderIntegration, SweatJarContract,
+    },
+    jar::JarView,
+};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
+    jar_contract_extensions::JarContractExtensions,
     migrations::helpers::load_wasm,
     product::RegisterProductCommand,
 };
 
 #[tokio::test]
-#[ignore]
 async fn migrate_to_claim_roundings() -> Result<()> {
     use std::time::Instant;
     let now = Instant::now();
@@ -21,7 +26,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     let jar_before_rounding = load_wasm("res/sweat_jar_before_rounding.wasm");
 
-    let context = prepare_contract(
+    let mut context = prepare_contract(
         jar_before_rounding.into(),
         [
             RegisterProductCommand::Locked12Months12Percents,
@@ -29,9 +34,11 @@ async fn migrate_to_claim_roundings() -> Result<()> {
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
         ],
     )
-        .await?;
+    .await?;
 
     let jar_account = context.sweat_jar().contract.as_account().clone();
+
+    let alice = context.alice().await?;
 
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
@@ -66,6 +73,23 @@ async fn migrate_to_claim_roundings() -> Result<()> {
     let elapsed = now.elapsed();
     println!("Created jars elapsed: {:.2?}", elapsed);
 
+    const PRINCIPAL: u128 = 100000;
+
+    context
+        .sweat_jar()
+        .create_jar(
+            &alice,
+            RegisterProductCommand::Locked6Months6Percents.id(),
+            PRINCIPAL,
+            context.ft_contract().contract.as_account().id(),
+        )
+        .await?;
+
+    let alice_jars_before = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).await?;
+
+    assert_eq!(alice_principal.total.0, PRINCIPAL);
+
     let jar_after_rounding = load_wasm("res/sweat_jar.wasm");
     let jar_after_rounding = jar_account.deploy(&jar_after_rounding).await?.into_result()?;
     let jar_after_rounding = SweatJarContract {
@@ -78,6 +102,42 @@ async fn migrate_to_claim_roundings() -> Result<()> {
     set_integration_logs_enabled(true);
 
     jar_after_rounding.migrate_state_to_claim_remainder().await?;
+
+    let alice_jars_after = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let alice_principal_after = context.sweat_jar().get_total_principal(alice.to_near()).await?;
+
+    assert_eq!(alice_jars_before, alice_jars_after);
+    assert_eq!(alice_principal, alice_principal_after);
+    assert_eq!(alice_principal_after.total.0, PRINCIPAL);
+
+    context
+        .sweat_jar()
+        .create_jar(
+            &alice,
+            RegisterProductCommand::Locked6Months6Percents.id(),
+            PRINCIPAL,
+            context.ft_contract().contract.as_account().id(),
+        )
+        .await?;
+
+    let alice_principal_2_jars = context.sweat_jar().get_total_principal(alice.to_near()).await?;
+    assert_eq!(alice_principal_2_jars.total.0, PRINCIPAL * 2);
+
+    let alice_2_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+
+    let jar = alice_jars_before.into_iter().next().unwrap();
+
+    assert_eq!(
+        alice_2_jars.clone(),
+        vec![
+            jar.clone(),
+            JarView {
+                id: alice_2_jars[1].id,
+                created_at: alice_2_jars[1].created_at,
+                ..jar
+            },
+        ]
+    );
 
     for accs in accounts.chunks(600) {
         jar_after_rounding

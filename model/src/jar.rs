@@ -14,7 +14,7 @@ pub type JarId = u32;
 
 pub type JarIdView = U32;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarView {
     pub id: JarIdView,

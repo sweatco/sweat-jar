@@ -4,9 +4,15 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     serde_json, AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId};
+use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
-use crate::{common::Timestamp, env, jar::model::Jar, product::model::Product, PACKAGE_NAME, VERSION};
+use crate::{
+    common::Timestamp,
+    env,
+    jar::model::{JarCache, JarV1},
+    product::model::Product,
+    PACKAGE_NAME, VERSION,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(
@@ -17,7 +23,7 @@ use crate::{common::Timestamp, env, jar::model::Jar, product::model::Product, PA
 )]
 pub enum EventKind {
     RegisterProduct(Product),
-    CreateJar(Jar),
+    CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
     Migration(Vec<MigrationEventItem>),
@@ -27,6 +33,36 @@ pub enum EventKind {
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+pub struct EventJar {
+    id: JarId,
+    account_id: AccountId,
+    product_id: ProductId,
+    created_at: Timestamp,
+    principal: TokenAmount,
+    cache: Option<JarCache>,
+    claimed_balance: TokenAmount,
+    is_pending_withdraw: bool,
+    is_penalty_applied: bool,
+}
+
+impl From<JarV1> for EventJar {
+    fn from(value: JarV1) -> Self {
+        Self {
+            id: value.id,
+            account_id: value.account_id,
+            product_id: value.product_id,
+            created_at: value.created_at,
+            principal: value.principal,
+            cache: value.cache,
+            claimed_balance: value.claimed_balance,
+            is_pending_withdraw: value.is_pending_withdraw,
+            is_penalty_applied: value.is_penalty_applied,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -142,16 +178,19 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::json_types::U128;
+    use near_sdk::{json_types::U128, AccountId};
 
-    use crate::event::{EventKind, SweatJarEvent, TopUpData};
+    use crate::{
+        event::{EventKind, SweatJarEvent, TopUpData},
+        jar::model::JarV1,
+    };
 
     #[test]
     fn event_to_string() {
         assert_eq!(
             SweatJarEvent::from(EventKind::TopUp(TopUpData {
                 id: 10,
-                amount: U128(50)
+                amount: U128(50),
             }))
             .to_json_event_string(),
             r#"EVENT_JSON:{
@@ -163,6 +202,41 @@ mod test {
     "amount": "50"
   }
 }"#
-        )
+        );
+
+        assert_eq!(
+            SweatJarEvent::from(EventKind::CreateJar(
+                JarV1 {
+                    id: 555,
+                    account_id: AccountId::new_unchecked("bob.near".to_string()),
+                    product_id: "some_product".to_string(),
+                    created_at: 1234324235,
+                    principal: 78685678567,
+                    cache: None,
+                    claimed_balance: 4324,
+                    is_pending_withdraw: false,
+                    is_penalty_applied: false,
+                    claim_remainder: 55555,
+                }
+                .into()
+            ))
+            .to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "1.0.0",
+  "event": "create_jar",
+  "data": {
+    "id": 555,
+    "account_id": "bob.near",
+    "product_id": "some_product",
+    "created_at": 1234324235,
+    "principal": 78685678567,
+    "cache": null,
+    "claimed_balance": 4324,
+    "is_pending_withdraw": false,
+    "is_penalty_applied": false
+  }
+}"#
+        );
     }
 }

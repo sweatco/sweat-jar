@@ -108,7 +108,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
         product_id: String,
         amount: u128,
         ft_contract_id: &near_workspaces::AccountId,
-    ) -> anyhow::Result<U128> {
+    ) -> Result<U128> {
         println!(
             "▶️ Create jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -137,7 +137,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
         signature: String,
         valid_until: u64,
         ft_contract_id: &near_workspaces::AccountId,
-    ) -> anyhow::Result<U128> {
+    ) -> Result<U128> {
         println!(
             "▶️ Create premium jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -165,7 +165,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
         jar_id: JarId,
         amount: U128,
         ft_contract_id: &near_workspaces::AccountId,
-    ) -> anyhow::Result<U128> {
+    ) -> Result<U128> {
         let msg = json!({
             "type": "top_up",
             "data": jar_id,
@@ -229,7 +229,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
             receiver_id.id(),
             product_id,
             amount,
-            last_jar_id.map_or_else(String::new, |value| value,),
+            last_jar_id.map_or_else(String::new, |value| value),
             valid_until,
         )
     }

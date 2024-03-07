@@ -236,7 +236,7 @@ impl Contract {
 
         self.add_new_jar(&account_id, jar.clone());
 
-        emit(EventKind::CreateJar(jar.clone()));
+        emit(EventKind::CreateJar(jar.inner().into()));
 
         jar.into()
     }
@@ -314,6 +314,8 @@ impl Contract {
         ticket: &JarTicket,
         signature: Option<Base64VecU8>,
     ) {
+        self.migrate_account_jars_if_needed(account_id.clone());
+
         let last_jar_id = self.account_jars.get(account_id).map(|jars| jars.last_id);
         let product = self.get_product(&ticket.product_id);
 

@@ -70,7 +70,7 @@ impl JarVersioned {
         .into()
     }
 
-    fn inner(&self) -> JarV1 {
+    pub fn inner(&self) -> JarV1 {
         match self {
             Self::V1(jar) => jar.clone(),
         }
