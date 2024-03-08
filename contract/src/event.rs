@@ -195,7 +195,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -223,7 +223,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "event": "create_jar",
   "data": {
     "id": 555,
