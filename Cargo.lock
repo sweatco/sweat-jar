@@ -4072,7 +4072,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "sweat-jar-model"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4098,7 +4098,7 @@ dependencies = [
 
 [[package]]
 name = "sweat_jar"
-version = "1.0.0"
+version = "1.0.1"
 dependencies = [
  "base64 0.21.5",
  "crypto-hash",
