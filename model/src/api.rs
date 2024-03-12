@@ -164,12 +164,6 @@ pub trait JarApi {
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
 }
 
-#[make_integration_version]
-pub trait MigrationToClaimRemainder {
-    fn migrate_state_to_claim_remainder() -> Self;
-    fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>);
-}
-
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
 #[make_integration_version]
 pub trait PenaltyApi {

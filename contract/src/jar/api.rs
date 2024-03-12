@@ -15,20 +15,8 @@ use crate::{
 
 #[near_bindgen]
 impl JarApi for Contract {
-    // TODO: restore previous version after V2 migration
     #[mutants::skip]
     fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
-        if let Some(record) = self.account_jars_v1.get(&account_id) {
-            let jar: Jar = record
-                .jars
-                .iter()
-                .find(|jar| jar.id == jar_id.0)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
-                .clone()
-                .into();
-
-            return jar.into();
-        }
         self.account_jars
             .get(&account_id)
             .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")))
@@ -97,8 +85,6 @@ impl JarApi for Contract {
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
-
-        self.migrate_account_jars_if_needed(account_id.clone());
 
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 

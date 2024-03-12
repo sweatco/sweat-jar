@@ -14,7 +14,7 @@ use near_self_update::SelfUpdate;
 use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
-use crate::jar::model::{AccountJarsLegacy, Jar};
+use crate::jar::model::Jar;
 
 mod assert;
 mod claim;
@@ -55,8 +55,6 @@ pub struct Contract {
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
-
-    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 }
 
 #[derive(Default, BorshDeserialize, BorshSerialize)]
@@ -83,7 +81,8 @@ impl DerefMut for AccountJars {
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Products,
-    AccountJarsLegacy,
+    /// Jars before claim remainder. Don't delete this, otherwise storage indices will be incorrect.
+    _AccountJarsLegacy,
     /// Jars with claim remainder
     AccountJarsV1,
 }
@@ -99,7 +98,6 @@ impl InitApi for Contract {
             manager,
             products: UnorderedMap::new(StorageKey::Products),
             account_jars: LookupMap::new(StorageKey::AccountJarsV1),
-            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
         }
     }

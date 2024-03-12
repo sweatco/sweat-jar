@@ -40,36 +40,24 @@ impl Contract {
             .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 
-    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
-        // TODO: Remove after complete migration and return '&[Jar]`
-        if let Some(record) = self.account_jars_v1.get(account_id) {
-            return record.jars.iter().map(|j| j.clone().into()).collect();
-        }
-
-        self.account_jars
-            .get(account_id)
-            .map_or(vec![], |record| record.jars.clone())
+    pub(crate) fn account_jars(&self, account_id: &AccountId) -> &[Jar] {
+        self.account_jars.get(account_id).map_or(&[], |jars| jars.as_slice())
     }
 
-    // TODO: Restore previous version after V2 migration
-    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<Jar> {
+    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<&Jar> {
         // iterates once over jars and once over ids
-        let mut jars: HashMap<JarId, Jar> = self
-            .account_jars(account_id)
-            .into_iter()
-            .map(|jar| (jar.id, jar))
-            .collect();
+        let jars: HashMap<JarId, &Jar> = self.account_jars(account_id).iter().map(|jar| (jar.id, jar)).collect();
 
         ids.iter()
             .map(|id| {
-                jars.remove(&id.0)
+                *jars
+                    .get(&id.0)
                     .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0)))
             })
             .collect()
     }
 
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.migrate_account_jars_if_needed(account_id.clone());
         let jars = self.account_jars.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
         jars.push(jar);

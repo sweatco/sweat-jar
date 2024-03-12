@@ -33,7 +33,6 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
 
         let jar = self.get_jar_internal(&account_id, jar_id.0).clone();
 
