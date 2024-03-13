@@ -11,7 +11,6 @@ use crate::{
     jar_contract_extensions::JarContractExtensions,
     measure::{
         measure::scoped_command_measure,
-        outcome_storage::OutcomeStorage,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
     product::RegisterProductCommand,
@@ -61,7 +60,7 @@ async fn measure_top_up_test() -> Result<()> {
 #[ignore]
 #[tokio::test]
 #[mutants::skip]
-async fn single_top_up() -> anyhow::Result<()> {
+async fn single_top_up() -> Result<()> {
     let gas = measure_top_up((RegisterProductCommand::Locked10Minutes6PercentsTopUp, 1)).await?;
 
     dbg!(&gas);
@@ -70,7 +69,7 @@ async fn single_top_up() -> anyhow::Result<()> {
 }
 
 #[mutants::skip]
-async fn measure_top_up(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
+async fn measure_top_up(input: (RegisterProductCommand, usize)) -> Result<Gas> {
     let (product, jars_count) = input;
 
     let mut context = prepare_contract(None, [product]).await?;
@@ -81,13 +80,10 @@ async fn measure_top_up(input: (RegisterProductCommand, usize)) -> anyhow::Resul
         add_jar(&context, &alice, product, 100_000).await?;
     }
 
-    let (gas, _) = OutcomeStorage::measure_total(
-        &alice,
-        context
-            .sweat_jar()
-            .top_up(&alice, 1, U128(1_000), context.ft_contract().contract.as_account().id()),
-    )
-    .await?;
-
-    Ok(gas)
+    Ok(context
+        .sweat_jar()
+        .top_up(&alice, 1, U128(1_000), &context.ft_contract())
+        .result()
+        .await?
+        .total_gas_burnt)
 }

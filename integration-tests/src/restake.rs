@@ -22,12 +22,7 @@ async fn restake() -> anyhow::Result<()> {
     let amount = 1_000_000;
     context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            product_id,
-            amount,
-            context.ft_contract().contract.as_account().id(),
-        )
+        .create_jar(&alice, product_id, amount, &context.ft_contract())
         .await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;

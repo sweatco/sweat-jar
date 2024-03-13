@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::{collections::HashMap, future::IntoFuture};
+use std::collections::HashMap;
 
 use anyhow::Result;
 use integration_utils::misc::ToNear;
@@ -11,7 +11,6 @@ use crate::{
     context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
-        outcome_storage::OutcomeStorage,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
     product::RegisterProductCommand,
@@ -87,15 +86,11 @@ async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> Result
         .map(|j| j.id)
         .collect();
 
-    let (gas, _) = OutcomeStorage::measure_total(
-        &manager,
-        context
-            .sweat_jar()
-            .batch_set_penalty(vec![(alice.to_near(), jars)], true)
-            .with_user(&manager)
-            .into_future(),
-    )
-    .await?;
-
-    Ok(gas)
+    Ok(context
+        .sweat_jar()
+        .batch_set_penalty(vec![(alice.to_near(), jars)], true)
+        .with_user(&manager)
+        .result()
+        .await?
+        .total_gas_burnt)
 }

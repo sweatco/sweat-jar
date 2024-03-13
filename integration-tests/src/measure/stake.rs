@@ -10,7 +10,6 @@ use crate::{
     jar_contract_extensions::JarContractExtensions,
     measure::{
         measure::scoped_command_measure,
-        outcome_storage::OutcomeStorage,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
     product::RegisterProductCommand,
@@ -88,16 +87,10 @@ pub(crate) async fn measure_stake(input: (RegisterProductCommand, usize)) -> any
         add_jar(&context, &alice, product, 100_000).await?;
     }
 
-    let (gas, _) = OutcomeStorage::measure_total(
-        &alice,
-        context.sweat_jar().create_jar(
-            &alice,
-            product.id(),
-            100_000,
-            context.ft_contract().contract.as_account().id(),
-        ),
-    )
-    .await?;
-
-    Ok(gas)
+    Ok(context
+        .sweat_jar()
+        .create_jar(&alice, product.id(), 100_000, &context.ft_contract())
+        .result()
+        .await?
+        .total_gas_burnt)
 }

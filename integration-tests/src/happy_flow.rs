@@ -34,7 +34,7 @@ async fn happy_flow() -> anyhow::Result<()> {
             &alice,
             RegisterProductCommand::Locked12Months12Percents.id(),
             1_000_000,
-            context.ft_contract().contract.as_account().id(),
+            &context.ft_contract(),
         )
         .await?;
 

@@ -22,7 +22,7 @@ async fn jar_deletion() -> anyhow::Result<()> {
             &alice,
             RegisterProductCommand::Locked10Minutes60000Percents.id(),
             1_000_000,
-            context.ft_contract().contract.as_account().id(),
+            &context.ft_contract(),
         )
         .await?;
 

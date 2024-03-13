@@ -3,7 +3,6 @@ mod after_withdraw;
 mod batch_penalty;
 mod claim;
 pub(crate) mod measure;
-pub(crate) mod outcome_storage;
 pub(crate) mod random_element;
 mod register_product;
 mod restake;

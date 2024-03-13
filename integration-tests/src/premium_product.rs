@@ -60,7 +60,7 @@ async fn premium_product() -> anyhow::Result<()> {
             amount,
             signature.to_string(),
             valid_until,
-            context.ft_contract().contract.as_account().id(),
+            &context.ft_contract(),
         )
         .await?;
 

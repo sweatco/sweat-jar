@@ -66,10 +66,10 @@ pub(crate) async fn prepare_contract(
         context.contracts.insert(SWEAT_JAR, contract);
     }
 
-    let alice = context.account("alice").await?;
+    let alice = context.alice().await?;
     let bob = context.account("bob").await?;
-    let manager = context.account("manager").await?;
-    let fee_account = context.account("fee").await?;
+    let manager = context.manager().await?;
+    let fee_account = context.fee().await?;
 
     context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
     context

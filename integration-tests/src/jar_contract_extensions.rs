@@ -1,93 +1,69 @@
 use anyhow::Result;
+use integration_utils::{contract_call::ContractCall, misc::ToNear};
 use near_sdk::{json_types::U128, Timestamp};
 use near_workspaces::{types::NearToken, Account};
 use serde_json::{json, Value};
 use sweat_jar_model::{api::SweatJarContract, jar::JarId};
-
-use crate::measure::outcome_storage::OutcomeStorage;
+use sweat_model::{FungibleTokenCoreIntegration, SweatContract};
 
 trait Internal {
-    async fn create_jar_internal(
+    fn create_jar_internal(
         &self,
         user: &Account,
         msg: Value,
         amount: u128,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128>;
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
 }
 
 impl Internal for SweatJarContract<'_> {
-    async fn create_jar_internal(
+    fn create_jar_internal(
         &self,
         user: &Account,
         msg: Value,
         amount: u128,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128> {
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
         println!("▶️ Create jar with msg: {:?}", msg,);
 
-        let args = json!({
-            "receiver_id": self.contract .as_account().id(),
-            "amount": amount.to_string(),
-            "msg": msg.to_string(),
-        });
-
-        let result = user
-            .call(ft_contract_id, "ft_transfer_call")
-            .args_json(args)
-            .max_gas()
+        ft_contract
+            .ft_transfer_call(
+                self.contract.as_account().to_near(),
+                amount.into(),
+                None,
+                msg.to_string(),
+            )
+            .with_user(user)
             .deposit(NearToken::from_yoctonear(1))
-            .transact()
-            .await?
-            .into_result()?;
-
-        for log in result.logs() {
-            println!("   📖 {log}");
-        }
-
-        for failure in result.failures() {
-            println!("   ❌ {:?}", failure);
-        }
-
-        if let Some(failure) = result.failures().into_iter().next().cloned() {
-            let error = failure.into_result().err().unwrap();
-            return Err(error.into());
-        }
-
-        let result_value = result.json()?;
-
-        OutcomeStorage::add_result(result);
-
-        Ok(result_value)
     }
 }
 
 pub trait JarContractExtensions {
-    async fn create_jar(
+    fn create_jar(
         &self,
         user: &Account,
         product_id: String,
         amount: u128,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128>;
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
 
-    async fn create_premium_jar(
+    fn create_premium_jar(
         &self,
         user: &Account,
         product_id: String,
         amount: u128,
         signature: String,
         valid_until: u64,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128>;
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
 
-    async fn top_up(
+    fn top_up(
         &self,
         account: &Account,
         jar_id: JarId,
         amount: U128,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128>;
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
 
     async fn block_timestamp_ms(&self) -> Result<Timestamp>;
 
@@ -102,13 +78,13 @@ pub trait JarContractExtensions {
 }
 
 impl JarContractExtensions for SweatJarContract<'_> {
-    async fn create_jar(
+    fn create_jar(
         &self,
         user: &Account,
         product_id: String,
         amount: u128,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128> {
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
         println!(
             "▶️ Create jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -126,18 +102,18 @@ impl JarContractExtensions for SweatJarContract<'_> {
             }
         });
 
-        self.create_jar_internal(user, msg, amount, ft_contract_id).await
+        self.create_jar_internal(user, msg, amount, ft_contract)
     }
 
-    async fn create_premium_jar(
+    fn create_premium_jar(
         &self,
         user: &Account,
         product_id: String,
         amount: u128,
         signature: String,
         valid_until: u64,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128> {
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
         println!(
             "▶️ Create premium jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
@@ -156,16 +132,16 @@ impl JarContractExtensions for SweatJarContract<'_> {
             }
         });
 
-        self.create_jar_internal(user, msg, amount, ft_contract_id).await
+        self.create_jar_internal(user, msg, amount, ft_contract)
     }
 
-    async fn top_up(
+    fn top_up(
         &self,
         account: &Account,
         jar_id: JarId,
         amount: U128,
-        ft_contract_id: &near_workspaces::AccountId,
-    ) -> Result<U128> {
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
         let msg = json!({
             "type": "top_up",
             "data": jar_id,
@@ -173,39 +149,10 @@ impl JarContractExtensions for SweatJarContract<'_> {
 
         println!("▶️ Top up with msg: {:?}", msg,);
 
-        let args = json!({
-            "receiver_id": self.contract .as_account().id(),
-            "amount": amount.0.to_string(),
-            "msg": msg.to_string(),
-        });
-
-        let result = account
-            .call(ft_contract_id, "ft_transfer_call")
-            .args_json(args)
-            .max_gas()
+        ft_contract
+            .ft_transfer_call(self.contract.as_account().to_near(), amount, None, msg.to_string())
             .deposit(NearToken::from_yoctonear(1))
-            .transact()
-            .await?
-            .into_result()?;
-
-        for log in result.logs() {
-            println!("   📖 {log}");
-        }
-
-        for failure in result.failures() {
-            println!("   ❌ {:?}", failure);
-        }
-
-        if let Some(failure) = result.failures().into_iter().next().cloned() {
-            let error = failure.into_result().err().unwrap();
-            return Err(error.into());
-        }
-
-        let result_value = result.json()?;
-
-        OutcomeStorage::add_result(result);
-
-        Ok(result_value)
+            .with_user(account)
     }
 
     async fn block_timestamp_ms(&self) -> anyhow::Result<Timestamp> {

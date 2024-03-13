@@ -58,7 +58,7 @@ async fn migrate_to_new_sdk() -> Result<()> {
             &bob,
             RegisterProductCommand::Locked10Minutes6PercentsTopUp.get().id,
             100_000,
-            ft_account.id(),
+            &ft_contract,
         )
         .await?;
 
@@ -98,7 +98,7 @@ async fn migrate_to_new_sdk() -> Result<()> {
             &bob,
             RegisterProductCommand::Locked10Minutes6PercentsTopUp.get().id,
             100_000,
-            ft_account.id(),
+            &ft_contract,
         )
         .await?;
 

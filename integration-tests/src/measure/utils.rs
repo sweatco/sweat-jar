@@ -201,12 +201,7 @@ pub(crate) async fn add_jar(
 ) -> Result<()> {
     context
         .sweat_jar()
-        .create_jar(
-            account,
-            product.id(),
-            amount,
-            &context.ft_contract().contract.as_account().id(),
-        )
+        .create_jar(account, product.id(), amount, &context.ft_contract())
         .await?;
 
     Ok(())
