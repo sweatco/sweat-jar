@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use std::{collections::HashMap, future::IntoFuture};
+use std::collections::HashMap;
 
 use anyhow::Result;
 use integration_utils::misc::ToNear;
@@ -11,7 +11,6 @@ use crate::{
     context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
-        outcome_storage::OutcomeStorage,
         random_element::RandomElement,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
@@ -86,15 +85,11 @@ pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> a
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
 
-    let (gas, _) = OutcomeStorage::measure_total(
-        &alice,
-        context
-            .sweat_jar()
-            .restake(jars.random_element().id)
-            .with_user(&alice)
-            .into_future(),
-    )
-    .await?;
-
-    Ok(gas)
+    Ok(context
+        .sweat_jar()
+        .restake(jars.random_element().id)
+        .with_user(&alice)
+        .result()
+        .await?
+        .total_gas_burnt)
 }

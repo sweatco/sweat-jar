@@ -1,7 +1,6 @@
 #![cfg(test)]
 
-use std::future::IntoFuture;
-
+use anyhow::Result;
 use itertools::Itertools;
 use near_workspaces::types::Gas;
 use sweat_jar_model::{api::WithdrawApiIntegration, U32};
@@ -9,14 +8,14 @@ use sweat_jar_model::{api::WithdrawApiIntegration, U32};
 use crate::{
     context::{prepare_contract, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
-    measure::{measure::scoped_command_measure, outcome_storage::OutcomeStorage, utils::generate_permutations},
+    measure::{measure::scoped_command_measure, utils::generate_permutations},
     product::RegisterProductCommand,
 };
 
 #[ignore]
 #[tokio::test]
 #[mutants::skip]
-async fn measure_withdraw_test() -> anyhow::Result<()> {
+async fn measure_withdraw_test() -> Result<()> {
     let result = scoped_command_measure(
         generate_permutations(
             &[
@@ -57,7 +56,7 @@ async fn one_withdraw() -> anyhow::Result<()> {
 }
 
 #[mutants::skip]
-async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::Result<Gas> {
+async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> Result<Gas> {
     let (product, anmount) = data;
 
     let mut context = prepare_contract(None, [product]).await?;
@@ -66,28 +65,16 @@ async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> anyhow::R
 
     context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            product.id(),
-            anmount,
-            context.ft_contract().contract.as_account().id(),
-        )
+        .create_jar(&alice, product.id(), anmount, &context.ft_contract())
         .await?;
 
     context.fast_forward_hours(1).await?;
 
-    dbg!(&alice);
-
-    let (gas, _withdraw_result) = OutcomeStorage::measure_operation(
-        "after_withdraw_internal",
-        &alice,
-        context
-            .sweat_jar()
-            .withdraw(U32(0), None)
-            .with_user(&alice)
-            .into_future(),
-    )
-    .await?;
-
-    Ok(gas)
+    Ok(context
+        .sweat_jar()
+        .withdraw(U32(0), None)
+        .with_user(&alice)
+        .result()
+        .await?
+        .total_gas_burnt)
 }

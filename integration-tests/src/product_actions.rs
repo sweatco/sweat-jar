@@ -23,12 +23,7 @@ async fn product_actions() -> anyhow::Result<()> {
 
     let result = context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            product_id.clone(),
-            1_000_000,
-            context.ft_contract().contract.as_account().id(),
-        )
+        .create_jar(&alice, product_id.clone(), 1_000_000, &context.ft_contract())
         .await?;
 
     assert_eq!(result.0, 1_000_000);
@@ -41,21 +36,12 @@ async fn product_actions() -> anyhow::Result<()> {
 
     let result = context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            product_id.clone(),
-            1_000_000,
-            context.ft_contract().contract.as_account().id(),
-        )
+        .create_jar(&alice, product_id.clone(), 1_000_000, &context.ft_contract())
+        .result()
         .await;
 
-    assert!(result.is_err());
-    assert!(result
-        .err()
-        .unwrap()
-        .root_cause()
-        .to_string()
-        .contains("It's not possible to create new jars for this product"));
+    assert!(format!("{result:?}")
+        .contains("Smart contract panicked: It's not possible to create new jars for this product"));
 
     context
         .sweat_jar()
@@ -77,21 +63,11 @@ async fn product_actions() -> anyhow::Result<()> {
 
     let result = context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            product_id,
-            1_000_000,
-            context.ft_contract().contract.as_account().id(),
-        )
+        .create_jar(&alice, product_id, 1_000_000, &context.ft_contract())
+        .result()
         .await;
 
-    assert!(result.is_err());
-    assert!(result
-        .err()
-        .unwrap()
-        .root_cause()
-        .to_string()
-        .contains("Signature is required"));
+    assert!(format!("{result:?}").contains("Smart contract panicked: Signature is required"));
 
     Ok(())
 }

@@ -30,7 +30,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
             &alice,
             RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee.id(),
             1_000_000,
-            context.ft_contract().contract.as_account().id(),
+            &context.ft_contract(),
         )
         .await?;
 
@@ -76,7 +76,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
             &alice,
             RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee.id(),
             1_000_000,
-            context.ft_contract().contract.as_account().id(),
+            &context.ft_contract(),
         )
         .await?;
 

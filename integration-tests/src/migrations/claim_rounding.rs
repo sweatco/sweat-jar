@@ -81,7 +81,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
             &alice,
             RegisterProductCommand::Locked6Months6Percents.id(),
             PRINCIPAL,
-            context.ft_contract().contract.as_account().id(),
+            &context.ft_contract(),
         )
         .await?;
 
@@ -116,7 +116,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
             &alice,
             RegisterProductCommand::Locked6Months6Percents.id(),
             PRINCIPAL,
-            context.ft_contract().contract.as_account().id(),
+            &context.ft_contract(),
         )
         .await?;
 
