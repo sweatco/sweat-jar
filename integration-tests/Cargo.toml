@@ -26,7 +26,6 @@ sweat-model = { workspace = true, features = ["integration-api"] }
 nitka = { workspace = true }
 near-workspaces = { workspace = true }
 
-borsh = "0.10.3"
 maplit = "1.0"
 near-units = "0.2.0"
 # arbitrary_precision enabled for u128 types that workspaces requires for Balance types
