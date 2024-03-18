@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::Signer;
-use integration_utils::misc::ToNear;
 use near_sdk::env::sha256;
+use nitka::misc::ToNear;
 use serde_json::from_value;
 use sweat_jar_model::api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration};
 

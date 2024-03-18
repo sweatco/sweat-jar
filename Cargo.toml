@@ -14,15 +14,15 @@ futures = "0.3.28"
 num-format = "0.4.4"
 itertools = "0.12.1"
 ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
-base64 = "0.21.3"
+base64 = "0.22.0"
 sha256 = "1.3.0"
 mutants = "0.0.3"
 
-integration-trait = { git = "https://github.com/sweatco/integration-utils.git", rev = "e54dc392ef42837123dd2c0ad19b6d6b815192d7" }
-integration-utils = { git = "https://github.com/sweatco/integration-utils.git", rev = "e54dc392ef42837123dd2c0ad19b6d6b815192d7" }
+nitka = "0.1.1"
+nitka-proc = "0.1.1"
 
 sweat-jar-model = { path = "model" }
-sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "bb9acde42fd6ef4f3e4c2a69d4ade8503df40f4a" }
+sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "1fee5d917dc1f2eeb91ba4ac65eef35f173e9a47" }
 
 near-workspaces = "0.10.0"
 near-sdk = { git = "https://github.com/sweatco/near-sdk-rs", rev = "8c48b26cc48d969c1e5f3162141fe9c824fccecd" }

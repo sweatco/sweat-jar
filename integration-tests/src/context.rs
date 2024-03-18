@@ -1,14 +1,14 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use integration_utils::misc::ToNear;
 use near_sdk::json_types::U128;
 use near_workspaces::Account;
+use nitka::misc::ToNear;
 use sweat_jar_model::api::{InitApiIntegration, ProductApiIntegration, SweatJarContract};
 use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::product::RegisterProductCommand;
 
-pub type Context = integration_utils::context::Context<near_workspaces::network::Sandbox>;
+pub type Context = nitka::context::Context<near_workspaces::network::Sandbox>;
 
 pub const FT_CONTRACT: &str = "sweat";
 pub const SWEAT_JAR: &str = "sweat_jar";
