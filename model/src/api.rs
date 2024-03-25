@@ -1,8 +1,12 @@
-use integration_trait::make_integration_version;
+#[cfg(feature = "release-api")]
+use near_sdk::AccountId;
 use near_sdk::{
     json_types::{Base64VecU8, U128},
-    AccountId, PromiseOrValue,
+    PromiseOrValue,
 };
+#[cfg(feature = "integration-api")]
+use nitka::AccountId;
+use nitka_proc::make_integration_version;
 
 use crate::{
     claimed_amount_view::ClaimedAmountView,

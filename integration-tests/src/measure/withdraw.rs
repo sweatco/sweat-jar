@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use integration_utils::misc::ToNear;
 use near_workspaces::types::Gas;
+use nitka::misc::ToNear;
 use sweat_jar_model::api::{JarApiIntegration, WithdrawApiIntegration};
 
 use crate::{

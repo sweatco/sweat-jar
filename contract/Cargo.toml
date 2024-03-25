@@ -8,8 +8,10 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [features]
-default = []
-integration-test = ["sweat-jar-model/integration-methods"]
+default = ["release"]
+release = ["sweat-jar-model/release-api"]
+integration-test = ["sweat-jar-model/release-api", "sweat-jar-model/integration-methods"]
+integration-api = ["sweat-jar-model/integration-api"]
 
 [dependencies]
 ed25519-dalek = { workspace = true }

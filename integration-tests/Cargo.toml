@@ -21,12 +21,11 @@ ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
 mutants = { workspace = true }
 
-sweat-jar-model = { workspace = true, features = ["integration-test", "integration-methods"] }
-sweat-model = { workspace = true, features = ["integration-test"] }
-integration-utils = { workspace = true }
+sweat-jar-model = { workspace = true, features = ["integration-test", "integration-methods", "integration-api"] }
+sweat-model = { workspace = true, features = ["integration-api"] }
+nitka = { workspace = true }
 near-workspaces = { workspace = true }
 
-borsh = "0.10.3"
 maplit = "1.0"
 near-units = "0.2.0"
 # arbitrary_precision enabled for u128 types that workspaces requires for Balance types

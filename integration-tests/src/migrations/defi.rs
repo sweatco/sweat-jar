@@ -1,5 +1,5 @@
-use integration_utils::misc::ToNear;
 use near_workspaces::types::NearToken;
+use nitka::misc::ToNear;
 use serde_json::json;
 use sweat_jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration};
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration};

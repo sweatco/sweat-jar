@@ -1,4 +1,4 @@
-use integration_utils::misc::ToNear;
+use nitka::misc::ToNear;
 use sweat_jar_model::{api::WithdrawApiIntegration, U32};
 use sweat_model::FungibleTokenCoreIntegration;
 

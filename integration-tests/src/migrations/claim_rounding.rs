@@ -1,8 +1,7 @@
 use anyhow::Result;
 use fake::Fake;
-use integration_utils::{contract_call::set_integration_logs_enabled, misc::ToNear};
-use near_sdk::AccountId;
 use near_workspaces::types::NearToken;
+use nitka::{contract_call::set_integration_logs_enabled, misc::ToNear};
 use sweat_jar_model::{
     api::{
         IntegrationTestMethodsIntegration, JarApiIntegration, MigrationToClaimRemainderIntegration, SweatJarContract,
@@ -52,7 +51,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
     let mut accounts = Vec::with_capacity(users_count);
 
     for _ in 0..users_count {
-        accounts.push(AccountId::new_unchecked(64.fake::<String>().to_ascii_lowercase()));
+        accounts.push(64.fake::<String>().to_ascii_lowercase().try_into().unwrap());
     }
 
     let elapsed = now.elapsed();

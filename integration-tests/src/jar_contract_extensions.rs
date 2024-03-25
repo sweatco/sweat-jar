@@ -1,7 +1,7 @@
 use anyhow::Result;
-use integration_utils::{contract_call::ContractCall, misc::ToNear};
 use near_sdk::{json_types::U128, Timestamp};
 use near_workspaces::{types::NearToken, Account};
+use nitka::{contract_call::ContractCall, misc::ToNear};
 use serde_json::{json, Value};
 use sweat_jar_model::{api::SweatJarContract, jar::JarId};
 use sweat_model::{FungibleTokenCoreIntegration, SweatContract};
