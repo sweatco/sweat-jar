@@ -242,8 +242,6 @@ impl Contract {
     }
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
-        self.migrate_account_jars_if_needed(account.clone());
-
         let jar = self.get_jar_internal(account, jar_id).clone();
         let product = self.get_product(&jar.product_id).clone();
 
@@ -288,23 +286,11 @@ impl Contract {
             .get_jar_mut(id)
     }
 
-    #[mutants::skip]
-    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> Jar {
-        if let Some(jars) = self.account_jars_v1.get(account) {
-            return jars
-                .jars
-                .iter()
-                .find(|jar| jar.id == id)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-                .clone()
-                .into();
-        }
-
+    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> &Jar {
         self.account_jars
             .get(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar(id)
-            .clone()
     }
 
     pub(crate) fn verify(
@@ -314,8 +300,6 @@ impl Contract {
         ticket: &JarTicket,
         signature: Option<Base64VecU8>,
     ) {
-        self.migrate_account_jars_if_needed(account_id.clone());
-
         let last_jar_id = self.account_jars.get(account_id).map(|jars| jars.last_id);
         let product = self.get_product(&ticket.product_id);
 

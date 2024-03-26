@@ -16,8 +16,6 @@ impl PenaltyApi for Contract {
     fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
         self.assert_manager();
 
-        self.migrate_account_jars_if_needed(account_id.clone());
-
         let jar_id = jar_id.0;
         let jar = self.get_jar_internal(&account_id, jar_id);
         let product = self.get_product(&jar.product_id).clone();
@@ -42,8 +40,6 @@ impl PenaltyApi for Contract {
         let now = env::block_timestamp_ms();
 
         for (account_id, jars) in jars {
-            self.migrate_account_jars_if_needed(account_id.clone());
-
             let account_jars = self
                 .account_jars
                 .get_mut(&account_id)
