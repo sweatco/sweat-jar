@@ -1,7 +1,7 @@
 use anyhow::Result;
 use fake::Fake;
 use near_workspaces::types::NearToken;
-use nitka::{contract_call::set_integration_logs_enabled, misc::ToNear};
+use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
     api::{
         IntegrationTestMethodsIntegration, JarApiIntegration, MigrationToClaimRemainderIntegration, SweatJarContract,

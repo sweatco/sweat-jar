@@ -6,6 +6,8 @@ use sweat_jar_model::{
     TokenAmount,
 };
 
+#[cfg(not(test))]
+use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     assert::{assert_is_liquidable, assert_not_locked, assert_sufficient_balance},
     env,
@@ -14,8 +16,6 @@ use crate::{
     product::model::WithdrawalFee,
     AccountId, Contract, ContractExt, Product,
 };
-#[cfg(not(test))]
-use crate::{ft_interface::FungibleTokenInterface, Promise};
 
 #[ext_contract(ext_self)]
 pub trait WithdrawCallbacks {
@@ -139,7 +139,7 @@ impl Contract {
         close_jar: bool,
         withdrawn_balance: TokenAmount,
         fee: &Option<Fee>,
-    ) -> Promise {
+    ) -> near_sdk::Promise {
         ext_self::ext(env::current_account_id())
             .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_WITHDRAW)
             .after_withdraw(account_id, jar_id, close_jar, withdrawn_balance, fee.clone())
