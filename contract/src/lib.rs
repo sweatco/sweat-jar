@@ -2,15 +2,14 @@ use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
 use near_sdk::{
-    assert_one_yocto,
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
     json_types::Base64VecU8,
     near_bindgen,
     store::{LookupMap, UnorderedMap},
-    AccountId, BorshStorageKey, Gas, PanicOnDefault, Promise,
+    AccountId, BorshStorageKey, PanicOnDefault, Promise,
 };
-use near_self_update::SelfUpdate;
+use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
