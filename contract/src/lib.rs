@@ -7,7 +7,7 @@ use near_sdk::{
     json_types::Base64VecU8,
     near_bindgen,
     store::{LookupMap, UnorderedMap},
-    AccountId, BorshStorageKey, PanicOnDefault, Promise,
+    AccountId, BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};

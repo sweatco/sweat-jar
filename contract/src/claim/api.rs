@@ -210,7 +210,7 @@ fn after_claim_call(
     jars_before_transfer: Vec<Jar>,
     event: EventKind,
     now: Timestamp,
-) -> crate::Promise {
+) -> near_sdk::Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_CLAIM)
         .after_claim(claimed_amount, jars_before_transfer, event, now)
