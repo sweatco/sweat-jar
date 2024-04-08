@@ -23,7 +23,7 @@ impl Contract {
         );
     }
 
-    pub(crate) fn assert_update(&self) {
+    pub(crate) fn assert_account_can_update(&self) {
         self.assert_manager();
     }
 

@@ -2541,9 +2541,9 @@ dependencies = [
 
 [[package]]
 name = "near-self-update-proc"
-version = "0.0.1"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb4768efe6f32fbe85f9f519fe57d31eca2d42aa7545f67bfdd0e38fb08ba092"
+checksum = "a3925eadcb70728f4f4589c7b20e976d4c8601bb3d89fc45372178b1bc5a3d03"
 dependencies = [
  "proc-macro2",
  "quote",
