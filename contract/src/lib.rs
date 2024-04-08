@@ -2,12 +2,11 @@ use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
 use near_sdk::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
     env,
     json_types::Base64VecU8,
     near, near_bindgen,
     store::{LookupMap, UnorderedMap},
-    AccountId, BorshStorageKey, PanicOnDefault, Promise,
+    AccountId, BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
@@ -34,7 +33,7 @@ pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[near(contract_state)]
-#[derive(PanicOnDefault)]
+#[derive(PanicOnDefault, SelfUpdate)]
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.

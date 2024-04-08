@@ -410,9 +410,9 @@ fn claim_often_vs_claim_once() {
     fn test(product: &Product, principal: TokenAmount, days: u64, n: usize) {
         set_test_log_events(false);
 
-        let alice = AccountId::new_unchecked(format!("alice_{principal}_{days}_{n}"));
-        let bob = AccountId::new_unchecked(format!("bob_{principal}_{days}_{n}"));
-        let admin = AccountId::new_unchecked(format!("admin_{principal}_{days}_{n}"));
+        let alice: AccountId = format!("alice_{principal}_{days}_{n}").try_into().unwrap();
+        let bob: AccountId = format!("bob_{principal}_{days}_{n}").try_into().unwrap();
+        let admin: AccountId = format!("admin_{principal}_{days}_{n}").try_into().unwrap();
 
         let alice_jar = Jar::generate(0, &alice, &product.id).principal(principal);
         let bob_jar = Jar::generate(1, &bob, &product.id).principal(principal);

@@ -178,7 +178,7 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::{json_types::U128, AccountId};
+    use near_sdk::json_types::U128;
 
     use crate::{
         event::{EventKind, SweatJarEvent, TopUpData},
@@ -208,7 +208,7 @@ mod test {
             SweatJarEvent::from(EventKind::CreateJar(
                 JarV1 {
                     id: 555,
-                    account_id: AccountId::new_unchecked("bob.near".to_string()),
+                    account_id: "bob.near".to_string().try_into().unwrap(),
                     product_id: "some_product".to_string(),
                     created_at: 1234324235,
                     principal: 78685678567,

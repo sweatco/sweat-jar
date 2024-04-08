@@ -2270,10 +2270,15 @@ dependencies = [
  "borsh 1.4.0",
  "bs58 0.5.1",
  "near-account-id",
+ "near-crypto",
  "near-gas",
+ "near-parameters",
+ "near-primitives",
+ "near-primitives-core",
  "near-sdk-macros 5.1.0 (git+https://github.com/sweatco/near-sdk-rs?rev=d5e975e3b224b5758745ab46c25d586a8e0db473)",
  "near-sys 0.2.1 (git+https://github.com/sweatco/near-sdk-rs?rev=d5e975e3b224b5758745ab46c25d586a8e0db473)",
  "near-token",
+ "near-vm-runner",
  "once_cell",
  "serde",
  "serde_json",
@@ -2315,18 +2320,7 @@ dependencies = [
 
 [[package]]
 name = "near-self-update-proc"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "near-workspaces",
- "nitka",
-]
-
-[[package]]
-name = "near-self-update-proc"
 version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3925eadcb70728f4f4589c7b20e976d4c8601bb3d89fc45372178b1bc5a3d03"
 dependencies = [
  "proc-macro2",
  "quote",

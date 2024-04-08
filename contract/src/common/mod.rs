@@ -29,16 +29,11 @@ pub mod gas_data {
 
 #[cfg(test)]
 mod test {
-    use crate::common::{
-        gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_AFTER_WITHDRAW, GIGA},
-        tgas,
-    };
+    use crate::common::gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_AFTER_WITHDRAW};
 
     #[test]
     fn test_gas_methods() {
-        assert_eq!(tgas(50).0, 50_000_000_000_000);
-        assert_eq!(GIGA, 1_000_000_000);
-        assert_eq!(GAS_FOR_AFTER_CLAIM.0, 20_000_000_000_000);
-        assert_eq!(GAS_FOR_AFTER_WITHDRAW.0, 4_000_000_000_000);
+        assert_eq!(GAS_FOR_AFTER_CLAIM.as_gas(), 20_000_000_000_000);
+        assert_eq!(GAS_FOR_AFTER_WITHDRAW.as_gas(), 4_000_000_000_000);
     }
 }

@@ -2,7 +2,8 @@
 
 use std::time::Duration;
 
-use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, Balance};
+use near_contract_standards::fungible_token::Balance;
+use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
 use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 
 use crate::{jar::model::Jar, product::model::Product, Contract};
@@ -16,9 +17,9 @@ pub(crate) struct Context {
 
 impl Context {
     pub(crate) fn new(manager: AccountId) -> Self {
-        let owner = AccountId::new_unchecked("owner".to_string());
-        let fee_account_id = AccountId::new_unchecked("fee".to_string());
-        let ft_contract_id = AccountId::new_unchecked("token".to_string());
+        let owner: AccountId = "owner".to_string().try_into().unwrap();
+        let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
+        let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();
 
         let mut builder = VMContextBuilder::new();
         builder
@@ -96,7 +97,7 @@ impl Context {
     }
 
     fn set_deposit_yocto(&mut self, amount: Balance) {
-        self.builder.attached_deposit(amount);
+        self.builder.attached_deposit(NearToken::from_yoctonear(amount));
         testing_env!(self.builder.build());
     }
 }
