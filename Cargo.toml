@@ -22,7 +22,7 @@ nitka = "0.2.2"
 nitka-proc = "0.2.2"
 
 sweat-jar-model = { path = "model" }
-sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "486695fb3a679f4b21b3b64fa38d3652634e9a09" }
+sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "c18483345e4fd7f04ca8e248709281856115cef3" }
 
 near-workspaces = "0.10.0"
 #near-self-update-proc = "0.1.1"

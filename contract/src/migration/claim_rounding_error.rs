@@ -7,7 +7,7 @@ use sweat_jar_model::{api::MigrationToClaimRemainder, jar::JarId, ProductId};
 
 use crate::{jar::model::AccountJarsMapLegacy, product::model::Product, Contract, ContractExt, StorageKey};
 
-#[near(contract_state)]
+#[near]
 #[derive(PanicOnDefault)]
 pub struct ContractLegacy {
     pub token_account_id: AccountId,
