@@ -1,7 +1,7 @@
-use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Promise};
+use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Gas, NearToken, Promise};
 use sweat_jar_model::{withdraw::Fee, TokenAmount};
 
-use crate::{common::tgas, Contract, ContractExt};
+use crate::{Contract, ContractExt};
 
 pub(crate) struct FungibleTokenContract {
     address: AccountId,
@@ -52,6 +52,11 @@ impl FtTransferPromise for Promise {
         }))
         .expect("Failed to serialize arguments");
 
-        self.function_call("ft_transfer".to_string(), args, 1, tgas(5))
+        self.function_call(
+            "ft_transfer".to_string(),
+            args,
+            NearToken::from_yoctonear(1),
+            Gas::from_tgas(5),
+        )
     }
 }

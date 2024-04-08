@@ -5,9 +5,9 @@ use near_sdk::{
     borsh::{self, BorshDeserialize, BorshSerialize},
     env,
     json_types::Base64VecU8,
-    near_bindgen,
+    near, near_bindgen,
     store::{LookupMap, UnorderedMap},
-    AccountId, BorshStorageKey, PanicOnDefault,
+    AccountId, BorshStorageKey, PanicOnDefault, Promise,
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
@@ -33,8 +33,8 @@ mod withdraw;
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, SelfUpdate)]
+#[near(contract_state)]
+#[derive(PanicOnDefault)]
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
@@ -58,7 +58,8 @@ pub struct Contract {
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 }
 
-#[derive(Default, BorshDeserialize, BorshSerialize)]
+#[near]
+#[derive(Default)]
 pub struct AccountJars {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_id: JarId,
@@ -79,7 +80,8 @@ impl DerefMut for AccountJars {
     }
 }
 
-#[derive(BorshStorageKey, BorshSerialize)]
+#[near]
+#[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
     Products,
     AccountJarsLegacy,

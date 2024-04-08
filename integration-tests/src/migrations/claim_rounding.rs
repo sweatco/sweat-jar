@@ -23,7 +23,7 @@ async fn migrate_to_claim_roundings() -> Result<()> {
 
     set_integration_logs_enabled(false);
 
-    let jar_before_rounding = load_wasm("res/sweat_jar_before_rounding.wasm");
+    let jar_before_rounding = load_wasm("res_test/sweat_jar_before_rounding.wasm");
 
     let mut context = prepare_contract(
         jar_before_rounding.into(),

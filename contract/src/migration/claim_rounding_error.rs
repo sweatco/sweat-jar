@@ -1,7 +1,5 @@
 use near_sdk::{
-    borsh,
-    borsh::{BorshDeserialize, BorshSerialize},
-    env, near_bindgen,
+    env, near, near_bindgen,
     store::{LookupMap, UnorderedMap},
     AccountId, PanicOnDefault,
 };
@@ -9,8 +7,8 @@ use sweat_jar_model::{api::MigrationToClaimRemainder, jar::JarId, ProductId};
 
 use crate::{jar::model::AccountJarsMapLegacy, product::model::Product, Contract, ContractExt, StorageKey};
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+#[near(contract_state)]
+#[derive(PanicOnDefault)]
 pub struct ContractLegacy {
     pub token_account_id: AccountId,
     pub fee_account_id: AccountId,
