@@ -1,8 +1,7 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
 use ed25519_dalek::Signer;
-use near_sdk::env::sha256;
-use nitka::misc::ToNear;
-use serde_json::from_value;
+use nitka::{misc::ToNear, near_sdk::serde_json::from_value};
+use sha2::{Digest, Sha256};
 use sweat_jar_model::api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration};
 
 use crate::{
@@ -38,19 +37,14 @@ async fn premium_product() -> anyhow::Result<()> {
     let valid_until = 43_012_170_000_000;
     let amount = 3_000_000;
 
-    let signature = STANDARD.encode(
-        signing_key
-            .sign(
-                sha256(
-                    context
-                        .sweat_jar()
-                        .get_signature_material(&alice, &product_id, valid_until, amount, None)
-                        .as_bytes(),
-                )
-                .as_slice(),
-            )
-            .to_bytes(),
+    let hash = Sha256::digest(
+        context
+            .sweat_jar()
+            .get_signature_material(&alice, &product_id, valid_until, amount, None)
+            .as_bytes(),
     );
+
+    let signature = STANDARD.encode(signing_key.sign(hash.as_slice()).to_bytes());
 
     let result = context
         .sweat_jar()

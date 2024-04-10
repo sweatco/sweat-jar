@@ -31,7 +31,7 @@ impl WithdrawView {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::{json_types::U128, AccountId};
+    use near_sdk::json_types::U128;
 
     use crate::withdraw::{Fee, WithdrawView};
 

@@ -1,8 +1,7 @@
-use near_sdk::serde::Serialize;
-use serde_json::{from_value, json, Value};
+use nitka::near_sdk::serde_json::{from_value, json, Value};
+use serde::Serialize;
 
 #[derive(Serialize, Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[serde(crate = "near_sdk::serde")]
 pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,

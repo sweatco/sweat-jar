@@ -3,8 +3,9 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use near_sdk::json_types::U128;
+// use near_sdk::json_types::U128;
 use near_workspaces::types::Gas;
+use nitka::near_sdk::json_types::U128;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
