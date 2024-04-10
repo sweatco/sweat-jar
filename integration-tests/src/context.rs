@@ -1,5 +1,4 @@
 use anyhow::Result;
-// use near_sdk::json_types::U128;
 use near_workspaces::Account;
 use nitka::{misc::ToNear, near_sdk::json_types::U128};
 use sweat_jar_model::api::{InitApiIntegration, ProductApiIntegration, SweatJarContract};

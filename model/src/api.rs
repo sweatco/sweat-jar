@@ -284,11 +284,4 @@ pub trait WithdrawApi {
 #[make_integration_version]
 pub trait IntegrationTestMethods {
     fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
-    fn bulk_create_jars(
-        &mut self,
-        accounts: Vec<AccountId>,
-        product_id: ProductId,
-        locked_amount: crate::TokenAmount,
-        jars_count: u32,
-    );
 }
