@@ -29,5 +29,5 @@ sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "7fc4914502
 near-workspaces = "0.10.0"
 near-self-update-proc = "0.1.2"
 
-near-sdk = { git = "https://github.com/sweatco/near-sdk-rs", rev = "d5e975e3b224b5758745ab46c25d586a8e0db473" }
-near-contract-standards = { git = "https://github.com/sweatco/near-sdk-rs", rev = "d5e975e3b224b5758745ab46c25d586a8e0db473" }
+near-sdk = "5.1.0"
+near-contract-standards = "5.1.0"

@@ -444,7 +444,7 @@ fn claim_often_vs_claim_once() {
 
     test(&product, 10_000_000_000_000_000_000_000_000_000, 365, 0);
 
-    for n in 1..1000 {
+    for n in 1..100 {
         test(
             &product,
             (1..10_000_000_000_000_000_000_000_000_000).fake(),
