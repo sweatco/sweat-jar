@@ -46,10 +46,10 @@ impl WithdrawApi for Contract {
         let now = env::block_timestamp_ms();
         let product = self.get_product(&jar.product_id);
 
-        assert_is_liquidable(&jar, product, now);
+        assert_is_liquidable(&jar, &product, now);
 
-        let mut withdrawn_jar = jar.withdrawn(product, amount, now);
-        let close_jar = withdrawn_jar.should_be_closed(product, now);
+        let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
+        let close_jar = withdrawn_jar.should_be_closed(&product, now);
 
         withdrawn_jar.lock();
         *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
@@ -119,7 +119,7 @@ impl Contract {
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = self.get_fee(product, jar);
+        let fee = self.get_fee(&product, jar);
 
         self.ft_contract()
             .transfer(account_id, amount, "withdraw", &fee)
@@ -156,7 +156,7 @@ impl Contract {
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = self.get_fee(product, jar);
+        let fee = self.get_fee(&product, jar);
 
         let withdrawn = self.after_withdraw_internal(
             account_id.clone(),

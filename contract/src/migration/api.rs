@@ -44,7 +44,7 @@ impl Contract {
 
         for ce_fi_jar in jars {
             require!(
-                self.products.contains_key(&ce_fi_jar.product_id),
+                self.products.get(&ce_fi_jar.product_id).is_some(),
                 format!("Product {} is not registered", ce_fi_jar.product_id),
             );
 

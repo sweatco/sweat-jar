@@ -137,7 +137,7 @@ impl RegisterProductCommand {
                 "is_enabled": true,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsTopUp => json!({
-                "id": "locked_10_minutes_6_percents",
+                "id": "locked_10_minutes_6_percents_top_up",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",

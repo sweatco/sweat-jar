@@ -32,15 +32,9 @@ impl Contract {
         self.last_jar_id
     }
 
-    pub(crate) fn get_product(&self, product_id: &ProductId) -> &Product {
+    pub(crate) fn get_product(&self, product_id: &ProductId) -> Product {
         self.products
             .get(product_id)
-            .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
-    }
-
-    pub(crate) fn get_product_mut(&mut self, product_id: &ProductId) -> &mut Product {
-        self.products
-            .get_mut(product_id)
             .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 

@@ -164,8 +164,12 @@ pub trait JarApi {
 
 #[make_integration_version]
 pub trait MigrationToClaimRemainder {
-    fn migrate_state_to_claim_remainder() -> Self;
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>);
+}
+
+#[make_integration_version]
+pub trait MigratonToNearSdk5 {
+    fn migrate_state_to_near_sdk_5() -> Self;
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.

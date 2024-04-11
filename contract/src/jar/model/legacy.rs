@@ -1,4 +1,4 @@
-use near_sdk::{near, store::LookupMap, AccountId};
+use near_sdk::{near, AccountId};
 use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
 use crate::{
@@ -57,5 +57,3 @@ impl From<AccountJarsLegacy> for AccountJars {
         }
     }
 }
-
-pub type AccountJarsMapLegacy = LookupMap<AccountId, AccountJarsLegacy>;

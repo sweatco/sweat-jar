@@ -8,10 +8,9 @@ use crate::{
 };
 
 #[tokio::test]
-#[ignore]
-async fn migrate_to_new_sdk() -> Result<()> {
+async fn migrate_to_near_sdk_5() -> Result<()> {
     let ft_code = load_wasm("res/sweat.wasm");
-    let jar_old_code = load_wasm("res/sweat_jar_main.wasm");
+    let jar_old_code = load_wasm("res_test/sweat_jar_pre_near_sdk_5.wasm");
     let jar_new_code = load_wasm("res/sweat_jar.wasm");
 
     let worker = near_workspaces::sandbox().await?;
@@ -41,13 +40,19 @@ async fn migrate_to_new_sdk() -> Result<()> {
 
     ft_contract.tge_mint(&bob.to_near(), 1_000_000.into()).await?;
 
-    old_jar_contract
-        .register_product(RegisterProductCommand::Locked10Minutes6PercentsTopUp.get())
-        .with_user(&manager_account)
-        .await?;
+    for product in RegisterProductCommand::all() {
+        if product.id() == RegisterProductCommand::Locked6Months6Percents.get().id {
+            continue;
+        }
+
+        old_jar_contract
+            .register_product(product.get())
+            .with_user(&manager_account)
+            .await?;
+    }
 
     let products = old_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products.len(), 1);
+    assert_eq!(products.len(), 8);
 
     let bob_jars = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
     assert!(bob_jars.is_empty());
@@ -90,7 +95,7 @@ async fn migrate_to_new_sdk() -> Result<()> {
         .await?;
 
     let products = new_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products.len(), 2);
+    assert_eq!(products.len(), 9);
 
     let staked = new_jar_contract
         .create_jar(

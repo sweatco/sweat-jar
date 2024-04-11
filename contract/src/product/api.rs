@@ -18,13 +18,13 @@ impl ProductApi for Contract {
         self.assert_manager();
         assert_one_yocto();
 
-        assert!(!self.products.contains_key(&command.id), "Product already exists");
+        assert!(self.products.get(&command.id).is_none(), "Product already exists");
 
         let product: Product = command.into();
 
         product.assert_fee_amount();
 
-        self.products.insert(product.id.clone(), product.clone());
+        self.products.insert(&product.id, &product);
 
         emit(EventKind::RegisterProduct(product));
     }
@@ -34,11 +34,13 @@ impl ProductApi for Contract {
         self.assert_manager();
         assert_one_yocto();
 
-        let product = self.get_product_mut(&product_id);
+        let mut product = self.get_product(&product_id);
 
         require!(is_enabled != product.is_enabled, "Status matches");
 
         product.is_enabled = is_enabled;
+
+        self.products.insert(&product_id, &product);
 
         emit(EventKind::EnableProduct(EnableProductData {
             id: product_id,
@@ -51,7 +53,9 @@ impl ProductApi for Contract {
         self.assert_manager();
         assert_one_yocto();
 
-        self.get_product_mut(&product_id).public_key = Some(public_key.0.clone());
+        let mut product = self.get_product(&product_id);
+        product.public_key = Some(public_key.0.clone());
+        self.products.insert(&product_id, &product);
 
         emit(EventKind::ChangeProductPublicKey(ChangeProductPublicKeyData {
             product_id,

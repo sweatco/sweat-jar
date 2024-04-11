@@ -2,11 +2,8 @@ use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
 use near_sdk::{
-    env,
-    json_types::Base64VecU8,
-    near, near_bindgen,
-    store::{LookupMap, UnorderedMap},
-    AccountId, BorshStorageKey, PanicOnDefault,
+    collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
+    BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
@@ -82,10 +79,12 @@ impl DerefMut for AccountJars {
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
-    Products,
+    ProductsLegacy,
     AccountJarsLegacy,
     /// Jars with claim remainder
     AccountJarsV1,
+    /// Products migrated to near_sdk 5
+    ProductsV1,
 }
 
 #[near_bindgen]
@@ -97,7 +96,7 @@ impl InitApi for Contract {
             token_account_id,
             fee_account_id,
             manager,
-            products: UnorderedMap::new(StorageKey::Products),
+            products: UnorderedMap::new(StorageKey::ProductsV1),
             account_jars: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
