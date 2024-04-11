@@ -1,6 +1,8 @@
 use anyhow::Result;
-use nitka::{misc::ToNear, near_sdk::json_types::U128};
-use sweat_jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract};
+use nitka::{build::build_contract, misc::ToNear, near_sdk::json_types::U128};
+use sweat_jar_model::api::{
+    InitApiIntegration, JarApiIntegration, MigratonToNearSdk5Integration, ProductApiIntegration, SweatJarContract,
+};
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::{
@@ -9,6 +11,8 @@ use crate::{
 
 #[tokio::test]
 async fn migrate_to_near_sdk_5() -> Result<()> {
+    build_contract("build-integration".into())?;
+
     let ft_code = load_wasm("res/sweat.wasm");
     let jar_old_code = load_wasm("res_test/sweat_jar_pre_near_sdk_5.wasm");
     let jar_new_code = load_wasm("res/sweat_jar.wasm");
@@ -51,8 +55,8 @@ async fn migrate_to_near_sdk_5() -> Result<()> {
             .await?;
     }
 
-    let products = old_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products.len(), 8);
+    let products_old = old_jar_contract.get_products().with_user(&ft_account).await?;
+    assert_eq!(products_old.len(), 8);
 
     let bob_jars = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
     assert!(bob_jars.is_empty());
@@ -66,9 +70,9 @@ async fn migrate_to_near_sdk_5() -> Result<()> {
         )
         .await?;
 
-    let bob_jars = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
+    let bob_jars_old = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
 
-    assert_eq!(bob_jars.len(), 1);
+    assert_eq!(bob_jars_old.len(), 1);
 
     assert_eq!(staked.0, 100_000);
 
@@ -83,11 +87,13 @@ async fn migrate_to_near_sdk_5() -> Result<()> {
         contract: &new_jar_contract,
     };
 
+    new_jar_contract.migrate_state_to_near_sdk_5().await?;
+
     let products_new = new_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products, products_new);
+    assert_eq!(products_old, products_new);
 
     let bob_jars_new = new_jar_contract.get_jars_for_account(bob.to_near()).await?;
-    assert_eq!(bob_jars, bob_jars_new);
+    assert_eq!(bob_jars_old, bob_jars_new);
 
     new_jar_contract
         .register_product(RegisterProductCommand::Locked6Months6Percents.get())
