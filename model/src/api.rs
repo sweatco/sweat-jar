@@ -160,6 +160,8 @@ pub trait JarApi {
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
+
+    fn restake_all(&mut self) -> Vec<JarView>;
 }
 
 #[make_integration_version]

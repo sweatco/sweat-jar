@@ -13,6 +13,13 @@ use crate::{
     Contract, ContractExt, JarsStorage,
 };
 
+impl Contract {
+    fn jar_restackable(&self, now: u64, jar: &Jar) -> bool {
+        let product = self.get_product(&jar.product_id);
+        !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(product, now)
+    }
+}
+
 #[near_bindgen]
 impl JarApi for Contract {
     // TODO: restore previous version after V2 migration
@@ -141,5 +148,30 @@ impl JarApi for Contract {
         }));
 
         new_jar.into()
+    }
+
+    fn restake_all(&mut self) -> Vec<JarView> {
+        let account_id = env::predecessor_account_id();
+
+        self.migrate_account_jars_if_needed(account_id.clone());
+
+        let jars = self
+            .account_jars
+            .get(&account_id)
+            .unwrap_or_else(|| {
+                panic_str(&format!("Jars for account {account_id} don't exist"));
+            })
+            .jars
+            .clone();
+
+        let now = env::block_timestamp_ms();
+
+        let jars: Vec<Jar> = jars.into_iter().filter(|j| self.jar_restackable(now, j)).collect();
+
+        for jar in &jars {
+            self.restake(jar.id.into());
+        }
+
+        jars.into_iter().map(Into::into).collect()
     }
 }
