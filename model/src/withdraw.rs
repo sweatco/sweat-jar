@@ -17,6 +17,8 @@ pub struct WithdrawView {
     pub fee: U128,
 }
 
+pub type BulkWithdrawView = Vec<WithdrawView>;
+
 impl WithdrawView {
     #[must_use]
     pub fn new(amount: TokenAmount, fee: Option<Fee>) -> Self {

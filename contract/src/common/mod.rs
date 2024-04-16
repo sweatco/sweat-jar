@@ -25,6 +25,9 @@ pub mod gas_data {
     /// Value is measured with `measure_withdraw_test`
     /// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
     pub(crate) const GAS_FOR_AFTER_WITHDRAW: Gas = Gas::from_tgas(4);
+
+    /// TODO: properly measure
+    pub(crate) const GAS_FOR_BULK_AFTER_WITHDRAW: Gas = Gas::from_tgas(10);
 }
 
 #[cfg(test)]
@@ -35,5 +38,6 @@ mod test {
     fn test_gas_methods() {
         assert_eq!(GAS_FOR_AFTER_CLAIM.as_gas(), 20_000_000_000_000);
         assert_eq!(GAS_FOR_AFTER_WITHDRAW.as_gas(), 4_000_000_000_000);
+        assert_eq!(GAS_FOR_BULK_AFTER_WITHDRAW.as_gas(), 10_000_000_000_000);
     }
 }
