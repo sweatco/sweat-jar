@@ -100,7 +100,7 @@ impl WithdrawApi for Contract {
             .filter_map(|jar| {
                 let product = self.get_product(&jar.product_id);
 
-                if !Self::can_be_withdrawn(&jar, product, now) {
+                if !Self::can_be_withdrawn(&jar, &product, now) {
                     return None;
                 }
 
@@ -108,8 +108,8 @@ impl WithdrawApi for Contract {
 
                 total_amount += amount;
 
-                let mut withdrawn_jar = jar.withdrawn(product, amount, now);
-                let should_be_closed = withdrawn_jar.should_be_closed(product, now);
+                let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
+                let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
 
                 withdrawn_jar.lock();
                 *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
@@ -232,7 +232,7 @@ impl Contract {
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = self.get_fee(&product, jar);
+        let fee = Self::get_fee(&product, jar);
 
         self.ft_contract()
             .transfer(account_id, amount, "withdraw", &self.make_fee(fee))
@@ -256,7 +256,7 @@ impl Contract {
             .iter()
             .filter_map(|j| {
                 let product = self.get_product(&j.jar.product_id);
-                Self::get_fee(product, &j.jar)
+                Self::get_fee(&product, &j.jar)
             })
             .sum();
 
@@ -300,7 +300,7 @@ impl Contract {
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = self.get_fee(&product, jar);
+        let fee = Self::get_fee(&product, jar);
 
         let withdrawn = self.after_withdraw_internal(
             account_id.clone(),

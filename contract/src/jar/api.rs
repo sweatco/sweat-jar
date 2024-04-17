@@ -16,7 +16,7 @@ use crate::{
 impl Contract {
     fn can_be_restacked(&self, jar: &Jar, now: u64) -> bool {
         let product = self.get_product(&jar.product_id);
-        !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(product, now)
+        !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
     }
 }
 

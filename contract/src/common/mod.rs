@@ -32,7 +32,7 @@ pub mod gas_data {
 
 #[cfg(test)]
 mod test {
-    use crate::common::gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_AFTER_WITHDRAW};
+    use crate::common::gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_AFTER_WITHDRAW, GAS_FOR_BULK_AFTER_WITHDRAW};
 
     #[test]
     fn test_gas_methods() {
