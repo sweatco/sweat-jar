@@ -1,4 +1,4 @@
-use near_sdk::Timestamp;
+use nitka::near_sdk::Timestamp;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

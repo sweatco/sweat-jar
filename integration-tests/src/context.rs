@@ -1,8 +1,6 @@
 use anyhow::Result;
-use async_trait::async_trait;
-use near_sdk::json_types::U128;
 use near_workspaces::Account;
-use nitka::misc::ToNear;
+use nitka::{misc::ToNear, near_sdk::json_types::U128};
 use sweat_jar_model::api::{InitApiIntegration, ProductApiIntegration, SweatJarContract};
 use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
@@ -13,7 +11,6 @@ pub type Context = nitka::context::Context<near_workspaces::network::Sandbox>;
 pub const FT_CONTRACT: &str = "sweat";
 pub const SWEAT_JAR: &str = "sweat_jar";
 
-#[async_trait]
 pub trait IntegrationContext {
     async fn manager(&mut self) -> Result<Account>;
     async fn alice(&mut self) -> Result<Account>;
@@ -22,7 +19,6 @@ pub trait IntegrationContext {
     fn ft_contract(&self) -> SweatContract;
 }
 
-#[async_trait]
 impl IntegrationContext for Context {
     async fn manager(&mut self) -> Result<Account> {
         self.account("manager").await

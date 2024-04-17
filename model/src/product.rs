@@ -1,6 +1,6 @@
 use near_sdk::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
     json_types::{Base64VecU8, U128, U64},
+    near,
     serde::{Deserialize, Serialize},
 };
 
@@ -60,8 +60,8 @@ pub struct ProductView {
     pub is_enabled: bool,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, PartialEq, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(PartialEq, Clone, Debug)]
 pub struct FixedProductTermsDto {
     pub lockup_term: U64,
     pub allows_top_up: bool,
@@ -78,8 +78,9 @@ impl Default for FixedProductTermsDto {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, PartialEq, Clone, Debug)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(PartialEq, Clone, Debug)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum TermsDto {
     Fixed(FixedProductTermsDto),
     Flexible,
@@ -91,8 +92,9 @@ impl Default for TermsDto {
     }
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, PartialEq, Debug)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, PartialEq, Debug)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WithdrawalFeeDto {
     /// Fixed amount of tokens which a user will pay on tokens withdraw
     Fix(U128),
@@ -103,8 +105,8 @@ pub enum WithdrawalFeeDto {
     Percent(U128, u32),
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, PartialEq, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(PartialEq, Clone, Debug)]
 pub struct RegisterProductCommand {
     pub id: ProductId,
     pub apy_default: (U128, u32),

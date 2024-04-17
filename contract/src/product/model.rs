@@ -1,8 +1,4 @@
-use near_sdk::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
-    require,
-    serde::{Deserialize, Serialize},
-};
+use near_sdk::{near, require};
 use sweat_jar_model::{ProductId, TokenAmount};
 
 use crate::{
@@ -11,8 +7,8 @@ use crate::{
 };
 
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug)]
 pub struct Product {
     /// The unique identifier of the product.
     pub id: ProductId,
@@ -37,8 +33,9 @@ pub struct Product {
 }
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum Terms {
     /// Describes additional terms for Fixed products.
     Fixed(FixedProductTerms),
@@ -48,8 +45,8 @@ pub enum Terms {
 }
 
 /// The `FixedProductTerms` struct contains terms specific to Fixed products.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FixedProductTerms {
     /// The maturity term of the jar, during which it yields interest. After this period, the user can withdraw principal
     /// or potentially restake the jar.
@@ -63,8 +60,9 @@ pub struct FixedProductTerms {
 }
 
 /// The `WithdrawalFee` enum describes withdrawal fee details, which can be either a fixed amount or a percentage of the withdrawal.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WithdrawalFee {
     /// Describes a fixed amount of tokens that a user must pay as a fee on withdrawal.
     Fix(TokenAmount),
@@ -74,8 +72,9 @@ pub enum WithdrawalFee {
 }
 
 /// The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum Apy {
     /// Describes a constant APY, where the interest remains the same throughout the product's term.
     Constant(UDecimal),
@@ -85,8 +84,8 @@ pub enum Apy {
 }
 
 /// The `DowngradableApy` struct describes an APY that can be downgraded by an oracle.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
 pub struct DowngradableApy {
     /// The default APY value if the user meets all the terms of the product.
     pub default: UDecimal,
@@ -96,8 +95,8 @@ pub struct DowngradableApy {
 }
 
 /// The `Cap` struct defines the capacity of a deposit jar in terms of the minimum and maximum allowed principal amounts.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug)]
 pub struct Cap {
     /// The minimum amount of tokens that can be stored in the jar.
     pub min: TokenAmount,

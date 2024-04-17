@@ -33,8 +33,8 @@ cov: ##@Testing Run unit tests with coverage.
 	cargo llvm-cov --hide-instantiations --open --ignore-filename-regex tests.rs
 
 test: ##@Testing Run unit tests.
-	cargo test --package sweat-jar-model --features=release-api && \
-	cargo test --package sweat_jar
+	cargo test --package sweat-jar-model --features=release-api --release && \
+	cargo test --package sweat_jar --release
 
 integration: ##@Testing Run integration tests.
 	cargo test --package integration-tests

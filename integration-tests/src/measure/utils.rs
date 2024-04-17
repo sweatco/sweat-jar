@@ -1,10 +1,10 @@
 use std::{env::var, fs::OpenOptions, future::Future, io::Write, iter::once};
 
 use anyhow::{bail, Result};
-use near_sdk::serde::Serialize;
 use near_workspaces::{types::Gas, Account};
+use nitka::near_sdk::serde_json::{to_string_pretty, to_value, Map, Value};
 use num_format::{Buffer, CustomFormat};
-use serde_json::{to_string_pretty, to_value, Map, Value};
+use serde::Serialize;
 
 use crate::{
     context::{Context, IntegrationContext},
@@ -37,7 +37,6 @@ fn generate_measure_jars_range(max: usize, multiplier: usize) -> Vec<usize> {
 }
 
 #[derive(Serialize)]
-#[serde(crate = "near_sdk::serde")]
 pub struct MeasureData {
     total: u64,
     cost: Vec<String>,

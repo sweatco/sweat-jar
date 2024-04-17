@@ -1,9 +1,10 @@
 use near_sdk::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
+    near,
     serde::{self, Deserialize, Deserializer, Serialize, Serializer},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, BorshDeserialize, BorshSerialize, Hash)]
+#[near]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct U32(pub u32);
 
 impl From<u32> for U32 {
