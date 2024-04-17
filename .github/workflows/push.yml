@@ -2,7 +2,7 @@ name: Push
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -44,7 +44,7 @@ jobs:
         run: make test
 
   integration-tests:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -65,7 +65,7 @@ jobs:
         run: make mutation
 
   measure:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3

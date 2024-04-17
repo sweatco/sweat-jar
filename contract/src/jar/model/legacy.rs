@@ -1,22 +1,15 @@
-use near_sdk::{
-    borsh::{BorshDeserialize, BorshSerialize},
-    serde::{Deserialize, Serialize},
-    store::LookupMap,
-    AccountId,
-};
+use near_sdk::{near, AccountId};
 use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
 use crate::{
-    borsh,
     common::Timestamp,
     jar::model::{Jar, JarCache, JarV1},
     AccountJars,
 };
 
-#[derive(
-    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
-)]
-#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[serde(rename_all = "snake_case")]
 pub struct JarLegacy {
     pub id: JarId,
     pub account_id: AccountId,
@@ -48,7 +41,8 @@ impl From<JarLegacy> for Jar {
     }
 }
 
-#[derive(Default, Debug, Clone, BorshDeserialize, BorshSerialize)]
+#[near]
+#[derive(Default, Debug, Clone)]
 pub struct AccountJarsLegacy {
     pub last_id: JarId,
     pub jars: Vec<JarLegacy>,
@@ -63,5 +57,3 @@ impl From<AccountJarsLegacy> for AccountJars {
         }
     }
 }
-
-pub type AccountJarsMapLegacy = LookupMap<AccountId, AccountJarsLegacy>;

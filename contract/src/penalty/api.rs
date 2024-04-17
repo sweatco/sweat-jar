@@ -60,7 +60,7 @@ impl PenaltyApi for Contract {
                     .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
 
                 assert_penalty_apy(&product.apy);
-                jar.apply_penalty(product, value, now);
+                jar.apply_penalty(&product, value, now);
 
                 applied_jars.push(jar_id);
             }

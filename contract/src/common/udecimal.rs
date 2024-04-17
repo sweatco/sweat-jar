@@ -1,9 +1,6 @@
 use std::ops::Mul;
 
-use near_sdk::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
-    serde::{Deserialize, Serialize},
-};
+use near_sdk::near;
 
 /// `UDecimal` represents a scientific representation of decimals.
 ///
@@ -15,8 +12,8 @@ use near_sdk::{
 ///                  following the leftmost nonzero digit.
 ///
 /// * `exponent`: The part of the decimal number that represents the power to which 10 must be raised to yield the original number.
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
 pub struct UDecimal {
     pub significand: u128,
     pub exponent: u32,

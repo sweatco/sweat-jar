@@ -2,11 +2,10 @@ use std::cmp;
 
 use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
     env,
     env::{panic_str, sha256},
     json_types::{U128, U64},
-    require,
+    near, require,
     serde::{Deserialize, Serialize},
     AccountId,
 };
@@ -44,10 +43,9 @@ pub struct JarTicket {
 }
 
 /// The `Jar` struct represents a deposit jar within the smart contract.
-#[derive(
-    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
-)]
-#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[serde(rename_all = "snake_case")]
 pub struct JarV1 {
     /// The unique identifier for the jar.
     pub id: JarId,
@@ -87,10 +85,8 @@ pub struct JarV1 {
 /// A cached value that stores calculated interest based on the current state of the jar.
 /// This cache is updated whenever properties that impact interest calculation change,
 /// allowing for efficient interest calculations between state changes.
-#[derive(
-    BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd,
-)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct JarCache {
     pub updated_at: Timestamp,
     pub interest: TokenAmount,

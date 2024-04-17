@@ -31,7 +31,7 @@ impl WithdrawView {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::{json_types::U128, AccountId};
+    use near_sdk::json_types::U128;
 
     use crate::withdraw::{Fee, WithdrawView};
 
@@ -40,7 +40,7 @@ mod test {
         let fee = WithdrawView::new(
             1_000_000,
             Some(Fee {
-                beneficiary_id: AccountId::new_unchecked("account_id".to_string()),
+                beneficiary_id: "account_id".to_string().try_into().unwrap(),
                 amount: 100,
             }),
         );

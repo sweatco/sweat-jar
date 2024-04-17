@@ -79,7 +79,7 @@ impl JarApi for Contract {
         let mut total_amount: TokenAmount = 0;
 
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let interest = jar.get_interest(self.get_product(&jar.product_id), now).0;
+            let interest = jar.get_interest(&self.get_product(&jar.product_id), now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
@@ -110,7 +110,7 @@ impl JarApi for Contract {
         require!(product.is_enabled, "The product is disabled");
 
         let now = env::block_timestamp_ms();
-        require!(jar.is_liquidable(product, now), "The jar is not mature yet");
+        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
         require!(!jar.is_empty(), "The jar is empty, nothing to restake");
 
         let principal = jar.principal;
@@ -123,8 +123,8 @@ impl JarApi for Contract {
             now,
         );
 
-        let withdraw_jar = jar.withdrawn(product, principal, now);
-        let should_be_closed = withdraw_jar.should_be_closed(product, now);
+        let withdraw_jar = jar.withdrawn(&product, principal, now);
+        let should_be_closed = withdraw_jar.should_be_closed(&product, now);
 
         if should_be_closed {
             self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);

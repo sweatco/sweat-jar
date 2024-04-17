@@ -17,15 +17,17 @@ ed25519-dalek = { version = "2.0.0", features = ["rand_core"] }
 base64 = "0.22.0"
 sha256 = "1.3.0"
 mutants = "0.0.3"
+serde = "1.0"
+sha2 = "0.10"
 
-nitka = "0.2.0"
-nitka-proc = "0.2.0"
+nitka = "0.3.0"
+nitka-proc = "0.3.0"
 
 sweat-jar-model = { path = "model" }
-sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "19063e79c4795ff67d6971fe2ca18be31c961011" }
+sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "7fc49145026654404310b42efd0d20eb346e7ae2" }
 
 near-workspaces = "0.10.0"
-near-self-update-proc = "0.1.1"
+near-self-update-proc = "0.1.2"
 
-near-sdk = { git = "https://github.com/sweatco/near-sdk-rs", rev = "8c48b26cc48d969c1e5f3162141fe9c824fccecd" }
-near-contract-standards = { git = "https://github.com/sweatco/near-sdk-rs", rev = "8c48b26cc48d969c1e5f3162141fe9c824fccecd" }
+near-sdk = "5.1.0"
+near-contract-standards = "5.1.0"

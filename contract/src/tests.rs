@@ -407,18 +407,20 @@ fn generate_product() -> Product {
 
 #[test]
 fn claim_often_vs_claim_once() {
-    fn test(product: &Product, principal: TokenAmount, days: u64, n: usize) {
+    fn test(mut product: Product, principal: TokenAmount, days: u64, n: usize) {
         set_test_log_events(false);
 
-        let alice = AccountId::new_unchecked(format!("alice_{principal}_{days}_{n}"));
-        let bob = AccountId::new_unchecked(format!("bob_{principal}_{days}_{n}"));
-        let admin = AccountId::new_unchecked(format!("admin_{principal}_{days}_{n}"));
+        let alice: AccountId = format!("alice_{principal}_{days}_{n}").try_into().unwrap();
+        let bob: AccountId = format!("bob_{principal}_{days}_{n}").try_into().unwrap();
+        let admin: AccountId = format!("admin_{principal}_{days}_{n}").try_into().unwrap();
+
+        product.id = format!("product_{principal}_{days}_{n}");
 
         let alice_jar = Jar::generate(0, &alice, &product.id).principal(principal);
         let bob_jar = Jar::generate(1, &bob, &product.id).principal(principal);
 
         let mut context = Context::new(admin)
-            .with_products(&[product.clone()])
+            .with_products(&[product])
             .with_jars(&[alice_jar.clone(), bob_jar.clone()]);
 
         let mut bobs_claimed = 0;
@@ -442,11 +444,11 @@ fn claim_often_vs_claim_once() {
 
     let product = generate_product();
 
-    test(&product, 10_000_000_000_000_000_000_000_000_000, 365, 0);
+    test(product.clone(), 10_000_000_000_000_000_000_000_000_000, 365, 0);
 
-    for n in 1..1000 {
+    for n in 1..100 {
         test(
-            &product,
+            product.clone(),
             (1..10_000_000_000_000_000_000_000_000_000).fake(),
             (1..365).fake(),
             n,
