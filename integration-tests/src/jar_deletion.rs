@@ -12,7 +12,7 @@ use crate::{
 async fn jar_deletion() -> anyhow::Result<()> {
     println!("👷🏽 Run jar deletion test");
 
-    let mut context = prepare_contract(None, [RegisterProductCommand::Locked10Minutes60000Percents]).await?;
+    let context = prepare_contract(None, [RegisterProductCommand::Locked10Minutes60000Percents]).await?;
 
     let alice = context.alice().await?;
 

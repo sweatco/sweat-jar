@@ -13,7 +13,7 @@ use crate::{
 async fn defi_migration() -> anyhow::Result<()> {
     println!("👷🏽 Run migration test");
 
-    let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
+    let context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
 
     let manager = &context.account("manager").await?;
     let alice = &context.account("alice").await?;

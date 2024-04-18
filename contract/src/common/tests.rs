@@ -1,6 +1,11 @@
 #![cfg(test)]
 
-use std::time::Duration;
+use std::{
+    borrow::Borrow,
+    panic::UnwindSafe,
+    sync::{Arc, Mutex, MutexGuard},
+    time::Duration,
+};
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
@@ -8,12 +13,15 @@ use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 
 use crate::{jar::model::Jar, product::model::Product, Contract};
 
+#[derive(Clone)]
 pub(crate) struct Context {
-    pub contract: Contract,
+    contract: Arc<Mutex<Contract>>,
     pub owner: AccountId,
     ft_contract_id: AccountId,
     builder: VMContextBuilder,
 }
+
+impl UnwindSafe for Context {}
 
 impl Context {
     pub(crate) fn new(manager: AccountId) -> Self {
@@ -36,21 +44,29 @@ impl Context {
             owner,
             ft_contract_id,
             builder,
-            contract,
+            contract: Arc::new(Mutex::new(contract)),
         }
     }
 
-    pub(crate) fn with_products(mut self, products: &[Product]) -> Self {
+    pub(crate) fn contract(&self) -> MutexGuard<Contract> {
+        self.contract.lock().unwrap()
+    }
+
+    pub(crate) fn before_catch_unwind(&self) {
+        self.contract.clear_poison();
+    }
+
+    pub(crate) fn with_products(self, products: &[Product]) -> Self {
         for product in products {
-            self.contract.products.insert(&product.id, product);
+            self.contract().products.insert(&product.id, product);
         }
 
         self
     }
 
-    pub(crate) fn with_jars(mut self, jars: &[Jar]) -> Self {
+    pub(crate) fn with_jars(self, jars: &[Jar]) -> Self {
         for jar in jars {
-            self.contract
+            self.contract()
                 .account_jars
                 .entry(jar.account_id.clone())
                 .or_default()
@@ -77,10 +93,11 @@ impl Context {
         testing_env!(self.builder.build());
     }
 
-    pub(crate) fn switch_account(&mut self, account_id: &AccountId) {
+    pub(crate) fn switch_account(&mut self, account_id: impl Borrow<AccountId>) {
+        let account_id = account_id.borrow().clone();
         self.builder
             .predecessor_account_id(account_id.clone())
-            .signer_account_id(account_id.clone());
+            .signer_account_id(account_id);
         testing_env!(self.builder.build());
     }
 

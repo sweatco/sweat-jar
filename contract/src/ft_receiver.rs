@@ -102,10 +102,10 @@ mod tests {
 
         context.switch_account_to_ft_contract_account();
         context
-            .contract
+            .contract()
             .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
 
-        let jar = context.contract.get_jar(alice, U32(1));
+        let jar = context.contract().get_jar(alice, U32(1));
         assert_eq!(jar.id.0, 1);
     }
 
@@ -145,15 +145,15 @@ mod tests {
 
         context.switch_account_to_ft_contract_account();
         context
-            .contract
+            .contract()
             .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(alice.clone(), U32(1));
+        let jar = context.contract().get_jar(alice.clone(), U32(1));
         assert_eq!(jar.id.0, 1);
 
         let result = catch_unwind(move || {
             context
-                .contract
+                .contract()
                 .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string())
         });
         assert!(result.is_err());
@@ -184,10 +184,10 @@ mod tests {
         context.switch_account_to_ft_contract_account();
         let top_up_amount = 700;
         context
-            .contract
+            .contract()
             .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(alice, U32(0));
+        let jar = context.contract().get_jar(alice, U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 
@@ -214,7 +214,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract.ft_on_transfer(alice, U128(100), msg.to_string());
+        context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
     }
 
     #[test]
@@ -243,10 +243,10 @@ mod tests {
 
         let top_up_amount = 1_000;
         context
-            .contract
+            .contract()
             .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
-        let jar = context.contract.get_jar(alice, U32(0));
+        let jar = context.contract().get_jar(alice, U32(0));
         assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
     }
 
@@ -286,14 +286,14 @@ mod tests {
 
         context.switch_account_to_ft_contract_account();
         context
-            .contract
+            .contract()
             .ft_on_transfer(admin, U128(amount_alice + amount_bob), msg.to_string());
 
-        let alice_jars = context.contract.get_jars_for_account(alice);
+        let alice_jars = context.contract().get_jars_for_account(alice);
         assert_eq!(alice_jars.len(), 1);
         assert_eq!(alice_jars.first().unwrap().principal.0, amount_alice);
 
-        let bob_jars = context.contract.get_jars_for_account(bob);
+        let bob_jars = context.contract().get_jars_for_account(bob);
         assert_eq!(bob_jars.len(), 1);
         assert_eq!(bob_jars.first().unwrap().principal.0, amount_bob);
     }
@@ -325,7 +325,7 @@ mod tests {
 
         context.switch_account_to_ft_contract_account();
         context
-            .contract
+            .contract()
             .ft_on_transfer(alice, U128(amount_alice), msg.to_string());
     }
 
@@ -339,7 +339,7 @@ mod tests {
 
         context.switch_account_to_ft_contract_account();
         context
-            .contract
+            .contract()
             .ft_on_transfer(alice, U128(300), "something".to_string());
     }
 
@@ -353,7 +353,7 @@ mod tests {
 
         context.switch_account(&alice);
         context
-            .contract
+            .contract()
             .ft_on_transfer(alice.clone(), U128(300), "something".to_string());
     }
 

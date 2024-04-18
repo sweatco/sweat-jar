@@ -10,7 +10,7 @@ use crate::{
 
 #[mutants::skip]
 pub(crate) async fn measure_register_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
-    let mut context = prepare_contract(None, []).await?;
+    let context = prepare_contract(None, []).await?;
 
     let manager = context.manager().await?;
 

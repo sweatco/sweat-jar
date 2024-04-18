@@ -84,7 +84,7 @@ mod test {
     #[should_panic(expected = r#"Can be performed only by admin"#)]
     fn self_update_without_access() {
         let admin = accounts(1);
-        let mut context = Context::new(admin);
-        context.contract.update_contract(vec![], None);
+        let context = Context::new(admin);
+        context.contract().update_contract(vec![], None);
     }
 }

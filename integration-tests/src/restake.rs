@@ -15,7 +15,7 @@ async fn restake() -> anyhow::Result<()> {
     let product_command = RegisterProductCommand::Locked10Minutes6Percents;
     let product_id = product_command.id();
 
-    let mut context = prepare_contract(None, [product_command]).await?;
+    let context = prepare_contract(None, [product_command]).await?;
 
     let alice = context.alice().await?;
 

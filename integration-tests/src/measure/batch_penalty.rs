@@ -69,7 +69,7 @@ async fn single_batch_penalty() -> Result<()> {
 async fn measure_batch_penalty(input: (RegisterProductCommand, usize)) -> Result<Gas> {
     let (product, jars_count) = input;
 
-    let mut context = prepare_contract(None, [product]).await?;
+    let context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
     let manager = context.manager().await?;

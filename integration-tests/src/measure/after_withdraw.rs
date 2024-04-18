@@ -59,7 +59,7 @@ async fn one_withdraw() -> anyhow::Result<()> {
 async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> Result<Gas> {
     let (product, anmount) = data;
 
-    let mut context = prepare_contract(None, [product]).await?;
+    let context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 

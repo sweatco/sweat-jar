@@ -35,15 +35,15 @@ fn disable_product_when_enabled() {
 
     let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
 
-    let mut product = context.contract.get_product(&reference_product.id);
+    let mut product = context.contract().get_product(&reference_product.id);
     assert!(product.is_enabled);
 
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| {
-        context.contract.set_enabled(reference_product.id.to_string(), false)
+        context.contract().set_enabled(reference_product.id.to_string(), false)
     });
 
-    product = context.contract.get_product(&reference_product.id);
+    product = context.contract().get_product(&reference_product.id);
     assert!(!product.is_enabled);
 }
 
@@ -55,12 +55,12 @@ fn enable_product_when_enabled() {
 
     let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
 
-    let product = context.contract.get_product(&reference_product.id);
+    let product = context.contract().get_product(&reference_product.id);
     assert!(product.is_enabled);
 
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| {
-        context.contract.set_enabled(reference_product.id.to_string(), true)
+        context.contract().set_enabled(reference_product.id.to_string(), true)
     });
 }
 
@@ -75,12 +75,12 @@ fn register_product_with_existing_id() {
 
     context.with_deposit_yocto(1, |context| {
         let first_command = get_register_product_command();
-        context.contract.register_product(first_command)
+        context.contract().register_product(first_command)
     });
 
     context.with_deposit_yocto(1, |context| {
         let second_command = get_register_product_command();
-        context.contract.register_product(second_command)
+        context.contract().register_product(second_command)
     });
 }
 
@@ -90,10 +90,10 @@ fn register_product(command: RegisterProductCommand) -> (Product, ProductView) {
     let mut context = Context::new(admin.clone());
 
     context.switch_account(&admin);
-    context.with_deposit_yocto(1, |context| context.contract.register_product(command));
+    context.with_deposit_yocto(1, |context| context.contract().register_product(command));
 
-    let product = context.contract.products.into_iter().last().unwrap().1.clone();
-    let view = context.contract.get_products().first().unwrap().clone();
+    let product = context.contract().products.into_iter().last().unwrap().1.clone();
+    let view = context.contract().get_products().first().unwrap().clone();
 
     (product, view)
 }
@@ -213,11 +213,11 @@ fn set_public_key() {
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| {
         context
-            .contract
+            .contract()
             .set_public_key(product.id.clone(), Base64VecU8(new_pk.clone()))
     });
 
-    let product = context.contract.products.get(&product.id).unwrap();
+    let product = context.contract().products.get(&product.id).unwrap();
     assert_eq!(&new_pk, product.public_key.as_ref().unwrap());
 }
 
@@ -236,7 +236,7 @@ fn set_public_key_by_not_admin() {
 
     context.switch_account(&alice);
     context.with_deposit_yocto(1, |context| {
-        context.contract.set_public_key(product.id, Base64VecU8(new_pk))
+        context.contract().set_public_key(product.id, Base64VecU8(new_pk))
     });
 }
 
@@ -254,7 +254,7 @@ fn set_public_key_without_deposit() {
 
     context.switch_account(&admin);
 
-    context.contract.set_public_key(product.id, Base64VecU8(new_pk));
+    context.contract().set_public_key(product.id, Base64VecU8(new_pk));
 }
 
 #[test]

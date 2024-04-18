@@ -280,7 +280,7 @@ impl Contract {
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
         self.account_jars
             .get_mut(account)
-            .unwrap_or_else(|| panic_str(&format!("Account '{account}' doesn't exist")))
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar_mut(id)
     }
 

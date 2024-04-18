@@ -49,7 +49,7 @@ pub(crate) async fn prepare_contract(
     custom_jar: Option<Vec<u8>>,
     products: impl IntoIterator<Item = RegisterProductCommand>,
 ) -> Result<Context> {
-    let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
+    let context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
 
     if let Some(custom_jar) = custom_jar {
         let contract = context
@@ -59,7 +59,7 @@ pub(crate) async fn prepare_contract(
             .deploy(&custom_jar)
             .await?
             .into_result()?;
-        context.contracts.insert(SWEAT_JAR, contract);
+        context.contract()s.insert(SWEAT_JAR, contract);
     }
 
     let alice = context.alice().await?;

@@ -50,9 +50,13 @@ fn interest_precision() {
 
 #[cfg(test)]
 mod signature_tests {
+
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
-        test_utils::accounts,
+        test_utils::{
+            accounts,
+            test_env::{alice, bob, carol},
+        },
     };
     use sweat_jar_model::{
         api::{JarApi, ProductApi},
@@ -66,6 +70,7 @@ mod signature_tests {
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
         },
+        test_utils::{admin, expect_panic},
         Jar,
     };
 
@@ -75,7 +80,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let reference_product = generate_premium_product("premium_product", &signer);
-        let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+        let context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
 
         let amount = 14_000_000;
         let ticket = JarTicket {
@@ -86,7 +91,7 @@ mod signature_tests {
         let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
 
         context
-            .contract
+            .contract()
             .verify(&admin, amount, &ticket, Some(Base64VecU8(signature)));
     }
 
@@ -98,7 +103,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let reference_product = generate_premium_product("premium_product", &signer);
-        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
+        let context = Context::new(admin).with_products(&[reference_product.clone()]);
 
         let amount = 1_000_000;
         let ticket = JarTicket {
@@ -109,7 +114,7 @@ mod signature_tests {
         let signature: Vec<u8> = vec![0, 1, 2];
 
         context
-            .contract
+            .contract()
             .verify(&alice, amount, &ticket, Some(Base64VecU8(signature)));
     }
 
@@ -122,7 +127,7 @@ mod signature_tests {
         let product = generate_premium_product("premium_product", &signer);
         let another_product = generate_premium_product("another_premium_product", &MessageSigner::new());
 
-        let mut context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
+        let context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
 
         let amount = 15_000_000;
         let ticket_for_another_product = JarTicket {
@@ -137,7 +142,7 @@ mod signature_tests {
                 .as_str(),
         );
 
-        context.contract.verify(
+        context.contract().verify(
             &admin,
             amount,
             &ticket_for_another_product,
@@ -166,7 +171,7 @@ mod signature_tests {
         let signature = signer.sign(context.get_signature_material(&alice, &ticket, amount).as_str());
 
         context
-            .contract
+            .contract()
             .verify(&alice, amount, &ticket, Some(Base64VecU8(signature)));
     }
 
@@ -191,7 +196,7 @@ mod signature_tests {
         let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
 
         context
-            .contract
+            .contract()
             .verify(&admin, amount, &ticket, Some(Base64VecU8(signature)));
     }
 
@@ -202,7 +207,7 @@ mod signature_tests {
 
         let signer = MessageSigner::new();
         let product = generate_premium_product("not_existing_product", &signer);
-        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 3_000_000;
         let ticket = JarTicket {
@@ -210,7 +215,7 @@ mod signature_tests {
             valid_until: U64(100000000),
         };
 
-        context.contract.verify(&admin, amount, &ticket, None);
+        context.contract().verify(&admin, amount, &ticket, None);
     }
 
     #[test]
@@ -218,7 +223,7 @@ mod signature_tests {
         let admin = accounts(0);
 
         let product = generate_product("regular_product");
-        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;
         let ticket = JarTicket {
@@ -226,23 +231,28 @@ mod signature_tests {
             valid_until: U64(0),
         };
 
-        context.contract.verify(&admin, amount, &ticket, None);
+        context.contract().verify(&admin, amount, &ticket, None);
     }
 
     #[test]
-    #[should_panic(expected = "Account 'bob' doesn't exist")]
     fn restake_by_not_owner() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
 
         let product = generate_product("restakable_product").with_allows_restaking(true);
         let alice_jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
-        let mut context = Context::new(admin.clone())
+        let mut ctx = Context::new(admin())
             .with_products(&[product])
             .with_jars(&[alice_jar.clone()]);
 
-        context.switch_account(&admin);
-        context.contract.restake(U32(alice_jar.id));
+        ctx.switch_account(bob());
+        expect_panic(&ctx, "Account 'bob.near' doesn't exist", |ctx| {
+            ctx.contract().restake(U32(alice_jar.id));
+        });
+
+        ctx.switch_account(carol());
+        expect_panic(&ctx, "Account 'carol.near' doesn't exist", |ctx| {
+            ctx.contract().restake(U32(alice_jar.id));
+        });
     }
 
     #[test]
@@ -256,7 +266,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.id));
+        context.contract().restake(U32(jar.id));
     }
 
     #[test]
@@ -270,7 +280,7 @@ mod signature_tests {
         let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.id));
+        context.contract().restake(U32(jar.id));
     }
 
     #[test]
@@ -286,12 +296,12 @@ mod signature_tests {
             .with_jars(&[jar.clone()]);
 
         context.switch_account(&admin);
-        context.with_deposit_yocto(1, |context| context.contract.set_enabled(product.id, false));
+        context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id, false));
 
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.id));
+        context.contract().restake(U32(jar.id));
     }
 
     #[test]
@@ -309,7 +319,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.id));
+        context.contract().restake(U32(jar.id));
     }
 
     #[test]
@@ -326,9 +336,9 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.id));
+        context.contract().restake(U32(jar.id));
 
-        let alice_jars = context.contract.get_jars_for_account(alice);
+        let alice_jars = context.contract().get_jars_for_account(alice);
 
         assert_eq!(2, alice_jars.len());
         assert_eq!(0, alice_jars.iter().find(|item| item.id.0 == 0).unwrap().principal.0);
@@ -353,7 +363,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(366);
 
         context.switch_account(&alice);
-        context.contract.restake(U32(jar.id));
+        context.contract().restake(U32(jar.id));
     }
 
     #[test]
@@ -363,13 +373,13 @@ mod signature_tests {
         let admin = accounts(1);
 
         let product = generate_product("restakable_product").enabled(false);
-        let mut context = Context::new(admin).with_products(&[product.clone()]);
+        let context = Context::new(admin).with_products(&[product.clone()]);
 
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
         };
-        context.contract.create_jar(alice, ticket, U128(1_000_000), None);
+        context.contract().create_jar(alice, ticket, U128(1_000_000), None);
     }
 
     fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {

@@ -14,7 +14,7 @@ use crate::{
 async fn product_actions() -> anyhow::Result<()> {
     println!("👷🏽 Run test for product actions");
 
-    let mut context = prepare_contract(None, [RegisterProductCommand::Locked12Months12Percents]).await?;
+    let context = prepare_contract(None, [RegisterProductCommand::Locked12Months12Percents]).await?;
 
     let alice = context.alice().await?;
     let manager = context.manager().await?;

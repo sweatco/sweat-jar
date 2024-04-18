@@ -22,8 +22,8 @@ fn claim_total_when_nothing_to_claim() {
     let jar = Jar::generate(0, &alice, &product.id).principal(100_000_000);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar]);
 
-    context.switch_account(&alice);
-    let result = context.contract.claim_total(None);
+    context.switch_account(alice);
+    let result = context.contract().claim_total(None);
 
     let PromiseOrValue::Value(value) = result else {
         panic!();
@@ -53,7 +53,7 @@ fn claim_total_detailed_when_having_tokens() {
     context.set_block_timestamp_in_ms(test_duration);
 
     context.switch_account(&alice);
-    let result = context.contract.claim_total(Some(true));
+    let result = context.contract().claim_total(Some(true));
 
     let PromiseOrValue::Value(ClaimedAmountView::Detailed(value)) = result else {
         panic!();
@@ -86,7 +86,7 @@ fn claim_partially_detailed_when_having_tokens() {
     context.set_block_timestamp_in_ms(test_duration);
 
     context.switch_account(&alice);
-    let result = context.contract.claim_jars(
+    let result = context.contract().claim_jars(
         vec![U32(jar_0.id), U32(jar_1.id)],
         Some(U128(jar_0_expected_interest + jar_1_expected_interest)),
         Some(true),
@@ -126,7 +126,7 @@ fn claim_pending_withdraw_jar() {
     context.set_block_timestamp_in_ms(test_duration);
 
     context.switch_account(&alice);
-    let result = context.contract.claim_jars(
+    let result = context.contract().claim_jars(
         vec![U32(jar_0.id), U32(jar_1.id)],
         Some(U128(jar_0_expected_interest.0 + jar_1_expected_interest)),
         Some(true),
@@ -162,7 +162,7 @@ fn claim_partially_detailed_when_having_tokens_and_request_sum_of_single_deposit
     context.set_block_timestamp_in_ms(test_duration);
 
     context.switch_account(&alice);
-    let result = context.contract.claim_jars(
+    let result = context.contract().claim_jars(
         vec![U32(jar_0.id), U32(jar_1.id)],
         Some(U128(jar_0_expected_interest)),
         Some(true),
@@ -190,13 +190,13 @@ fn claim_partially_when_having_tokens_to_claim() {
     context.set_block_timestamp_in_days(365);
 
     context.switch_account(&alice);
-    let PromiseOrValue::Value(claimed) = context.contract.claim_jars(vec![U32(jar.id)], Some(U128(100)), None) else {
+    let PromiseOrValue::Value(claimed) = context.contract().claim_jars(vec![U32(jar.id)], Some(U128(100)), None) else {
         panic!()
     };
 
     assert_eq!(claimed.get_total().0, 100);
 
-    let jar = context.contract.get_jar(alice, U32(jar.id));
+    let jar = context.contract().get_jar(alice, U32(jar.id));
     assert_eq!(100, jar.claimed_balance.0);
 }
 
@@ -213,10 +213,10 @@ fn dont_delete_jar_on_all_interest_claim() {
 
     context.switch_account(&alice);
     context
-        .contract
+        .contract()
         .claim_jars(vec![U32(jar.id)], Some(U128(200_000)), None);
 
-    let jar = context.contract.get_jar_internal(&alice, jar.id);
+    let jar = context.contract().get_jar_internal(&alice, jar.id);
     assert_eq!(200_000, jar.claimed_balance);
 
     let Some(ref cache) = jar.cache else { panic!() };
@@ -244,7 +244,7 @@ fn claim_all_withdraw_all_and_delete_jar() {
 
     context.switch_account(&alice);
     let PromiseOrValue::Value(claimed) = context
-        .contract
+        .contract()
         .claim_jars(vec![U32(jar_id)], Some(U128(200_000)), None)
     else {
         panic!()
@@ -252,7 +252,7 @@ fn claim_all_withdraw_all_and_delete_jar() {
 
     assert_eq!(200_000, claimed.get_total().0);
 
-    let jar = context.contract.get_jar_internal(&alice, jar_id);
+    let jar = context.contract().get_jar_internal(&alice, jar_id);
     assert_eq!(200_000, jar.claimed_balance);
 
     let Some(ref cache) = jar.cache else { panic!() };
@@ -260,14 +260,14 @@ fn claim_all_withdraw_all_and_delete_jar() {
     assert_eq!(cache.interest, 0);
     assert_eq!(jar.principal, 1_000_000);
 
-    let PromiseOrValue::Value(withdrawn) = context.contract.withdraw(U32(jar_id), None) else {
+    let PromiseOrValue::Value(withdrawn) = context.contract().withdraw(U32(jar_id), None) else {
         panic!()
     };
 
     assert_eq!(withdrawn.withdrawn_amount, U128(1_000_000));
     assert_eq!(withdrawn.fee, U128(0));
 
-    let _jar = context.contract.get_jar_internal(&alice, jar_id);
+    let _jar = context.contract().get_jar_internal(&alice, jar_id);
 }
 
 #[test]
@@ -289,19 +289,19 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     context.switch_account(&alice);
 
-    let PromiseOrValue::Value(withdrawn) = context.contract.withdraw(U32(jar_id), None) else {
+    let PromiseOrValue::Value(withdrawn) = context.contract().withdraw(U32(jar_id), None) else {
         panic!()
     };
 
     assert_eq!(withdrawn.withdrawn_amount, U128(1_000_000));
     assert_eq!(withdrawn.fee, U128(0));
 
-    let jar = context.contract.get_jar_internal(&alice, jar_id);
+    let jar = context.contract().get_jar_internal(&alice, jar_id);
 
     assert_eq!(jar.principal, 0);
 
     let PromiseOrValue::Value(claimed) = context
-        .contract
+        .contract()
         .claim_jars(vec![U32(jar_id)], Some(U128(200_000)), None)
     else {
         panic!();
@@ -309,7 +309,7 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     assert_eq!(claimed.get_total(), U128(200_000));
 
-    let _jar = context.contract.get_jar_internal(&alice, jar_id);
+    let _jar = context.contract().get_jar_internal(&alice, jar_id);
 }
 
 #[test]
@@ -327,10 +327,10 @@ fn failed_future_claim() {
 
     context.switch_account(&alice);
 
-    let jar_before_claim = context.contract.get_jar_internal(&alice, jar.id).clone();
+    let jar_before_claim = context.contract().get_jar_internal(&alice, jar.id).clone();
 
     let PromiseOrValue::Value(claimed) = context
-        .contract
+        .contract()
         .claim_jars(vec![U32(jar.id)], Some(U128(200_000)), None)
     else {
         panic!()
@@ -338,7 +338,7 @@ fn failed_future_claim() {
 
     assert_eq!(claimed.get_total().0, 0);
 
-    let jar_after_claim = context.contract.get_jar_internal(&alice, jar.id);
+    let jar_after_claim = context.contract().get_jar_internal(&alice, jar.id);
 
     assert_eq!(jar_before_claim, jar_after_claim);
 }

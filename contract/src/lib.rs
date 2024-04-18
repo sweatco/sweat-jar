@@ -23,6 +23,7 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
+mod test_utils;
 mod tests;
 mod withdraw;
 
