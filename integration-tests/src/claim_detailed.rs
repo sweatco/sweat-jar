@@ -14,7 +14,7 @@ use crate::{
 async fn claim_detailed() -> anyhow::Result<()> {
     println!("👷🏽 Run detailed claim test");
 
-    let context = prepare_contract(
+    let mut context = prepare_contract(
         None,
         [
             RegisterProductCommand::Locked12Months12Percents,

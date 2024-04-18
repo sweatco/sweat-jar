@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use std::collections::HashMap;
 
 use anyhow::Result;
@@ -79,7 +77,7 @@ async fn one_stake() -> anyhow::Result<()> {
 pub(crate) async fn measure_stake(input: (RegisterProductCommand, usize)) -> anyhow::Result<Gas> {
     let (product, jars_count) = input;
 
-    let context = prepare_contract(None, [product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 

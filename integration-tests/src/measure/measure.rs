@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use std::future::Future;
 
 use futures::future::join_all;

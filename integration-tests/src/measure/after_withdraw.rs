@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use anyhow::Result;
 use itertools::Itertools;
 use near_workspaces::types::Gas;
@@ -59,7 +57,7 @@ async fn one_withdraw() -> anyhow::Result<()> {
 async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> Result<Gas> {
     let (product, anmount) = data;
 
-    let context = prepare_contract(None, [product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 

@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use std::collections::HashMap;
 
 use anyhow::Result;
@@ -72,7 +70,7 @@ async fn single_top_up() -> Result<()> {
 async fn measure_top_up(input: (RegisterProductCommand, usize)) -> Result<Gas> {
     let (product, jars_count) = input;
 
-    let context = prepare_contract(None, [product]).await?;
+    let mut context = prepare_contract(None, [product]).await?;
 
     let alice = context.alice().await?;
 

@@ -13,7 +13,7 @@ use crate::{
 async fn happy_flow() -> anyhow::Result<()> {
     println!("👷🏽 Run happy flow test");
 
-    let context = prepare_contract(
+    let mut context = prepare_contract(
         None,
         [
             RegisterProductCommand::Locked12Months12Percents,

@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use near_workspaces::types::Gas;
 use sweat_jar_model::api::ProductApiIntegration;
 
@@ -10,7 +8,7 @@ use crate::{
 
 #[mutants::skip]
 pub(crate) async fn measure_register_product(command: RegisterProductCommand) -> anyhow::Result<Gas> {
-    let context = prepare_contract(None, []).await?;
+    let mut context = prepare_contract(None, []).await?;
 
     let manager = context.manager().await?;
 
