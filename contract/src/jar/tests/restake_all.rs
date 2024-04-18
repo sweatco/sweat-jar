@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use fake::Fake;
 use near_sdk::test_utils::test_env::alice;
 use sweat_jar_model::{api::JarApi, MS_IN_YEAR};
@@ -7,11 +5,8 @@ use sweat_jar_model::{api::JarApi, MS_IN_YEAR};
 use crate::{
     common::tests::Context,
     jar::model::Jar,
-    test_utils::{admin, generate_product},
+    test_utils::{admin, generate_product, JAR_ID_RANGE, PRINCIPAL},
 };
-
-const PRINCIPAL: u128 = 1_000_000;
-const JAR_ID_RANGE: Range<u32> = 0..100_000_000;
 
 #[test]
 fn restake_all() {

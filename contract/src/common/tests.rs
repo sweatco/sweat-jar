@@ -48,7 +48,7 @@ impl Context {
         self.contract.lock().unwrap()
     }
 
-    pub(crate) fn before_catch_unwind(&self) {
+    pub(crate) fn after_catch_unwind(&self) {
         self.contract.clear_poison();
     }
 

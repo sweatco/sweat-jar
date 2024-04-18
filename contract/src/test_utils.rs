@@ -1,8 +1,11 @@
 #![cfg(test)]
 
-use std::panic::{catch_unwind, UnwindSafe};
+use std::{
+    ops::Range,
+    panic::{catch_unwind, UnwindSafe},
+};
 
-use near_sdk::AccountId;
+use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::TokenAmount;
 
 use crate::{
@@ -13,6 +16,9 @@ use crate::{
         model::{Apy, DowngradableApy, Product},
     },
 };
+
+pub const PRINCIPAL: u128 = 1_000_000;
+pub const JAR_ID_RANGE: Range<u32> = 0..100_000_000;
 
 pub fn admin() -> AccountId {
     "admin".parse().unwrap()
@@ -69,12 +75,12 @@ pub fn generate_product(id: &str) -> Product {
         .apy(Apy::Constant(UDecimal::new(20, 2)))
 }
 
-pub fn expect_panic(ctx: &Context, msg: &str, action: impl FnOnce(&Context) + UnwindSafe) {
-    ctx.before_catch_unwind();
+pub fn expect_panic(ctx: &Context, msg: &str, action: impl FnOnce() + UnwindSafe) {
+    let res = catch_unwind(move || action());
 
-    let res = catch_unwind(move || action(ctx));
-
-    let panic_msg = res.unwrap_err();
+    let panic_msg = res.err().expect(&format!(
+        "Contract didn't panic when expected to.\nExpected message: {msg}"
+    ));
 
     let panic_msg = panic_msg
         .downcast_ref::<String>()
@@ -84,4 +90,19 @@ pub fn expect_panic(ctx: &Context, msg: &str, action: impl FnOnce(&Context) + Un
         panic_msg.contains(msg),
         "Expected panic message to contain: {msg}.\nPanic message: {panic_msg}"
     );
+
+    ctx.after_catch_unwind();
+}
+
+pub trait UnwrapPromise<T> {
+    fn unwrap(self) -> T;
+}
+
+impl<T> UnwrapPromise<T> for PromiseOrValue<T> {
+    fn unwrap(self) -> T {
+        let PromiseOrValue::Value(t) = self else {
+            panic!("Failed to unwrap PromiseOrValue")
+        };
+        t
+    }
 }

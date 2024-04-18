@@ -21,20 +21,20 @@ fn restake_by_not_owner() {
         .with_jars(&[alice_jar.clone()]);
 
     ctx.switch_account(bob());
-    expect_panic(&ctx, "Account 'bob.near' doesn't exist", |ctx| {
+    expect_panic(&ctx, "Account 'bob.near' doesn't exist", || {
         ctx.contract().restake(U32(alice_jar.id));
     });
 
-    expect_panic(&ctx, "Jars for account bob.near don't exist", |ctx| {
+    expect_panic(&ctx, "Jars for account bob.near don't exist", || {
         ctx.contract().restake_all();
     });
 
     ctx.switch_account(carol());
-    expect_panic(&ctx, "Account 'carol.near' doesn't exist", |ctx| {
+    expect_panic(&ctx, "Account 'carol.near' doesn't exist", || {
         ctx.contract().restake(U32(alice_jar.id));
     });
 
-    expect_panic(&ctx, "Jars for account carol.near don't exist", |ctx| {
+    expect_panic(&ctx, "Jars for account carol.near don't exist", || {
         ctx.contract().restake_all();
     });
 }

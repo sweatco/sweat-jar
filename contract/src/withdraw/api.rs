@@ -92,7 +92,7 @@ impl WithdrawApi for Contract {
             .account_jars
             .get(&account_id)
             .unwrap_or_else(|| {
-                panic_str(&format!("Jars for account {account_id} don't exist"));
+                panic_str(&format!("Jars for account '{account_id}' don't exist"));
             })
             .jars
             .clone()

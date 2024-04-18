@@ -11,7 +11,7 @@ use crate::{
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal},
     jar::model::Jar,
     product::model::{Apy, Product},
-    test_utils::admin,
+    test_utils::{admin, UnwrapPromise},
 };
 
 #[test]
@@ -24,11 +24,7 @@ fn claim_total_when_nothing_to_claim() {
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar]);
 
     context.switch_account(alice);
-    let result = context.contract().claim_total(None);
-
-    let PromiseOrValue::Value(value) = result else {
-        panic!();
-    };
+    let value = context.contract().claim_total(None).unwrap();
 
     assert_eq!(0, value.get_total().0);
 }
@@ -244,12 +240,10 @@ fn claim_all_withdraw_all_and_delete_jar() {
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
     context.switch_account(&alice);
-    let PromiseOrValue::Value(claimed) = context
+    let claimed = context
         .contract()
         .claim_jars(vec![U32(jar_id)], Some(U128(200_000)), None)
-    else {
-        panic!()
-    };
+        .unwrap();
 
     assert_eq!(200_000, claimed.get_total().0);
 
@@ -301,12 +295,10 @@ fn withdraw_all_claim_all_and_delete_jar() {
 
     assert_eq!(jar.principal, 0);
 
-    let PromiseOrValue::Value(claimed) = context
+    let claimed = context
         .contract()
         .claim_jars(vec![U32(jar_id)], Some(U128(200_000)), None)
-    else {
-        panic!();
-    };
+        .unwrap();
 
     assert_eq!(claimed.get_total(), U128(200_000));
 
