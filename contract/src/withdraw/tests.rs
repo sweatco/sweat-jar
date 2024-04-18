@@ -317,17 +317,17 @@ fn withdraw_all() {
         .enabled(true)
         .lockup_term(MS_IN_YEAR * 2);
 
-    let mature_jar_1 = Jar::generate(0, &alice, &product.id).principal(PRINCIPAL + 1);
-    let mature_jar_2 = Jar::generate(1, &alice, &product.id).principal(PRINCIPAL + 2);
+    let mature_unclaimed_jar = Jar::generate(0, &alice, &product.id).principal(PRINCIPAL + 1);
+    let mature_claimed_jar = Jar::generate(1, &alice, &product.id).principal(PRINCIPAL + 2);
 
-    let immature_jar = Jar::generate(1, &alice, &long_term_product.id).principal(PRINCIPAL + 3);
-    let locked_jar = Jar::generate(1, &alice, &product.id).principal(PRINCIPAL + 4).locked();
+    let immature_jar = Jar::generate(2, &alice, &long_term_product.id).principal(PRINCIPAL + 3);
+    let locked_jar = Jar::generate(3, &alice, &product.id).principal(PRINCIPAL + 4).locked();
 
     let mut context = Context::new(admin)
         .with_products(&[product, long_term_product])
         .with_jars(&[
-            mature_jar_1.clone(),
-            mature_jar_2.clone(),
+            mature_unclaimed_jar.clone(),
+            mature_claimed_jar.clone(),
             immature_jar.clone(),
             locked_jar.clone(),
         ]);
@@ -336,18 +336,27 @@ fn withdraw_all() {
 
     context.switch_account(&alice);
 
+    context
+        .contract()
+        .claim_jars(vec![mature_claimed_jar.id.into()], None, None);
+
     let withdrawn_jars = context.contract().withdraw_all().unwrap();
 
     assert_eq!(
         withdrawn_jars.iter().map(|j| j.withdrawn_amount.0).collect::<Vec<_>>(),
-        vec![mature_jar_1.principal, mature_jar_2.principal]
+        vec![mature_unclaimed_jar.principal, mature_claimed_jar.principal]
     );
 
     let all_jars = context.contract().get_jars_for_account(alice);
 
     assert_eq!(
         all_jars.iter().map(|j| j.principal.0).collect::<Vec<_>>(),
-        vec![0, 0, immature_jar.principal, locked_jar.principal]
+        vec![0, locked_jar.principal, immature_jar.principal]
+    );
+
+    assert_eq!(
+        all_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
+        vec![mature_unclaimed_jar.id, locked_jar.id, immature_jar.id,]
     );
 }
 

@@ -8,7 +8,6 @@ use near_sdk::{
     json_types::U128,
     serde_json::{from_str, to_string},
     test_utils::test_env::{alice, bob},
-    PromiseOrValue,
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
@@ -21,7 +20,7 @@ use super::*;
 use crate::{
     common::{test_data::set_test_log_events, udecimal::UDecimal},
     product::{helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
-    test_utils::admin,
+    test_utils::{admin, UnwrapPromise},
 };
 
 #[test]
@@ -428,11 +427,7 @@ fn claim_often_vs_claim_once() {
 
         for day in 0..days {
             context.set_block_timestamp_in_days(day);
-
-            let PromiseOrValue::Value(claimed) = context.contract().claim_total(None) else {
-                panic!()
-            };
-
+            let claimed = context.contract().claim_total(None).unwrap();
             bobs_claimed += claimed.get_total().0;
         }
 
