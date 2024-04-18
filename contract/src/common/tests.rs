@@ -2,7 +2,6 @@
 
 use std::{
     borrow::Borrow,
-    panic::UnwindSafe,
     sync::{Arc, Mutex, MutexGuard},
     time::Duration,
 };
@@ -13,15 +12,12 @@ use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 
 use crate::{jar::model::Jar, product::model::Product, Contract};
 
-#[derive(Clone)]
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
     pub owner: AccountId,
     ft_contract_id: AccountId,
     builder: VMContextBuilder,
 }
-
-impl UnwindSafe for Context {}
 
 impl Context {
     pub(crate) fn new(manager: AccountId) -> Self {
