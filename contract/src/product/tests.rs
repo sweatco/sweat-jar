@@ -2,7 +2,7 @@
 
 use near_sdk::{
     json_types::{Base64VecU8, U128, U64},
-    test_utils::accounts,
+    test_utils::test_env::alice,
 };
 use sweat_jar_model::{
     api::ProductApi,
@@ -19,6 +19,7 @@ use crate::{
         helpers::MessageSigner,
         model::{Apy, DowngradableApy, Product, Terms, WithdrawalFee},
     },
+    test_utils::admin,
 };
 
 pub(crate) fn get_register_product_command() -> RegisterProductCommand {
@@ -30,7 +31,7 @@ pub(crate) fn get_register_product_command() -> RegisterProductCommand {
 
 #[test]
 fn disable_product_when_enabled() {
-    let admin = accounts(0);
+    let admin = admin();
     let reference_product = &Product::generate("product").enabled(true);
 
     let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
@@ -50,7 +51,7 @@ fn disable_product_when_enabled() {
 #[test]
 #[should_panic(expected = "Status matches")]
 fn enable_product_when_enabled() {
-    let admin = accounts(0);
+    let admin = admin();
     let reference_product = &Product::generate("product").enabled(true);
 
     let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
@@ -67,7 +68,7 @@ fn enable_product_when_enabled() {
 #[test]
 #[should_panic(expected = "Product already exists")]
 fn register_product_with_existing_id() {
-    let admin = accounts(1);
+    let admin = admin();
 
     let mut context = Context::new(admin.clone());
 
@@ -85,7 +86,7 @@ fn register_product_with_existing_id() {
 }
 
 fn register_product(command: RegisterProductCommand) -> (Product, ProductView) {
-    let admin = accounts(1);
+    let admin = admin();
 
     let mut context = Context::new(admin.clone());
 
@@ -201,7 +202,7 @@ fn register_product_with_flexible_terms() {
 
 #[test]
 fn set_public_key() {
-    let admin = accounts(1);
+    let admin = admin();
 
     let signer = MessageSigner::new();
     let product = generate_product().public_key(signer.public_key());
@@ -224,8 +225,8 @@ fn set_public_key() {
 #[test]
 #[should_panic(expected = "Can be performed only by admin")]
 fn set_public_key_by_not_admin() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let signer = MessageSigner::new();
     let product = generate_product().public_key(signer.public_key());
@@ -243,7 +244,7 @@ fn set_public_key_by_not_admin() {
 #[test]
 #[should_panic(expected = "Requires attached deposit of exactly 1 yoctoNEAR")]
 fn set_public_key_without_deposit() {
-    let admin = accounts(1);
+    let admin = admin();
 
     let signer = MessageSigner::new();
     let product = generate_product().public_key(signer.public_key());

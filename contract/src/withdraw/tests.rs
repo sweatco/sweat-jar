@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use near_sdk::{json_types::U128, test_utils::accounts, AccountId, PromiseOrValue};
+use near_sdk::{json_types::U128, test_utils::test_env::alice, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     MS_IN_YEAR, U32,
@@ -10,11 +10,12 @@ use crate::{
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, Timestamp},
     jar::model::Jar,
     product::model::{Apy, Product, WithdrawalFee},
+    test_utils::admin,
 };
 
 fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
     let context = Context::new(admin)
@@ -25,8 +26,8 @@ fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
 }
 
 fn prepare_jar_created_at(product: &Product, created_at: Timestamp) -> (AccountId, Jar, Context) {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let jar = Jar::generate(0, &alice, &product.id)
         .created_at(created_at)
@@ -274,12 +275,12 @@ fn withdraw_from_locked_jar() {
     let product = Product::generate("product")
         .apy(Apy::Constant(UDecimal::new(1, 0)))
         .lockup_term(MS_IN_YEAR);
-    let mut jar = Jar::generate(0, &accounts(0), &product.id).principal(MS_IN_YEAR as u128);
+    let mut jar = Jar::generate(0, &alice(), &product.id).principal(MS_IN_YEAR as u128);
 
     jar.lock();
 
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let mut context = Context::new(admin).with_products(&[product.clone()]).with_jars(&[jar]);
 

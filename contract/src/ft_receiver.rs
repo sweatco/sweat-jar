@@ -69,7 +69,11 @@ mod tests {
     use std::panic::catch_unwind;
 
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-    use near_sdk::{json_types::U128, serde_json::json, test_utils::accounts};
+    use near_sdk::{
+        json_types::U128,
+        serde_json::json,
+        test_utils::test_env::{alice, bob},
+    };
     use sweat_jar_model::{api::JarApi, U32};
 
     use crate::{
@@ -79,13 +83,14 @@ mod tests {
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
         },
+        test_utils::admin,
         Contract,
     };
 
     #[test]
     fn transfer_with_create_jar_message() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let reference_product = Product::generate("test_product").enabled(true);
         let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
@@ -111,8 +116,8 @@ mod tests {
 
     #[test]
     fn transfer_with_duplicate_create_jar_message() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let (signer, reference_product) = generate_premium_product_context();
 
@@ -161,8 +166,8 @@ mod tests {
 
     #[test]
     fn transfer_with_top_up_message_for_refillable_product() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let reference_product = Product::generate("refillable_product")
             .enabled(true)
@@ -194,8 +199,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "The product doesn't allow top-ups")]
     fn transfer_with_top_up_message_for_not_refillable_product() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let reference_product = Product::generate("not_refillable_product")
             .enabled(true)
@@ -219,8 +224,8 @@ mod tests {
 
     #[test]
     fn transfer_with_top_up_message_for_flexible_product() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let reference_product = Product::generate("flexible_product")
             .enabled(true)
@@ -252,9 +257,9 @@ mod tests {
 
     #[test]
     fn transfer_with_migration_message() {
-        let alice = accounts(0);
-        let bob = accounts(1);
-        let admin = accounts(2);
+        let alice = alice();
+        let bob = bob();
+        let admin = admin();
 
         let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
         let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
@@ -301,8 +306,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "Migration can be performed only by admin")]
     fn transfer_with_migration_message_by_not_admin() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
         let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
@@ -332,8 +337,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "Unable to deserialize msg")]
     fn transfer_with_unknown_message() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let mut context = Context::new(admin);
 
@@ -346,8 +351,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "Can receive tokens only from token")]
     fn transfer_by_not_token_account() {
-        let alice = accounts(0);
-        let admin = accounts(1);
+        let alice = alice();
+        let admin = admin();
 
         let mut context = Context::new(admin);
 

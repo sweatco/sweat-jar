@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use near_sdk::{json_types::U128, test_utils::accounts, PromiseOrValue};
+use near_sdk::{json_types::U128, test_utils::test_env::alice, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     claimed_amount_view::ClaimedAmountView,
@@ -11,12 +11,13 @@ use crate::{
     common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal},
     jar::model::Jar,
     product::model::{Apy, Product},
+    test_utils::admin,
 };
 
 #[test]
 fn claim_total_when_nothing_to_claim() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product();
     let jar = Jar::generate(0, &alice, &product.id).principal(100_000_000);
@@ -34,8 +35,8 @@ fn claim_total_when_nothing_to_claim() {
 
 #[test]
 fn claim_total_detailed_when_having_tokens() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product();
     let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
@@ -67,8 +68,8 @@ fn claim_total_detailed_when_having_tokens() {
 
 #[test]
 fn claim_partially_detailed_when_having_tokens() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product();
     let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
@@ -104,8 +105,8 @@ fn claim_partially_detailed_when_having_tokens() {
 
 #[test]
 fn claim_pending_withdraw_jar() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product();
     let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
@@ -144,8 +145,8 @@ fn claim_pending_withdraw_jar() {
 
 #[test]
 fn claim_partially_detailed_when_having_tokens_and_request_sum_of_single_deposit() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product();
     let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
@@ -180,8 +181,8 @@ fn claim_partially_detailed_when_having_tokens_and_request_sum_of_single_deposit
 
 #[test]
 fn claim_partially_when_having_tokens_to_claim() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product();
     let jar = Jar::generate(0, &alice, &product.id).principal(100_000_000_000);
@@ -202,8 +203,8 @@ fn claim_partially_when_having_tokens_to_claim() {
 
 #[test]
 fn dont_delete_jar_on_all_interest_claim() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
     let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
@@ -228,8 +229,8 @@ fn dont_delete_jar_on_all_interest_claim() {
 #[test]
 #[should_panic(expected = "Jar with id: 0 doesn't exist")]
 fn claim_all_withdraw_all_and_delete_jar() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
     let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
@@ -273,8 +274,8 @@ fn claim_all_withdraw_all_and_delete_jar() {
 #[test]
 #[should_panic(expected = "Jar with id: 0 doesn't exist")]
 fn withdraw_all_claim_all_and_delete_jar() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
     let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
@@ -316,8 +317,8 @@ fn withdraw_all_claim_all_and_delete_jar() {
 fn failed_future_claim() {
     set_test_future_success(false);
 
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
     let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);

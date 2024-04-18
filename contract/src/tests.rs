@@ -7,10 +7,7 @@ use fake::Fake;
 use near_sdk::{
     json_types::U128,
     serde_json::{from_str, to_string},
-    test_utils::{
-        accounts,
-        test_env::{alice, bob},
-    },
+    test_utils::test_env::{alice, bob},
     PromiseOrValue,
 };
 use sweat_jar_model::{
@@ -29,7 +26,7 @@ use crate::{
 
 #[test]
 fn add_product_to_list_by_admin() {
-    let admin = accounts(0);
+    let admin = admin();
     let mut context = Context::new(admin.clone());
 
     context.switch_account(&admin);
@@ -45,7 +42,7 @@ fn add_product_to_list_by_admin() {
 #[test]
 #[should_panic(expected = "Can be performed only by admin")]
 fn add_product_to_list_by_not_admin() {
-    let admin = accounts(0);
+    let admin = admin();
     let mut context = Context::new(admin);
 
     context.with_deposit_yocto(1, |context| {
@@ -55,8 +52,8 @@ fn add_product_to_list_by_not_admin() {
 
 #[test]
 fn get_principle_with_no_jars() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
     let context = Context::new(admin);
 
     let principal = context.contract().get_total_principal(alice);
@@ -65,8 +62,8 @@ fn get_principle_with_no_jars() {
 
 #[test]
 fn get_principal_with_single_jar() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let reference_product = generate_product();
     let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
@@ -80,8 +77,8 @@ fn get_principal_with_single_jar() {
 
 #[test]
 fn get_principal_with_multiple_jars() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let reference_product = generate_product();
     let jars = &[
@@ -98,8 +95,8 @@ fn get_principal_with_multiple_jars() {
 
 #[test]
 fn get_total_interest_with_no_jars() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let context = Context::new(admin);
 
@@ -111,8 +108,8 @@ fn get_total_interest_with_no_jars() {
 
 #[test]
 fn get_total_interest_with_single_jar_after_30_minutes() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let reference_product = generate_product();
 
@@ -135,8 +132,8 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
 
 #[test]
 fn get_total_interest_with_single_jar_on_maturity() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let reference_product = generate_product();
 
@@ -164,8 +161,8 @@ fn get_total_interest_with_single_jar_on_maturity() {
 
 #[test]
 fn get_total_interest_with_single_jar_after_maturity() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let reference_product = generate_product();
 
@@ -186,8 +183,8 @@ fn get_total_interest_with_single_jar_after_maturity() {
 
 #[test]
 fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let reference_product = generate_product();
 
@@ -217,8 +214,8 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
 #[test]
 #[should_panic(expected = "Penalty is not applicable for constant APY")]
 fn penalty_is_not_applicable_for_constant_apy() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let signer = MessageSigner::new();
     let reference_product = Product::generate("premium_product")
@@ -237,8 +234,8 @@ fn penalty_is_not_applicable_for_constant_apy() {
 
 #[test]
 fn get_total_interest_for_premium_with_penalty_after_half_term() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let signer = MessageSigner::new();
     let reference_product = Product::generate("premium_product")
@@ -270,8 +267,8 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
 
 #[test]
 fn get_total_interest_for_premium_with_multiple_penalties_applied() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let signer = MessageSigner::new();
     let reference_product = Product::generate("lux_product")
@@ -375,8 +372,8 @@ fn apply_penalty_in_batch() {
 
 #[test]
 fn get_interest_after_withdraw() {
-    let alice = accounts(0);
-    let admin = accounts(1);
+    let alice = alice();
+    let admin = admin();
 
     let product = generate_product();
     let jar = Jar::generate(0, &alice, &product.id).principal(100_000_000);
