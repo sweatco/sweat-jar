@@ -18,7 +18,7 @@ pub struct WithdrawView {
     pub fee: U128,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 #[near(serializers=[borsh, json])]
 pub struct BulkWithdrawView {
     pub total_amount: U128,
