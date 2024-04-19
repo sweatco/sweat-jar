@@ -1,5 +1,4 @@
 use anyhow::Result;
-use itertools::Itertools;
 use near_workspaces::types::Gas;
 use sweat_jar_model::{api::WithdrawApiIntegration, U32};
 
@@ -26,9 +25,7 @@ async fn measure_withdraw_test() -> Result<()> {
     )
     .await?;
 
-    dbg!(&result);
-
-    let all_gas = result.into_iter().map(|res| res.1).collect_vec();
+    let all_gas: Vec<_> = result.into_iter().map(|res| res.1).collect();
 
     dbg!(&all_gas);
 

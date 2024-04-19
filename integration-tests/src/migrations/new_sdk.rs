@@ -78,8 +78,6 @@ async fn migrate_to_near_sdk_5() -> Result<()> {
 
     assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 900_000);
 
-    dbg!(ft_contract.ft_balance_of(bob.to_near()).await?);
-
     drop(old_jar_contract);
 
     let new_jar_contract = jar_account.deploy(&jar_new_code).await?.into_result()?;

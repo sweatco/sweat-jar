@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 
-use itertools::Itertools;
 use near_workspaces::types::Gas;
 use sweat_jar_model::api::ClaimApiIntegration;
 
@@ -24,21 +23,17 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
                 RegisterProductCommand::Locked6Months6Percents,
                 RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee,
             ],
-            &(1..5).collect_vec(),
+            &(1..5).collect::<Vec<_>>(),
         ),
         measure_after_claim_total,
     )
     .await?;
-
-    dbg!(&measured);
 
     let mut map: HashMap<RegisterProductCommand, Vec<Gas>> = HashMap::new();
 
     for measure in measured {
         map.entry(measure.0 .0).or_default().push(measure.1);
     }
-
-    dbg!(&map);
 
     let map: HashMap<RegisterProductCommand, _> = map
         .into_iter()

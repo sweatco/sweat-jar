@@ -10,7 +10,7 @@ use near_contract_standards::fungible_token::Balance;
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
 use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
 
-use crate::{jar::model::Jar, product::model::Product, Contract};
+use crate::{jar::model::Jar, product::model::Product, test_utils::AfterCatchUnwind, Contract};
 
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
@@ -46,10 +46,6 @@ impl Context {
 
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {
         self.contract.lock().unwrap()
-    }
-
-    pub(crate) fn after_catch_unwind(&self) {
-        self.contract.clear_poison();
     }
 
     pub(crate) fn with_products(self, products: &[Product]) -> Self {
@@ -112,5 +108,11 @@ impl Context {
     fn set_deposit_yocto(&mut self, amount: Balance) {
         self.builder.attached_deposit(NearToken::from_yoctonear(amount));
         testing_env!(self.builder.build());
+    }
+}
+
+impl AfterCatchUnwind for Context {
+    fn after_catch_unwind(&self) {
+        self.contract.clear_poison();
     }
 }

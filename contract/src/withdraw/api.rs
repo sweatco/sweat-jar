@@ -175,10 +175,10 @@ impl Contract {
                 jar.principal += withdraw.amount;
                 jar.unlock();
             }
-            return vec![];
+            return BulkWithdrawView::default();
         }
 
-        let mut withdrawal_result = vec![];
+        let mut withdrawal_result = BulkWithdrawView::default();
 
         for withdraw in jars {
             if withdraw.should_be_closed {
@@ -195,7 +195,8 @@ impl Contract {
                 fee_amount: jar_result.fee,
             }));
 
-            withdrawal_result.push(jar_result);
+            withdrawal_result.total_amount.0 += jar_result.withdrawn_amount.0;
+            withdrawal_result.jars.push(jar_result);
         }
 
         withdrawal_result
@@ -235,7 +236,7 @@ impl Contract {
         let fee = Self::get_fee(&product, jar);
 
         self.ft_contract()
-            .transfer(account_id, amount, "withdraw", &self.make_fee(fee))
+            .ft_transfer(account_id, amount, "withdraw", &self.make_fee(fee))
             .then(Self::after_withdraw_call(
                 account_id.clone(),
                 jar.id,
@@ -266,7 +267,7 @@ impl Contract {
         };
 
         self.ft_contract()
-            .transfer(account_id, total_amount, "bulk_withdraw", &total_fee)
+            .ft_transfer(account_id, total_amount, "bulk_withdraw", &total_fee)
             .then(Self::after_bulk_withdraw_call(account_id.clone(), jars))
             .into()
     }
@@ -351,6 +352,7 @@ impl WithdrawCallbacks for Contract {
         )
     }
 
+    #[private]
     fn after_bulk_withdraw(&mut self, account_id: AccountId, jars: Vec<JarWithdraw>) -> BulkWithdrawView {
         self.after_bulk_withdraw_internal(account_id, jars, is_promise_success())
     }

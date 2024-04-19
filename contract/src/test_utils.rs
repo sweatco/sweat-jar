@@ -9,7 +9,7 @@ use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::TokenAmount;
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal, Timestamp},
+    common::{udecimal::UDecimal, Timestamp},
     jar::model::{Jar, JarV1},
     product::{
         helpers::MessageSigner,
@@ -75,7 +75,11 @@ pub fn generate_product(id: &str) -> Product {
         .apy(Apy::Constant(UDecimal::new(20, 2)))
 }
 
-pub fn expect_panic(ctx: &Context, msg: &str, action: impl FnOnce() + UnwindSafe) {
+pub trait AfterCatchUnwind {
+    fn after_catch_unwind(&self);
+}
+
+pub fn expect_panic(ctx: &impl AfterCatchUnwind, msg: &str, action: impl FnOnce() + UnwindSafe) {
     let res = catch_unwind(move || action());
 
     let panic_msg = res.err().expect(&format!(
@@ -84,7 +88,7 @@ pub fn expect_panic(ctx: &Context, msg: &str, action: impl FnOnce() + UnwindSafe
 
     let panic_msg = panic_msg
         .downcast_ref::<String>()
-        .expect(&format!("Contract didn't panic. Expected {msg}"));
+        .expect(&format!("Contract didn't panic with String.\nExpected message: {msg}"));
 
     assert!(
         panic_msg.contains(msg),
@@ -105,4 +109,19 @@ impl<T> UnwrapPromise<T> for PromiseOrValue<T> {
         };
         t
     }
+}
+
+#[test]
+#[should_panic(expected = "Contract didn't panic when expected to.\nExpected message: Something went wrong")]
+fn test_expect_panic() {
+    struct Ctx;
+    impl AfterCatchUnwind for Ctx {
+        fn after_catch_unwind(&self) {}
+    }
+
+    expect_panic(&Ctx, "Something went wrong", || {
+        panic!("{}", "Something went wrong");
+    });
+
+    expect_panic(&Ctx, "Something went wrong", || {});
 }

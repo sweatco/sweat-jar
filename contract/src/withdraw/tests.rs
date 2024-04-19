@@ -64,7 +64,7 @@ fn withdraw_locked_jar_before_maturity_by_owner() {
         context.contract().withdraw(U32(jar.id), None);
     });
 
-    assert!(context.contract().withdraw_all().unwrap().is_empty());
+    assert!(context.contract().withdraw_all().unwrap().jars.is_empty());
 }
 
 #[test]
@@ -152,8 +152,8 @@ fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
 
     let withdrawn = context.contract().withdraw_all().unwrap();
 
-    assert_eq!(withdrawn.len(), 1);
-    assert_eq!(withdrawn[0].withdrawn_amount.0, 1_000_000);
+    assert_eq!(withdrawn.jars.len(), 1);
+    assert_eq!(withdrawn.jars[0].withdrawn_amount.0, 1_000_000);
 }
 
 #[test]
@@ -304,7 +304,7 @@ fn withdraw_from_locked_jar() {
         _ = context.contract().withdraw(U32(0), Some(U128(100_000)));
     });
 
-    assert!(context.contract().withdraw_all().unwrap().is_empty());
+    assert!(context.contract().withdraw_all().unwrap().jars.is_empty());
 }
 
 #[test]
@@ -342,8 +342,14 @@ fn withdraw_all() {
 
     let withdrawn_jars = context.contract().withdraw_all().unwrap();
 
+    assert_eq!(withdrawn_jars.total_amount.0, 2000003);
+
     assert_eq!(
-        withdrawn_jars.iter().map(|j| j.withdrawn_amount.0).collect::<Vec<_>>(),
+        withdrawn_jars
+            .jars
+            .iter()
+            .map(|j| j.withdrawn_amount.0)
+            .collect::<Vec<_>>(),
         vec![mature_unclaimed_jar.principal, mature_claimed_jar.principal]
     );
 

@@ -1,7 +1,10 @@
 use anyhow::Result;
 use near_workspaces::Account;
 use nitka::{misc::ToNear, near_sdk::json_types::U128};
-use sweat_jar_model::api::{InitApiIntegration, ProductApiIntegration, SweatJarContract};
+use sweat_jar_model::{
+    api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract},
+    jar::JarView,
+};
 use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::product::RegisterProductCommand;
@@ -17,6 +20,7 @@ pub trait IntegrationContext {
     async fn fee(&mut self) -> Result<Account>;
     fn sweat_jar(&self) -> SweatJarContract;
     fn ft_contract(&self) -> SweatContract;
+    async fn last_jar_for(&self, account: &Account) -> Result<JarView>;
 }
 
 impl IntegrationContext for Context {
@@ -42,6 +46,16 @@ impl IntegrationContext for Context {
         SweatContract {
             contract: &self.contracts[FT_CONTRACT],
         }
+    }
+
+    async fn last_jar_for(&self, account: &Account) -> Result<JarView> {
+        Ok(self
+            .sweat_jar()
+            .get_jars_for_account(account.to_near())
+            .await?
+            .into_iter()
+            .last()
+            .unwrap())
     }
 }
 
