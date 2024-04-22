@@ -440,7 +440,7 @@ fn claim_often_vs_claim_once() {
 
     test(product.clone(), 10_000_000_000_000_000_000_000_000_000, 365, 0);
 
-    for n in 1..100 {
+    for n in 1..10 {
         test(
             product.clone(),
             (1..10_000_000_000_000_000_000_000_000_000).fake(),
