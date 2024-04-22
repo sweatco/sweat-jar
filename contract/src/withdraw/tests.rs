@@ -11,6 +11,7 @@ use crate::{
     jar::model::Jar,
     product::model::{Apy, Product, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise, PRINCIPAL},
+    withdraw::api::JarWithdraw,
 };
 
 fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
@@ -279,6 +280,43 @@ fn test_failed_withdraw_internal() {
 
     assert_eq!(
         jar_view.principal.0 + withdrawn_amount,
+        contract.get_jar(alice, U32(0)).principal.0
+    );
+}
+
+#[test]
+fn test_failed_bulk_withdraw_internal() {
+    let product = generate_product();
+    let (alice, reference_jar, context) = prepare_jar(&product);
+
+    let mut contract = context.contract();
+
+    let jar_view = contract.get_jar(alice.clone(), U32(reference_jar.id));
+    let jar = contract
+        .account_jars
+        .get(&alice)
+        .unwrap()
+        .iter()
+        .next()
+        .unwrap()
+        .clone();
+
+    let withdraw = contract.after_bulk_withdraw_internal(
+        jar.account_id.clone(),
+        vec![JarWithdraw {
+            jar: jar.clone(),
+            should_be_closed: true,
+            amount: jar.principal,
+            fee: None,
+        }],
+        false,
+    );
+
+    assert!(withdraw.jars.is_empty());
+    assert_eq!(withdraw.total_amount.0, 0);
+
+    assert_eq!(
+        jar_view.principal.0 + jar_view.principal.0,
         contract.get_jar(alice, U32(0)).principal.0
     );
 }

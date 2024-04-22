@@ -16,10 +16,10 @@ use sweat_jar_model::{
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarWithdraw {
-    jar: Jar,
-    should_be_closed: bool,
-    amount: u128,
-    fee: Option<TokenAmount>,
+    pub jar: Jar,
+    pub should_be_closed: bool,
+    pub amount: u128,
+    pub fee: Option<TokenAmount>,
 }
 
 #[cfg(not(test))]
@@ -169,16 +169,19 @@ impl Contract {
         jars: Vec<JarWithdraw>,
         is_promise_success: bool,
     ) -> BulkWithdrawView {
+        let mut withdrawal_result = BulkWithdrawView {
+            total_amount: 0.into(),
+            jars: vec![],
+        };
+
         if !is_promise_success {
             for withdraw in jars {
                 let jar = self.get_jar_mut_internal(&account_id, withdraw.jar.id);
                 jar.principal += withdraw.amount;
                 jar.unlock();
             }
-            return BulkWithdrawView::default();
+            return withdrawal_result;
         }
-
-        let mut withdrawal_result = BulkWithdrawView::default();
 
         for withdraw in jars {
             if withdraw.should_be_closed {
