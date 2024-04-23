@@ -86,8 +86,6 @@ impl WithdrawApi for Contract {
         self.migrate_account_jars_if_needed(account_id.clone());
         let now = env::block_timestamp_ms();
 
-        let mut total_amount = 0;
-
         let jars: Vec<JarWithdraw> = self
             .account_jars
             .get(&account_id)
@@ -106,8 +104,6 @@ impl WithdrawApi for Contract {
 
                 let amount = jar.principal;
 
-                total_amount += amount;
-
                 let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
                 let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
 
@@ -124,7 +120,7 @@ impl WithdrawApi for Contract {
             })
             .collect();
 
-        self.transfer_bulk_withdraw(&account_id, jars, total_amount)
+        self.transfer_bulk_withdraw(&account_id, jars)
     }
 }
 
@@ -254,7 +250,6 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         jars: Vec<JarWithdraw>,
-        total_amount: TokenAmount,
     ) -> PromiseOrValue<BulkWithdrawView> {
         let total_fee: TokenAmount = jars
             .iter()
@@ -268,6 +263,8 @@ impl Contract {
             0 => None,
             _ => self.make_fee(total_fee.into()),
         };
+
+        let total_amount = jars.iter().map(|j| j.amount).sum();
 
         self.ft_contract()
             .ft_transfer(account_id, total_amount, "bulk_withdraw", &total_fee)
@@ -322,7 +319,6 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         jars: Vec<JarWithdraw>,
-        _token_amount: TokenAmount,
     ) -> PromiseOrValue<BulkWithdrawView> {
         let withdrawn = self.after_bulk_withdraw_internal(
             account_id.clone(),

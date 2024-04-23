@@ -1,5 +1,7 @@
+use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
+use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -9,7 +11,7 @@ use crate::{
 
 #[tokio::test]
 #[mutants::skip]
-async fn withdraw_all() -> anyhow::Result<()> {
+async fn withdraw_all() -> Result<()> {
     const PRINCIPAL: u128 = 1_000_000;
 
     println!("👷🏽 Run test for withdraw all");
@@ -53,7 +55,22 @@ async fn withdraw_all() -> anyhow::Result<()> {
 
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
+    let alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
+    let jar_balance = context
+        .ft_contract()
+        .ft_balance_of(context.sweat_jar().contract.as_account().to_near())
+        .await?;
+
     let withdrawn = context.sweat_jar().withdraw_all().with_user(&alice).await?;
+
+    let alice_balance_after = context.ft_contract().ft_balance_of(alice.to_near()).await?;
+    let jar_balance_after = context
+        .ft_contract()
+        .ft_balance_of(context.sweat_jar().contract.as_account().to_near())
+        .await?;
+
+    assert_eq!(alice_balance_after.0 - alice_balance.0, 2000003);
+    assert_eq!(jar_balance.0 - jar_balance_after.0, 2000003);
 
     assert_eq!(withdrawn.total_amount.0, 2000003);
 
