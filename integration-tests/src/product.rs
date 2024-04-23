@@ -126,7 +126,7 @@ impl RegisterProductCommand {
             RegisterProductCommand::Locked5Minutes60000Percents => json!({
                 "id": "flexible_5_minutes_60000_percents",
                 "apy_default": ["60000", 2],
-                "cap_min": "100000",
+                "cap_min": "10000",
                 "cap_max": "100000000000",
                 "terms": {
                     "type": "fixed",

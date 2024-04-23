@@ -152,8 +152,8 @@ impl Contract {
 
         emit(EventKind::Withdraw(WithdrawData {
             id: jar_id,
-            withdrawn_amount: withdrawal_result.withdrawn_amount,
-            fee_amount: withdrawal_result.fee,
+            amount: withdrawal_result.withdrawn_amount,
+            fee: withdrawal_result.fee,
         }));
 
         withdrawal_result
@@ -179,6 +179,8 @@ impl Contract {
             return withdrawal_result;
         }
 
+        let mut event_data = vec![];
+
         for withdraw in jars {
             if withdraw.should_be_closed {
                 self.delete_jar(&account_id, withdraw.jar.id);
@@ -188,15 +190,17 @@ impl Contract {
 
             let jar_result = WithdrawView::new(withdraw.amount, self.make_fee(withdraw.fee));
 
-            emit(EventKind::Withdraw(WithdrawData {
+            event_data.push(WithdrawData {
                 id: withdraw.jar.id,
-                withdrawn_amount: jar_result.withdrawn_amount,
-                fee_amount: jar_result.fee,
-            }));
+                amount: jar_result.withdrawn_amount,
+                fee: jar_result.fee,
+            });
 
             withdrawal_result.total_amount.0 += jar_result.withdrawn_amount.0;
             withdrawal_result.jars.push(jar_result);
         }
+
+        emit(EventKind::WithdrawAll(event_data));
 
         withdrawal_result
     }

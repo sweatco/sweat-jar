@@ -64,10 +64,7 @@ fn restake_all() {
     let restacked_jars = context.contract().restake_all();
 
     assert_eq!(restacked_jars.len(), 2);
-    assert_eq!(
-        restacked_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
-        vec![restackable_jar_1.id, restackable_jar_2.id]
-    );
+    assert_eq!(restacked_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(), vec![1, 2]);
 
     let all_jars = context.contract().get_jars_for_account(alice);
 

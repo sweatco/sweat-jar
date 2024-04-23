@@ -18,6 +18,57 @@ impl Contract {
         let product = self.get_product(&jar.product_id);
         !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
     }
+
+    fn restake_impl(&mut self, jar_id: JarIdView, emit_event: bool) -> JarView {
+        let jar_id = jar_id.0;
+        let account_id = env::predecessor_account_id();
+
+        self.migrate_account_jars_if_needed(account_id.clone());
+
+        let restaked_jar_id = self.increment_and_get_last_jar_id();
+
+        let jar = self.get_jar_internal(&account_id, jar_id);
+
+        let product = self.get_product(&jar.product_id);
+
+        require!(product.allows_restaking(), "The product doesn't support restaking");
+        require!(product.is_enabled, "The product is disabled");
+
+        let now = env::block_timestamp_ms();
+        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
+        require!(!jar.is_empty(), "The jar is empty, nothing to restake");
+
+        let principal = jar.principal;
+
+        let new_jar = Jar::create(
+            restaked_jar_id,
+            jar.account_id.clone(),
+            jar.product_id.clone(),
+            principal,
+            now,
+        );
+
+        let withdraw_jar = jar.withdrawn(&product, principal, now);
+        let should_be_closed = withdraw_jar.should_be_closed(&product, now);
+
+        if should_be_closed {
+            self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);
+        } else {
+            let jar_id = withdraw_jar.id;
+            *self.get_jar_mut_internal(&account_id, jar_id) = withdraw_jar;
+        }
+
+        self.add_new_jar(&account_id, new_jar.clone());
+
+        if emit_event {
+            emit(EventKind::Restake(RestakeData {
+                old_id: jar_id,
+                new_id: new_jar.id,
+            }));
+        }
+
+        new_jar.into()
+    }
 }
 
 #[near_bindgen]
@@ -102,52 +153,7 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
-        let jar_id = jar_id.0;
-        let account_id = env::predecessor_account_id();
-
-        self.migrate_account_jars_if_needed(account_id.clone());
-
-        let restaked_jar_id = self.increment_and_get_last_jar_id();
-
-        let jar = self.get_jar_internal(&account_id, jar_id);
-
-        let product = self.get_product(&jar.product_id);
-
-        require!(product.allows_restaking(), "The product doesn't support restaking");
-        require!(product.is_enabled, "The product is disabled");
-
-        let now = env::block_timestamp_ms();
-        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
-        require!(!jar.is_empty(), "The jar is empty, nothing to restake");
-
-        let principal = jar.principal;
-
-        let new_jar = Jar::create(
-            restaked_jar_id,
-            jar.account_id.clone(),
-            jar.product_id.clone(),
-            principal,
-            now,
-        );
-
-        let withdraw_jar = jar.withdrawn(&product, principal, now);
-        let should_be_closed = withdraw_jar.should_be_closed(&product, now);
-
-        if should_be_closed {
-            self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);
-        } else {
-            let jar_id = withdraw_jar.id;
-            *self.get_jar_mut_internal(&account_id, jar_id) = withdraw_jar;
-        }
-
-        self.add_new_jar(&account_id, new_jar.clone());
-
-        emit(EventKind::Restake(RestakeData {
-            old_id: jar_id,
-            new_id: new_jar.id,
-        }));
-
-        new_jar.into()
+        self.restake_impl(jar_id, true)
     }
 
     fn restake_all(&mut self) -> Vec<JarView> {
@@ -169,10 +175,21 @@ impl JarApi for Contract {
             .cloned()
             .collect();
 
+        let mut result = vec![];
+
+        let mut data = vec![];
+
         for jar in &jars {
-            self.restake(jar.id.into());
+            let restaked = self.restake_impl(jar.id.into(), false);
+            data.push(RestakeData {
+                old_id: jar.id,
+                new_id: restaked.id.0,
+            });
+            result.push(restaked);
         }
 
-        jars.into_iter().map(Into::into).collect()
+        emit(EventKind::RestakeAll(data));
+
+        result
     }
 }
