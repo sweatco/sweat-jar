@@ -19,11 +19,13 @@ impl Contract {
         !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
     }
 
-    fn restake_internal(&mut self, jar_id: JarIdView, emit_event: bool) -> JarView {
+    fn restake_internal(&mut self, jar_id: JarIdView, single_restake: bool) -> JarView {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
 
-        self.migrate_account_jars_if_needed(account_id.clone());
+        if single_restake {
+            self.migrate_account_jars_if_needed(account_id.clone());
+        }
 
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 
@@ -60,7 +62,7 @@ impl Contract {
 
         self.add_new_jar(&account_id, new_jar.clone());
 
-        if emit_event {
+        if single_restake {
             emit(EventKind::Restake(RestakeData {
                 old_id: jar_id,
                 new_id: new_jar.id,
@@ -177,18 +179,18 @@ impl JarApi for Contract {
 
         let mut result = vec![];
 
-        let mut data = vec![];
+        let mut event_data = vec![];
 
         for jar in &jars {
             let restaked = self.restake_internal(jar.id.into(), false);
-            data.push(RestakeData {
+            event_data.push(RestakeData {
                 old_id: jar.id,
                 new_id: restaked.id.0,
             });
             result.push(restaked);
         }
 
-        emit(EventKind::RestakeAll(data));
+        emit(EventKind::RestakeAll(event_data));
 
         result
     }
