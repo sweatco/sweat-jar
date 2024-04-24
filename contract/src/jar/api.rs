@@ -19,7 +19,7 @@ impl Contract {
         !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
     }
 
-    fn restake_impl(&mut self, jar_id: JarIdView, emit_event: bool) -> JarView {
+    fn restake_internal(&mut self, jar_id: JarIdView, emit_event: bool) -> JarView {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
 
@@ -153,7 +153,7 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
-        self.restake_impl(jar_id, true)
+        self.restake_internal(jar_id, true)
     }
 
     fn restake_all(&mut self) -> Vec<JarView> {
@@ -180,7 +180,7 @@ impl JarApi for Contract {
         let mut data = vec![];
 
         for jar in &jars {
-            let restaked = self.restake_impl(jar.id.into(), false);
+            let restaked = self.restake_internal(jar.id.into(), false);
             data.push(RestakeData {
                 old_id: jar.id,
                 new_id: restaked.id.0,
