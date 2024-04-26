@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
+    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
     TokenAmount, U32,
 };
 
@@ -19,13 +19,9 @@ impl Contract {
         !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
     }
 
-    fn restake_internal(&mut self, jar_id: JarIdView, single_restake: bool) -> JarView {
+    fn restake_internal(&mut self, jar_id: JarIdView) -> (JarId, JarView) {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
-
-        if single_restake {
-            self.migrate_account_jars_if_needed(account_id.clone());
-        }
 
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 
@@ -62,14 +58,7 @@ impl Contract {
 
         self.add_new_jar(&account_id, new_jar.clone());
 
-        if single_restake {
-            emit(EventKind::Restake(RestakeData {
-                old_id: jar_id,
-                new_id: new_jar.id,
-            }));
-        }
-
-        new_jar.into()
+        (jar_id, new_jar.into())
     }
 }
 
@@ -155,7 +144,15 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
-        self.restake_internal(jar_id, true)
+        self.migrate_account_jars_if_needed(env::predecessor_account_id());
+        let (old_id, jar) = self.restake_internal(jar_id);
+
+        emit(EventKind::Restake(RestakeData {
+            old_id,
+            new_id: jar.id.0,
+        }));
+
+        jar
     }
 
     fn restake_all(&mut self) -> Vec<JarView> {
@@ -182,9 +179,9 @@ impl JarApi for Contract {
         let mut event_data = vec![];
 
         for jar in &jars {
-            let restaked = self.restake_internal(jar.id.into(), false);
+            let (old_id, restaked) = self.restake_internal(jar.id.into());
             event_data.push(RestakeData {
-                old_id: jar.id,
+                old_id,
                 new_id: restaked.id.0,
             });
             result.push(restaked);
