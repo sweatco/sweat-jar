@@ -19,11 +19,11 @@ mutants = "0.0.3"
 serde = "1.0"
 sha2 = "0.10"
 
-nitka = "0.3.0"
-nitka-proc = "0.3.0"
+nitka = "0.4.0"
+nitka-proc = "0.4.0"
 
 sweat-jar-model = { path = "model" }
-sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "7fc49145026654404310b42efd0d20eb346e7ae2" }
+sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "537ef7d0aa3bf58d87b77a1c9660b2d0299b6c00" }
 
 near-workspaces = "0.10.0"
 near-self-update-proc = "0.1.2"

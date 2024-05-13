@@ -270,6 +270,15 @@ impl Contract {
 
         let total_amount = jars.iter().map(|j| j.amount).sum();
 
+        let gas_left = crate::env::prepaid_gas().as_gas() - crate::env::used_gas().as_gas();
+
+        if gas_left
+            < crate::common::gas_data::GAS_FOR_FT_TRANSFER.as_gas()
+                + crate::common::gas_data::GAS_FOR_BULK_AFTER_WITHDRAW.as_gas()
+        {
+            panic_str("Not enough gas left to complete transfer_bulk_withdraw.");
+        }
+
         self.ft_contract()
             .ft_transfer(account_id, total_amount, "bulk_withdraw", &total_fee)
             .then(Self::after_bulk_withdraw_call(account_id.clone(), jars))

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use near_workspaces::types::Gas;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
 use sweat_model::FungibleTokenCoreIntegration;
@@ -59,6 +60,14 @@ async fn withdraw_all() -> Result<()> {
     let jar_balance = context
         .ft_contract()
         .ft_balance_of(context.sweat_jar().contract.as_account().to_near())
+        .await?;
+
+    context
+        .sweat_jar()
+        .withdraw_all()
+        .with_user(&alice)
+        .gas(Gas::from_tgas(5))
+        .expect_error("Not enough gas left to complete transfer_bulk_withdraw")
         .await?;
 
     let withdrawn = context.sweat_jar().withdraw_all().with_user(&alice).await?;
