@@ -20,11 +20,7 @@ async fn fast_forward() -> anyhow::Result<()> {
         passed.push(context.sweat_jar().block_timestamp_ms().await? - start_timestamp)
     }
 
-    dbg!(&passed);
-
     let avg = passed.iter().sum::<Timestamp>() / passed.len() as Timestamp;
-
-    dbg!(avg);
 
     // Yeah this looks weird but workspace block skipping is very volatile
     assert!(52_000 < avg && avg < 76_000);

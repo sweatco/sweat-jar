@@ -1,5 +1,4 @@
 use base64::{engine::general_purpose::STANDARD, Engine};
-use itertools::Itertools;
 use sweat_jar_model::api::ProductApiIntegration;
 
 use crate::{
@@ -56,7 +55,7 @@ async fn product_actions() -> anyhow::Result<()> {
         .sweat_jar()
         .set_public_key(
             RegisterProductCommand::Locked12Months12Percents.id(),
-            pk_base64.as_bytes().into_iter().copied().collect_vec().into(),
+            pk_base64.as_bytes().into_iter().copied().collect::<Vec<_>>().into(),
         )
         .with_user(&manager)
         .await?;

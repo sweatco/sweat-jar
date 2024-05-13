@@ -26,8 +26,10 @@ pub enum EventKind {
     CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
+    WithdrawAll(Vec<WithdrawData>),
     Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
+    RestakeAll(Vec<RestakeData>),
     ApplyPenalty(PenaltyData),
     BatchApplyPenalty(BatchPenaltyData),
     EnableProduct(EnableProductData),
@@ -85,8 +87,8 @@ pub struct ClaimEventItem {
 #[serde(crate = "near_sdk::serde")]
 pub struct WithdrawData {
     pub id: JarId,
-    pub fee_amount: U128,
-    pub withdrawn_amount: U128,
+    pub fee: U128,
+    pub amount: U128,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -195,7 +197,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -223,7 +225,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "event": "create_jar",
   "data": {
     "id": 555,

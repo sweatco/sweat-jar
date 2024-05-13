@@ -10,7 +10,7 @@ use crate::{
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     product::{ProductView, RegisterProductCommand},
-    withdraw::WithdrawView,
+    withdraw::{BulkWithdrawView, WithdrawView},
     ProductId,
 };
 
@@ -160,6 +160,8 @@ pub trait JarApi {
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
+
+    fn restake_all(&mut self) -> Vec<JarView>;
 }
 
 #[make_integration_version]
@@ -282,6 +284,8 @@ pub trait WithdrawApi {
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
+
+    fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
 #[cfg(feature = "integration-methods")]

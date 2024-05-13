@@ -23,12 +23,12 @@ impl Contract {
 }
 
 pub(crate) trait FungibleTokenInterface {
-    fn transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise;
+    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise;
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
     #[mutants::skip] // Covered by integration tests
-    fn transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise {
+    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())
                 .ft_transfer(receiver_id, amount - fee.amount, Some(memo.to_string()))
@@ -39,11 +39,11 @@ impl FungibleTokenInterface for FungibleTokenContract {
     }
 }
 
-trait FtTransferPromise {
+trait FungibleTokenPromise {
     fn ft_transfer(self, receiver_id: &AccountId, amount: TokenAmount, memo: Option<String>) -> Promise;
 }
 
-impl FtTransferPromise for Promise {
+impl FungibleTokenPromise for Promise {
     fn ft_transfer(self, receiver_id: &AccountId, amount: TokenAmount, memo: Option<String>) -> Promise {
         let args = serde_json::to_vec(&json!({
             "receiver_id": receiver_id,

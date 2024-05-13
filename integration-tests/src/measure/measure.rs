@@ -1,9 +1,6 @@
-#![cfg(test)]
-
 use std::future::Future;
 
 use futures::future::join_all;
-use itertools::Itertools;
 use near_workspaces::types::Gas;
 use tokio::spawn;
 
@@ -30,10 +27,10 @@ where
     Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
     Command: FnMut(Input) -> Fut + Copy,
 {
-    let inputs = inputs.into_iter().collect_vec();
+    let inputs: Vec<_> = inputs.into_iter().collect();
 
     // async concurrent execution
-    let all = inputs.iter().map(|inp| command(*inp)).collect_vec();
+    let all: Vec<_> = inputs.iter().map(|inp| command(*inp)).collect();
 
     let res: Vec<_> = join_all(all).await.into_iter().collect::<anyhow::Result<_>>()?;
 
@@ -54,7 +51,7 @@ where
     //     res.extend(chunk_result);
     // }
 
-    let res = inputs.into_iter().zip(res.into_iter()).collect_vec();
+    let res = inputs.into_iter().zip(res.into_iter()).collect();
 
     Ok(res)
 }
@@ -65,7 +62,7 @@ async fn _redundant_command_measure<Fut>(mut command: impl FnMut() -> Fut) -> an
 where
     Fut: Future<Output = anyhow::Result<Gas>> + Send + 'static,
 {
-    let futures = (0..1).into_iter().map(|_| spawn(command())).collect_vec();
+    let futures: Vec<_> = (0..1).into_iter().map(|_| spawn(command())).collect();
 
     let all_gas: Vec<Gas> = join_all(futures)
         .await

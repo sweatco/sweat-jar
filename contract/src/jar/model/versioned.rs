@@ -41,6 +41,14 @@ impl JarVersioned {
         .into()
     }
 
+    pub fn locked(&self) -> Self {
+        JarV1 {
+            is_pending_withdraw: true,
+            ..self.inner()
+        }
+        .into()
+    }
+
     pub fn unlocked(&self) -> Self {
         JarV1 {
             is_pending_withdraw: false,
