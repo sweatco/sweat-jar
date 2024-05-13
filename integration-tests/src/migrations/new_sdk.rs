@@ -56,7 +56,7 @@ async fn migrate_to_near_sdk_5() -> Result<()> {
     }
 
     let products_old = old_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products_old.len(), 8);
+    assert_eq!(products_old.len(), 9);
 
     let bob_jars = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
     assert!(bob_jars.is_empty());
@@ -77,8 +77,6 @@ async fn migrate_to_near_sdk_5() -> Result<()> {
     assert_eq!(staked.0, 100_000);
 
     assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 900_000);
-
-    dbg!(ft_contract.ft_balance_of(bob.to_near()).await?);
 
     drop(old_jar_contract);
 
@@ -101,7 +99,7 @@ async fn migrate_to_near_sdk_5() -> Result<()> {
         .await?;
 
     let products = new_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products.len(), 9);
+    assert_eq!(products.len(), 10);
 
     let staked = new_jar_contract
         .create_jar(

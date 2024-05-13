@@ -11,6 +11,9 @@ pub type Duration = u64;
 pub mod gas_data {
     use near_sdk::Gas;
 
+    /// Const of `ft_transfer` call in token contract
+    pub(crate) const GAS_FOR_FT_TRANSFER: Gas = Gas::from_tgas(6);
+
     /// Const of after claim call with 1 jar
     const INITIAL_GAS_FOR_AFTER_CLAIM: Gas = Gas::from_tgas(4);
 
@@ -25,15 +28,23 @@ pub mod gas_data {
     /// Value is measured with `measure_withdraw_test`
     /// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
     pub(crate) const GAS_FOR_AFTER_WITHDRAW: Gas = Gas::from_tgas(4);
+
+    /// Value is measured with `measure_withdraw_all`
+    /// 10 `TGas` was enough for 200 jars. 15 here just in case.
+    pub(crate) const GAS_FOR_BULK_AFTER_WITHDRAW: Gas = Gas::from_tgas(15);
 }
 
 #[cfg(test)]
 mod test {
-    use crate::common::gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_AFTER_WITHDRAW};
+    use crate::common::gas_data::{
+        GAS_FOR_AFTER_CLAIM, GAS_FOR_AFTER_WITHDRAW, GAS_FOR_BULK_AFTER_WITHDRAW, GAS_FOR_FT_TRANSFER,
+    };
 
     #[test]
     fn test_gas_methods() {
+        assert_eq!(GAS_FOR_FT_TRANSFER.as_gas(), 6_000_000_000_000);
         assert_eq!(GAS_FOR_AFTER_CLAIM.as_gas(), 20_000_000_000_000);
         assert_eq!(GAS_FOR_AFTER_WITHDRAW.as_gas(), 4_000_000_000_000);
+        assert_eq!(GAS_FOR_BULK_AFTER_WITHDRAW.as_gas(), 15_000_000_000_000);
     }
 }

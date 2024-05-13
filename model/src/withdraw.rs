@@ -1,5 +1,6 @@
 use near_sdk::{
     json_types::U128,
+    near,
     serde::{Deserialize, Serialize},
     AccountId,
 };
@@ -7,14 +8,21 @@ use near_sdk::{
 use crate::TokenAmount;
 
 /// The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug, PartialEq)]
+#[near(serializers=[borsh, json])]
 pub struct WithdrawView {
     /// The amount of tokens that has been transferred to the user's account as part of the withdrawal.
     pub withdrawn_amount: U128,
 
     /// The possible fee that a user must pay for withdrawal, if it's defined by the associated Product.
     pub fee: U128,
+}
+
+#[derive(Debug)]
+#[near(serializers=[borsh, json])]
+pub struct BulkWithdrawView {
+    pub total_amount: U128,
+    pub jars: Vec<WithdrawView>,
 }
 
 impl WithdrawView {
