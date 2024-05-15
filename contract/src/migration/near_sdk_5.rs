@@ -27,7 +27,7 @@ impl MigratonToNearSdk5 for Contract {
     #[init(ignore_state)]
     #[mutants::skip]
     fn migrate_state_to_near_sdk_5() -> Self {
-        let old_state: ContractBeforeNearSdk5 = env::state_read().expect("Failed to extract old contract state.");
+        let mut old_state: ContractBeforeNearSdk5 = env::state_read().expect("Failed to extract old contract state.");
 
         let mut products: near_sdk::collections::UnorderedMap<ProductId, Product> =
             near_sdk::collections::UnorderedMap::new(StorageKey::ProductsV1);
@@ -35,6 +35,8 @@ impl MigratonToNearSdk5 for Contract {
         for (product_id, product) in &old_state.products {
             products.insert(product_id, product);
         }
+
+        old_state.products.clear();
 
         Contract {
             token_account_id: old_state.token_account_id,
