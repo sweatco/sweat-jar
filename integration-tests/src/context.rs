@@ -104,7 +104,7 @@ pub(crate) async fn prepare_contract(
         .await?;
     context
         .ft_contract()
-        .tge_mint(&alice.to_near(), U128(100_000_000_000))
+        .tge_mint(&alice.to_near(), U128(100_000_000))
         .await?;
     context
         .ft_contract()
@@ -161,6 +161,10 @@ impl ContextHelpers for Context {
         number_of_jars: u16,
     ) -> Result<Vec<JarView>> {
         let total_amount = principal * number_of_jars as u128;
+
+        self.ft_contract()
+            .tge_mint(&account.to_near(), U128(100_000_000_000))
+            .await?;
 
         let account_balance = self.account_balance(account).await?;
         assert!(
