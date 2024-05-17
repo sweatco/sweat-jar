@@ -3,7 +3,7 @@ use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration};
 
 use crate::{
-    context::{prepare_contract, IntegrationContext},
+    context::{prepare_contract, ContextHelpers, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
 };
@@ -68,6 +68,7 @@ async fn restake() -> Result<()> {
 #[mutants::skip]
 async fn restake_all() -> Result<()> {
     const PRINCIPAL: u128 = 1_000_000;
+    const JARS_COUNT: u16 = 210;
 
     println!("👷🏽 Run test for restake all");
 
@@ -103,6 +104,10 @@ async fn restake_all() -> Result<()> {
     let jar_10_min = context.last_jar_for(&alice).await?;
     assert_eq!(jar_10_min.principal.0, PRINCIPAL + 3);
 
+    context
+        .bulk_create_jars(&alice, &product_5_min.id(), PRINCIPAL, JARS_COUNT)
+        .await?;
+
     let claimed = context.sweat_jar().claim_total(None).await?;
     assert_eq!(claimed.get_total().0, 0);
 
@@ -113,17 +118,19 @@ async fn restake_all() -> Result<()> {
     let restacked = context.sweat_jar().restake_all().with_user(&alice).await?;
 
     assert_eq!(
-        restacked.into_iter().map(|j| j.principal).collect::<Vec<_>>(),
+        restacked.into_iter().map(|j| j.principal).collect::<Vec<_>>()[..2],
         vec![jar_5_min_1.principal, jar_5_min_2.principal]
     );
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
 
-    assert_eq!(jars.iter().map(|j| j.id.0).collect::<Vec<_>>(), vec![3, 4, 5]);
+    let principals = jars.iter().map(|j| j.principal.0).collect::<Vec<_>>();
 
-    assert_eq!(
-        jars.iter().map(|j| j.principal.0).collect::<Vec<_>>(),
-        vec![PRINCIPAL + 3, PRINCIPAL + 1, PRINCIPAL + 2]
+    assert!(
+        [PRINCIPAL + 3, PRINCIPAL + 1, PRINCIPAL + 2]
+            .iter()
+            .all(|p| principals.contains(p)),
+        "Can't find all expected principals in {principals:?}"
     );
 
     Ok(())

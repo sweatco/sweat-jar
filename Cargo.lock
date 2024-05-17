@@ -3797,7 +3797,6 @@ name = "sweat-jar-model"
 version = "1.0.1"
 dependencies = [
  "anyhow",
- "async-trait",
  "near-sdk 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "near-workspaces",
  "nitka 0.4.0",

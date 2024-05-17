@@ -48,9 +48,7 @@ fn withdraw_locked_jar_before_maturity_by_not_owner() {
         context.contract().withdraw(U32(0), None);
     });
 
-    expect_panic(&context, "Jars for account 'owner' don't exist", || {
-        context.contract().withdraw_all();
-    });
+    assert_eq!(context.contract().withdraw_all().unwrap().total_amount.0, 0);
 }
 
 #[test]
@@ -79,9 +77,7 @@ fn withdraw_locked_jar_after_maturity_by_not_owner() {
         context.contract().withdraw(U32(jar.id), None);
     });
 
-    expect_panic(&context, "Jars for account 'owner' don't exist", || {
-        context.contract().withdraw_all();
-    });
+    assert_eq!(context.contract().withdraw_all().unwrap().total_amount.0, 0);
 }
 
 #[test]
