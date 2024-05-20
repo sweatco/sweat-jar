@@ -83,15 +83,21 @@ pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce()
         env::panic_str(&format!(
             r#"Not enough gas left. Consider attaching more gas to the transaction.
                {error}
-               Gas left: {gas_left} Needed: {gas_needed}"#,
+               Gas left: {gas_left} Needed: {gas_needed}. Need additional {} gas"#,
+            gas_needed - gas_left
         ));
     }
 }
 
 #[cfg(test)]
 mod test {
+    use near_sdk::env;
 
-    use crate::{common::tests::Context, internal::assert_gas, test_utils::admin};
+    use crate::{
+        common::tests::Context,
+        internal::assert_gas,
+        test_utils::{admin, expect_panic},
+    };
 
     #[test]
     #[should_panic(expected = r#"Can be performed only by admin"#)]
@@ -102,8 +108,31 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
     fn test_assert_gas() {
-        assert_gas(u64::MAX, || "Error message");
+        const GAS_FOR_ASSERT_CALL: u64 = 529536222;
+
+        expect_panic(
+            &(),
+            "Not enough gas left. Consider attaching more gas to the transaction.",
+            || {
+                assert_gas(u64::MAX, || "Error message");
+            },
+        );
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        expect_panic(&(), &format!("Need additional {GAS_FOR_ASSERT_CALL} gas"), || {
+            assert_gas(gas_left, || "Error message");
+        });
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        expect_panic(&(), "Need additional 1 gas", || {
+            assert_gas(gas_left - GAS_FOR_ASSERT_CALL + 1, || "Error message");
+        });
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        assert_gas(gas_left - GAS_FOR_ASSERT_CALL, || "Error message");
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        assert_gas(gas_left - GAS_FOR_ASSERT_CALL - 1, || "Error message");
     }
 }
