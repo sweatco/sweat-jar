@@ -14,7 +14,7 @@ commit_hash=$(openssl dgst -sha256 "$commit" | awk '{print $2}')
 docker_hash=$(openssl dgst -sha256 "$docker" | awk '{print $2}')
 
 if [ "$commit_hash" = "$docker_hash" ]; then
-  echo "Hashes match"
+  echo "Binary hashes match. Commit hash: $(git rev-parse HEAD)"
 else
   echo "The contract in commit hash does not match with hash of contract build in docker. You must call \`make dock\` command before submitting a PR." >&2
   exit 1
