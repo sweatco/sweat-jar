@@ -14,14 +14,6 @@ jobs:
       - uses: actions/checkout@v3
       - uses: crate-ci/typos@v1.21.0
 
-  check-binary-hash:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Hash
-        run: make hash
-
   typos:
     runs-on: ubuntu-latest
     steps:
@@ -73,3 +65,11 @@ jobs:
 
       - name: Mutation tests
         run: make mutation
+
+  check-binary-hash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Hash
+        run: make hash
