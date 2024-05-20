@@ -1,5 +1,4 @@
 use near_sdk::{
-    env::panic_str,
     ext_contract, is_promise_success,
     json_types::U128,
     near_bindgen,
@@ -13,7 +12,7 @@ use sweat_jar_model::{
     TokenAmount,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct JarWithdraw {
     pub jar: Jar,
@@ -86,12 +85,11 @@ impl WithdrawApi for Contract {
         self.migrate_account_jars_if_needed(account_id.clone());
         let now = env::block_timestamp_ms();
 
-        let jars: Vec<JarWithdraw> = self
-            .account_jars
-            .get(&account_id)
-            .unwrap_or_else(|| {
-                panic_str(&format!("Jars for account '{account_id}' don't exist"));
-            })
+        let Some(account_jars) = self.account_jars.get(&account_id) else {
+            return PromiseOrValue::Value(BulkWithdrawView::default());
+        };
+
+        let jars: Vec<JarWithdraw> = account_jars
             .jars
             .clone()
             .into_iter()
@@ -103,6 +101,10 @@ impl WithdrawApi for Contract {
                 }
 
                 let amount = jar.principal;
+
+                if amount == 0 {
+                    return None;
+                }
 
                 let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
                 let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
@@ -119,6 +121,10 @@ impl WithdrawApi for Contract {
                 .into()
             })
             .collect();
+
+        if jars.is_empty() {
+            return PromiseOrValue::Value(BulkWithdrawView::default());
+        }
 
         self.transfer_bulk_withdraw(&account_id, jars)
     }
@@ -270,14 +276,11 @@ impl Contract {
 
         let total_amount = jars.iter().map(|j| j.amount).sum();
 
-        let gas_left = crate::env::prepaid_gas().as_gas() - crate::env::used_gas().as_gas();
-
-        if gas_left
-            < crate::common::gas_data::GAS_FOR_FT_TRANSFER.as_gas()
-                + crate::common::gas_data::GAS_FOR_BULK_AFTER_WITHDRAW.as_gas()
-        {
-            panic_str("Not enough gas left to complete transfer_bulk_withdraw.");
-        }
+        crate::internal::assert_gas(
+            crate::common::gas_data::GAS_FOR_FT_TRANSFER.as_gas()
+                + crate::common::gas_data::GAS_FOR_BULK_AFTER_WITHDRAW.as_gas(),
+            || format!("transfer_bulk_withdraw. Number of jars: {}", jars.len()),
+        );
 
         self.ft_contract()
             .ft_transfer(account_id, total_amount, "bulk_withdraw", &total_fee)
@@ -344,6 +347,7 @@ impl Contract {
 }
 
 #[near_bindgen]
+#[mutants::skip] // Covered by integration tests
 impl WithdrawCallbacks for Contract {
     #[private]
     fn after_withdraw(

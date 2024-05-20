@@ -79,6 +79,10 @@ pub trait AfterCatchUnwind {
     fn after_catch_unwind(&self);
 }
 
+impl AfterCatchUnwind for () {
+    fn after_catch_unwind(&self) {}
+}
+
 pub fn expect_panic(ctx: &impl AfterCatchUnwind, msg: &str, action: impl FnOnce() + UnwindSafe) {
     let res = catch_unwind(move || action());
 
