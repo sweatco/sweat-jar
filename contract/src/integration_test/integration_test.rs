@@ -5,14 +5,13 @@ use sweat_jar_model::{api::IntegrationTestMethods, jar::JarView, ProductId};
 
 use crate::{jar::model::Jar, Contract, ContractExt};
 
+#[mutants::skip]
 #[near_bindgen]
 impl IntegrationTestMethods for Contract {
-    #[mutants::skip]
     fn block_timestamp_ms(&self) -> Timestamp {
         env::block_timestamp_ms()
     }
 
-    #[mutants::skip]
     fn bulk_create_jars(
         &mut self,
         account_id: AccountId,
@@ -27,6 +26,7 @@ impl IntegrationTestMethods for Contract {
     }
 }
 
+#[mutants::skip]
 impl Contract {
     fn create_jar_for_integration_tests(
         &mut self,

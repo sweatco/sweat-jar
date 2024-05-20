@@ -115,10 +115,10 @@ async fn restake_all() -> Result<()> {
 
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
-    let restacked = context.sweat_jar().restake_all().with_user(&alice).await?;
+    let restaked = context.sweat_jar().restake_all().with_user(&alice).await?;
 
     assert_eq!(
-        restacked.into_iter().map(|j| j.principal).collect::<Vec<_>>()[..2],
+        restaked.into_iter().map(|j| j.principal).collect::<Vec<_>>()[..2],
         vec![jar_5_min_1.principal, jar_5_min_2.principal]
     );
 

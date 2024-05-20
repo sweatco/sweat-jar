@@ -356,6 +356,7 @@ impl Contract {
 }
 
 #[near_bindgen]
+#[mutants::skip] // Covered by integration tests
 impl WithdrawCallbacks for Contract {
     #[private]
     fn after_withdraw(

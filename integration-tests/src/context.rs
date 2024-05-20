@@ -170,7 +170,7 @@ impl ContextHelpers for Context {
         assert!(
             account_balance > total_amount,
             r#"
-                Account doesn't have enought $SWEAT to create {number_of_jars} jars with {principal} principal.
+                Account doesn't have enough $SWEAT to create {number_of_jars} jars with {principal} principal.
                 Required: {total_amount} has: {account_balance}
             "#,
         );

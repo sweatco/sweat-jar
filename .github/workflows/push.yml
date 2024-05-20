@@ -8,6 +8,11 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: crate-ci/typos@v1.21.0
 
   lint:
     runs-on: ubuntu-latest
@@ -80,7 +85,7 @@ jobs:
           path: measured.txt
 
   push:
-    needs: [ build, lint, unit-tests, integration-tests, measure, mutation-tests ]
+    needs: [ build, typos, lint, unit-tests, integration-tests, measure, mutation-tests ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
