@@ -84,7 +84,7 @@ jobs:
         run: make hash
 
       - name: Commit Hash
-        run: echo ${GITHUB_SHA}
+        run: echo ${{ github.event.pull_request.head.sha }}
 
   measure:
     runs-on: ubuntu-latest
