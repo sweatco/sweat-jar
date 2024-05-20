@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use near_sdk::require;
 use sweat_jar_model::{
@@ -74,10 +74,24 @@ impl Contract {
     }
 }
 
+pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce() -> Message) {
+    let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+
+    if gas_left < gas_needed {
+        let error = error();
+
+        env::panic_str(&format!(
+            r#"Not enough gas left. Consider attaching more gas to the transaction.
+               {error}
+               Gas left: {gas_left} Needed: {gas_needed}"#,
+        ));
+    }
+}
+
 #[cfg(test)]
 mod test {
 
-    use crate::{common::tests::Context, test_utils::admin};
+    use crate::{common::tests::Context, internal::assert_gas, test_utils::admin};
 
     #[test]
     #[should_panic(expected = r#"Can be performed only by admin"#)]
@@ -85,5 +99,11 @@ mod test {
         let admin = admin();
         let context = Context::new(admin);
         context.contract().update_contract(vec![], None);
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_assert_gas() {
+        assert_gas(u64::MAX, || "Error message");
     }
 }
