@@ -2,10 +2,14 @@ use anyhow::Result;
 use near_workspaces::Account;
 use nitka::{misc::ToNear, near_sdk::json_types::U128};
 use sweat_jar_model::{
-    api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract},
+    api::{
+        InitApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, ProductApiIntegration,
+        SweatJarContract,
+    },
     jar::JarView,
+    ProductId,
 };
-use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
+use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::product::RegisterProductCommand;
 
@@ -20,7 +24,6 @@ pub trait IntegrationContext {
     async fn fee(&mut self) -> Result<Account>;
     fn sweat_jar(&self) -> SweatJarContract;
     fn ft_contract(&self) -> SweatContract;
-    async fn last_jar_for(&self, account: &Account) -> Result<JarView>;
 }
 
 impl IntegrationContext for Context {
@@ -46,16 +49,6 @@ impl IntegrationContext for Context {
         SweatContract {
             contract: &self.contracts[FT_CONTRACT],
         }
-    }
-
-    async fn last_jar_for(&self, account: &Account) -> Result<JarView> {
-        Ok(self
-            .sweat_jar()
-            .get_jars_for_account(account.to_near())
-            .await?
-            .into_iter()
-            .last()
-            .unwrap())
     }
 }
 
@@ -135,4 +128,72 @@ pub(crate) async fn prepare_contract(
     }
 
     Ok(context)
+}
+
+pub trait ContextHelpers {
+    async fn last_jar_for(&self, account: &Account) -> Result<JarView>;
+    async fn bulk_create_jars(
+        &mut self,
+        account: &Account,
+        product_id: &ProductId,
+        principal: u128,
+        number_of_jars: u16,
+    ) -> Result<Vec<JarView>>;
+    async fn account_balance(&self, account: &Account) -> Result<u128>;
+}
+
+impl ContextHelpers for Context {
+    async fn last_jar_for(&self, account: &Account) -> Result<JarView> {
+        Ok(self
+            .sweat_jar()
+            .get_jars_for_account(account.to_near())
+            .await?
+            .into_iter()
+            .last()
+            .unwrap())
+    }
+
+    async fn bulk_create_jars(
+        &mut self,
+        account: &Account,
+        product_id: &ProductId,
+        principal: u128,
+        number_of_jars: u16,
+    ) -> Result<Vec<JarView>> {
+        let total_amount = principal * number_of_jars as u128;
+
+        self.ft_contract()
+            .tge_mint(&account.to_near(), U128(100_000_000_000))
+            .await?;
+
+        let account_balance = self.account_balance(account).await?;
+        assert!(
+            account_balance > total_amount,
+            r#"
+                Account doesn't have enough $SWEAT to create {number_of_jars} jars with {principal} principal.
+                Required: {total_amount} has: {account_balance}
+            "#,
+        );
+
+        self.ft_contract()
+            .ft_transfer(
+                self.sweat_jar().contract.as_account().id().clone(),
+                total_amount.into(),
+                None,
+            )
+            .with_user(account)
+            .await?;
+
+        let manager = self.manager().await?;
+
+        self.sweat_jar()
+            .bulk_create_jars(account.to_near(), product_id.clone(), principal, number_of_jars)
+            .with_user(&manager)
+            .await
+    }
+
+    async fn account_balance(&self, account: &Account) -> Result<u128> {
+        let balance = self.ft_contract().ft_balance_of(account.to_near()).await?.0;
+        Ok(balance)
+    }
 }

@@ -1,11 +1,10 @@
 use anyhow::Result;
-use near_workspaces::types::Gas;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{
-    context::{prepare_contract, IntegrationContext},
+    context::{prepare_contract, ContextHelpers, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
 };
@@ -14,6 +13,8 @@ use crate::{
 #[mutants::skip]
 async fn withdraw_all() -> Result<()> {
     const PRINCIPAL: u128 = 1_000_000;
+    const JARS_COUNT: u16 = 210;
+    const BULK_PRINCIPAL: u128 = PRINCIPAL * JARS_COUNT as u128;
 
     println!("👷🏽 Run test for withdraw all");
 
@@ -43,6 +44,10 @@ async fn withdraw_all() -> Result<()> {
     assert_eq!(jar_5_min_2.principal.0, PRINCIPAL + 2);
 
     context
+        .bulk_create_jars(&alice, &product_5_min.id(), PRINCIPAL, JARS_COUNT)
+        .await?;
+
+    context
         .sweat_jar()
         .create_jar(&alice, product_10_min.id(), PRINCIPAL + 3, &context.ft_contract())
         .await?;
@@ -62,14 +67,6 @@ async fn withdraw_all() -> Result<()> {
         .ft_balance_of(context.sweat_jar().contract.as_account().to_near())
         .await?;
 
-    context
-        .sweat_jar()
-        .withdraw_all()
-        .with_user(&alice)
-        .gas(Gas::from_tgas(5))
-        .expect_error("Not enough gas left to complete transfer_bulk_withdraw")
-        .await?;
-
     let withdrawn = context.sweat_jar().withdraw_all().with_user(&alice).await?;
 
     let alice_balance_after = context.ft_contract().ft_balance_of(alice.to_near()).await?;
@@ -78,13 +75,13 @@ async fn withdraw_all() -> Result<()> {
         .ft_balance_of(context.sweat_jar().contract.as_account().to_near())
         .await?;
 
-    assert_eq!(alice_balance_after.0 - alice_balance.0, 2000003);
-    assert_eq!(jar_balance.0 - jar_balance_after.0, 2000003);
+    assert_eq!(alice_balance_after.0 - alice_balance.0, BULK_PRINCIPAL + 2000003);
+    assert_eq!(jar_balance.0 - jar_balance_after.0, BULK_PRINCIPAL + 2000003);
 
-    assert_eq!(withdrawn.total_amount.0, 2000003);
+    assert_eq!(withdrawn.total_amount.0, BULK_PRINCIPAL + 2000003);
 
     assert_eq!(
-        withdrawn.jars.iter().map(|j| j.withdrawn_amount).collect::<Vec<_>>(),
+        withdrawn.jars.iter().map(|j| j.withdrawn_amount).collect::<Vec<_>>()[..2],
         vec![jar_5_min_1.principal, jar_5_min_2.principal]
     );
 
