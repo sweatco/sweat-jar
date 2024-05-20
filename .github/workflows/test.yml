@@ -73,3 +73,6 @@ jobs:
 
       - name: Hash
         run: make hash
+
+      - name: Commit Hash
+        run: echo ${GITHUB_SHA}
