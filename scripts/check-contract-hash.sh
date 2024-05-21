@@ -13,12 +13,6 @@ make build-in-docker
 commit_hash=$(openssl dgst -sha256 "$commit" | awk '{print $2}')
 docker_hash=$(openssl dgst -sha256 "$docker" | awk '{print $2}')
 
-git_hash=$(git rev-parse --short "$GITHUB_SHA")
-git_branch=${GITHUB_REF#refs/heads/}
-
-echo "$git_hash"
-echo "$git_branch"
-
 if [ "$commit_hash" = "$docker_hash" ]; then
   echo "Binary hashes match."
 else
