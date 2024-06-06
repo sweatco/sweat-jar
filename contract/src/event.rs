@@ -183,9 +183,18 @@ mod test {
     use near_sdk::json_types::U128;
 
     use crate::{
+        common::tests::Context,
         event::{EventKind, SweatJarEvent, TopUpData},
         jar::model::JarV1,
+        test_utils::admin,
     };
+
+    #[test]
+    fn test_contract_version() {
+        let admin = admin();
+        let context = Context::new(admin);
+        assert_eq!(context.contract().contract_version(), "sweat_jar-2.1.0");
+    }
 
     #[test]
     fn event_to_string() {
@@ -197,7 +206,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -225,7 +234,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "event": "create_jar",
   "data": {
     "id": 555,
