@@ -17,7 +17,6 @@ release-api = []
 
 
 [dependencies]
-anyhow = { workspace = true }
 near-sdk = { workspace = true }
 
 nitka-proc = { workspace = true }
