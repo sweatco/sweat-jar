@@ -13,5 +13,5 @@ docker run \
     --platform linux/amd64 \
     --cap-add=SYS_PTRACE \
     --security-opt seccomp=unconfined \
-    -t nearprotocol/contract-builder:latest-amd64 \
+    -t nearprotocol/contract-builder:master-13430592a7be246dd5a29439791f4081e0107ff3-amd64 \
     /bin/bash -c "cd /host && make build"
