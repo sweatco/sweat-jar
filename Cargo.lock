@@ -734,6 +734,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "compile-time"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e55ede5279d4d7c528906853743abeb26353ae1e6c440fcd6d18316c2c2dd903"
+dependencies = [
+ "once_cell",
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "semver",
+ "time",
+]
+
+[[package]]
 name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3794,7 +3808,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "sweat-jar-model"
-version = "1.0.1"
+version = "2.1.0"
 dependencies = [
  "anyhow",
  "near-sdk 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -3818,9 +3832,10 @@ dependencies = [
 
 [[package]]
 name = "sweat_jar"
-version = "2.0.0"
+version = "2.1.0"
 dependencies = [
  "base64 0.22.0",
+ "compile-time",
  "crypto-hash",
  "ed25519-dalek",
  "fake",

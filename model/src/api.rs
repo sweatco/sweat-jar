@@ -288,6 +288,12 @@ pub trait WithdrawApi {
     fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
+#[make_integration_version]
+pub trait InfoApi {
+    fn contract_version(&self) -> String;
+    fn contract_build_date(&self) -> String;
+}
+
 #[cfg(feature = "integration-methods")]
 #[make_integration_version]
 pub trait IntegrationTestMethods {
