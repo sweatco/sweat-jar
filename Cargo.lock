@@ -1667,21 +1667,16 @@ dependencies = [
  "ed25519-dalek",
  "fake",
  "futures",
- "maplit",
  "mutants",
- "near-units",
  "near-workspaces",
  "nitka 0.4.0",
  "num-format",
- "pkg-config",
  "rand 0.8.5",
  "serde",
  "sha2",
  "sweat-jar-model",
  "sweat-model",
  "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1827,12 +1822,6 @@ name = "log"
 version = "0.4.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "90ed8c1e510134f979dbc4f070f87d4313098b704861a105fe34231c70a3901c"
-
-[[package]]
-name = "maplit"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "matchers"
@@ -3796,7 +3785,6 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 name = "sweat-jar-model"
 version = "1.0.1"
 dependencies = [
- "anyhow",
  "near-sdk 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "near-workspaces",
  "nitka 0.4.0",
