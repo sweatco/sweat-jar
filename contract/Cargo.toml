@@ -16,7 +16,6 @@ integration-api = ["sweat-jar-model/integration-api"]
 [dependencies]
 ed25519-dalek = { workspace = true }
 mutants = { workspace = true }
-compile-time = { workspace = true }
 
 near-sdk = { workspace = true, features = ["unit-testing"] }
 near-self-update-proc = { workspace = true }
