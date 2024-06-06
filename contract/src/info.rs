@@ -1,14 +1,10 @@
 use near_sdk::near_bindgen;
 use sweat_jar_model::api::InfoApi;
 
-use crate::{Contract, PACKAGE_NAME, VERSION};
+use crate::{Contract, ContractExt};
 
 #[near_bindgen]
 impl InfoApi for Contract {
-    fn contract_version(&self) -> String {
-        format!("{PACKAGE_NAME}-{VERSION}")
-    }
-
     fn contract_build_date(&self) -> String {
         compile_time::datetime_str!().to_string()
     }

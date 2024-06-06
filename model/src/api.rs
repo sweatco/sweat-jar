@@ -290,7 +290,6 @@ pub trait WithdrawApi {
 
 #[make_integration_version]
 pub trait InfoApi {
-    fn contract_version(&self) -> String;
     fn contract_build_date(&self) -> String;
 }
 
