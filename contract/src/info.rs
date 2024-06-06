@@ -1,7 +1,9 @@
+use near_sdk::near_bindgen;
 use sweat_jar_model::api::InfoApi;
 
 use crate::{Contract, PACKAGE_NAME, VERSION};
 
+#[near_bindgen]
 impl InfoApi for Contract {
     fn contract_version(&self) -> String {
         format!("{PACKAGE_NAME}-{VERSION}")
