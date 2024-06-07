@@ -1,5 +1,5 @@
 use near_sdk::{
-    json_types::{Base64VecU8, U128},
+    json_types::{Base64VecU8, U128, U64},
     AccountId,
 };
 #[cfg(feature = "integration-api")]
@@ -288,6 +288,12 @@ pub trait WithdrawApi {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
     fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+}
+
+#[make_integration_version]
+pub trait StepsApi {
+    /// TODO: document
+    fn record_steps(&mut self, timestamp: U64, batch: Vec<(AccountId, u32)>);
 }
 
 #[cfg(feature = "integration-methods")]

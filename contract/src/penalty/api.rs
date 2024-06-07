@@ -24,6 +24,7 @@ impl PenaltyApi for Contract {
         let now = env::block_timestamp_ms();
 
         assert_penalty_apy(&product.apy);
+
         self.get_jar_mut_internal(&account_id, jar_id)
             .apply_penalty(&product, value, now);
 

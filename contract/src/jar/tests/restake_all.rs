@@ -5,7 +5,8 @@ use sweat_jar_model::{api::JarApi, MS_IN_YEAR};
 use crate::{
     common::tests::Context,
     jar::model::Jar,
-    test_utils::{admin, generate_product, JAR_ID_RANGE, PRINCIPAL},
+    product::model::Product,
+    test_utils::{admin, JAR_ID_RANGE, PRINCIPAL},
 };
 
 #[test]
@@ -13,33 +14,38 @@ fn restake_all() {
     let alice = alice();
     let admin = admin();
 
-    let restakable_product = generate_product("restakable_product")
+    let restakable_product = Product::new().id("restakable_product").with_allows_restaking(true);
+
+    let disabled_restakable_product = Product::new()
+        .id("disabled_restakable_product")
         .with_allows_restaking(true)
-        .lockup_term(MS_IN_YEAR);
+        .enabled(false);
 
-    let disabled_restakable_product = generate_product("disabled_restakable_product")
-        .with_allows_restaking(true)
-        .enabled(false)
-        .lockup_term(MS_IN_YEAR);
+    let non_restakable_product = Product::new().id("non_restakable_product").with_allows_restaking(false);
 
-    let non_restakable_product = generate_product("non_restakable_product")
-        .with_allows_restaking(false)
-        .lockup_term(MS_IN_YEAR);
-
-    let long_term_restakable_product = generate_product("long_term_restakable_product")
+    let long_term_restakable_product = Product::new()
+        .id("long_term_restakable_product")
         .with_allows_restaking(true)
         .lockup_term(MS_IN_YEAR * 2);
 
-    let restakable_jar_1 = Jar::generate(JAR_ID_RANGE.fake(), &alice, &restakable_product.id).principal(PRINCIPAL);
-    let restakable_jar_2 = Jar::generate(JAR_ID_RANGE.fake(), &alice, &restakable_product.id).principal(PRINCIPAL);
+    let restakable_jar_1 = Jar::new(JAR_ID_RANGE.fake())
+        .product_id(&restakable_product.id)
+        .principal(PRINCIPAL);
+    let restakable_jar_2 = Jar::new(JAR_ID_RANGE.fake())
+        .product_id(&restakable_product.id)
+        .principal(PRINCIPAL);
 
-    let disabled_jar = Jar::generate(JAR_ID_RANGE.fake(), &alice, &disabled_restakable_product.id).principal(PRINCIPAL);
+    let disabled_jar = Jar::new(JAR_ID_RANGE.fake())
+        .product_id(&disabled_restakable_product.id)
+        .principal(PRINCIPAL);
 
-    let non_restakable_jar =
-        Jar::generate(JAR_ID_RANGE.fake(), &alice, &non_restakable_product.id).principal(PRINCIPAL);
+    let non_restakable_jar = Jar::new(JAR_ID_RANGE.fake())
+        .product_id(&non_restakable_product.id)
+        .principal(PRINCIPAL);
 
-    let long_term_jar =
-        Jar::generate(JAR_ID_RANGE.fake(), &alice, &long_term_restakable_product.id).principal(PRINCIPAL);
+    let long_term_jar = Jar::new(JAR_ID_RANGE.fake())
+        .product_id(&long_term_restakable_product.id)
+        .principal(PRINCIPAL);
 
     let mut context = Context::new(admin)
         .with_products(&[
@@ -86,10 +92,8 @@ fn restake_all_after_maturity_for_restakable_product_one_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product("restakable_product")
-        .with_allows_restaking(true)
-        .lockup_term(MS_IN_YEAR);
-    let jar = Jar::generate(0, &alice, &product.id).principal(PRINCIPAL);
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0).principal(PRINCIPAL);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.set_block_timestamp_in_days(366);

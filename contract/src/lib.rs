@@ -1,6 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-use ed25519_dalek::Signature;
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -23,6 +22,8 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
+mod steps;
+mod test_builder;
 mod test_utils;
 mod tests;
 mod withdraw;
@@ -86,6 +87,7 @@ pub(crate) enum StorageKey {
     AccountJarsV1,
     /// Products migrated to near_sdk 5
     ProductsV1,
+    AccountSteps,
 }
 
 #[near_bindgen]

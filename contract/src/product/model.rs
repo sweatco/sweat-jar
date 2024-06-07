@@ -1,10 +1,22 @@
 use near_sdk::{near, require};
-use sweat_jar_model::{ProductId, TokenAmount};
+use sweat_jar_model::{ProductId, Steps, TokenAmount};
 
 use crate::{
     common::{udecimal::UDecimal, Duration},
     env,
 };
+
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug)]
+pub struct ProductBeforeStepJars {
+    pub id: ProductId,
+    pub apy: Apy,
+    pub cap: Cap,
+    pub terms: Terms,
+    pub withdrawal_fee: Option<WithdrawalFee>,
+    pub public_key: Option<Vec<u8>>,
+    pub is_enabled: bool,
+}
 
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[near(serializers=[borsh, json])]
@@ -30,6 +42,9 @@ pub struct Product {
 
     /// Indicates whether it's possible to create a new jar for this product.
     pub is_enabled: bool,
+
+    /// TODO: document 0 - non step jar
+    pub steps_cap: Steps,
 }
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
@@ -106,6 +121,10 @@ pub struct Cap {
 }
 
 impl Product {
+    pub(crate) fn is_steps_product(&self) -> bool {
+        self.steps_cap > 0
+    }
+
     pub(crate) fn is_flexible(&self) -> bool {
         self.terms == Terms::Flexible
     }
