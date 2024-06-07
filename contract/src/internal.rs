@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use near_sdk::require;
 use sweat_jar_model::{
@@ -32,15 +32,9 @@ impl Contract {
         self.last_jar_id
     }
 
-    pub(crate) fn get_product(&self, product_id: &ProductId) -> &Product {
+    pub(crate) fn get_product(&self, product_id: &ProductId) -> Product {
         self.products
             .get(product_id)
-            .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
-    }
-
-    pub(crate) fn get_product_mut(&mut self, product_id: &ProductId) -> &mut Product {
-        self.products
-            .get_mut(product_id)
             .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
     }
 
@@ -80,17 +74,65 @@ impl Contract {
     }
 }
 
+pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce() -> Message) {
+    let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+
+    if gas_left < gas_needed {
+        let error = error();
+
+        env::panic_str(&format!(
+            r#"Not enough gas left. Consider attaching more gas to the transaction.
+               {error}
+               Gas left: {gas_left} Needed: {gas_needed}. Need additional {} gas"#,
+            gas_needed - gas_left
+        ));
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use near_sdk::test_utils::accounts;
+    use near_sdk::env;
 
-    use crate::common::tests::Context;
+    use crate::{
+        common::tests::Context,
+        internal::assert_gas,
+        test_utils::{admin, expect_panic},
+    };
 
     #[test]
     #[should_panic(expected = r#"Can be performed only by admin"#)]
     fn self_update_without_access() {
-        let admin = accounts(1);
-        let mut context = Context::new(admin);
-        context.contract.update_contract(vec![], None);
+        let admin = admin();
+        let context = Context::new(admin);
+        context.contract().update_contract(vec![], None);
+    }
+
+    #[test]
+    fn test_assert_gas() {
+        const GAS_FOR_ASSERT_CALL: u64 = 529536222;
+
+        expect_panic(
+            &(),
+            "Not enough gas left. Consider attaching more gas to the transaction.",
+            || {
+                assert_gas(u64::MAX, || "Error message");
+            },
+        );
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        expect_panic(&(), &format!("Need additional {GAS_FOR_ASSERT_CALL} gas"), || {
+            assert_gas(gas_left, || "Error message");
+        });
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        expect_panic(&(), "Need additional 1 gas", || {
+            assert_gas(gas_left - GAS_FOR_ASSERT_CALL + 1, || "Error message");
+        });
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        assert_gas(gas_left - GAS_FOR_ASSERT_CALL, || "Error message");
+
+        let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
+        assert_gas(gas_left - GAS_FOR_ASSERT_CALL - 1, || "Error message");
     }
 }

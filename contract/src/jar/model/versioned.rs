@@ -1,11 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use near_sdk::{
-    borsh,
-    borsh::{BorshDeserialize, BorshSerialize},
-    serde::{Deserialize, Serialize},
-    AccountId,
-};
+use near_sdk::{near, AccountId};
 use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
 use crate::{
@@ -16,8 +11,9 @@ use crate::{
 
 pub type Jar = JarVersioned;
 
-#[derive(Clone, Debug, Serialize, Deserialize, BorshSerialize, BorshDeserialize, PartialEq)]
-#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+#[serde(rename_all = "snake_case")]
 pub enum JarVersioned {
     V1(JarV1),
 }
@@ -41,6 +37,14 @@ impl JarVersioned {
             is_pending_withdraw: false,
             is_penalty_applied: false,
             claim_remainder: 0,
+        }
+        .into()
+    }
+
+    pub fn locked(&self) -> Self {
+        JarV1 {
+            is_pending_withdraw: true,
+            ..self.inner()
         }
         .into()
     }

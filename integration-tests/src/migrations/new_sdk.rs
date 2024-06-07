@@ -1,7 +1,8 @@
 use anyhow::Result;
-use near_sdk::json_types::U128;
-use nitka::misc::ToNear;
-use sweat_jar_model::api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract};
+use nitka::{build::build_contract, misc::ToNear, near_sdk::json_types::U128};
+use sweat_jar_model::api::{
+    InitApiIntegration, JarApiIntegration, MigratonToNearSdk5Integration, ProductApiIntegration, SweatJarContract,
+};
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::{
@@ -9,10 +10,11 @@ use crate::{
 };
 
 #[tokio::test]
-#[ignore]
-async fn migrate_to_new_sdk() -> Result<()> {
+async fn migrate_to_near_sdk_5() -> Result<()> {
+    build_contract("build-integration".into())?;
+
     let ft_code = load_wasm("res/sweat.wasm");
-    let jar_old_code = load_wasm("res/sweat_jar_main.wasm");
+    let jar_old_code = load_wasm("res_test/sweat_jar_pre_near_sdk_5.wasm");
     let jar_new_code = load_wasm("res/sweat_jar.wasm");
 
     let worker = near_workspaces::sandbox().await?;
@@ -42,13 +44,19 @@ async fn migrate_to_new_sdk() -> Result<()> {
 
     ft_contract.tge_mint(&bob.to_near(), 1_000_000.into()).await?;
 
-    old_jar_contract
-        .register_product(RegisterProductCommand::Locked10Minutes6PercentsTopUp.get())
-        .with_user(&manager_account)
-        .await?;
+    for product in RegisterProductCommand::all() {
+        if product.id() == RegisterProductCommand::Locked6Months6Percents.get().id {
+            continue;
+        }
 
-    let products = old_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products.len(), 1);
+        old_jar_contract
+            .register_product(product.get())
+            .with_user(&manager_account)
+            .await?;
+    }
+
+    let products_old = old_jar_contract.get_products().with_user(&ft_account).await?;
+    assert_eq!(products_old.len(), 9);
 
     let bob_jars = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
     assert!(bob_jars.is_empty());
@@ -62,15 +70,13 @@ async fn migrate_to_new_sdk() -> Result<()> {
         )
         .await?;
 
-    let bob_jars = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
+    let bob_jars_old = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
 
-    assert_eq!(bob_jars.len(), 1);
+    assert_eq!(bob_jars_old.len(), 1);
 
     assert_eq!(staked.0, 100_000);
 
     assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 900_000);
-
-    dbg!(ft_contract.ft_balance_of(bob.to_near()).await?);
 
     drop(old_jar_contract);
 
@@ -79,11 +85,13 @@ async fn migrate_to_new_sdk() -> Result<()> {
         contract: &new_jar_contract,
     };
 
+    new_jar_contract.migrate_state_to_near_sdk_5().await?;
+
     let products_new = new_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products, products_new);
+    assert_eq!(products_old, products_new);
 
     let bob_jars_new = new_jar_contract.get_jars_for_account(bob.to_near()).await?;
-    assert_eq!(bob_jars, bob_jars_new);
+    assert_eq!(bob_jars_old, bob_jars_new);
 
     new_jar_contract
         .register_product(RegisterProductCommand::Locked6Months6Percents.get())
@@ -91,7 +99,7 @@ async fn migrate_to_new_sdk() -> Result<()> {
         .await?;
 
     let products = new_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products.len(), 2);
+    assert_eq!(products.len(), 10);
 
     let staked = new_jar_contract
         .create_jar(

@@ -33,8 +33,8 @@ cov: ##@Testing Run unit tests with coverage.
 	cargo llvm-cov --hide-instantiations --open --ignore-filename-regex tests.rs
 
 test: ##@Testing Run unit tests.
-	cargo test --package sweat-jar-model --features=release-api && \
-	cargo test --package sweat_jar
+	cargo test --package sweat-jar-model --features=release-api --release && \
+	cargo test --package sweat_jar --release
 
 integration: ##@Testing Run integration tests.
 	cargo test --package integration-tests
@@ -46,6 +46,9 @@ fmt: ##@Chores Format the code using rustfmt nightly.
 
 lint: ##@Chores Run lint checks with Clippy.
 	./scripts/lint.sh
+
+hash: ##@Chores Check if contract in commit has valid hash.
+	./scripts/check-contract-hash.sh
 
 HELP_FUN = \
     %help; while(<>){push@{$$help{$$2//'options'}},[$$1,$$3] \

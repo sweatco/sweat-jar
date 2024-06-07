@@ -2,12 +2,8 @@ use std::ops::{Deref, DerefMut};
 
 use ed25519_dalek::Signature;
 use near_sdk::{
-    borsh::{self, BorshDeserialize, BorshSerialize},
-    env,
-    json_types::Base64VecU8,
-    near_bindgen,
-    store::{LookupMap, UnorderedMap},
-    AccountId, BorshStorageKey, PanicOnDefault,
+    collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
+    BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
@@ -27,14 +23,15 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
+mod test_utils;
 mod tests;
 mod withdraw;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault, SelfUpdate)]
+#[near(contract_state)]
+#[derive(PanicOnDefault, SelfUpdate)]
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
@@ -58,7 +55,8 @@ pub struct Contract {
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 }
 
-#[derive(Default, BorshDeserialize, BorshSerialize)]
+#[near]
+#[derive(Default)]
 pub struct AccountJars {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_id: JarId,
@@ -79,12 +77,15 @@ impl DerefMut for AccountJars {
     }
 }
 
-#[derive(BorshStorageKey, BorshSerialize)]
+#[near]
+#[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
-    Products,
+    ProductsLegacy,
     AccountJarsLegacy,
     /// Jars with claim remainder
     AccountJarsV1,
+    /// Products migrated to near_sdk 5
+    ProductsV1,
 }
 
 #[near_bindgen]
@@ -96,7 +97,7 @@ impl InitApi for Contract {
             token_account_id,
             fee_account_id,
             manager,
-            products: UnorderedMap::new(StorageKey::Products),
+            products: UnorderedMap::new(StorageKey::ProductsV1),
             account_jars: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,

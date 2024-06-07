@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use near_workspaces::types::Gas;
 use sweat_jar_model::api::ProductApiIntegration;
 

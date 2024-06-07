@@ -1,10 +1,15 @@
 use anyhow::Result;
-use async_trait::async_trait;
-use near_sdk::json_types::U128;
 use near_workspaces::Account;
-use nitka::misc::ToNear;
-use sweat_jar_model::api::{InitApiIntegration, ProductApiIntegration, SweatJarContract};
-use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
+use nitka::{misc::ToNear, near_sdk::json_types::U128};
+use sweat_jar_model::{
+    api::{
+        InitApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, ProductApiIntegration,
+        SweatJarContract,
+    },
+    jar::JarView,
+    ProductId,
+};
+use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::product::RegisterProductCommand;
 
@@ -13,7 +18,6 @@ pub type Context = nitka::context::Context<near_workspaces::network::Sandbox>;
 pub const FT_CONTRACT: &str = "sweat";
 pub const SWEAT_JAR: &str = "sweat_jar";
 
-#[async_trait]
 pub trait IntegrationContext {
     async fn manager(&mut self) -> Result<Account>;
     async fn alice(&mut self) -> Result<Account>;
@@ -22,7 +26,6 @@ pub trait IntegrationContext {
     fn ft_contract(&self) -> SweatContract;
 }
 
-#[async_trait]
 impl IntegrationContext for Context {
     async fn manager(&mut self) -> Result<Account> {
         self.account("manager").await
@@ -50,12 +53,12 @@ impl IntegrationContext for Context {
 }
 
 pub(crate) async fn prepare_contract(
-    custom_jar: Option<Vec<u8>>,
+    custom_jar_contract: Option<Vec<u8>>,
     products: impl IntoIterator<Item = RegisterProductCommand>,
 ) -> Result<Context> {
     let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
 
-    if let Some(custom_jar) = custom_jar {
+    if let Some(custom_jar) = custom_jar_contract {
         let contract = context
             .sweat_jar()
             .contract
@@ -125,4 +128,72 @@ pub(crate) async fn prepare_contract(
     }
 
     Ok(context)
+}
+
+pub trait ContextHelpers {
+    async fn last_jar_for(&self, account: &Account) -> Result<JarView>;
+    async fn bulk_create_jars(
+        &mut self,
+        account: &Account,
+        product_id: &ProductId,
+        principal: u128,
+        number_of_jars: u16,
+    ) -> Result<Vec<JarView>>;
+    async fn account_balance(&self, account: &Account) -> Result<u128>;
+}
+
+impl ContextHelpers for Context {
+    async fn last_jar_for(&self, account: &Account) -> Result<JarView> {
+        Ok(self
+            .sweat_jar()
+            .get_jars_for_account(account.to_near())
+            .await?
+            .into_iter()
+            .last()
+            .unwrap())
+    }
+
+    async fn bulk_create_jars(
+        &mut self,
+        account: &Account,
+        product_id: &ProductId,
+        principal: u128,
+        number_of_jars: u16,
+    ) -> Result<Vec<JarView>> {
+        let total_amount = principal * number_of_jars as u128;
+
+        self.ft_contract()
+            .tge_mint(&account.to_near(), U128(100_000_000_000))
+            .await?;
+
+        let account_balance = self.account_balance(account).await?;
+        assert!(
+            account_balance > total_amount,
+            r#"
+                Account doesn't have enough $SWEAT to create {number_of_jars} jars with {principal} principal.
+                Required: {total_amount} has: {account_balance}
+            "#,
+        );
+
+        self.ft_contract()
+            .ft_transfer(
+                self.sweat_jar().contract.as_account().id().clone(),
+                total_amount.into(),
+                None,
+            )
+            .with_user(account)
+            .await?;
+
+        let manager = self.manager().await?;
+
+        self.sweat_jar()
+            .bulk_create_jars(account.to_near(), product_id.clone(), principal, number_of_jars)
+            .with_user(&manager)
+            .await
+    }
+
+    async fn account_balance(&self, account: &Account) -> Result<u128> {
+        let balance = self.ft_contract().ft_balance_of(account.to_near()).await?.0;
+        Ok(balance)
+    }
 }

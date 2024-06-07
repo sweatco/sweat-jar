@@ -1,18 +1,16 @@
-#[cfg(feature = "release-api")]
-use near_sdk::AccountId;
 use near_sdk::{
     json_types::{Base64VecU8, U128},
-    PromiseOrValue,
+    AccountId,
 };
 #[cfg(feature = "integration-api")]
-use nitka::AccountId;
+use nitka::near_sdk;
 use nitka_proc::make_integration_version;
 
 use crate::{
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     product::{ProductView, RegisterProductCommand},
-    withdraw::WithdrawView,
+    withdraw::{BulkWithdrawView, WithdrawView},
     ProductId,
 };
 
@@ -40,7 +38,7 @@ pub trait ClaimApi {
     /// A `PromiseOrValue<ClaimedAmountView>` representing the amount of tokens claimed
     /// and probably a map containing amount of tokens claimed from each Jar. If the total available
     /// interest across all jars is zero, the returned value will also be zero and the detailed map will be empty (if requested).
-    fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView>;
+    fn claim_total(&mut self, detailed: Option<bool>) -> ::near_sdk::PromiseOrValue<ClaimedAmountView>;
 
     /// Claims interest from specific deposit jars with provided IDs.
     ///
@@ -66,7 +64,7 @@ pub trait ClaimApi {
         jar_ids: Vec<JarIdView>,
         amount: Option<U128>,
         detailed: Option<bool>,
-    ) -> PromiseOrValue<ClaimedAmountView>;
+    ) -> ::near_sdk::PromiseOrValue<ClaimedAmountView>;
 }
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
@@ -162,12 +160,18 @@ pub trait JarApi {
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
+
+    fn restake_all(&mut self) -> Vec<JarView>;
 }
 
 #[make_integration_version]
 pub trait MigrationToClaimRemainder {
-    fn migrate_state_to_claim_remainder() -> Self;
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>);
+}
+
+#[make_integration_version]
+pub trait MigratonToNearSdk5 {
+    fn migrate_state_to_near_sdk_5() -> Self;
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
@@ -279,7 +283,9 @@ pub trait WithdrawApi {
     /// - If the caller is not the owner of the specified jar.
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView>;
+    fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
+
+    fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
 #[cfg(feature = "integration-methods")]
@@ -288,9 +294,9 @@ pub trait IntegrationTestMethods {
     fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
     fn bulk_create_jars(
         &mut self,
-        accounts: Vec<AccountId>,
+        account_id: AccountId,
         product_id: ProductId,
-        locked_amount: crate::TokenAmount,
-        jars_count: u32,
-    );
+        principal: u128,
+        number_of_jars: u16,
+    ) -> Vec<JarView>;
 }

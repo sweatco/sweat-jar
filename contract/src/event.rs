@@ -26,8 +26,10 @@ pub enum EventKind {
     CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
+    WithdrawAll(Vec<WithdrawData>),
     Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
+    RestakeAll(Vec<RestakeData>),
     ApplyPenalty(PenaltyData),
     BatchApplyPenalty(BatchPenaltyData),
     EnableProduct(EnableProductData),
@@ -85,8 +87,8 @@ pub struct ClaimEventItem {
 #[serde(crate = "near_sdk::serde")]
 pub struct WithdrawData {
     pub id: JarId,
-    pub fee_amount: U128,
-    pub withdrawn_amount: U128,
+    pub fee: U128,
+    pub amount: U128,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -178,12 +180,21 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::{json_types::U128, AccountId};
+    use near_sdk::json_types::U128;
 
     use crate::{
+        common::tests::Context,
         event::{EventKind, SweatJarEvent, TopUpData},
         jar::model::JarV1,
+        test_utils::admin,
     };
+
+    #[test]
+    fn test_contract_version() {
+        let admin = admin();
+        let context = Context::new(admin);
+        assert_eq!(context.contract().contract_version(), "sweat_jar-2.1.0");
+    }
 
     #[test]
     fn event_to_string() {
@@ -195,7 +206,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "1.0.1",
+  "version": "2.1.0",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -208,7 +219,7 @@ mod test {
             SweatJarEvent::from(EventKind::CreateJar(
                 JarV1 {
                     id: 555,
-                    account_id: AccountId::new_unchecked("bob.near".to_string()),
+                    account_id: "bob.near".to_string().try_into().unwrap(),
                     product_id: "some_product".to_string(),
                     created_at: 1234324235,
                     principal: 78685678567,
@@ -223,7 +234,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "1.0.1",
+  "version": "2.1.0",
   "event": "create_jar",
   "data": {
     "id": 555,

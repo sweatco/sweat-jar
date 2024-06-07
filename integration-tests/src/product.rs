@@ -1,14 +1,14 @@
-use near_sdk::serde::Serialize;
-use serde_json::{from_value, json, Value};
+use nitka::near_sdk::serde_json::{from_value, json, Value};
+use serde::Serialize;
 
 #[derive(Serialize, Debug, Copy, Clone, Eq, PartialEq, Hash)]
-#[serde(crate = "near_sdk::serde")]
 pub(crate) enum RegisterProductCommand {
     Locked12Months12Percents,
     Locked6Months6Percents,
     Flexible6Months6Percents,
     Locked6Months6PercentsWithWithdrawFee,
     Locked10Minutes6Percents,
+    Locked5Minutes60000Percents,
     Locked10Minutes60000Percents,
     Locked10Minutes6PercentsTopUp,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
@@ -16,13 +16,14 @@ pub(crate) enum RegisterProductCommand {
 }
 
 impl RegisterProductCommand {
-    pub(crate) fn all() -> [Self; 9] {
+    pub(crate) fn all() -> [Self; 10] {
         [
             Self::Locked12Months12Percents,
             Self::Locked6Months6Percents,
             Self::Flexible6Months6Percents,
             Self::Locked6Months6PercentsWithWithdrawFee,
             Self::Locked10Minutes6Percents,
+            Self::Locked5Minutes60000Percents,
             Self::Locked10Minutes60000Percents,
             Self::Locked10Minutes6PercentsTopUp,
             Self::Locked10Minutes6PercentsWithFixedWithdrawFee,
@@ -122,8 +123,23 @@ impl RegisterProductCommand {
                 },
                 "is_enabled": true,
             }),
+            RegisterProductCommand::Locked5Minutes60000Percents => json!({
+                "id": "flexible_5_minutes_60000_percents",
+                "apy_default": ["60000", 2],
+                "cap_min": "10000",
+                "cap_max": "100000000000",
+                "terms": {
+                    "type": "fixed",
+                    "data": {
+                        "lockup_term": "300000",
+                        "allows_top_up": false,
+                        "allows_restaking": true,
+                    }
+                },
+                "is_enabled": true,
+            }),
             RegisterProductCommand::Locked10Minutes60000Percents => json!({
-                "id": "flexible_6_months_60000_percents",
+                "id": "flexible_10_minutes_60000_percents",
                 "apy_default": ["60000", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",
@@ -132,13 +148,13 @@ impl RegisterProductCommand {
                     "data": {
                         "lockup_term": "600000",
                         "allows_top_up": false,
-                        "allows_restaking": false,
+                        "allows_restaking": true,
                     }
                 },
                 "is_enabled": true,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsTopUp => json!({
-                "id": "locked_10_minutes_6_percents",
+                "id": "locked_10_minutes_6_percents_top_up",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
                 "cap_max": "100000000000",

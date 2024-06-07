@@ -9,10 +9,25 @@ env:
 
 jobs:
 
+  typos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1.21.0
+
+  unused-dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for unused dependencies
+        run: |
+          cargo install cargo-machete --locked
+          cargo machete
+
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Lint
         run: make lint
@@ -21,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build
         run: make build
@@ -29,16 +44,16 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Unit tests
         run: make test
 
   integration-tests:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Integration tests
         run: make integration
@@ -50,7 +65,19 @@ jobs:
         run: cargo install --locked cargo-mutants
 
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Mutation tests
         run: make mutation
+
+  check-binary-hash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hash
+        run: make hash
+
+      - name: Commit Hash
+        run: echo ${{ github.event.pull_request.head.sha }}
+

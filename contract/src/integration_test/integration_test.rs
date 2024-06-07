@@ -1,42 +1,50 @@
 #![cfg(feature = "integration-test")]
 
 use near_sdk::{env, near_bindgen, AccountId, Timestamp};
-use sweat_jar_model::{api::IntegrationTestMethods, ProductId, TokenAmount};
+use sweat_jar_model::{api::IntegrationTestMethods, jar::JarView, ProductId};
 
-use crate::{Contract, ContractExt, Jar};
+use crate::{jar::model::Jar, Contract, ContractExt};
 
+#[mutants::skip]
 #[near_bindgen]
 impl IntegrationTestMethods for Contract {
-    #[mutants::skip]
     fn block_timestamp_ms(&self) -> Timestamp {
         env::block_timestamp_ms()
     }
 
-    #[mutants::skip]
     fn bulk_create_jars(
         &mut self,
-        accounts: Vec<AccountId>,
+        account_id: AccountId,
         product_id: ProductId,
-        locked_amount: TokenAmount,
-        jars_count: u32,
-    ) {
+        principal: u128,
+        number_of_jars: u16,
+    ) -> Vec<JarView> {
+        self.assert_manager();
+        (0..number_of_jars)
+            .map(|_| self.create_jar_for_integration_tests(&account_id, &product_id, principal))
+            .collect()
+    }
+}
+
+#[mutants::skip]
+impl Contract {
+    fn create_jar_for_integration_tests(
+        &mut self,
+        account_id: &AccountId,
+        product_id: &ProductId,
+        amount: u128,
+    ) -> JarView {
+        let product = self.get_product(&product_id);
+
+        product.assert_enabled();
+        product.assert_cap(amount);
+
+        let id = self.increment_and_get_last_jar_id();
         let now = env::block_timestamp_ms();
+        let jar = Jar::create(id, account_id.clone(), product_id.clone(), amount, now);
 
-        for account in accounts {
-            let jar = Jar::create(0, account.clone(), product_id.clone(), locked_amount, now);
+        self.add_new_jar(account_id, jar.clone());
 
-            let jars = self.account_jars.entry(account.clone()).or_default();
-
-            jars.jars.reserve(jars_count as usize);
-
-            for _ in 0..jars_count {
-                self.last_jar_id += 1;
-
-                jars.last_id = jar.id;
-                jars.push(jar.clone().with_id(self.last_jar_id));
-            }
-
-            jars.last_id = jars_count - 1;
-        }
+        jar.into()
     }
 }

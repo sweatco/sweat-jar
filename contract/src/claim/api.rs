@@ -69,7 +69,7 @@ impl Contract {
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let (available_interest, remainder) = jar.get_interest(product, now);
+            let (available_interest, remainder) = jar.get_interest(&product, now);
 
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - accumulator.get_total().0)
@@ -136,7 +136,7 @@ impl Contract {
     ) -> PromiseOrValue<ClaimedAmountView> {
         use crate::ft_interface::FungibleTokenInterface;
         self.ft_contract()
-            .transfer(account_id, claimed_amount.get_total().0, "claim", &None)
+            .ft_transfer(account_id, claimed_amount.get_total().0, "claim", &None)
             .then(after_claim_call(claimed_amount, jars_before_transfer, event, now))
             .into()
     }
@@ -165,7 +165,7 @@ impl Contract {
 
                 jar.unlock();
 
-                if jar.should_be_closed(product, now) {
+                if jar.should_be_closed(&product, now) {
                     self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
                 }
             }

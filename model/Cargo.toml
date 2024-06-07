@@ -1,6 +1,6 @@
 [package]
 name = "sweat-jar-model"
-version = "1.0.1"
+version = "2.1.0"
 publish = false
 edition = "2021"
 
@@ -17,9 +17,7 @@ release-api = []
 
 
 [dependencies]
-anyhow = { workspace = true }
 near-sdk = { workspace = true }
-async-trait = { workspace = true }
 
 nitka-proc = { workspace = true }
 nitka = { workspace = true, optional = true }

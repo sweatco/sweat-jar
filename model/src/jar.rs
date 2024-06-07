@@ -1,9 +1,8 @@
 use std::collections::HashMap;
 
 use near_sdk::{
-    borsh,
-    borsh::{BorshDeserialize, BorshSerialize},
     json_types::{U128, U64},
+    near,
     serde::{Deserialize, Serialize},
     AccountId, Timestamp,
 };
@@ -49,7 +48,8 @@ pub struct AggregatedInterestView {
     pub timestamp: Timestamp,
 }
 
-#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
+#[near]
+#[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
 pub struct CeFiJar {
     pub id: String,
