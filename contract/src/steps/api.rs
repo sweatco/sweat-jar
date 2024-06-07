@@ -38,7 +38,7 @@ impl StepsApi for Contract {
             event.push(StepsData {
                 account_id: account,
                 steps: steps.into(),
-            })
+            });
         }
 
         emit(EventKind::RecordSteps(event));

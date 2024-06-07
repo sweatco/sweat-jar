@@ -187,8 +187,10 @@ mod test {
     use near_sdk::{json_types::U128, AccountId};
 
     use crate::{
+        common::tests::Context,
         event::{EventKind, StepsData, SweatJarEvent, TopUpData},
         jar::model::{Jar, JarLastVersion},
+        test_utils::admin,
     };
 
     #[test]
