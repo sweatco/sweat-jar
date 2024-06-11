@@ -6,18 +6,6 @@ use crate::{
     env,
 };
 
-#[near(serializers=[borsh, json])]
-#[derive(Clone, Debug)]
-pub struct ProductBeforeStepJars {
-    pub id: ProductId,
-    pub apy: Apy,
-    pub cap: Cap,
-    pub terms: Terms,
-    pub withdrawal_fee: Option<WithdrawalFee>,
-    pub public_key: Option<Vec<u8>>,
-    pub is_enabled: bool,
-}
-
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug)]

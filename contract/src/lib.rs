@@ -87,7 +87,8 @@ pub(crate) enum StorageKey {
     AccountJarsV1,
     /// Products migrated to near_sdk 5
     ProductsV1,
-    AccountSteps,
+    /// Products migrated to step jars
+    ProductsV2,
 }
 
 #[near_bindgen]

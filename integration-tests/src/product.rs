@@ -144,21 +144,6 @@ impl RegisterProductCommand {
                 "is_enabled": true,
                 "steps_for_percent": 0,
             }),
-            RegisterProductCommand::Locked5Minutes60000Percents => json!({
-                "id": "flexible_5_minutes_60000_percents",
-                "apy_default": ["60000", 2],
-                "cap_min": "10000",
-                "cap_max": "100000000000",
-                "terms": {
-                    "type": "fixed",
-                    "data": {
-                        "lockup_term": "300000",
-                        "allows_top_up": false,
-                        "allows_restaking": true,
-                    }
-                },
-                "is_enabled": true,
-            }),
             RegisterProductCommand::Locked10Minutes60000Percents => json!({
                 "id": "flexible_10_minutes_60000_percents",
                 "apy_default": ["60000", 2],
