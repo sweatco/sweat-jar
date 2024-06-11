@@ -33,7 +33,7 @@ impl From<RegisterProductCommand> for Product {
             withdrawal_fee,
             public_key: value.public_key.map(|key| key.0),
             is_enabled: value.is_enabled,
-            steps_cap: 0,
+            steps_cap: value.steps_cap,
         }
     }
 }

@@ -119,5 +119,13 @@ async fn migrate_to_step_jars() -> Result<()> {
 
     assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 800_000);
 
+    new_jar_contract
+        .register_product(RegisterProductCommand::Locked10Minutes20000StepsCap.get())
+        .with_user(&manager_account)
+        .await?;
+
+    let products = new_jar_contract.get_products().with_user(&ft_account).await?;
+    assert_eq!(products.last().unwrap().steps_cap, 20_000);
+
     Ok(())
 }

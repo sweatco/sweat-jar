@@ -13,6 +13,7 @@ pub(crate) enum RegisterProductCommand {
     Locked10Minutes6PercentsTopUp,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
     Locked10Minutes6PercentsWithPercentWithdrawFee,
+    Locked10Minutes20000StepsCap,
 }
 
 impl RegisterProductCommand {
@@ -215,6 +216,22 @@ impl RegisterProductCommand {
                 },
                 "is_enabled": true,
                 "steps_cap": 0,
+            }),
+            RegisterProductCommand::Locked10Minutes20000StepsCap => json!({
+                "id": "locked_10_minutes_20000_steps_cap",
+                "apy_default": ["0", 0],
+                "cap_min": "100000",
+                "cap_max": "100000000000",
+                "terms": {
+                    "type": "fixed",
+                    "data": {
+                        "lockup_term": "600000",
+                        "allows_top_up": false,
+                        "allows_restaking": false,
+                    }
+                },
+                "is_enabled": true,
+                "steps_cap": 20000,
             }),
         }
     }
