@@ -58,8 +58,6 @@ fn immediate_max_steps_apy() {
         .jar(JAR_APY_2)
         .build();
 
-    // let reset_period_days = 7;
-
     for day in 0..400 {
         ctx.set_block_timestamp_in_days(day);
     }

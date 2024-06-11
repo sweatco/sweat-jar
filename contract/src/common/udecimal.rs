@@ -33,11 +33,6 @@ impl UDecimal {
     pub(crate) fn to_f32(self) -> f32 {
         self.significand as f32 / 10u128.pow(self.exponent) as f32
     }
-
-    #[allow(dead_code)]
-    pub(crate) fn is_zero(&self) -> bool {
-        self.significand == 0
-    }
 }
 
 impl Mul<u128> for UDecimal {
@@ -143,11 +138,5 @@ mod tests {
 
             assert!(diff < 0.00008, "Diff: {diff}");
         }
-    }
-
-    #[test]
-    fn udecimal_zero() {
-        assert!(UDecimal::new(0, 0).is_zero());
-        assert!(UDecimal::new(0, 55).is_zero());
     }
 }
