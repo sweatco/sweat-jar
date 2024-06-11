@@ -1,8 +1,7 @@
 use anyhow::Result;
 use nitka::{build::build_contract, misc::ToNear, near_sdk::json_types::U128};
 use sweat_jar_model::api::{
-    InitApiIntegration, JarApiIntegration, MigrationToStepJarsIntegration,
-    ProductApiIntegration, SweatJarContract,
+    InitApiIntegration, JarApiIntegration, MigrationToStepJarsIntegration, ProductApiIntegration, SweatJarContract,
 };
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
@@ -100,6 +99,7 @@ async fn migrate_to_step_jars() -> Result<()> {
         .await?;
 
     let products = new_jar_contract.get_products().with_user(&ft_account).await?;
+    assert!(products.iter().all(|a| a.steps_cap == 0));
     assert_eq!(products.len(), 10);
 
     let staked = new_jar_contract

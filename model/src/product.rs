@@ -3,7 +3,7 @@ use near_sdk::{
     near,
 };
 
-use crate::{ProductId, MS_IN_YEAR};
+use crate::{ProductId, Steps, MS_IN_YEAR};
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers=[json])]
@@ -59,6 +59,8 @@ pub struct ProductView {
     pub terms: TermsView,
     pub withdrawal_fee: Option<WithdrawalFeeView>,
     pub is_enabled: bool,
+    #[serde(default)]
+    pub steps_cap: Steps,
 }
 
 #[near(serializers=[borsh, json])]
@@ -118,7 +120,7 @@ pub struct RegisterProductCommand {
     pub withdrawal_fee: Option<WithdrawalFeeDto>,
     pub public_key: Option<Base64VecU8>,
     pub is_enabled: bool,
-    pub steps_for_percent: u32,
+    pub steps_cap: Steps,
 }
 
 impl Default for RegisterProductCommand {
@@ -133,7 +135,7 @@ impl Default for RegisterProductCommand {
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
-            steps_for_percent: 0,
+            steps_cap: 0,
         }
     }
 }

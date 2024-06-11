@@ -1,10 +1,4 @@
-#![allow(deprecated)]
-
-use near_sdk::{
-    env, log, near, near_bindgen,
-    store::{LookupMap, UnorderedMap},
-    AccountId, PanicOnDefault,
-};
+use near_sdk::{collections::UnorderedMap, env, near, near_bindgen, store::LookupMap, AccountId, PanicOnDefault};
 use sweat_jar_model::{api::MigrationToStepJars, jar::JarId, ProductId};
 
 use crate::{
@@ -43,17 +37,12 @@ impl MigrationToStepJars for Contract {
     #[init(ignore_state)]
     #[mutants::skip]
     fn migrate_state_to_step_jars() -> Self {
-        log!("migrate_state_to_step_jars");
-
         let mut old_state: ContractBeforeStepJars = env::state_read().expect("Failed to extract old contract state.");
 
         let mut products: near_sdk::collections::UnorderedMap<ProductId, Product> =
             near_sdk::collections::UnorderedMap::new(StorageKey::ProductsV2);
 
-        log!("State porsed");
-
-        for (product_id, product) in old_state.products.drain() {
-            log!("Predacto");
+        for (product_id, product) in &old_state.products {
             products.insert(
                 &product_id,
                 &Product {
@@ -68,6 +57,8 @@ impl MigrationToStepJars for Contract {
                 },
             );
         }
+
+        old_state.products.clear();
 
         Contract {
             token_account_id: old_state.token_account_id,
