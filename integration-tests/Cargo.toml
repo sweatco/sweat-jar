@@ -21,9 +21,9 @@ tokio = { workspace = true }
 mutants = { workspace = true }
 
 sweat-jar-model = { workspace = true, features = [
-    "integration-test",
-    "integration-methods",
-    "integration-api",
+  "integration-test",
+  "integration-methods",
+  "integration-api",
 ] }
 sweat-model = { workspace = true, features = ["integration-api"] }
 
