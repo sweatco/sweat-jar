@@ -8,7 +8,7 @@ use std::{
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_MINUTE};
+use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
 use crate::{jar::model::Jar, product::model::Product, test_utils::AfterCatchUnwind, Contract};
 
@@ -74,6 +74,10 @@ impl Context {
 
     pub(crate) fn set_block_timestamp_in_minutes(&mut self, minutes: u64) {
         self.set_block_timestamp(Duration::from_millis(minutes * MS_IN_MINUTE));
+    }
+
+    pub(crate) fn set_block_timestamp_in_hours(&mut self, hours: u64) {
+        self.set_block_timestamp(Duration::from_millis(hours * MS_IN_HOUR));
     }
 
     pub(crate) fn set_block_timestamp_in_ms(&mut self, ms: u64) {

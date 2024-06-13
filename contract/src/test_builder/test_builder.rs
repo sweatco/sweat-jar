@@ -1,14 +1,13 @@
 #![cfg(test)]
 
-use near_sdk::NearToken;
 use sweat_jar_model::jar::JarId;
 
 use crate::{
     common::tests::Context,
     jar::model::Jar,
     product::model::Product,
-    test_builder::ProductBuilder,
-    test_utils::{admin, PRODUCT},
+    test_builder::{jar_builder::JarBuilder, ProductBuilder},
+    test_utils::admin,
 };
 
 pub(crate) struct TestBuilder {
@@ -26,26 +25,16 @@ impl TestBuilder {
 }
 
 impl TestBuilder {
-    /// Add default product with APY
-    pub fn product(mut self, apy: u32) -> Self {
-        self.products.push(Product::new().id(PRODUCT).apy(apy));
-        self
-    }
-
     /// Build and add custom product
-    pub fn product_build(mut self, id: &'static str, builder: impl ProductBuilder) -> Self {
+    pub fn product(mut self, id: &'static str, builder: impl ProductBuilder) -> Self {
         self.products.push(builder.build(id));
         self
     }
 
-    /// Add default jar for `Alice` with 100 tokens and with last added to builder `Product`
-    pub fn jar(mut self, id: JarId) -> Self {
+    /// Build and add custom jar
+    pub fn jar(mut self, id: JarId, builder: impl JarBuilder) -> Self {
         let product_id = &self.products.last().expect("Create product first").id;
-        self.jars.push(
-            Jar::new(id)
-                .product_id(product_id)
-                .principal(NearToken::from_near(100).as_yoctonear()),
-        );
+        self.jars.push(builder.build(id, product_id, 100));
         self
     }
 }
