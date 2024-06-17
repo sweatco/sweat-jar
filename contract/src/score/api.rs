@@ -28,7 +28,9 @@ impl ScoreApi for Contract {
                     continue;
                 }
 
-                let interest = jar.get_interest(*score, &product, timestamp.into()).0;
+                let (interest, remainder) = jar.get_interest(*score, &product, timestamp.into());
+
+                jar.claim_remainder = remainder;
 
                 jar.cache = Some(JarCache {
                     updated_at: timestamp.into(),

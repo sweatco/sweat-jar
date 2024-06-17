@@ -1,38 +1,31 @@
 #![cfg(test)]
 
-use fake::Fake;
 use near_sdk::test_utils::test_env::alice;
-use sweat_jar_model::{jar::JarId, Score};
+use sweat_jar_model::{jar::JarId, MS_IN_DAY};
 
 use crate::{
     test_builder::{ProductField::*, TestAccess, TestBuilder},
     test_utils::{PRODUCT, SCORE_PRODUCT},
 };
 
-/// 12% jar should have the same interest as 6% + 1_000 score jar if user has 6_000 scores each period
+/// 12% jar should have the same interest as 12_000 score jar
 /// Also this method tests score cap
 #[test]
 fn same_interest_in_score_jar_as_in_const_jar() {
     const JAR: JarId = 0;
     const STEP_JAR: JarId = 1;
 
-    let score_cap: Score = 6_000;
-
     let mut ctx = TestBuilder::new()
         .product(PRODUCT, APY(12))
         .jar(JAR, ())
-        .product(SCORE_PRODUCT, [APY(6), ScoreCap(score_cap)])
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
         .jar(STEP_JAR, ())
         .build();
 
-    let reset_period_days = 7;
-
     for day in 0..400 {
         ctx.set_block_timestamp_in_days(day);
-
-        if day % reset_period_days == 0 {
-            ctx.record_score(1, score_cap + (0..5_000).fake::<Score>(), alice());
-        }
+        ctx.record_score(day * MS_IN_DAY, 20_000, alice());
+        assert_eq!(ctx.interest(JAR, alice()), ctx.interest(STEP_JAR, alice()));
     }
 }
 
