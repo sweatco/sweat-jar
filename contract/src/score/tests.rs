@@ -27,6 +27,8 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         ctx.record_score(day * MS_IN_DAY, 20_000, alice());
         assert_eq!(ctx.interest(JAR, alice()), ctx.interest(STEP_JAR, alice()));
     }
+
+    assert!(ctx.contract().get_jar_internal(&alice(), JAR).cache.is_none());
 }
 
 #[test]
