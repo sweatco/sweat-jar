@@ -46,7 +46,9 @@ impl Contract {
             now,
         );
 
-        let withdraw_jar = jar.withdrawn(&product, principal, now);
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
+
+        let withdraw_jar = jar.withdrawn(score, &product, principal, now);
         let should_be_closed = withdraw_jar.should_be_closed(&product, now);
 
         if should_be_closed {

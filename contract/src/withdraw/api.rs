@@ -71,7 +71,9 @@ impl WithdrawApi for Contract {
 
         assert_is_liquidable(&jar, &product, now);
 
-        let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
+
+        let mut withdrawn_jar = jar.withdrawn(score, &product, amount, now);
         let close_jar = withdrawn_jar.should_be_closed(&product, now);
 
         withdrawn_jar.lock();
@@ -84,6 +86,7 @@ impl WithdrawApi for Contract {
         let account_id = env::predecessor_account_id();
         self.migrate_account_jars_if_needed(&account_id);
         let now = env::block_timestamp_ms();
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
 
         let Some(account_jars) = self.account_jars.get(&account_id) else {
             return PromiseOrValue::Value(BulkWithdrawView::default());
@@ -106,7 +109,7 @@ impl WithdrawApi for Contract {
                     return None;
                 }
 
-                let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
+                let mut withdrawn_jar = jar.withdrawn(score, &product, amount, now);
                 let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
 
                 withdrawn_jar.lock();

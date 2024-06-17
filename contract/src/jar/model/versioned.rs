@@ -8,7 +8,7 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
+use sweat_jar_model::{jar::JarId, ProductId, Score, TokenAmount};
 
 use crate::{
     common::Timestamp,
@@ -85,12 +85,12 @@ impl JarVersioned {
         self
     }
 
-    pub fn withdrawn(&self, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
+    pub fn withdrawn(&self, score: Score, product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
         JarV1 {
             principal: self.principal - withdrawn_amount,
             cache: Some(JarCache {
                 updated_at: now,
-                interest: self.get_interest(0, product, now).0,
+                interest: self.get_interest(score, product, now).0,
             }),
             ..self.deref().clone()
         }

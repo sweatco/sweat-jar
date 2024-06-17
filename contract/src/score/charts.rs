@@ -58,14 +58,17 @@ fn plot_year() -> Result<()> {
     Ok(())
 }
 
-fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>) {
+fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>) {
     const IDEAL_JAR: JarId = 0;
     const REAL_JAR: JarId = 1;
+    const REGULAR_JAR: JarId = 2;
 
-    let mut context = TestBuilder::new()
+    let mut ctx = TestBuilder::new()
         .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
         .jar(IDEAL_JAR, Account(alice()))
         .jar(REAL_JAR, Account(bob()))
+        .product(PRODUCT, APY(12))
+        .jar(REGULAR_JAR, Account(alice()))
         .build();
 
     let mut walkchain: u128 = 0;
@@ -84,26 +87,32 @@ fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>) {
 
         if hour % 24 == 0 {
             score_history.push(score_walked);
-            context.record_score(day * MS_IN_DAY, score_walked.try_into().unwrap(), alice());
+            ctx.record_score(day * MS_IN_DAY, score_walked.try_into().unwrap(), alice());
             score_walked = 0;
         }
 
         score_walked += score_walked_data[day as usize] / 24;
 
-        context.set_block_timestamp_in_hours(hour);
+        ctx.set_block_timestamp_in_hours(hour);
+
+        if with_claim && hour as i32 == walkchain_updates[0] - 2 {
+            ctx.claim_total(alice());
+            ctx.claim_total(bob());
+        }
 
         if hour as i32 == walkchain_updates[0] {
             walkchain_updates.remove(0);
 
             walkchain = if walkchain == 1 { 0 } else { 1 };
 
-            context.record_score(day * MS_IN_DAY, score_history[day as usize].try_into().unwrap(), bob());
+            ctx.record_score(day * MS_IN_DAY, score_history[day as usize].try_into().unwrap(), bob());
         }
 
         result.push((
             score_walked,
-            context.interest(IDEAL_JAR, alice()),
-            context.interest(REAL_JAR, bob()),
+            ctx.interest(IDEAL_JAR, alice()),
+            ctx.interest(REAL_JAR, bob()),
+            ctx.interest(REGULAR_JAR, alice()),
         ));
     }
 
@@ -113,15 +122,33 @@ fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>) {
 #[test]
 #[ignore]
 fn plot_first_week() -> Result<()> {
-    let (score_walked, ideal_jar, real_jar) = generate_first_week_data();
+    let (score_walked, ideal_jar, real_jar, regular_jar) = generate_first_week_data(false);
 
     render_chart(Graph {
         title: "Step Jars First Week",
+        data: [&score_walked, &ideal_jar, &real_jar, &regular_jar],
+        legend: ["Steps Walked", "Ideal jar", "Real Jar", "Regular jar"],
+        x_title: "Hours",
+        y_title: "Interest",
+        output_file: "../docs/first_week.png",
+        ..Default::default()
+    })?;
+
+    Ok(())
+}
+
+#[test]
+#[ignore]
+fn plot_first_week_with_claim() -> Result<()> {
+    let (score_walked, ideal_jar, real_jar, _regular_jar) = generate_first_week_data(true);
+
+    render_chart(Graph {
+        title: "Step Jars First Week With Claim",
         data: [&score_walked, &ideal_jar, &real_jar],
         legend: ["Steps Walked", "Ideal jar", "Real Jar"],
         x_title: "Hours",
         y_title: "Interest",
-        output_file: "../docs/first_week.png",
+        output_file: "../docs/first_week_claim.png",
         ..Default::default()
     })?;
 

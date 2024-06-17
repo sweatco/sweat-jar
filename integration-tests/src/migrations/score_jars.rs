@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[tokio::test]
-async fn migrate_to_step_jars() -> Result<()> {
+async fn migrate_to_score_jars() -> Result<()> {
     build_contract("build-integration".into())?;
 
     let ft_code = load_wasm("res/sweat.wasm");
