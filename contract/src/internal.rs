@@ -67,7 +67,7 @@ impl Contract {
     }
 
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(account_id);
         let jars = self.account_jars.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
         jars.push(jar);

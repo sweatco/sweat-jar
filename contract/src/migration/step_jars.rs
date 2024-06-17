@@ -53,7 +53,7 @@ impl MigrationToStepJars for Contract {
                     withdrawal_fee: product.withdrawal_fee,
                     public_key: product.public_key,
                     is_enabled: product.is_enabled,
-                    steps_cap: 0,
+                    score_cap: 0,
                 },
             );
         }
@@ -68,6 +68,7 @@ impl MigrationToStepJars for Contract {
             last_jar_id: old_state.last_jar_id,
             account_jars: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
+            account_score: LookupMap::new(StorageKey::Scores),
         }
     }
 }

@@ -4797,7 +4797,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "visu"
-version = "0.2.2"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16ad5cd543d3e00249c1155e7934c7b38348ce9c2bfa6bbe293d2e12cbb65c00"
 dependencies = [
  "anyhow",
  "count-digits",

@@ -127,8 +127,10 @@ impl JarApi for Contract {
         let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
+
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let interest = jar.get_interest(0, &self.get_product(&jar.product_id), now).0;
+            let interest = jar.get_interest(score, &self.get_product(&jar.product_id), now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
@@ -144,7 +146,7 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
-        self.migrate_account_jars_if_needed(env::predecessor_account_id());
+        self.migrate_account_jars_if_needed(&env::predecessor_account_id());
         let (old_id, jar) = self.restake_internal(jar_id);
 
         emit(EventKind::Restake(RestakeData {
@@ -158,7 +160,7 @@ impl JarApi for Contract {
     fn restake_all(&mut self) -> Vec<JarView> {
         let account_id = env::predecessor_account_id();
 
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(&account_id);
 
         let now = env::block_timestamp_ms();
 

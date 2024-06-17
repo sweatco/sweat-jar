@@ -6,7 +6,7 @@ use ed25519_dalek::{Signer, SigningKey};
 use general_purpose::STANDARD;
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
-use sweat_jar_model::{Steps, TokenAmount, MS_IN_YEAR};
+use sweat_jar_model::{Score, TokenAmount, MS_IN_YEAR};
 
 use crate::{
     common::{tests::Context, udecimal::UDecimal, Duration},
@@ -57,7 +57,7 @@ impl Product {
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
-            steps_cap: 0,
+            score_cap: 0,
         }
     }
 }
@@ -143,8 +143,8 @@ impl Product {
         self
     }
 
-    pub(crate) fn steps_cap(mut self, cap: Steps) -> Self {
-        self.steps_cap = cap;
+    pub(crate) fn score_cap(mut self, cap: Score) -> Self {
+        self.score_cap = cap;
         self
     }
 }

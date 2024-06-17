@@ -1,8 +1,8 @@
 use near_sdk::AccountId;
 use sweat_jar_model::{
-    api::{JarApi, StepsApi},
+    api::{JarApi, ScoreApi},
     jar::JarId,
-    Steps,
+    Score,
 };
 
 use crate::{common::tests::Context, product::model::Product};
@@ -10,7 +10,7 @@ use crate::{common::tests::Context, product::model::Product};
 pub(crate) trait TestAccess {
     fn product(&self, id: &str) -> Product;
     fn interest(&self, id: JarId, account_id: AccountId) -> u128;
-    fn record_steps(&mut self, timestamp: u64, steps: Steps, account_id: AccountId);
+    fn record_score(&mut self, timestamp: u64, score: Score, account_id: AccountId);
 }
 
 impl TestAccess for Context {
@@ -22,8 +22,8 @@ impl TestAccess for Context {
         self.contract().get_interest(vec![id.into()], account_id).amount.total.0
     }
 
-    fn record_steps(&mut self, timestamp: u64, steps: Steps, account_id: AccountId) {
+    fn record_score(&mut self, timestamp: u64, score: Score, account_id: AccountId) {
         self.contract()
-            .record_steps(timestamp.into(), vec![(account_id, steps)])
+            .record_score(timestamp.into(), vec![(account_id, score)])
     }
 }

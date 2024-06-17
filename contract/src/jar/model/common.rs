@@ -138,9 +138,9 @@ impl JarLastVersion {
         )
     }
 
-    pub(crate) fn get_interest(&self, steps: u32, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
-        let steps = min(product.steps_cap, steps);
-        let apy = self.get_apy(product) + Self::get_steps_apy(steps, product);
+    pub(crate) fn get_interest(&self, score: u32, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
+        let score = min(product.score_cap, score);
+        let apy = self.get_apy(product) + Self::get_score_apy(score, product);
         self.get_interest_with_apy(apy, product, now)
     }
 
@@ -157,12 +157,12 @@ impl JarLastVersion {
         }
     }
 
-    pub(crate) fn get_steps_apy(steps: u32, product: &Product) -> UDecimal {
-        if product.steps_cap == 0 {
+    pub(crate) fn get_score_apy(score: u32, product: &Product) -> UDecimal {
+        if product.score_cap == 0 {
             return UDecimal::default();
         }
 
-        UDecimal::new(steps.into(), 5)
+        UDecimal::new(score.into(), 5)
     }
 
     fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
@@ -211,7 +211,7 @@ impl Contract {
     }
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
-        self.migrate_account_jars_if_needed(account.clone());
+        self.migrate_account_jars_if_needed(account);
 
         let jar = self.get_jar_internal(account, jar_id).clone();
         let product = self.get_product(&jar.product_id).clone();
@@ -283,7 +283,7 @@ impl Contract {
         ticket: &JarTicket,
         signature: Option<Base64VecU8>,
     ) {
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(account_id);
 
         let last_jar_id = self.account_jars.get(account_id).map(|jars| jars.last_id);
         let product = self.get_product(&ticket.product_id);

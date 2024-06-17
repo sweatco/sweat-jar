@@ -1,4 +1,4 @@
-use sweat_jar_model::Steps;
+use sweat_jar_model::Score;
 
 use crate::product::model::Product;
 
@@ -12,16 +12,16 @@ pub(crate) trait ProductBuilder: Sized {
 
 pub(crate) enum ProductField {
     APY(u32),
-    StepsCap(Steps),
-    NoStepsCap,
+    ScoreCap(Score),
+    NoScoreCap,
 }
 
 impl ProductBuilder for ProductField {
     fn apply(self, product: Product) -> Product {
         match self {
             ProductField::APY(apy) => product.apy(apy),
-            ProductField::StepsCap(cap) => product.steps_cap(cap),
-            ProductField::NoStepsCap => product.steps_cap(Steps::MAX),
+            ProductField::ScoreCap(cap) => product.score_cap(cap),
+            ProductField::NoScoreCap => product.score_cap(Score::MAX),
         }
     }
 }

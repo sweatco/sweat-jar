@@ -29,7 +29,7 @@ pub enum EventKind {
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
-    RecordSteps(Vec<StepsData>),
+    RecordScore(Vec<ScoreData>),
 }
 
 #[derive(Debug)]
@@ -140,9 +140,9 @@ pub struct TopUpData {
 
 #[derive(Debug)]
 #[near(serializers=[json])]
-pub struct StepsData {
+pub struct ScoreData {
     pub account_id: AccountId,
-    pub steps: U32,
+    pub score: U32,
 }
 
 impl From<EventKind> for SweatJarEvent {
@@ -188,7 +188,7 @@ mod test {
 
     use crate::{
         common::tests::Context,
-        event::{EventKind, StepsData, SweatJarEvent, TopUpData},
+        event::{EventKind, ScoreData, SweatJarEvent, TopUpData},
         jar::model::{Jar, JarLastVersion},
         test_utils::admin,
     };
@@ -256,43 +256,43 @@ mod test {
 
         println!(
             "{}",
-            SweatJarEvent::from(EventKind::RecordSteps(vec![
-                StepsData {
+            SweatJarEvent::from(EventKind::RecordScore(vec![
+                ScoreData {
                     account_id: AccountId::from_str("alice.near").unwrap(),
-                    steps: 5_000.into(),
+                    score: 5_000.into(),
                 },
-                StepsData {
+                ScoreData {
                     account_id: AccountId::from_str("bob.near").unwrap(),
-                    steps: 10_000.into(),
+                    score: 10_000.into(),
                 }
             ]))
             .to_json_event_string()
         );
 
         assert_eq!(
-            SweatJarEvent::from(EventKind::RecordSteps(vec![
-                StepsData {
+            SweatJarEvent::from(EventKind::RecordScore(vec![
+                ScoreData {
                     account_id: AccountId::from_str("alice.near").unwrap(),
-                    steps: 5_000.into(),
+                    score: 5_000.into(),
                 },
-                StepsData {
+                ScoreData {
                     account_id: AccountId::from_str("bob.near").unwrap(),
-                    steps: 10_000.into(),
+                    score: 10_000.into(),
                 }
             ]))
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
   "version": "2.2.0",
-  "event": "record_steps",
+  "event": "record_score",
   "data": [
     {
       "account_id": "alice.near",
-      "steps": "5000"
+      "score": "5000"
     },
     {
       "account_id": "bob.near",
-      "steps": "10000"
+      "score": "10000"
     }
   ]
 }"#

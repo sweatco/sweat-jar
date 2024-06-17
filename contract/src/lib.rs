@@ -6,7 +6,7 @@ use near_sdk::{
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
-use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
+use sweat_jar_model::{api::InitApi, jar::JarId, ProductId, Score};
 
 use crate::jar::model::{AccountJarsLegacy, Jar};
 
@@ -22,7 +22,7 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
-mod steps;
+mod score;
 mod test_builder;
 mod test_utils;
 mod tests;
@@ -54,6 +54,8 @@ pub struct Contract {
     pub account_jars: LookupMap<AccountId, AccountJars>,
 
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+
+    pub account_score: LookupMap<AccountId, Score>,
 }
 
 #[near]
@@ -89,6 +91,7 @@ pub(crate) enum StorageKey {
     ProductsV1,
     /// Products migrated to step jars
     ProductsV2,
+    Scores,
 }
 
 #[near_bindgen]
@@ -104,6 +107,7 @@ impl InitApi for Contract {
             account_jars: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
+            account_score: LookupMap::new(StorageKey::Scores),
         }
     }
 }

@@ -13,7 +13,7 @@ pub(crate) enum RegisterProductCommand {
     Locked10Minutes6PercentsTopUp,
     Locked10Minutes6PercentsWithFixedWithdrawFee,
     Locked10Minutes6PercentsWithPercentWithdrawFee,
-    Locked10Minutes20000StepsCap,
+    Locked10Minutes20000ScoreCap,
 }
 
 impl RegisterProductCommand {
@@ -62,7 +62,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Locked6Months6Percents => json!({
                 "id": "locked_6_months_6_percents",
@@ -78,7 +78,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Flexible6Months6Percents => json!({
                 "id": "flexible_6_months_6_percents",
@@ -90,7 +90,7 @@ impl RegisterProductCommand {
                     "type": "flexible",
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
 
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee => json!({
@@ -111,7 +111,7 @@ impl RegisterProductCommand {
                     "data": "1000",
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Locked10Minutes6Percents => json!({
                 "id": "locked_10_minutes_6_percents",
@@ -127,7 +127,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Locked5Minutes60000Percents => json!({
                 "id": "flexible_5_minutes_60000_percents",
@@ -143,7 +143,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Locked10Minutes60000Percents => json!({
                 "id": "flexible_10_minutes_60000_percents",
@@ -159,7 +159,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsTopUp => json!({
                 "id": "locked_10_minutes_6_percents_top_up",
@@ -175,7 +175,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_fixed_withdraw_fee",
@@ -195,7 +195,7 @@ impl RegisterProductCommand {
                     "data": "1000",
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_percent_withdraw_fee",
@@ -215,10 +215,10 @@ impl RegisterProductCommand {
                     "data": ["1", 2],
                 },
                 "is_enabled": true,
-                "steps_cap": 0,
+                "score_cap": 0,
             }),
-            RegisterProductCommand::Locked10Minutes20000StepsCap => json!({
-                "id": "locked_10_minutes_20000_steps_cap",
+            RegisterProductCommand::Locked10Minutes20000ScoreCap => json!({
+                "id": "locked_10_minutes_20000_score_cap",
                 "apy_default": ["0", 0],
                 "cap_min": "100000",
                 "cap_max": "100000000000",
@@ -231,7 +231,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "steps_cap": 20000,
+                "score_cap": 20000,
             }),
         }
     }

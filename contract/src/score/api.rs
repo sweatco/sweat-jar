@@ -1,20 +1,21 @@
 use near_sdk::{env, json_types::U64, near_bindgen, AccountId};
-use sweat_jar_model::api::StepsApi;
+use sweat_jar_model::api::ScoreApi;
 
 use crate::{
-    event::{emit, EventKind, StepsData},
+    event::{emit, EventKind, ScoreData},
     jar::model::JarCache,
     Contract, ContractExt,
 };
 
 #[near_bindgen]
-impl StepsApi for Contract {
-    fn record_steps(&mut self, timestamp: U64, batch: Vec<(AccountId, u32)>) {
+impl ScoreApi for Contract {
+    fn record_score(&mut self, timestamp: U64, batch: Vec<(AccountId, u32)>) {
         let mut event = vec![];
 
-        for (account, steps) in batch {
-            self.migrate_account_jars_if_needed(account.clone());
+        for (account, new_score) in batch {
+            self.migrate_account_jars_if_needed(&account);
 
+            let score = self.account_score.entry(account.clone()).or_default();
             let account_jars = self.account_jars.entry(account.clone()).or_default();
 
             for jar in &mut account_jars.jars {
@@ -23,11 +24,11 @@ impl StepsApi for Contract {
                     .get(&jar.product_id)
                     .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
 
-                if !product.is_steps_product() {
+                if !product.is_score_product() {
                     continue;
                 }
 
-                let interest = jar.get_interest(steps, &product, timestamp.into()).0;
+                let interest = jar.get_interest(*score, &product, timestamp.into()).0;
 
                 jar.cache = Some(JarCache {
                     updated_at: timestamp.into(),
@@ -35,12 +36,14 @@ impl StepsApi for Contract {
                 });
             }
 
-            event.push(StepsData {
+            *score = new_score;
+
+            event.push(ScoreData {
                 account_id: account,
-                steps: steps.into(),
+                score: new_score.into(),
             });
         }
 
-        emit(EventKind::RecordSteps(event));
+        emit(EventKind::RecordScore(event));
     }
 }

@@ -14,7 +14,7 @@ async fn migrate_to_step_jars() -> Result<()> {
     build_contract("build-integration".into())?;
 
     let ft_code = load_wasm("res/sweat.wasm");
-    let jar_old_code = load_wasm("res_test/sweat_jar_pre_steps_jars.wasm");
+    let jar_old_code = load_wasm("res_test/sweat_jar_pre_score_jars.wasm");
     let jar_new_code = load_wasm("res/sweat_jar.wasm");
 
     let worker = near_workspaces::sandbox().await?;
@@ -99,7 +99,7 @@ async fn migrate_to_step_jars() -> Result<()> {
         .await?;
 
     let products = new_jar_contract.get_products().with_user(&ft_account).await?;
-    assert!(products.iter().all(|a| a.steps_cap == 0));
+    assert!(products.iter().all(|a| a.score_cap == 0));
     assert_eq!(products.len(), 10);
 
     let staked = new_jar_contract
@@ -120,12 +120,12 @@ async fn migrate_to_step_jars() -> Result<()> {
     assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 800_000);
 
     new_jar_contract
-        .register_product(RegisterProductCommand::Locked10Minutes20000StepsCap.get())
+        .register_product(RegisterProductCommand::Locked10Minutes20000ScoreCap.get())
         .with_user(&manager_account)
         .await?;
 
     let products = new_jar_contract.get_products().with_user(&ft_account).await?;
-    assert_eq!(products.last().unwrap().steps_cap, 20_000);
+    assert_eq!(products.last().unwrap().score_cap, 20_000);
 
     Ok(())
 }

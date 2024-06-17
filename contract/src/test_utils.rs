@@ -22,7 +22,7 @@ pub const JAR_ID_RANGE: Range<u32> = 0..100_000_000;
 
 /// Default product name. If product name wasn't specified it will have this name.
 pub(crate) const PRODUCT: &str = "product";
-pub(crate) const STEPS_PRODUCT: &str = "steps_product";
+pub(crate) const SCORE_PRODUCT: &str = "score_product";
 
 pub fn admin() -> AccountId {
     "admin".parse().unwrap()
