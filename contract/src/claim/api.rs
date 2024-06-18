@@ -75,7 +75,8 @@ impl Contract {
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let (available_interest, remainder) = jar.get_interest(score, &product, now);
+
+            let (available_interest, remainder) = jar.get_interest(&score, &product, now);
 
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - accumulator.get_total().0)
@@ -86,7 +87,8 @@ impl Contract {
 
                 jar.claim_remainder = remainder;
 
-                jar.claim(available_interest, interest_to_claim, now).lock();
+                jar.claim(available_interest, interest_to_claim, &product, &score, now)
+                    .lock();
 
                 accumulator.add(jar.id, interest_to_claim);
 
@@ -176,7 +178,13 @@ impl Contract {
 
                 jar.unlock();
 
-                if jar.should_be_closed(&product, now) {
+                let score = self
+                    .account_score
+                    .get(&jar_before_transfer.account_id)
+                    .copied()
+                    .unwrap_or_default();
+
+                if jar.should_be_closed(&score, &product, now) {
                     self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
                 }
             }

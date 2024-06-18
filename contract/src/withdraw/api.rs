@@ -73,8 +73,8 @@ impl WithdrawApi for Contract {
 
         let score = self.account_score.get(&account_id).copied().unwrap_or_default();
 
-        let mut withdrawn_jar = jar.withdrawn(score, &product, amount, now);
-        let close_jar = withdrawn_jar.should_be_closed(&product, now);
+        let mut withdrawn_jar = jar.withdrawn(&score, &product, amount, now);
+        let close_jar = withdrawn_jar.should_be_closed(&score, &product, now);
 
         withdrawn_jar.lock();
         *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
@@ -109,8 +109,8 @@ impl WithdrawApi for Contract {
                     return None;
                 }
 
-                let mut withdrawn_jar = jar.withdrawn(score, &product, amount, now);
-                let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
+                let mut withdrawn_jar = jar.withdrawn(&score, &product, amount, now);
+                let should_be_closed = withdrawn_jar.should_be_closed(&score, &product, now);
 
                 withdrawn_jar.lock();
                 *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;

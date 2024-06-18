@@ -4,7 +4,7 @@ use near_sdk::{json_types::U128, test_utils::test_env::alice, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     claimed_amount_view::ClaimedAmountView,
-    U32,
+    AccountScore, U32,
 };
 
 use crate::{
@@ -44,8 +44,8 @@ fn claim_total_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(0, &product, test_duration).0;
-    let jar_1_expected_interest = jar_1.get_interest(0, &product, test_duration).0;
+    let jar_0_expected_interest = jar_0.get_interest(&AccountScore::default(), &product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&AccountScore::default(), &product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -77,8 +77,8 @@ fn claim_partially_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(0, &product, test_duration).0;
-    let jar_1_expected_interest = jar_1.get_interest(0, &product, test_duration).0 - 1;
+    let jar_0_expected_interest = jar_0.get_interest(&AccountScore::default(), &product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&AccountScore::default(), &product, test_duration).0 - 1;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -115,8 +115,8 @@ fn claim_pending_withdraw_jar() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(0, &product, test_duration);
-    let jar_1_expected_interest = jar_1.get_interest(0, &product, test_duration).0 - 1;
+    let jar_0_expected_interest = jar_0.get_interest(&AccountScore::default(), &product, test_duration);
+    let jar_1_expected_interest = jar_1.get_interest(&AccountScore::default(), &product, test_duration).0 - 1;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -152,7 +152,7 @@ fn claim_partially_detailed_when_having_tokens_and_request_sum_of_single_deposit
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(0, &product, test_duration).0;
+    let jar_0_expected_interest = jar_0.get_interest(&AccountScore::default(), &product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 

@@ -3,13 +3,13 @@ use std::{cmp, cmp::min};
 use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::{
     env,
-    env::{panic_str, sha256},
+    env::{block_timestamp_ms, panic_str, sha256},
     json_types::{Base64VecU8, U128, U64},
     near, require, AccountId,
 };
 use sweat_jar_model::{
     jar::{JarId, JarView},
-    ProductId, TokenAmount, MS_IN_YEAR,
+    AccountScore, ProductId, TokenAmount, MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
@@ -50,8 +50,8 @@ impl JarLastVersion {
         self.is_pending_withdraw = false;
     }
 
-    pub(crate) fn apply_penalty(&mut self, product: &Product, is_applied: bool, now: Timestamp) {
-        let current_interest = self.get_interest(0, product, now).0;
+    pub(crate) fn apply_penalty(&mut self, score: &AccountScore, product: &Product, is_applied: bool, now: Timestamp) {
+        let current_interest = self.get_interest(score, product, now).0;
 
         self.cache = Some(JarCache {
             updated_at: now,
@@ -60,8 +60,14 @@ impl JarLastVersion {
         self.is_penalty_applied = is_applied;
     }
 
-    pub(crate) fn top_up(&mut self, amount: TokenAmount, product: &Product, now: Timestamp) -> &mut Self {
-        let current_interest = self.get_interest(0, product, now).0;
+    pub(crate) fn top_up(
+        &mut self,
+        score: &AccountScore,
+        amount: TokenAmount,
+        product: &Product,
+        now: Timestamp,
+    ) -> &mut Self {
+        let current_interest = self.get_interest(score, product, now).0;
 
         self.principal += amount;
         self.cache = Some(JarCache {
@@ -75,18 +81,32 @@ impl JarLastVersion {
         &mut self,
         available_yield: TokenAmount,
         claimed_amount: TokenAmount,
+        product: &Product,
+        score: &AccountScore,
         now: Timestamp,
     ) -> &mut Self {
         self.claimed_balance += claimed_amount;
+
+        let updated_at = if product.is_score_product() {
+            let block_timestamp = block_timestamp_ms();
+            if block_timestamp - score.last_update >= MS_IN_DAY {
+                score.last_update + MS_IN_DAY
+            } else {
+                now
+            }
+        } else {
+            now
+        };
+
         self.cache = Some(JarCache {
-            updated_at: now,
+            updated_at,
             interest: available_yield - claimed_amount,
         });
         self
     }
 
-    pub(crate) fn should_be_closed(&self, product: &Product, now: Timestamp) -> bool {
-        !product.is_flexible() && self.principal == 0 && self.get_interest(0, product, now).0 == 0
+    pub(crate) fn should_be_closed(&self, score: &AccountScore, product: &Product, now: Timestamp) -> bool {
+        !product.is_flexible() && self.principal == 0 && self.get_interest(score, product, now).0 == 0
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -138,10 +158,17 @@ impl JarLastVersion {
         )
     }
 
-    pub(crate) fn get_interest(&self, score: u32, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
-        let score = min(product.score_cap, score);
-        let apy = self.get_apy(product) + Self::get_score_apy(score, product);
-        self.get_interest_with_apy(apy, product, now)
+    pub(crate) fn get_interest(
+        &self,
+        account_score: &AccountScore,
+        product: &Product,
+        now: Timestamp,
+    ) -> (TokenAmount, u64) {
+        let (score_apy, adjusted_timestamp) = Self::get_score_apy(account_score, product);
+
+        let apy = self.get_apy(product) + score_apy;
+
+        self.get_interest_with_apy(apy, product, adjusted_timestamp.unwrap_or(now))
     }
 
     pub(crate) fn get_apy(&self, product: &Product) -> UDecimal {
@@ -157,12 +184,24 @@ impl JarLastVersion {
         }
     }
 
-    pub(crate) fn get_score_apy(score: u32, product: &Product) -> UDecimal {
+    pub(crate) fn get_score_apy(account_score: &AccountScore, product: &Product) -> (UDecimal, Option<Timestamp>) {
         if product.score_cap == 0 {
-            return UDecimal::default();
+            return (UDecimal::default(), None);
         }
 
-        UDecimal::new(score.into(), 5)
+        let now = block_timestamp_ms();
+
+        let score = min(product.score_cap, account_score.score);
+
+        let apy = UDecimal::new(score.into(), 5);
+
+        // A 24 hours has passed since last steps update.
+        // We need to wait for the next update form the server before updating score interest
+        if now - account_score.last_update >= MS_IN_DAY {
+            (apy, Some(account_score.last_update + MS_IN_DAY))
+        } else {
+            (apy, None)
+        }
     }
 
     fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
@@ -221,9 +260,11 @@ impl Contract {
 
         let now = env::block_timestamp_ms();
 
+        let score = self.account_score.get(account).copied().unwrap_or_default();
+
         let principal = self
             .get_jar_mut_internal(account, jar_id)
-            .top_up(amount.0, &product, now)
+            .top_up(&score, amount.0, &product, now)
             .principal;
 
         emit(EventKind::TopUp(TopUpData { id: jar_id, amount }));

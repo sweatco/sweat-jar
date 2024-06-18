@@ -25,8 +25,10 @@ impl PenaltyApi for Contract {
 
         assert_penalty_apy(&product.apy);
 
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
+
         self.get_jar_mut_internal(&account_id, jar_id)
-            .apply_penalty(&product, value, now);
+            .apply_penalty(&score, &product, value, now);
 
         emit(ApplyPenalty(PenaltyData {
             id: jar_id,
@@ -50,6 +52,8 @@ impl PenaltyApi for Contract {
                 .get_mut(&account_id)
                 .unwrap_or_else(|| env::panic_str(&format!("Account '{account_id}' doesn't exist")));
 
+            let score = self.account_score.get(&account_id).copied().unwrap_or_default();
+
             for jar_id in jars {
                 let jar_id = jar_id.0;
 
@@ -61,7 +65,7 @@ impl PenaltyApi for Contract {
                     .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
 
                 assert_penalty_apy(&product.apy);
-                jar.apply_penalty(&product, value, now);
+                jar.apply_penalty(&score, &product, value, now);
 
                 applied_jars.push(jar_id);
             }

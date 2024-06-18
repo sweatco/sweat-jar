@@ -30,7 +30,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
     // and will eventually be added to total claimed balance
     fn compare_interest(ctx: &Context) {
         let diff = ctx.interest(JAR, alice()) as i128 - ctx.interest(SCORE_JAR, alice()) as i128;
-        assert!(diff <= 1);
+        assert!(diff <= 1, "Diff is too big {diff}");
     }
 
     for day in 0..DAYS {

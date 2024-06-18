@@ -6,7 +6,7 @@ use near_sdk::{
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
-use sweat_jar_model::{api::InitApi, jar::JarId, ProductId, Score};
+use sweat_jar_model::{api::InitApi, jar::JarId, AccountScore, ProductId};
 
 use crate::jar::model::{AccountJarsLegacy, Jar};
 
@@ -55,7 +55,7 @@ pub struct Contract {
 
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 
-    pub account_score: LookupMap<AccountId, Score>,
+    pub account_score: LookupMap<AccountId, AccountScore>,
 }
 
 #[near]

@@ -298,7 +298,7 @@ pub trait WithdrawApi {
 #[make_integration_version]
 pub trait ScoreApi {
     /// TODO: document
-    fn record_score(&mut self, timestamp: U64, batch: Vec<(AccountId, u32)>);
+    fn record_score(&mut self, timestamp: U64, batch: Vec<(AccountId, u16)>);
 }
 
 #[cfg(feature = "integration-methods")]

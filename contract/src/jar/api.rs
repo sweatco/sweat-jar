@@ -48,8 +48,8 @@ impl Contract {
 
         let score = self.account_score.get(&account_id).copied().unwrap_or_default();
 
-        let withdraw_jar = jar.withdrawn(score, &product, principal, now);
-        let should_be_closed = withdraw_jar.should_be_closed(&product, now);
+        let withdraw_jar = jar.withdrawn(&score, &product, principal, now);
+        let should_be_closed = withdraw_jar.should_be_closed(&score, &product, now);
 
         if should_be_closed {
             self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);
@@ -132,7 +132,7 @@ impl JarApi for Contract {
         let score = self.account_score.get(&account_id).copied().unwrap_or_default();
 
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let interest = jar.get_interest(score, &self.get_product(&jar.product_id), now).0;
+            let interest = jar.get_interest(&score, &self.get_product(&jar.product_id), now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;

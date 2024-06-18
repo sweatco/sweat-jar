@@ -58,22 +58,17 @@ fn plot_year() -> Result<()> {
     Ok(())
 }
 
-fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>) {
+fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>) {
     const IDEAL_JAR: JarId = 0;
     const REAL_JAR: JarId = 1;
-    const REGULAR_JAR: JarId = 2;
 
     let mut ctx = TestBuilder::new()
         .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
         .jar(IDEAL_JAR, Account(alice()))
         .jar(REAL_JAR, Account(bob()))
-        .product(PRODUCT, APY(12))
-        .jar(REGULAR_JAR, Account(alice()))
         .build();
 
-    let mut walkchain: u128 = 0;
-
-    let mut walkchain_updates: Vec<i32> = (0..10).map(|day| day * 24 + (4..10).fake::<i32>()).collect();
+    let walkchain_updates: Vec<i32> = (0..10).map(|day| day * 24 + (4..10).fake::<i32>()).collect();
 
     let mut result = vec![];
     let mut score_walked: u128 = 0;
@@ -81,6 +76,11 @@ fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128
     let mut score_history = vec![];
 
     let score_walked_data: &[u128] = &[5000, 10000, 25000, 10000, 20000, 10000, 5000];
+
+    let mut claimed_ideal: u128 = 0;
+    let mut claimed_real: u128 = 0;
+
+    let mut walkchain_update_index = 0;
 
     for hour in 0..(24 * 7) {
         let day = hour / 24;
@@ -95,15 +95,18 @@ fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128
 
         ctx.set_block_timestamp_in_hours(hour);
 
-        if with_claim && hour as i32 == walkchain_updates[0] - 2 {
-            ctx.claim_total(alice());
-            ctx.claim_total(bob());
+        if walkchain_update_index > 0 {
+            if with_claim && hour as i32 == walkchain_updates[walkchain_update_index - 1] + 4 {
+                claimed_ideal += ctx.claim_total(alice());
+                claimed_real += ctx.claim_total(bob());
+
+                assert_eq!(claimed_ideal, claimed_real);
+            }
         }
 
-        if hour as i32 == walkchain_updates[0] {
-            walkchain_updates.remove(0);
-
-            walkchain = if walkchain == 1 { 0 } else { 1 };
+        if hour as i32 == walkchain_updates[walkchain_update_index] {
+            walkchain_updates[walkchain_update_index];
+            walkchain_update_index += 1;
 
             ctx.record_score(day * MS_IN_DAY, score_history[day as usize].try_into().unwrap(), bob());
         }
@@ -112,7 +115,8 @@ fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128
             score_walked,
             ctx.interest(IDEAL_JAR, alice()),
             ctx.interest(REAL_JAR, bob()),
-            ctx.interest(REGULAR_JAR, alice()),
+            claimed_ideal,
+            claimed_real,
         ));
     }
 
@@ -122,12 +126,12 @@ fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128
 #[test]
 #[ignore]
 fn plot_first_week() -> Result<()> {
-    let (score_walked, ideal_jar, real_jar, regular_jar) = generate_first_week_data(false);
+    let (score_walked, ideal_jar, real_jar, _claimed_ideal, _claimed_real) = generate_first_week_data(false);
 
     render_chart(Graph {
         title: "Step Jars First Week",
-        data: [&score_walked, &ideal_jar, &real_jar, &regular_jar],
-        legend: ["Steps Walked", "Ideal jar", "Real Jar", "Regular jar"],
+        data: [&score_walked, &ideal_jar, &real_jar],
+        legend: ["Steps Walked", "Ideal jar", "Real Jar"],
         x_title: "Hours",
         y_title: "Interest",
         output_file: "../docs/first_week.png",
@@ -140,12 +144,12 @@ fn plot_first_week() -> Result<()> {
 #[test]
 #[ignore]
 fn plot_first_week_with_claim() -> Result<()> {
-    let (score_walked, ideal_jar, real_jar, _regular_jar) = generate_first_week_data(true);
+    let (score_walked, ideal_jar, real_jar, claimed_ideal, claimed_real) = generate_first_week_data(true);
 
     render_chart(Graph {
         title: "Step Jars First Week With Claim",
-        data: [&score_walked, &ideal_jar, &real_jar],
-        legend: ["Steps Walked", "Ideal jar", "Real Jar"],
+        data: [&score_walked, &ideal_jar, &real_jar, &claimed_ideal, &claimed_real],
+        legend: ["Steps Walked", "Ideal jar", "Real Jar", "Claimed Ideal", "Claimed Real"],
         x_title: "Hours",
         y_title: "Interest",
         output_file: "../docs/first_week_claim.png",

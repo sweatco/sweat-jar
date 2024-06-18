@@ -2,7 +2,7 @@
 
 use fake::Fake;
 use near_sdk::Timestamp;
-use sweat_jar_model::MS_IN_YEAR;
+use sweat_jar_model::{AccountScore, MS_IN_YEAR};
 
 use crate::{
     common::udecimal::UDecimal,
@@ -15,7 +15,7 @@ fn get_interest_before_maturity() {
     let product = Product::new().lockup_term(2 * MS_IN_YEAR);
     let jar = Jar::new(0).principal(100_000_000);
 
-    let interest = jar.get_interest(0, &product, MS_IN_YEAR).0;
+    let interest = jar.get_interest(&AccountScore::default(), &product, MS_IN_YEAR).0;
     assert_eq!(12_000_000, interest);
 }
 
@@ -24,7 +24,9 @@ fn get_interest_after_maturity() {
     let product = Product::new();
     let jar = Jar::new(0).principal(100_000_000);
 
-    let interest = jar.get_interest(0, &product, 400 * 24 * 60 * 60 * 1000).0;
+    let interest = jar
+        .get_interest(&AccountScore::default(), &product, 400 * 24 * 60 * 60 * 1000)
+        .0;
     assert_eq!(12_000_000, interest);
 }
 
@@ -33,12 +35,21 @@ fn interest_precision() {
     let product = Product::new().apy(Apy::Constant(UDecimal::new(1, 0)));
     let jar = Jar::new(0).principal(MS_IN_YEAR as u128);
 
-    assert_eq!(jar.get_interest(0, &product, 10000000000).0, 10000000000);
-    assert_eq!(jar.get_interest(0, &product, 10000000001).0, 10000000001);
+    assert_eq!(
+        jar.get_interest(&AccountScore::default(), &product, 10000000000).0,
+        10000000000
+    );
+    assert_eq!(
+        jar.get_interest(&AccountScore::default(), &product, 10000000001).0,
+        10000000001
+    );
 
     for _ in 0..100 {
         let time: Timestamp = (10..MS_IN_YEAR).fake();
-        assert_eq!(jar.get_interest(0, &product, time).0, time as u128);
+        assert_eq!(
+            jar.get_interest(&AccountScore::default(), &product, time).0,
+            time as u128
+        );
     }
 }
 

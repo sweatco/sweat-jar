@@ -1,5 +1,5 @@
 use near_sdk::{env, json_types::U64, near_bindgen, AccountId};
-use sweat_jar_model::api::ScoreApi;
+use sweat_jar_model::{api::ScoreApi, U32};
 
 use crate::{
     event::{emit, EventKind, ScoreData},
@@ -9,7 +9,7 @@ use crate::{
 
 #[near_bindgen]
 impl ScoreApi for Contract {
-    fn record_score(&mut self, timestamp: U64, batch: Vec<(AccountId, u32)>) {
+    fn record_score(&mut self, timestamp: U64, batch: Vec<(AccountId, u16)>) {
         let mut event = vec![];
 
         for (account, new_score) in batch {
@@ -28,7 +28,7 @@ impl ScoreApi for Contract {
                     continue;
                 }
 
-                let (interest, remainder) = jar.get_interest(*score, &product, timestamp.into());
+                let (interest, remainder) = jar.get_interest(score, &product, timestamp.into());
 
                 jar.claim_remainder = remainder;
 
@@ -38,11 +38,12 @@ impl ScoreApi for Contract {
                 });
             }
 
-            *score = new_score;
+            score.score = new_score;
+            score.last_update = timestamp.into();
 
             event.push(ScoreData {
                 account_id: account,
-                score: new_score.into(),
+                score: U32(new_score.into()),
             });
         }
 
