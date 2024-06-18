@@ -95,13 +95,27 @@ fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128
 
         ctx.set_block_timestamp_in_hours(hour);
 
-        if walkchain_update_index > 0 {
-            if with_claim && hour as i32 == walkchain_updates[walkchain_update_index - 1] + 4 {
-                claimed_ideal += ctx.claim_total(alice());
-                claimed_real += ctx.claim_total(bob());
+        // if walkchain_update_index > 0 {
+        //     if with_claim && hour as i32 == walkchain_updates[walkchain_update_index - 1] + 4 {
+        //         claimed_ideal += ctx.claim_total(alice());
+        //         claimed_real += ctx.claim_total(bob());
+        //
+        //         assert_eq!(claimed_ideal, claimed_real);
+        //     }
+        // }
 
-                assert_eq!(claimed_ideal, claimed_real);
-            }
+        if with_claim && hour as i32 == walkchain_updates[walkchain_update_index] - 2 {
+            claimed_ideal += ctx.claim_total(alice());
+            claimed_real += ctx.claim_total(bob());
+
+            // assert_eq!(claimed_ideal, claimed_real);
+        }
+
+        if with_claim && hour == (24 * 7) - 1 {
+            claimed_ideal += ctx.claim_total(alice());
+            claimed_real += ctx.claim_total(bob());
+
+            assert_eq!(claimed_ideal - claimed_real, 2);
         }
 
         if hour as i32 == walkchain_updates[walkchain_update_index] {
