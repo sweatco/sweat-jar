@@ -45,7 +45,7 @@ impl Context {
     }
 
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {
-        self.contract.lock().unwrap()
+        self.contract.try_lock().expect("Contract is already locked")
     }
 
     pub(crate) fn with_products(self, products: &[Product]) -> Self {
