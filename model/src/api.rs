@@ -162,6 +162,8 @@ pub trait JarApi {
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
 
     fn restake_all(&mut self) -> Vec<JarView>;
+
+    fn unlock_jars_for_account(&mut self, account_id: AccountId);
 }
 
 #[make_integration_version]
