@@ -198,7 +198,7 @@ impl JarApi for Contract {
         let jars = self
             .account_jars
             .get_mut(&account_id)
-            .expect(&format!("Jars for account {account_id} don't exist"));
+            .expect("Account doesn't have jars");
 
         for jar in &mut jars.jars {
             jar.is_pending_withdraw = false;
