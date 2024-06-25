@@ -13,6 +13,7 @@ impl From<Jar> for JarView {
             principal: U128(value.principal),
             claimed_balance: U128(value.claimed_balance),
             is_penalty_applied: value.is_penalty_applied,
+            is_pending_withdraw: value.is_pending_withdraw,
         }
     }
 }
@@ -27,6 +28,7 @@ impl From<&Jar> for JarView {
             principal: U128(value.principal),
             claimed_balance: U128(value.claimed_balance),
             is_penalty_applied: value.is_penalty_applied,
+            is_pending_withdraw: value.is_pending_withdraw,
         }
     }
 }

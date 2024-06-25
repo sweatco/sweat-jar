@@ -23,6 +23,7 @@ pub struct JarView {
     pub principal: U128,
     pub claimed_balance: U128,
     pub is_penalty_applied: bool,
+    pub is_pending_withdraw: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
