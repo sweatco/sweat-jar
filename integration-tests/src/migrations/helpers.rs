@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{fs, path::PathBuf, process::Command};
 
 pub(crate) fn load_wasm(wasm_path: &str) -> Vec<u8> {
