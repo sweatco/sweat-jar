@@ -191,4 +191,17 @@ impl JarApi for Contract {
 
         result
     }
+
+    fn unlock_jars_for_account(&mut self, account_id: AccountId) {
+        self.assert_manager();
+
+        let jars = self
+            .account_jars
+            .get_mut(&account_id)
+            .expect("Account doesn't have jars");
+
+        for jar in &mut jars.jars {
+            jar.is_pending_withdraw = false;
+        }
+    }
 }
