@@ -389,6 +389,58 @@ fn get_interest_after_withdraw() {
 }
 
 #[test]
+#[should_panic(expected = "Can be performed only by admin")]
+fn unlock_not_by_manager() {
+    let alice = alice();
+    let admin = admin();
+
+    let reference_product = generate_product();
+
+    let mut reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
+    reference_jar.is_pending_withdraw = true;
+    let jars = &[reference_jar];
+
+    let mut context = Context::new(admin).with_products(&[reference_product]).with_jars(jars);
+
+    context.switch_account(&alice);
+    context.contract().unlock_jars_for_account(alice);
+}
+
+#[test]
+fn unlock_by_manager() {
+    let alice = alice();
+    let admin = admin();
+
+    let reference_product = generate_product();
+
+    let reference_jar_id = 0;
+    let mut reference_jar = Jar::generate(reference_jar_id, &alice, &reference_product.id).principal(100);
+    reference_jar.is_pending_withdraw = true;
+    let jars = &[reference_jar];
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[reference_product])
+        .with_jars(jars);
+
+    assert!(
+        context
+            .contract()
+            .get_jar(alice.clone(), reference_jar_id.into())
+            .is_pending_withdraw
+    );
+
+    context.switch_account(&admin);
+    context.contract().unlock_jars_for_account(alice.clone());
+
+    assert!(
+        !context
+            .contract()
+            .get_jar(alice.clone(), reference_jar_id.into())
+            .is_pending_withdraw
+    );
+}
+
+#[test]
 fn test_u32() {
     let n = U32(12345678);
 
