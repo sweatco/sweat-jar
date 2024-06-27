@@ -21,6 +21,7 @@ pub struct JarView {
     pub principal: U128,
     pub claimed_balance: U128,
     pub is_penalty_applied: bool,
+    #[serde(default)]
     pub is_pending_withdraw: bool,
 }
 

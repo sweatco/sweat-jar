@@ -380,9 +380,9 @@ fn unlock_not_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let reference_product = Product::new();
 
-    let mut reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
+    let mut reference_jar = Jar::new(0).product_id(&reference_product.id).principal(100);
     reference_jar.is_pending_withdraw = true;
     let jars = &[reference_jar];
 
@@ -397,10 +397,10 @@ fn unlock_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let reference_product = Product::new();
 
     let reference_jar_id = 0;
-    let mut reference_jar = Jar::generate(reference_jar_id, &alice, &reference_product.id).principal(100);
+    let mut reference_jar = Jar::new(0).product_id(&reference_product.id).principal(100);
     reference_jar.is_pending_withdraw = true;
     let jars = &[reference_jar];
 
