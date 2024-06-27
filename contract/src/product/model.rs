@@ -1,5 +1,5 @@
 use near_sdk::{near, require};
-use sweat_jar_model::{ProductId, TokenAmount};
+use sweat_jar_model::{ProductId, Score, TokenAmount};
 
 use crate::{
     common::{udecimal::UDecimal, Duration},
@@ -30,6 +30,9 @@ pub struct Product {
 
     /// Indicates whether it's possible to create a new jar for this product.
     pub is_enabled: bool,
+
+    /// TODO: document 0 - non step jar
+    pub score_cap: Score,
 }
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
@@ -106,6 +109,10 @@ pub struct Cap {
 }
 
 impl Product {
+    pub(crate) fn is_score_product(&self) -> bool {
+        self.score_cap > 0
+    }
+
     pub(crate) fn is_flexible(&self) -> bool {
         self.terms == Terms::Flexible
     }

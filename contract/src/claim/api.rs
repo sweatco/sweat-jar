@@ -9,12 +9,8 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::{
-        gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_FT_TRANSFER},
-        Timestamp,
-    },
+    common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
-    internal::assert_gas,
     jar::model::Jar,
     Contract, ContractExt, JarsStorage,
 };
@@ -34,7 +30,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(&account_id);
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars_internal(account_id, jar_ids, None, detailed)
     }
@@ -46,7 +42,7 @@ impl ClaimApi for Contract {
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(&account_id);
         self.claim_jars_internal(account_id, jar_ids, amount, detailed)
     }
 }
@@ -71,9 +67,12 @@ impl Contract {
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
+
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let (available_interest, remainder) = jar.get_interest(&product, now);
+
+            let (available_interest, remainder) = jar.get_interest(&score, &product, now);
 
             let interest_to_claim = amount.map_or(available_interest, |amount| {
                 cmp::min(available_interest, amount.0 - accumulator.get_total().0)
@@ -84,7 +83,8 @@ impl Contract {
 
                 jar.claim_remainder = remainder;
 
-                jar.claim(available_interest, interest_to_claim, now).lock();
+                jar.claim(available_interest, interest_to_claim, &product, &score, now)
+                    .lock();
 
                 accumulator.add(jar.id, interest_to_claim);
 
@@ -138,7 +138,11 @@ impl Contract {
         event: EventKind,
         now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        use crate::ft_interface::FungibleTokenInterface;
+        use crate::{
+            common::gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_FT_TRANSFER},
+            ft_interface::FungibleTokenInterface,
+            internal::assert_gas,
+        };
 
         assert_gas(GAS_FOR_FT_TRANSFER.as_gas() * 2 + GAS_FOR_AFTER_CLAIM.as_gas(), || {
             format!("claim_interest: number of jars: {}", jars_before_transfer.len())
@@ -174,7 +178,13 @@ impl Contract {
 
                 jar.unlock();
 
-                if jar.should_be_closed(&product, now) {
+                let score = self
+                    .account_score
+                    .get(&jar_before_transfer.account_id)
+                    .copied()
+                    .unwrap_or_default();
+
+                if jar.should_be_closed(&score, &product, now) {
                     self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
                 }
             }

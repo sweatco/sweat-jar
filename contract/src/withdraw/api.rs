@@ -56,7 +56,7 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(&account_id);
 
         let jar = self.get_jar_internal(&account_id, jar_id.0).clone();
 
@@ -71,8 +71,10 @@ impl WithdrawApi for Contract {
 
         assert_is_liquidable(&jar, &product, now);
 
-        let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
-        let close_jar = withdrawn_jar.should_be_closed(&product, now);
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
+
+        let mut withdrawn_jar = jar.withdrawn(&score, &product, amount, now);
+        let close_jar = withdrawn_jar.should_be_closed(&score, &product, now);
 
         withdrawn_jar.lock();
         *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
@@ -82,8 +84,9 @@ impl WithdrawApi for Contract {
 
     fn withdraw_all(&mut self) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(&account_id);
         let now = env::block_timestamp_ms();
+        let score = self.account_score.get(&account_id).copied().unwrap_or_default();
 
         let Some(account_jars) = self.account_jars.get(&account_id) else {
             return PromiseOrValue::Value(BulkWithdrawView::default());
@@ -106,8 +109,8 @@ impl WithdrawApi for Contract {
                     return None;
                 }
 
-                let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
-                let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
+                let mut withdrawn_jar = jar.withdrawn(&score, &product, amount, now);
+                let should_be_closed = withdrawn_jar.should_be_closed(&score, &product, now);
 
                 withdrawn_jar.lock();
                 *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;

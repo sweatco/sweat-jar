@@ -1,5 +1,5 @@
 use near_sdk::{
-    json_types::{Base64VecU8, U128},
+    json_types::{Base64VecU8, U128, U64},
     AccountId,
 };
 #[cfg(feature = "integration-api")]
@@ -176,6 +176,11 @@ pub trait MigratonToNearSdk5 {
     fn migrate_state_to_near_sdk_5() -> Self;
 }
 
+#[make_integration_version]
+pub trait MigrationToStepJars {
+    fn migrate_state_to_step_jars() -> Self;
+}
+
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
 #[make_integration_version]
 pub trait PenaltyApi {
@@ -288,6 +293,12 @@ pub trait WithdrawApi {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
     fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+}
+
+#[make_integration_version]
+pub trait ScoreApi {
+    /// TODO: document
+    fn record_score(&mut self, timestamp: U64, batch: Vec<(AccountId, u16)>);
 }
 
 #[cfg(feature = "integration-methods")]

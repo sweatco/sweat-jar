@@ -1,0 +1,22 @@
+[
+  {
+    "label": "Test",
+    "command": "make test"
+  },
+  {
+    "label": "Lint",
+    "command": "make lint"
+  },
+  {
+    "label": "Build contract",
+    "command": "make build"
+  },
+  {
+    "label": "Build contract in docker",
+    "command": "make dock"
+  },
+  {
+    "label": "Integration tests",
+    "command": "make int"
+  }
+]
