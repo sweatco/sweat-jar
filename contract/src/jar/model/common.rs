@@ -82,7 +82,7 @@ impl JarLastVersion {
         available_yield: TokenAmount,
         claimed_amount: TokenAmount,
         product: &Product,
-        score: &AccountScore,
+        score: Option<&AccountScore>,
         now: Timestamp,
     ) -> &mut Self {
         self.claimed_balance += claimed_amount;
@@ -105,7 +105,7 @@ impl JarLastVersion {
         self
     }
 
-    pub(crate) fn should_be_closed(&self, score: &AccountScore, product: &Product, now: Timestamp) -> bool {
+    pub(crate) fn should_be_closed(&self, score: Option<&AccountScore>, product: &Product, now: Timestamp) -> bool {
         !product.is_flexible() && self.principal == 0 && self.get_interest(score, product, now).0 == 0
     }
 
@@ -160,7 +160,7 @@ impl JarLastVersion {
 
     pub(crate) fn get_interest(
         &self,
-        account_score: &AccountScore,
+        account_score: Option<&AccountScore>,
         product: &Product,
         now: Timestamp,
     ) -> (TokenAmount, u64) {

@@ -19,13 +19,15 @@ pub type Score = u16;
 #[near]
 #[derive(Copy, Clone, Debug)]
 pub struct AccountScore {
+    pub timezone: Timestamp,
     pub last_update: Timestamp,
     pub score: Score,
 }
 
-impl Default for AccountScore {
-    fn default() -> Self {
+impl AccountScore {
+    pub fn new(timezone: Timestamp) -> Self {
         Self {
+            timezone,
             last_update: block_timestamp_ms(),
             score: 0,
         }
