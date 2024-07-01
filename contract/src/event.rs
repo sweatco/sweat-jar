@@ -193,7 +193,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-2.2.0");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-2.2.1");
     }
 
     #[test]
@@ -206,7 +206,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -234,7 +234,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "event": "create_jar",
   "data": {
     "id": 555,

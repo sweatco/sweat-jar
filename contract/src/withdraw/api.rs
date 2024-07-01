@@ -188,13 +188,13 @@ impl Contract {
         let mut event_data = vec![];
 
         for withdraw in jars {
+            let jar_result = WithdrawView::new(withdraw.amount, self.make_fee(withdraw.fee));
+
             if withdraw.should_be_closed {
                 self.delete_jar(&account_id, withdraw.jar.id);
             } else {
                 self.get_jar_mut_internal(&account_id, withdraw.jar.id).unlock();
             }
-
-            let jar_result = WithdrawView::new(withdraw.amount, self.make_fee(withdraw.fee));
 
             event_data.push(WithdrawData {
                 id: withdraw.jar.id,
