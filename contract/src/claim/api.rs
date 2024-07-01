@@ -9,13 +9,8 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::{
-        gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_FT_TRANSFER},
-        Timestamp,
-    },
     event::{emit, ClaimEventItem, EventKind},
-    internal::assert_gas,
-    jar::model::Jar,
+    jar::model::{ClaimData, ClaimJar, Jar},
     Contract, ContractExt, JarsStorage,
 };
 
@@ -24,9 +19,8 @@ pub trait ClaimCallbacks {
     fn after_claim(
         &mut self,
         claimed_amount: ClaimedAmountView,
-        jars_before_transfer: Vec<Jar>,
+        claim_data: ClaimData,
         event: EventKind,
-        now: Timestamp,
     ) -> ClaimedAmountView;
 }
 
@@ -71,37 +65,44 @@ impl Contract {
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
-        for jar in &unlocked_jars {
-            let product = self.get_product(&jar.product_id);
-            let (available_interest, remainder) = jar.get_interest(&product, now);
+        let jars = unlocked_jars
+            .into_iter()
+            .map(|jar| {
+                let product = self.get_product(&jar.product_id);
+                let (available_interest, remainder) = jar.get_interest(&product, now);
 
-            let interest_to_claim = amount.map_or(available_interest, |amount| {
-                cmp::min(available_interest, amount.0 - accumulator.get_total().0)
-            });
-
-            if interest_to_claim > 0 {
-                let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
-
-                jar.claim_remainder = remainder;
-
-                jar.claim(available_interest, interest_to_claim, now).lock();
-
-                accumulator.add(jar.id, interest_to_claim);
-
-                event_data.push(ClaimEventItem {
-                    id: jar.id,
-                    interest_to_claim: U128(interest_to_claim),
+                let interest_to_claim = amount.map_or(available_interest, |amount| {
+                    cmp::min(available_interest, amount.0 - accumulator.get_total().0)
                 });
-            }
-        }
+
+                if interest_to_claim > 0 {
+                    let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
+
+                    jar.claim_remainder = remainder;
+
+                    jar.lock();
+
+                    accumulator.add(jar.id, interest_to_claim);
+
+                    event_data.push(ClaimEventItem {
+                        id: jar.id,
+                        interest_to_claim: U128(interest_to_claim),
+                    });
+                }
+
+                ClaimJar {
+                    jar_id: jar.id,
+                    available_yield: available_interest,
+                    claimed_amount: interest_to_claim,
+                }
+            })
+            .collect();
 
         if accumulator.get_total().0 > 0 {
             self.claim_interest(
-                &account_id,
                 accumulator,
-                unlocked_jars,
+                ClaimData { account_id, now, jars },
                 EventKind::Claim(event_data),
-                now,
             )
         } else {
             PromiseOrValue::Value(accumulator)
@@ -113,17 +114,14 @@ impl Contract {
     #[cfg(test)]
     fn claim_interest(
         &mut self,
-        _account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
-        jars_before_transfer: Vec<Jar>,
+        claim_data: ClaimData,
         event: EventKind,
-        now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
         PromiseOrValue::Value(self.after_claim_internal(
             claimed_amount,
-            jars_before_transfer,
+            claim_data,
             event,
-            now,
             crate::common::test_data::get_test_future_success(),
         ))
     }
@@ -132,69 +130,69 @@ impl Contract {
     #[mutants::skip] // Covered by integration tests
     fn claim_interest(
         &mut self,
-        account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
-        jars_before_transfer: Vec<Jar>,
+        claim_data: ClaimData,
         event: EventKind,
-        now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        use crate::ft_interface::FungibleTokenInterface;
+        use crate::{
+            common::gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_FT_TRANSFER},
+            ft_interface::FungibleTokenInterface,
+            internal::assert_gas,
+        };
 
         assert_gas(GAS_FOR_FT_TRANSFER.as_gas() * 2 + GAS_FOR_AFTER_CLAIM.as_gas(), || {
-            format!("claim_interest: number of jars: {}", jars_before_transfer.len())
+            format!("claim_interest: number of jars: {}", claim_data.jars.len())
         });
 
         self.ft_contract()
-            .ft_transfer(account_id, claimed_amount.get_total().0, "claim", &None)
-            .then(after_claim_call(claimed_amount, jars_before_transfer, event, now))
+            .ft_transfer(&claim_data.account_id, claimed_amount.get_total().0, "claim", &None)
+            .then(after_claim_call(claimed_amount, claim_data, event))
             .into()
     }
 
     fn after_claim_internal(
         &mut self,
         claimed_amount: ClaimedAmountView,
-        jars_before_transfer: Vec<Jar>,
+        claim_data: ClaimData,
         event: EventKind,
-        now: Timestamp,
         is_promise_success: bool,
     ) -> ClaimedAmountView {
-        if is_promise_success {
-            for jar_before_transfer in jars_before_transfer {
-                let product = self.products.get(&jar_before_transfer.product_id).unwrap_or_else(|| {
-                    env::panic_str(&format!("Product '{}' doesn't exist", jar_before_transfer.product_id))
-                });
+        if !is_promise_success {
+            for claim in claim_data.jars {
+                let jar_id = claim.jar_id;
 
-                let jar = self
-                    .account_jars
-                    .get_mut(&jar_before_transfer.account_id)
-                    .unwrap_or_else(|| {
-                        env::panic_str(&format!("Account '{}' doesn't exist", jar_before_transfer.account_id))
-                    })
-                    .get_jar_mut(jar_before_transfer.id);
-
-                jar.unlock();
-
-                if jar.should_be_closed(&product, now) {
-                    self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
-                }
+                self.get_jar_mut_internal(&claim_data.account_id, jar_id).unlock();
             }
 
-            emit(event);
-
-            claimed_amount
-        } else {
-            for jar_before_transfer in jars_before_transfer {
-                let account_id = jar_before_transfer.account_id.clone();
-                let jar_id = jar_before_transfer.id;
-
-                *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
-            }
-
-            match claimed_amount {
+            return match claimed_amount {
                 ClaimedAmountView::Total(_) => ClaimedAmountView::Total(U128(0)),
                 ClaimedAmountView::Detailed(_) => ClaimedAmountView::Detailed(AggregatedTokenAmountView::default()),
+            };
+        }
+
+        for claim_jar in claim_data.jars {
+            let jar = self
+                .account_jars
+                .get_mut(&claim_data.account_id)
+                .unwrap_or_else(|| env::panic_str(&format!("Account '{}' doesn't exist", claim_data.account_id)))
+                .get_jar_mut(claim_jar.jar_id);
+
+            let product = self
+                .products
+                .get(&jar.product_id)
+                .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
+
+            jar.claim(claim_jar.available_yield, claim_jar.claimed_amount, claim_data.now)
+                .unlock();
+
+            if jar.should_be_closed(&product, claim_data.now) {
+                self.delete_jar(&claim_data.account_id, claim_jar.jar_id);
             }
         }
+
+        emit(event);
+
+        claimed_amount
     }
 }
 
@@ -204,23 +202,17 @@ impl ClaimCallbacks for Contract {
     fn after_claim(
         &mut self,
         claimed_amount: ClaimedAmountView,
-        jars_before_transfer: Vec<Jar>,
+        claim_data: ClaimData,
         event: EventKind,
-        now: Timestamp,
     ) -> ClaimedAmountView {
-        self.after_claim_internal(claimed_amount, jars_before_transfer, event, now, is_promise_success())
+        self.after_claim_internal(claimed_amount, claim_data, event, is_promise_success())
     }
 }
 
 #[cfg(not(test))]
 #[mutants::skip] // Covered by integration tests
-fn after_claim_call(
-    claimed_amount: ClaimedAmountView,
-    jars_before_transfer: Vec<Jar>,
-    event: EventKind,
-    now: Timestamp,
-) -> near_sdk::Promise {
+fn after_claim_call(claimed_amount: ClaimedAmountView, claim_data: ClaimData, event: EventKind) -> near_sdk::Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_CLAIM)
-        .after_claim(claimed_amount, jars_before_transfer, event, now)
+        .after_claim(claimed_amount, claim_data, event)
 }
