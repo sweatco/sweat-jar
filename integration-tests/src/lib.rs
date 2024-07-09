@@ -7,6 +7,7 @@ mod fast_forward;
 mod happy_flow;
 mod jar_contract_extensions;
 mod jar_deletion;
+mod many_jars;
 mod measure;
 mod migrations;
 mod premium_product;

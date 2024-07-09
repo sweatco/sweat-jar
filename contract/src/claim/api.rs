@@ -9,12 +9,8 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::{
-        gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_FT_TRANSFER},
-        Timestamp,
-    },
+    common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
-    internal::assert_gas,
     jar::model::Jar,
     Contract, ContractExt, JarsStorage,
 };
@@ -88,10 +84,7 @@ impl Contract {
 
                 accumulator.add(jar.id, interest_to_claim);
 
-                event_data.push(ClaimEventItem {
-                    id: jar.id,
-                    interest_to_claim: U128(interest_to_claim),
-                });
+                event_data.push((jar.id, U128(interest_to_claim)));
             }
         }
 
@@ -138,7 +131,11 @@ impl Contract {
         event: EventKind,
         now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        use crate::ft_interface::FungibleTokenInterface;
+        use crate::{
+            common::gas_data::{GAS_FOR_AFTER_CLAIM, GAS_FOR_FT_TRANSFER},
+            ft_interface::FungibleTokenInterface,
+            internal::assert_gas,
+        };
 
         assert_gas(GAS_FOR_FT_TRANSFER.as_gas() * 2 + GAS_FOR_AFTER_CLAIM.as_gas(), || {
             format!("claim_interest: number of jars: {}", jars_before_transfer.len())
