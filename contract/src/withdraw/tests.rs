@@ -351,32 +351,24 @@ fn withdraw_all() {
         .enabled(true)
         .lockup_term(MS_IN_YEAR * 2);
 
-    let mature_unclaimed_jar = Jar::generate(0, &alice, &product.id).principal(PRINCIPAL + 1);
-    let mature_claimed_jar = Jar::generate(1, &alice, &product.id).principal(PRINCIPAL + 2);
+    let mature_jar = Jar::generate(1, &alice, &product.id).principal(PRINCIPAL + 2);
 
     let immature_jar = Jar::generate(2, &alice, &long_term_product.id).principal(PRINCIPAL + 3);
     let locked_jar = Jar::generate(3, &alice, &product.id).principal(PRINCIPAL + 4).locked();
 
     let mut context = Context::new(admin)
         .with_products(&[product, long_term_product])
-        .with_jars(&[
-            mature_unclaimed_jar.clone(),
-            mature_claimed_jar.clone(),
-            immature_jar.clone(),
-            locked_jar.clone(),
-        ]);
+        .with_jars(&[mature_jar.clone(), immature_jar.clone(), locked_jar.clone()]);
 
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
 
-    context
-        .contract()
-        .claim_jars(vec![mature_claimed_jar.id.into()], None, None);
+    context.contract().claim_total(None);
 
     let withdrawn_jars = context.contract().withdraw_all().unwrap();
 
-    assert_eq!(withdrawn_jars.total_amount.0, 2000003);
+    assert_eq!(withdrawn_jars.total_amount.0, 1000002);
 
     assert_eq!(
         withdrawn_jars
@@ -384,19 +376,19 @@ fn withdraw_all() {
             .iter()
             .map(|j| j.withdrawn_amount.0)
             .collect::<Vec<_>>(),
-        vec![mature_unclaimed_jar.principal, mature_claimed_jar.principal]
+        vec![mature_jar.principal]
     );
 
     let all_jars = context.contract().get_jars_for_account(alice);
 
     assert_eq!(
         all_jars.iter().map(|j| j.principal.0).collect::<Vec<_>>(),
-        vec![0, locked_jar.principal, immature_jar.principal]
+        vec![locked_jar.principal, immature_jar.principal]
     );
 
     assert_eq!(
         all_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
-        vec![mature_unclaimed_jar.id, locked_jar.id, immature_jar.id,]
+        vec![locked_jar.id, immature_jar.id,]
     );
 }
 
