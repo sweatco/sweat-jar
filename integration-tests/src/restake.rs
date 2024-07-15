@@ -52,11 +52,7 @@ async fn restake() -> Result<()> {
     assert!(has_original_jar);
     assert!(has_restaked_jar);
 
-    context
-        .sweat_jar()
-        .claim_jars(vec![original_jar_id], None, None)
-        .with_user(&alice)
-        .await?;
+    context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     assert_eq!(jars.len(), 1);
