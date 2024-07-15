@@ -1,5 +1,3 @@
-use std::cmp;
-
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi,
@@ -32,7 +30,7 @@ impl ClaimApi for Contract {
         let account_id = env::predecessor_account_id();
         self.migrate_account_jars_if_needed(account_id.clone());
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
-        self.claim_jars_internal(account_id, jar_ids, None, detailed)
+        self.claim_jars_internal(account_id, jar_ids, detailed)
     }
 }
 
@@ -41,7 +39,6 @@ impl Contract {
         &mut self,
         account_id: AccountId,
         jar_ids: Vec<JarIdView>,
-        amount: Option<U128>,
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
         let now = env::block_timestamp_ms();
@@ -60,20 +57,16 @@ impl Contract {
             let product = self.get_product(&jar.product_id);
             let (available_interest, remainder) = jar.get_interest(&product, now);
 
-            let interest_to_claim = amount.map_or(available_interest, |amount| {
-                cmp::min(available_interest, amount.0 - accumulator.get_total().0)
-            });
-
-            if interest_to_claim > 0 {
+            if available_interest > 0 {
                 let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
 
                 jar.claim_remainder = remainder;
 
-                jar.claim(available_interest, interest_to_claim, now).lock();
+                jar.claim(available_interest, available_interest, now).lock();
 
-                accumulator.add(jar.id, interest_to_claim);
+                accumulator.add(jar.id, available_interest);
 
-                event_data.push((jar.id, U128(interest_to_claim)));
+                event_data.push((jar.id, U128(available_interest)));
             }
         }
 
