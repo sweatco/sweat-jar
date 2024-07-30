@@ -57,12 +57,18 @@ impl Context {
     }
 
     pub(crate) fn with_jars(self, jars: &[Jar]) -> Self {
+        let max_id = jars.iter().map(|j| j.id).max().unwrap();
+
         for jar in jars {
             self.contract()
                 .account_jars
                 .entry(jar.account_id.clone())
                 .or_default()
                 .push(jar.clone());
+        }
+
+        if max_id > self.contract().last_jar_id {
+            self.contract().last_jar_id = max_id;
         }
 
         self

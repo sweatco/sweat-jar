@@ -1,9 +1,6 @@
 #![cfg(test)]
 
-use std::{
-    ops::Range,
-    panic::{catch_unwind, UnwindSafe},
-};
+use std::panic::{catch_unwind, UnwindSafe};
 
 use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::TokenAmount;
@@ -18,7 +15,6 @@ use crate::{
 };
 
 pub const PRINCIPAL: u128 = 1_000_000;
-pub const JAR_ID_RANGE: Range<u32> = 0..100_000_000;
 
 pub fn admin() -> AccountId {
     "admin".parse().unwrap()

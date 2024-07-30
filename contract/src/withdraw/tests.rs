@@ -392,6 +392,42 @@ fn withdraw_all() {
     );
 }
 
+#[test]
+fn batch_withdraw_all() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::generate("product").enabled(true).lockup_term(MS_IN_YEAR);
+
+    let jars: Vec<_> = (0..8)
+        .map(|id| Jar::generate(id, &alice, &product.id).principal(PRINCIPAL + id as u128))
+        .collect();
+
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&jars);
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+
+    context.contract().claim_total(None);
+
+    let withdrawn_jars = context
+        .contract()
+        .withdraw_all(Some(vec![1.into(), 3.into(), 5.into()]))
+        .unwrap();
+
+    assert_eq!(withdrawn_jars.total_amount.0, 3000009);
+
+    let jars: Vec<_> = context
+        .contract()
+        .get_jars_for_account(alice)
+        .into_iter()
+        .map(|j| j.id.0)
+        .collect();
+
+    assert_eq!(jars, [0, 7, 2, 6, 4,]);
+}
+
 pub(crate) fn generate_product() -> Product {
     Product::generate("product").enabled(true)
 }
