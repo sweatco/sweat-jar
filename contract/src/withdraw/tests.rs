@@ -48,7 +48,7 @@ fn withdraw_locked_jar_before_maturity_by_not_owner() {
         context.contract().withdraw(U32(0), None);
     });
 
-    assert_eq!(context.contract().withdraw_all().unwrap().total_amount.0, 0);
+    assert_eq!(context.contract().withdraw_all(None).unwrap().total_amount.0, 0);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn withdraw_locked_jar_before_maturity_by_owner() {
         context.contract().withdraw(U32(jar.id), None);
     });
 
-    assert!(context.contract().withdraw_all().unwrap().jars.is_empty());
+    assert!(context.contract().withdraw_all(None).unwrap().jars.is_empty());
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn withdraw_locked_jar_after_maturity_by_not_owner() {
         context.contract().withdraw(U32(jar.id), None);
     });
 
-    assert_eq!(context.contract().withdraw_all().unwrap().total_amount.0, 0);
+    assert_eq!(context.contract().withdraw_all(None).unwrap().total_amount.0, 0);
 }
 
 #[test]
@@ -147,7 +147,7 @@ fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
         context.contract().withdraw(U32(jar.id), Some(U128(2_000_000)));
     });
 
-    let withdrawn = context.contract().withdraw_all().unwrap();
+    let withdrawn = context.contract().withdraw_all(None).unwrap();
 
     assert_eq!(withdrawn.jars.len(), 1);
     assert_eq!(withdrawn.jars[0].withdrawn_amount.0, 1_000_000);
@@ -338,7 +338,7 @@ fn withdraw_from_locked_jar() {
         _ = context.contract().withdraw(U32(0), Some(U128(100_000)));
     });
 
-    assert!(context.contract().withdraw_all().unwrap().jars.is_empty());
+    assert!(context.contract().withdraw_all(None).unwrap().jars.is_empty());
 }
 
 #[test]
@@ -366,7 +366,7 @@ fn withdraw_all() {
 
     context.contract().claim_total(None);
 
-    let withdrawn_jars = context.contract().withdraw_all().unwrap();
+    let withdrawn_jars = context.contract().withdraw_all(None).unwrap();
 
     assert_eq!(withdrawn_jars.total_amount.0, 1000002);
 
@@ -390,6 +390,42 @@ fn withdraw_all() {
         all_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
         vec![locked_jar.id, immature_jar.id,]
     );
+}
+
+#[test]
+fn batch_withdraw_all() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::generate("product").enabled(true).lockup_term(MS_IN_YEAR);
+
+    let jars: Vec<_> = (0..8)
+        .map(|id| Jar::generate(id, &alice, &product.id).principal(PRINCIPAL + id as u128))
+        .collect();
+
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&jars);
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+
+    context.contract().claim_total(None);
+
+    let withdrawn_jars = context
+        .contract()
+        .withdraw_all(Some(vec![1.into(), 3.into(), 5.into()]))
+        .unwrap();
+
+    assert_eq!(withdrawn_jars.total_amount.0, 3000009);
+
+    let jars: Vec<_> = context
+        .contract()
+        .get_jars_for_account(alice)
+        .into_iter()
+        .map(|j| j.id.0)
+        .collect();
+
+    assert_eq!(jars, [0, 7, 2, 6, 4,]);
 }
 
 pub(crate) fn generate_product() -> Product {

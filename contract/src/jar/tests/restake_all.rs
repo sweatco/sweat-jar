@@ -1,11 +1,13 @@
-use fake::Fake;
 use near_sdk::test_utils::test_env::alice;
-use sweat_jar_model::{api::JarApi, MS_IN_YEAR};
+use sweat_jar_model::{
+    api::{ClaimApi, JarApi},
+    MS_IN_YEAR,
+};
 
 use crate::{
     common::tests::Context,
     jar::model::Jar,
-    test_utils::{admin, generate_product, JAR_ID_RANGE, PRINCIPAL},
+    test_utils::{admin, generate_product, PRINCIPAL},
 };
 
 #[test]
@@ -30,16 +32,14 @@ fn restake_all() {
         .with_allows_restaking(true)
         .lockup_term(MS_IN_YEAR * 2);
 
-    let restakable_jar_1 = Jar::generate(JAR_ID_RANGE.fake(), &alice, &restakable_product.id).principal(PRINCIPAL);
-    let restakable_jar_2 = Jar::generate(JAR_ID_RANGE.fake(), &alice, &restakable_product.id).principal(PRINCIPAL);
+    let restakable_jar_1 = Jar::generate(0, &alice, &restakable_product.id).principal(PRINCIPAL);
+    let restakable_jar_2 = Jar::generate(1, &alice, &restakable_product.id).principal(PRINCIPAL);
 
-    let disabled_jar = Jar::generate(JAR_ID_RANGE.fake(), &alice, &disabled_restakable_product.id).principal(PRINCIPAL);
+    let disabled_jar = Jar::generate(2, &alice, &disabled_restakable_product.id).principal(PRINCIPAL);
 
-    let non_restakable_jar =
-        Jar::generate(JAR_ID_RANGE.fake(), &alice, &non_restakable_product.id).principal(PRINCIPAL);
+    let non_restakable_jar = Jar::generate(3, &alice, &non_restakable_product.id).principal(PRINCIPAL);
 
-    let long_term_jar =
-        Jar::generate(JAR_ID_RANGE.fake(), &alice, &long_term_restakable_product.id).principal(PRINCIPAL);
+    let long_term_jar = Jar::generate(4, &alice, &long_term_restakable_product.id).principal(PRINCIPAL);
 
     let mut context = Context::new(admin)
         .with_products(&[
@@ -60,10 +60,14 @@ fn restake_all() {
 
     context.switch_account(&alice);
 
-    let restaked_jars = context.contract().restake_all();
+    let restaked_jars = context.contract().restake_all(None);
 
     assert_eq!(restaked_jars.len(), 2);
-    assert_eq!(restaked_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(), vec![1, 2]);
+    assert_eq!(
+        restaked_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
+        // 4 was last jar is, so 2 new restaked jars will have ids 5 and 6
+        vec![5, 6]
+    );
 
     let all_jars = context.contract().get_jars_for_account(alice);
 
@@ -75,8 +79,8 @@ fn restake_all() {
             disabled_jar.id,
             non_restakable_jar.id,
             long_term_jar.id,
-            1,
-            2,
+            5,
+            6,
         ]
     )
 }
@@ -95,7 +99,7 @@ fn restake_all_after_maturity_for_restakable_product_one_jar() {
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
-    let restaked = context.contract().restake_all().into_iter().next().unwrap();
+    let restaked = context.contract().restake_all(None).into_iter().next().unwrap();
 
     assert_eq!(restaked.account_id, alice);
     assert_eq!(restaked.principal.0, PRINCIPAL);
@@ -109,4 +113,44 @@ fn restake_all_after_maturity_for_restakable_product_one_jar() {
         PRINCIPAL,
         alice_jars.iter().find(|item| item.id.0 == 1).unwrap().principal.0
     );
+}
+
+#[test]
+fn batch_restake_all() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = generate_product("restakable_product")
+        .with_allows_restaking(true)
+        .lockup_term(MS_IN_YEAR);
+
+    let jars: Vec<_> = (0..8)
+        .map(|id| Jar::generate(id, &alice, &product.id).principal(PRINCIPAL + id as u128))
+        .collect();
+
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&jars);
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+
+    context.contract().claim_total(None);
+
+    let restaked: Vec<_> = context
+        .contract()
+        .restake_all(Some(vec![1.into(), 2.into(), 5.into()]))
+        .into_iter()
+        .map(|j| j.id.0)
+        .collect();
+
+    assert_eq!(restaked, [8, 9, 10]);
+
+    let jars: Vec<_> = context
+        .contract()
+        .get_jars_for_account(alice)
+        .into_iter()
+        .map(|j| j.id.0)
+        .collect();
+
+    assert_eq!(jars, [0, 7, 8, 3, 4, 9, 6, 10,]);
 }

@@ -3798,7 +3798,7 @@ checksum = "81cdd64d312baedb58e21336b31bc043b77e01cc99033ce76ef539f78e965ebc"
 
 [[package]]
 name = "sweat-jar-model"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "near-sdk 5.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "near-workspaces",
@@ -3821,7 +3821,7 @@ dependencies = [
 
 [[package]]
 name = "sweat_jar"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "base64 0.22.1",
  "crypto-hash",

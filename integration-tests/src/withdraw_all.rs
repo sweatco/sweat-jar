@@ -67,7 +67,7 @@ async fn withdraw_all() -> Result<()> {
         .ft_balance_of(context.sweat_jar().contract.as_account().to_near())
         .await?;
 
-    let withdrawn = context.sweat_jar().withdraw_all().with_user(&alice).await?;
+    let withdrawn = context.sweat_jar().withdraw_all(None).with_user(&alice).await?;
 
     let alice_balance_after = context.ft_contract().ft_balance_of(alice.to_near()).await?;
     let jar_balance_after = context
