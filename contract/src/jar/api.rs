@@ -155,14 +155,16 @@ impl JarApi for Contract {
         jar
     }
 
-    fn restake_all(&mut self) -> Vec<JarView> {
+    fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView> {
         let account_id = env::predecessor_account_id();
 
         self.migrate_account_jars_if_needed(account_id.clone());
 
         let now = env::block_timestamp_ms();
 
-        let jars: Vec<Jar> = self
+        let jars_filter: Option<Vec<JarId>> = jars.map(|jars| jars.into_iter().map(|j| j.0).collect());
+
+        let mut jars: Vec<Jar> = self
             .account_jars
             .get(&account_id)
             .unwrap_or_else(|| {
@@ -173,6 +175,10 @@ impl JarApi for Contract {
             .filter(|j| self.can_be_restaked(j, now))
             .cloned()
             .collect();
+
+        if let Some(jars_filter) = jars_filter {
+            jars.retain(|jar| jars_filter.contains(&jar.id));
+        }
 
         let mut result = vec![];
 

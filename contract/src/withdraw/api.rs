@@ -80,7 +80,7 @@ impl WithdrawApi for Contract {
         self.transfer_withdraw(&account_id, amount, &jar, close_jar)
     }
 
-    fn withdraw_all(&mut self) -> PromiseOrValue<BulkWithdrawView> {
+    fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
         self.migrate_account_jars_if_needed(account_id.clone());
         let now = env::block_timestamp_ms();
@@ -88,6 +88,8 @@ impl WithdrawApi for Contract {
         let Some(account_jars) = self.account_jars.get(&account_id) else {
             return PromiseOrValue::Value(BulkWithdrawView::default());
         };
+
+        let jars_filter: Option<Vec<JarId>> = jars.map(|jars| jars.into_iter().map(|j| j.0).collect());
 
         let jars: Vec<JarWithdraw> = account_jars
             .jars
@@ -104,6 +106,12 @@ impl WithdrawApi for Contract {
 
                 if amount == 0 {
                     return None;
+                }
+
+                if let Some(jars_filter) = &jars_filter {
+                    if !jars_filter.contains(&jar.id) {
+                        return None;
+                    }
                 }
 
                 let mut withdrawn_jar = jar.withdrawn(&product, amount, now);

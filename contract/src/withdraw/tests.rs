@@ -48,7 +48,7 @@ fn withdraw_locked_jar_before_maturity_by_not_owner() {
         context.contract().withdraw(U32(0), None);
     });
 
-    assert_eq!(context.contract().withdraw_all().unwrap().total_amount.0, 0);
+    assert_eq!(context.contract().withdraw_all(None).unwrap().total_amount.0, 0);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn withdraw_locked_jar_before_maturity_by_owner() {
         context.contract().withdraw(U32(jar.id), None);
     });
 
-    assert!(context.contract().withdraw_all().unwrap().jars.is_empty());
+    assert!(context.contract().withdraw_all(None).unwrap().jars.is_empty());
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn withdraw_locked_jar_after_maturity_by_not_owner() {
         context.contract().withdraw(U32(jar.id), None);
     });
 
-    assert_eq!(context.contract().withdraw_all().unwrap().total_amount.0, 0);
+    assert_eq!(context.contract().withdraw_all(None).unwrap().total_amount.0, 0);
 }
 
 #[test]
@@ -147,7 +147,7 @@ fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
         context.contract().withdraw(U32(jar.id), Some(U128(2_000_000)));
     });
 
-    let withdrawn = context.contract().withdraw_all().unwrap();
+    let withdrawn = context.contract().withdraw_all(None).unwrap();
 
     assert_eq!(withdrawn.jars.len(), 1);
     assert_eq!(withdrawn.jars[0].withdrawn_amount.0, 1_000_000);
@@ -338,7 +338,7 @@ fn withdraw_from_locked_jar() {
         _ = context.contract().withdraw(U32(0), Some(U128(100_000)));
     });
 
-    assert!(context.contract().withdraw_all().unwrap().jars.is_empty());
+    assert!(context.contract().withdraw_all(None).unwrap().jars.is_empty());
 }
 
 #[test]
@@ -366,7 +366,7 @@ fn withdraw_all() {
 
     context.contract().claim_total(None);
 
-    let withdrawn_jars = context.contract().withdraw_all().unwrap();
+    let withdrawn_jars = context.contract().withdraw_all(None).unwrap();
 
     assert_eq!(withdrawn_jars.total_amount.0, 1000002);
 
