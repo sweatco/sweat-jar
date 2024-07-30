@@ -32,7 +32,7 @@ use crate::{
 #[serde(crate = "near_sdk::serde")]
 pub struct JarTicket {
     /// The unique identifier of the product for which the jar is intended to be created.
-    /// This product_id links the request to the specific terms and conditions of the product that will govern the behavior of the jar.
+    /// This `product_id` links the request to the specific terms and conditions of the product that will govern the behavior of the jar.
     pub product_id: String,
 
     /// Specifies the expiration date of the ticket. The expiration date is measured in milliseconds

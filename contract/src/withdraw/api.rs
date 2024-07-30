@@ -38,6 +38,7 @@ impl Contract {
     }
 }
 
+#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub trait WithdrawCallbacks {
     fn after_withdraw(

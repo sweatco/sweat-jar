@@ -17,7 +17,7 @@ pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
 
-    /// Represents a request to create DeFi Jars from provided CeFi Jars.
+    /// Represents a request to create `DeFi` Jars from provided `CeFi` Jars.
     Migrate(Vec<CeFiJar>),
 
     /// Represents a request to refill (top up) an existing jar using its `JarId`.
