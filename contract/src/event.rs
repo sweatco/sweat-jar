@@ -189,7 +189,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.0.0");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-3.1.0");
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -230,7 +230,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "event": "create_jar",
   "data": {
     "id": 555,
@@ -250,7 +250,7 @@ mod test {
             SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "event": "claim",
   "data": [
     [
