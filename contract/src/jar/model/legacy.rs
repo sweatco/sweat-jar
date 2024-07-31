@@ -3,7 +3,7 @@ use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
 use crate::{
     common::Timestamp,
-    jar::model::{Jar, JarCache, JarV1},
+    jar::model::{Jar, JarCache, JarLastVersion},
     AccountJars,
 };
 
@@ -25,7 +25,7 @@ pub struct JarLegacy {
 impl From<JarLegacy> for Jar {
     #[mutants::skip]
     fn from(value: JarLegacy) -> Self {
-        JarV1 {
+        JarLastVersion {
             id: value.id,
             account_id: value.account_id,
             product_id: value.product_id,

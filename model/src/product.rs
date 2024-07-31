@@ -1,56 +1,57 @@
 use near_sdk::{
     json_types::{Base64VecU8, U128, U64},
     near,
-    serde::{Deserialize, Serialize},
 };
 
-use crate::{ProductId, MS_IN_YEAR};
+use crate::{ProductId, Score, MS_IN_YEAR};
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
 pub struct DowngradableApyView {
     pub default: f32,
     pub fallback: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
 pub enum ApyView {
     Constant(f32),
     Downgradable(DowngradableApyView),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
 pub struct CapView {
     pub min: U128,
     pub max: U128,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
 pub struct FixedProductTermsView {
     pub lockup_term: U64,
     pub allows_top_up: bool,
     pub allows_restaking: bool,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum TermsView {
     Fixed(FixedProductTermsView),
     Flexible,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WithdrawalFeeView {
     Fix(U128),
     Percent(f32),
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
 pub struct ProductView {
     pub id: ProductId,
     pub apy: ApyView,
@@ -58,6 +59,8 @@ pub struct ProductView {
     pub terms: TermsView,
     pub withdrawal_fee: Option<WithdrawalFeeView>,
     pub is_enabled: bool,
+    #[serde(default)]
+    pub score_cap: Score,
 }
 
 #[near(serializers=[borsh, json])]
@@ -117,6 +120,7 @@ pub struct RegisterProductCommand {
     pub withdrawal_fee: Option<WithdrawalFeeDto>,
     pub public_key: Option<Base64VecU8>,
     pub is_enabled: bool,
+    pub score_cap: Score,
 }
 
 impl Default for RegisterProductCommand {
@@ -131,6 +135,7 @@ impl Default for RegisterProductCommand {
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
+            score_cap: 0,
         }
     }
 }

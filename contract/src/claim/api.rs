@@ -10,6 +10,7 @@ use crate::{
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
+    score::AccountScore,
     Contract, ContractExt, JarsStorage,
 };
 
@@ -29,7 +30,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(&account_id);
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars_internal(account_id, jar_ids, detailed)
     }
@@ -54,9 +55,13 @@ impl Contract {
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
+        let account_score = self.account_score.get_mut(&account_id);
+
+        let score = account_score.map(AccountScore::claim_score).unwrap_or_default();
+
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let (available_interest, remainder) = jar.get_interest(&product, now);
+            let (available_interest, remainder) = jar.get_interest(&score, &product, now);
 
             if available_interest > 0 {
                 let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
@@ -154,7 +159,13 @@ impl Contract {
 
                 jar.unlock();
 
-                if jar.should_be_closed(&product, now) {
+                let score = self
+                    .account_score
+                    .get(&jar_before_transfer.account_id)
+                    .map(AccountScore::claimable_score)
+                    .unwrap_or_default();
+
+                if jar.should_be_closed(&score, &product, now) {
                     self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
                 }
             }

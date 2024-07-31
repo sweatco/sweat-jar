@@ -1,9 +1,9 @@
-use sweat_jar_model::product::{RegisterProductCommand, TermsDto, WithdrawalFeeDto};
-
-use crate::{
-    common::udecimal::UDecimal,
-    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee},
+use sweat_jar_model::{
+    product::{RegisterProductCommand, TermsDto, WithdrawalFeeDto},
+    UDecimal,
 };
+
+use crate::product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee};
 
 impl From<RegisterProductCommand> for Product {
     fn from(value: RegisterProductCommand) -> Self {
@@ -33,6 +33,7 @@ impl From<RegisterProductCommand> for Product {
             withdrawal_fee,
             public_key: value.public_key.map(|key| key.0),
             is_enabled: value.is_enabled,
+            score_cap: value.score_cap,
         }
     }
 }
