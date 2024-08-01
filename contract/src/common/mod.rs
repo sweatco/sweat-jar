@@ -1,6 +1,5 @@
 pub(crate) mod test_data;
 pub(crate) mod tests;
-pub(crate) mod udecimal;
 
 /// Milliseconds since the Unix epoch (January 1, 1970 (midnight UTC/GMT))
 pub type Timestamp = u64;

@@ -11,7 +11,7 @@ use crate::{
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     product::{ProductView, RegisterProductCommand},
     withdraw::{BulkWithdrawView, WithdrawView},
-    ProductId,
+    ProductId, Score, UTC,
 };
 
 #[cfg(feature = "integration-test")]
@@ -151,6 +151,11 @@ pub trait MigratonToNearSdk5 {
     fn migrate_state_to_near_sdk_5() -> Self;
 }
 
+#[make_integration_version]
+pub trait MigrationToStepJars {
+    fn migrate_state_to_step_jars() -> Self;
+}
+
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
 #[make_integration_version]
 pub trait PenaltyApi {
@@ -264,6 +269,26 @@ pub trait WithdrawApi {
 
     /// Withdraws all jars for user, or only specified list of jars if `jars` argument is `Some`
     fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+}
+
+#[make_integration_version]
+pub trait ScoreApi {
+    /// Records the score for a batch of accounts and updates their jars score accordingly.
+    ///
+    /// This method processes a batch of new scores for multiple accounts, updates their
+    /// respective jars score, calculates interest based on the current timestamp, and emits
+    /// an event with the recorded scores.
+    ///
+    /// # Arguments
+    ///
+    /// * `batch` - A vector of tuples, where each tuple contains an `AccountId` and a vector
+    ///   of tuples representing the new scores and their associated timestamps (in UTC).
+    ///
+    /// # Panics
+    ///
+    /// - This function will panic if an account does not have score jars.
+    /// - This function will panic if a product associated with a jar does not exist.
+    fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
 }
 
 #[cfg(feature = "integration-methods")]

@@ -1,18 +1,16 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{
-    json_types::U128,
-    require,
-    serde::{Deserialize, Serialize},
-    serde_json, AccountId, PromiseOrValue,
+use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
+use sweat_jar_model::{
+    jar::{CeFiJar, JarId},
+    Timezone,
 };
-use sweat_jar_model::jar::{CeFiJar, JarId};
 
 use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[near(serializers=[json])]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
@@ -25,8 +23,7 @@ pub enum FtMessage {
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[json])]
 pub struct StakeMessage {
     /// Data of the `JarTicket` required for validating the request and specifying the product.
     ticket: JarTicket,
@@ -36,6 +33,9 @@ pub struct StakeMessage {
 
     /// An optional account ID representing the intended owner of the created jar.
     receiver_id: Option<crate::AccountId>,
+
+    /// An optional user timezone. Required for creating step jars.
+    timezone: Option<Timezone>,
 }
 
 #[near_bindgen]
@@ -48,7 +48,7 @@ impl FungibleTokenReceiver for Contract {
         match ft_message {
             FtMessage::Stake(message) => {
                 let receiver_id = message.receiver_id.unwrap_or(sender_id);
-                self.create_jar(receiver_id, message.ticket, amount, message.signature);
+                self.create_jar(receiver_id, message.ticket, amount, message.signature, message.timezone);
             }
             FtMessage::Migrate(jars) => {
                 require!(sender_id == self.manager, "Migration can be performed only by admin");
