@@ -34,7 +34,7 @@ fn generate_year_data() -> (Vec<u128>, Vec<u128>) {
             context.record_score(MS_IN_DAY * day, (15_000..20_000).fake(), alice());
         }
 
-        result.push((context.interest(STEP_JAR, alice()), context.interest(JAR, alice())));
+        result.push((context.interest(STEP_JAR), context.interest(JAR)));
     }
 
     result.into_iter().unzip()
@@ -130,8 +130,8 @@ fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128
 
         result.push((
             score_walked,
-            ctx.interest(IDEAL_JAR, alice()),
-            ctx.interest(REAL_JAR, bob()),
+            ctx.interest(IDEAL_JAR),
+            ctx.interest(REAL_JAR),
             claimed_ideal,
             claimed_real,
         ));

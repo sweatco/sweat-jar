@@ -13,7 +13,6 @@ pub(crate) trait ProductBuilder: Sized {
 pub(crate) enum ProductField {
     APY(u32),
     ScoreCap(Score),
-    NoScoreCap,
 }
 
 impl ProductBuilder for ProductField {
@@ -21,7 +20,6 @@ impl ProductBuilder for ProductField {
         match self {
             ProductField::APY(apy) => product.apy(apy),
             ProductField::ScoreCap(cap) => product.score_cap(cap),
-            ProductField::NoScoreCap => product.score_cap(Score::MAX),
         }
     }
 }

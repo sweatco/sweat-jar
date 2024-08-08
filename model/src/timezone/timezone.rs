@@ -28,7 +28,7 @@ impl Timezone {
         self.adjust(UTC(block_timestamp_ms()))
     }
 
-    /// Return current days index
+    /// Return current day index
     pub fn today(&self) -> Day {
         self.now().day()
     }

@@ -2,13 +2,14 @@
 
 use std::{
     borrow::Borrow,
+    collections::HashMap,
     sync::{Arc, Mutex, MutexGuard},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{env::block_timestamp_ms, test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use sweat_jar_model::{api::InitApi, jar::JarId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
 use crate::{jar::model::Jar, product::model::Product, test_utils::AfterCatchUnwind, Contract};
 
@@ -17,6 +18,7 @@ pub(crate) struct Context {
     pub owner: AccountId,
     ft_contract_id: AccountId,
     builder: VMContextBuilder,
+    pub account_jars: HashMap<AccountId, Vec<JarId>>,
 }
 
 impl Context {
@@ -41,6 +43,7 @@ impl Context {
             ft_contract_id,
             builder,
             contract: Arc::new(Mutex::new(contract)),
+            account_jars: HashMap::default(),
         }
     }
 
@@ -56,7 +59,7 @@ impl Context {
         self
     }
 
-    pub(crate) fn with_jars(self, jars: &[Jar]) -> Self {
+    pub(crate) fn with_jars(mut self, jars: &[Jar]) -> Self {
         if jars.is_empty() {
             return self;
         }
@@ -64,6 +67,11 @@ impl Context {
         let max_id = jars.iter().map(|j| j.id).max().unwrap();
 
         for jar in jars {
+            self.account_jars
+                .entry(jar.account_id.clone())
+                .or_default()
+                .push(jar.id);
+
             self.contract()
                 .account_jars
                 .entry(jar.account_id.clone())
