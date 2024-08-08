@@ -1,15 +1,13 @@
-use near_sdk::{
-    json_types::U128,
-    serde::{Deserialize, Serialize},
-};
+use near_sdk::{json_types::U128, near};
 
 use crate::{
     jar::{AggregatedTokenAmountView, JarId},
     TokenAmount, U32,
 };
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
-#[serde(crate = "near_sdk::serde", untagged)]
+#[derive(Debug, PartialEq, Clone)]
+#[near(serializers=[json])]
+#[serde(untagged)]
 pub enum ClaimedAmountView {
     Total(U128),
     Detailed(AggregatedTokenAmountView),

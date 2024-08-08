@@ -1,21 +1,20 @@
 use near_sdk::test_utils::test_env::{alice, bob, carol};
 use sweat_jar_model::{
     api::{JarApi, ProductApi},
-    MS_IN_YEAR, U32,
+    U32,
 };
 
 use crate::{
     common::tests::Context,
     jar::model::Jar,
-    test_utils::{admin, expect_panic, generate_product},
+    product::model::Product,
+    test_utils::{admin, expect_panic},
 };
 
 #[test]
 fn restake_by_not_owner() {
-    let alice = alice();
-
-    let product = generate_product("restakable_product").with_allows_restaking(true);
-    let alice_jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().with_allows_restaking(true);
+    let alice_jar = Jar::new(0);
     let mut ctx = Context::new(admin())
         .with_products(&[product])
         .with_jars(&[alice_jar.clone()]);
@@ -45,8 +44,8 @@ fn restake_before_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product("restakable_product").with_allows_restaking(true);
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.switch_account(&alice);
@@ -60,8 +59,9 @@ fn restake_when_restaking_is_not_supported() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product("not_restakable_product").with_allows_restaking(false);
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().with_allows_restaking(false);
+
+    let jar = Jar::new(0);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.switch_account(&alice);
@@ -75,8 +75,8 @@ fn restake_with_disabled_product() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product("restakable_product").with_allows_restaking(true);
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0);
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
         .with_jars(&[jar.clone()]);
@@ -97,10 +97,8 @@ fn restake_empty_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product("restakable_product")
-        .lockup_term(MS_IN_YEAR)
-        .with_allows_restaking(true);
-    let jar = Jar::generate(0, &alice, &product.id).principal(0);
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0).principal(0);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.set_block_timestamp_in_days(366);
@@ -115,10 +113,8 @@ fn restake_after_maturity_for_restakable_product() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product("restakable_product")
-        .with_allows_restaking(true)
-        .lockup_term(MS_IN_YEAR);
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.set_block_timestamp_in_days(366);
@@ -142,10 +138,10 @@ fn restake_after_maturity_for_not_restakable_product() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product("not_restakable_product").with_allows_restaking(false);
-    let jar = Jar::generate(0, &alice, &reference_product.id).principal(1_000_000);
+    let product = Product::new().with_allows_restaking(false);
+    let jar = Jar::new(0);
     let mut context = Context::new(admin.clone())
-        .with_products(&[reference_product.clone()])
+        .with_products(&[product.clone()])
         .with_jars(&[jar.clone()]);
 
     context.set_block_timestamp_in_days(366);

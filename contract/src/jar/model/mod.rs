@@ -1,7 +1,10 @@
+mod common;
 mod legacy;
 mod v1;
 mod versioned;
 
+pub use common::{JarCache, JarTicket};
 pub use legacy::AccountJarsLegacy;
-pub use v1::{JarCache, JarTicket, JarV1};
 pub use versioned::Jar;
+
+pub type JarLastVersion = v1::JarV1;

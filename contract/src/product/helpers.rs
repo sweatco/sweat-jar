@@ -3,16 +3,16 @@
 use base64::{engine::general_purpose, Engine};
 use crypto_hash::{digest, Algorithm};
 use ed25519_dalek::{Signer, SigningKey};
-use fake::{Fake, Faker};
 use general_purpose::STANDARD;
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
-use sweat_jar_model::{TokenAmount, MS_IN_YEAR};
+use sweat_jar_model::{Score, TokenAmount, UDecimal, MS_IN_YEAR};
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal, Duration},
+    common::{tests::Context, Duration},
     jar::model::JarTicket,
     product::model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
+    test_utils::PRODUCT,
     Contract,
 };
 
@@ -44,23 +44,28 @@ impl MessageSigner {
 }
 
 impl Product {
-    pub(crate) fn generate(id: &str) -> Self {
+    pub fn new() -> Self {
         Self {
-            id: id.to_string(),
-            apy: Apy::Constant(UDecimal::new((1..20).fake(), (1..2).fake())),
-            cap: Cap {
-                min: (0..1_000).fake(),
-                max: (1_000_000..1_000_000_000).fake(),
-            },
+            id: PRODUCT.to_string(),
+            apy: Apy::Constant(UDecimal::new(12, 2)),
+            cap: Cap { min: 0, max: 1_000_000 },
             terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: 31_536_000_000,
-                allows_top_up: Faker.fake(),
-                allows_restaking: Faker.fake(),
+                lockup_term: MS_IN_YEAR,
+                allows_top_up: false,
+                allows_restaking: false,
             }),
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
+            score_cap: 0,
         }
+    }
+}
+
+impl Product {
+    pub(crate) fn id(mut self, id: &str) -> Self {
+        self.id = id.to_string();
+        self
     }
 
     pub(crate) fn public_key(mut self, pk: Vec<u8>) -> Self {
@@ -133,8 +138,13 @@ impl Product {
         self
     }
 
-    pub(crate) fn apy(mut self, apy: Apy) -> Self {
-        self.apy = apy;
+    pub(crate) fn apy(mut self, apy: impl Into<Apy>) -> Self {
+        self.apy = apy.into();
+        self
+    }
+
+    pub(crate) fn score_cap(mut self, cap: Score) -> Self {
+        self.score_cap = cap;
         self
     }
 }
@@ -154,5 +164,12 @@ impl Context {
             ticket.valid_until.0,
             None,
         )
+    }
+}
+
+/// Constant APY described as percent. Value of 10 means 10% or UDecimal::new(10, 2)
+impl Into<Apy> for u32 {
+    fn into(self) -> Apy {
+        Apy::Constant(UDecimal::new(self.into(), 2))
     }
 }

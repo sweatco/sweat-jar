@@ -13,12 +13,12 @@ use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::{AggregatedTokenAmountView, JarView},
     product::ApyView,
-    TokenAmount, MS_IN_YEAR, U32,
+    TokenAmount, UDecimal, U32,
 };
 
 use super::*;
 use crate::{
-    common::{test_data::set_test_log_events, udecimal::UDecimal},
+    common::test_data::set_test_log_events,
     product::{helpers::MessageSigner, model::DowngradableApy, tests::get_register_product_command},
     test_utils::{admin, UnwrapPromise},
 };
@@ -64,10 +64,10 @@ fn get_principal_with_single_jar() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
-    let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
+    let product = Product::new();
+    let reference_jar = Jar::new(0).principal(100);
     let context = Context::new(admin)
-        .with_products(&[reference_product])
+        .with_products(&[product])
         .with_jars(&[reference_jar]);
 
     let principal = context.contract().get_total_principal(alice).total.0;
@@ -79,14 +79,14 @@ fn get_principal_with_multiple_jars() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let product = Product::new();
     let jars = &[
-        Jar::generate(0, &alice, &reference_product.id).principal(100),
-        Jar::generate(1, &alice, &reference_product.id).principal(200),
-        Jar::generate(2, &alice, &reference_product.id).principal(400),
+        Jar::new(0).principal(100),
+        Jar::new(1).principal(200),
+        Jar::new(2).principal(400),
     ];
 
-    let context = Context::new(admin).with_products(&[reference_product]).with_jars(jars);
+    let context = Context::new(admin).with_products(&[product]).with_jars(jars);
 
     let principal = context.contract().get_total_principal(alice).total.0;
     assert_eq!(principal, 700);
@@ -110,13 +110,11 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let product = Product::new();
 
     let jar_id = 0;
-    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
-    let mut context = Context::new(admin)
-        .with_products(&[reference_product])
-        .with_jars(&[jar.clone()]);
+    let jar = Jar::new(jar_id).principal(100_000_000);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
@@ -134,13 +132,11 @@ fn get_total_interest_with_single_jar_on_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let product = Product::new();
 
     let jar_id = 0;
-    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
-    let mut context = Context::new(admin)
-        .with_products(&[reference_product])
-        .with_jars(&[jar.clone()]);
+    let jar = Jar::new(jar_id).principal(100_000_000);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
@@ -163,13 +159,11 @@ fn get_total_interest_with_single_jar_after_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let product = Product::new();
 
     let jar_id = 0;
-    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
-    let mut context = Context::new(admin)
-        .with_products(&[reference_product])
-        .with_jars(&[jar.clone()]);
+    let jar = Jar::new(jar_id).principal(100_000_000);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
@@ -185,13 +179,11 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let product = Product::new();
 
     let jar_id = 0;
-    let jar = Jar::generate(jar_id, &alice, &reference_product.id).principal(100_000_000);
-    let mut context = Context::new(admin)
-        .with_products(&[reference_product])
-        .with_jars(&[jar.clone()]);
+    let jar = Jar::new(jar_id).principal(100_000_000);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
@@ -217,14 +209,13 @@ fn penalty_is_not_applicable_for_constant_apy() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let reference_product = Product::generate("premium_product")
-        .enabled(true)
+    let product = Product::new()
         .apy(Apy::Constant(UDecimal::new(20, 2)))
         .public_key(signer.public_key());
-    let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
+    let reference_jar = Jar::new(0).principal(100_000_000);
 
     let mut context = Context::new(admin.clone())
-        .with_products(&[reference_product])
+        .with_products(&[product])
         .with_jars(&[reference_jar]);
 
     context.switch_account(&admin);
@@ -237,17 +228,16 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let reference_product = Product::generate("premium_product")
-        .enabled(true)
+    let product = Product::new()
         .apy(Apy::Downgradable(DowngradableApy {
             default: UDecimal::new(20, 2),
             fallback: UDecimal::new(10, 2),
         }))
         .public_key(signer.public_key());
-    let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000);
+    let reference_jar = Jar::new(0).principal(100_000_000);
 
     let mut context = Context::new(admin.clone())
-        .with_products(&[reference_product])
+        .with_products(&[product])
         .with_jars(&[reference_jar]);
 
     context.set_block_timestamp_in_ms(15_768_000_000);
@@ -270,18 +260,17 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let reference_product = Product::generate("lux_product")
-        .enabled(true)
+    let product = Product::new()
         .apy(Apy::Downgradable(DowngradableApy {
             default: UDecimal::new(23, 2),
             fallback: UDecimal::new(10, 2),
         }))
         .lockup_term(3_600_000)
         .public_key(signer.public_key());
-    let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100_000_000_000_000_000_000_000);
+    let reference_jar = Jar::new(0).principal(100_000_000_000_000_000_000_000);
 
     let mut context = Context::new(admin.clone())
-        .with_products(&[reference_product])
+        .with_products(&[product])
         .with_jars(&[reference_jar]);
 
     let products = context.contract().get_products();
@@ -310,22 +299,19 @@ fn apply_penalty_in_batch() {
     let alice = alice();
     let bob = bob();
 
-    let product_id = "premium_product";
-
     let signer = MessageSigner::new();
-    let reference_product = Product::generate(product_id)
-        .enabled(true)
+    let product = Product::new()
         .apy(Apy::Downgradable(DowngradableApy {
             default: UDecimal::new(20, 2),
             fallback: UDecimal::new(10, 2),
         }))
         .public_key(signer.public_key());
 
-    let alice_jars = (0..100).map(|id| Jar::generate(id, &alice, product_id).principal(100_000_000));
-    let bob_jars = (0..50).map(|id| Jar::generate(id + 200, &bob, product_id).principal(100_000_000));
+    let alice_jars = (0..100).map(|id| Jar::new(id).principal(100_000_000));
+    let bob_jars = (0..50).map(|id| Jar::new(id + 200).account_id(&bob).principal(100_000_000));
 
     let mut context = Context::new(admin.clone())
-        .with_products(&[reference_product])
+        .with_products(&[product])
         .with_jars(&alice_jars.chain(bob_jars).collect::<Vec<_>>());
 
     context.set_block_timestamp_in_days(182);
@@ -374,8 +360,8 @@ fn get_interest_after_withdraw() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product();
-    let jar = Jar::generate(0, &alice, &product.id).principal(100_000_000);
+    let product = Product::new();
+    let jar = Jar::new(0).principal(100_000_000);
 
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
@@ -394,9 +380,9 @@ fn unlock_not_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let reference_product = Product::new();
 
-    let mut reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(100);
+    let mut reference_jar = Jar::new(0).product_id(&reference_product.id).principal(100);
     reference_jar.is_pending_withdraw = true;
     let jars = &[reference_jar];
 
@@ -411,10 +397,10 @@ fn unlock_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let reference_product = generate_product();
+    let reference_product = Product::new();
 
     let reference_jar_id = 0;
-    let mut reference_jar = Jar::generate(reference_jar_id, &alice, &reference_product.id).principal(100);
+    let mut reference_jar = Jar::new(0).product_id(&reference_product.id).principal(100);
     reference_jar.is_pending_withdraw = true;
     let jars = &[reference_jar];
 
@@ -448,13 +434,6 @@ fn test_u32() {
     assert_eq!(U32::from(12345678_u32), n);
 }
 
-fn generate_product() -> Product {
-    Product::generate("product")
-        .enabled(true)
-        .lockup_term(MS_IN_YEAR)
-        .apy(Apy::Constant(UDecimal::new(12, 2)))
-}
-
 #[test]
 fn claim_often_vs_claim_once() {
     fn test(mut product: Product, principal: TokenAmount, days: u64, n: usize) {
@@ -466,8 +445,15 @@ fn claim_often_vs_claim_once() {
 
         product.id = format!("product_{principal}_{days}_{n}");
 
-        let alice_jar = Jar::generate(0, &alice, &product.id).principal(principal);
-        let bob_jar = Jar::generate(1, &bob, &product.id).principal(principal);
+        let alice_jar = Jar::new(0)
+            .product_id(&product.id)
+            .account_id(&alice)
+            .principal(principal);
+
+        let bob_jar = Jar::new(1)
+            .product_id(&product.id)
+            .account_id(&bob)
+            .principal(principal);
 
         let mut context = Context::new(admin)
             .with_products(&[product])
@@ -488,7 +474,7 @@ fn claim_often_vs_claim_once() {
         assert_eq!(alice_interest, bobs_claimed);
     }
 
-    let product = generate_product();
+    let product = Product::new();
 
     test(product.clone(), 10_000_000_000_000_000_000_000_000_000, 365, 0);
 

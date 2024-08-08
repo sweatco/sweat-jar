@@ -7,7 +7,7 @@ use sweat_jar_model::{
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    product::model::Product,
+    product::model::{Apy, Product, Terms},
     Base64VecU8, Contract, ContractExt,
 };
 
@@ -21,6 +21,17 @@ impl ProductApi for Contract {
         assert!(self.products.get(&command.id).is_none(), "Product already exists");
 
         let product: Product = command.into();
+
+        if product.is_score_product() {
+            assert!(
+                matches!(product.apy, Apy::Constant(_)),
+                "Step based products support only constant APY"
+            );
+
+            if let Terms::Fixed(fixed) = &product.terms {
+                assert!(!fixed.allows_top_up, "Step based products don't support top up");
+            }
+        }
 
         product.assert_fee_amount();
 

@@ -1,50 +1,43 @@
 #![cfg(test)]
 
 use fake::Fake;
-use near_sdk::{test_utils::test_env::alice, Timestamp};
-use sweat_jar_model::MS_IN_YEAR;
+use near_sdk::Timestamp;
+use sweat_jar_model::{UDecimal, MS_IN_YEAR};
 
 use crate::{
-    common::udecimal::UDecimal,
     product::model::{Apy, Product},
     Jar,
 };
 
 #[test]
 fn get_interest_before_maturity() {
-    let product = Product::generate("product")
-        .apy(Apy::Constant(UDecimal::new(12, 2)))
-        .lockup_term(2 * MS_IN_YEAR);
-    let jar = Jar::generate(0, &alice(), &product.id).principal(100_000_000);
+    let product = Product::new().lockup_term(2 * MS_IN_YEAR);
+    let jar = Jar::new(0).principal(100_000_000);
 
-    let interest = jar.get_interest(&product, MS_IN_YEAR).0;
+    let interest = jar.get_interest(&[], &product, MS_IN_YEAR).0;
     assert_eq!(12_000_000, interest);
 }
 
 #[test]
 fn get_interest_after_maturity() {
-    let product = Product::generate("product")
-        .apy(Apy::Constant(UDecimal::new(12, 2)))
-        .lockup_term(MS_IN_YEAR);
-    let jar = Jar::generate(0, &alice(), &product.id).principal(100_000_000);
+    let product = Product::new();
+    let jar = Jar::new(0).principal(100_000_000);
 
-    let interest = jar.get_interest(&product, 400 * 24 * 60 * 60 * 1000).0;
+    let interest = jar.get_interest(&[], &product, 400 * 24 * 60 * 60 * 1000).0;
     assert_eq!(12_000_000, interest);
 }
 
 #[test]
 fn interest_precision() {
-    let product = Product::generate("product")
-        .apy(Apy::Constant(UDecimal::new(1, 0)))
-        .lockup_term(MS_IN_YEAR);
-    let jar = Jar::generate(0, &alice(), &product.id).principal(MS_IN_YEAR as u128);
+    let product = Product::new().apy(Apy::Constant(UDecimal::new(1, 0)));
+    let jar = Jar::new(0).principal(MS_IN_YEAR as u128);
 
-    assert_eq!(jar.get_interest(&product, 10000000000).0, 10000000000);
-    assert_eq!(jar.get_interest(&product, 10000000001).0, 10000000001);
+    assert_eq!(jar.get_interest(&[], &product, 10000000000).0, 10000000000);
+    assert_eq!(jar.get_interest(&[], &product, 10000000001).0, 10000000001);
 
     for _ in 0..100 {
         let time: Timestamp = (10..MS_IN_YEAR).fake();
-        assert_eq!(jar.get_interest(&product, time).0, time as u128);
+        assert_eq!(jar.get_interest(&[], &product, time).0, time as u128);
     }
 }
 
@@ -59,8 +52,8 @@ mod signature_tests {
     use crate::{
         common::tests::Context,
         jar::model::JarTicket,
-        product::helpers::MessageSigner,
-        test_utils::{admin, generate_premium_product, generate_product},
+        product::{helpers::MessageSigner, model::Product},
+        test_utils::{admin, generate_premium_product},
     };
 
     #[test]
@@ -68,12 +61,12 @@ mod signature_tests {
         let admin = admin();
 
         let signer = MessageSigner::new();
-        let reference_product = generate_premium_product("premium_product", &signer);
-        let context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+        let product = generate_premium_product("premium_product", &signer);
+        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 14_000_000;
         let ticket = JarTicket {
-            product_id: reference_product.id,
+            product_id: product.id,
             valid_until: U64(123000000),
         };
 
@@ -91,12 +84,12 @@ mod signature_tests {
         let admin = admin();
 
         let signer = MessageSigner::new();
-        let reference_product = generate_premium_product("premium_product", &signer);
-        let context = Context::new(admin).with_products(&[reference_product.clone()]);
+        let product = generate_premium_product("premium_product", &signer);
+        let context = Context::new(admin).with_products(&[product.clone()]);
 
         let amount = 1_000_000;
         let ticket = JarTicket {
-            product_id: reference_product.id,
+            product_id: product.id,
             valid_until: U64(100000000),
         };
 
@@ -146,14 +139,14 @@ mod signature_tests {
         let admin = admin();
 
         let signer = MessageSigner::new();
-        let reference_product = generate_premium_product("premium_product", &signer);
-        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
+        let product = generate_premium_product("premium_product", &signer);
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
 
         context.set_block_timestamp_in_days(365);
 
         let amount = 5_000_000;
         let ticket = JarTicket {
-            product_id: reference_product.id,
+            product_id: product.id,
             valid_until: U64(100000000),
         };
 
@@ -211,7 +204,7 @@ mod signature_tests {
     fn verify_ticket_without_signature_when_not_required() {
         let admin = admin();
 
-        let product = generate_product("regular_product");
+        let product = Product::new();
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;
@@ -229,13 +222,15 @@ mod signature_tests {
         let alice = alice();
         let admin = admin();
 
-        let product = generate_product("product").enabled(false);
+        let product = Product::new().enabled(false);
         let context = Context::new(admin).with_products(&[product.clone()]);
 
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
         };
-        context.contract().create_jar(alice, ticket, U128(1_000_000), None);
+        context
+            .contract()
+            .create_jar(alice, ticket, U128(1_000_000), None, None);
     }
 }
