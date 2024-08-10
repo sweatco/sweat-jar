@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use near_sdk::test_utils::test_env::alice;
-use sweat_jar_model::{jar::JarId, Timezone, MS_IN_DAY};
+use sweat_jar_model::{jar::JarId, Timezone, MS_IN_DAY, UTC};
 
 use crate::{
     common::{test_data::set_test_log_events, tests::Context},
@@ -37,7 +37,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
     for day in 0..DAYS {
         ctx.set_block_timestamp_in_days(day);
-        ctx.record_score(day * MS_IN_DAY, 20_000, alice());
+        ctx.record_score(UTC(day * MS_IN_DAY), 20_000, alice());
 
         compare_interest(&ctx);
 

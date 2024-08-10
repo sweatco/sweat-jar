@@ -4,7 +4,7 @@ use sweat_jar_model::Timezone;
 use crate::jar::model::Jar;
 
 pub(crate) enum JarField {
-    Account(AccountId),
+    _Account(AccountId),
     Timezone(Timezone),
 }
 
@@ -33,7 +33,7 @@ impl JarBuilder for () {
 impl JarBuilder for JarField {
     fn apply(&self, jar: Jar) -> Jar {
         match self {
-            JarField::Account(account_id) => jar.account_id(&account_id),
+            JarField::_Account(account_id) => jar.account_id(&account_id),
             JarField::Timezone(_) => jar,
         }
     }

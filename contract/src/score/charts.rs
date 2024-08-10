@@ -3,12 +3,13 @@
 use anyhow::Result;
 use fake::Fake;
 use itertools::Itertools;
-use near_sdk::test_utils::test_env::{alice, bob};
-use sweat_jar_model::{jar::JarId, MS_IN_DAY};
+use near_sdk::test_utils::test_env::alice;
+use sweat_jar_model::{jar::JarId, Score, Timezone, MS_IN_DAY, UTC};
 use visu::{render_chart, Graph};
 
 use crate::{
-    test_builder::{JarField::*, ProductField::*, TestAccess, TestBuilder},
+    common::test_data::set_test_log_events,
+    test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
     test_utils::{PRODUCT, SCORE_PRODUCT},
 };
 
@@ -16,9 +17,11 @@ fn generate_year_data() -> (Vec<u128>, Vec<u128>) {
     const JAR: JarId = 0;
     const STEP_JAR: JarId = 1;
 
+    set_test_log_events(false);
+
     let mut context = TestBuilder::new()
         .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
-        .jar(STEP_JAR, ())
+        .jar(STEP_JAR, JarField::Timezone(Timezone::hour_shift(3)))
         .product(PRODUCT, APY(12))
         .jar(JAR, ())
         .build();
@@ -29,9 +32,9 @@ fn generate_year_data() -> (Vec<u128>, Vec<u128>) {
         context.set_block_timestamp_in_days(day.try_into().unwrap());
 
         if day < 100 {
-            context.record_score(MS_IN_DAY * day, (4_000..10_000).fake(), alice());
+            context.record_score(UTC(MS_IN_DAY * day), (4_000..10_000).fake(), alice());
         } else {
-            context.record_score(MS_IN_DAY * day, (15_000..20_000).fake(), alice());
+            context.record_score(UTC(MS_IN_DAY * day), (15_000..20_000).fake(), alice());
         }
 
         result.push((context.interest(STEP_JAR), context.interest(JAR)));
@@ -58,82 +61,47 @@ fn plot_year() -> Result<()> {
     Ok(())
 }
 
-fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>) {
-    const IDEAL_JAR: JarId = 0;
-    const REAL_JAR: JarId = 1;
+fn generate_first_week_data(_with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>) {
+    const JAR: JarId = 0;
+
+    set_test_log_events(false);
 
     let mut ctx = TestBuilder::new()
         .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
-        .jar(IDEAL_JAR, Account(alice()))
-        .jar(REAL_JAR, Account(bob()))
+        .jar(JAR, JarField::Timezone(Timezone::hour_shift(0)))
         .build();
 
-    let walkchain_updates: Vec<i32> = (0..10).map(|day| day * 24 + (4..10).fake::<i32>()).collect();
-
     let mut result = vec![];
-    let mut score_walked: u128 = 0;
+    let mut score_walked: u128;
 
     let mut score_history = vec![];
 
-    let score_walked_data: &[u128] = &[5000, 10000, 25000, 10000, 20000, 10000, 5000];
-
-    let mut claimed_ideal: u128 = 0;
-    let mut claimed_real: u128 = 0;
-
-    let mut walkchain_update_index = 0;
+    let claimed: u128 = 0;
 
     for hour in 0..(24 * 7) {
         let day = hour / 24;
 
-        if hour % 24 == 0 {
-            score_history.push(score_walked);
-            ctx.record_score(day * MS_IN_DAY, score_walked.try_into().unwrap(), alice());
-            score_walked = 0;
-        }
-
-        score_walked += score_walked_data[day as usize] / 24;
-
         ctx.set_block_timestamp_in_hours(hour);
 
-        // if walkchain_update_index > 0 {
-        //     if with_claim && hour as i32 == walkchain_updates[walkchain_update_index - 1] + 4 {
-        //         claimed_ideal += ctx.claim_total(alice());
-        //         claimed_real += ctx.claim_total(bob());
-        //
-        //         assert_eq!(claimed_ideal, claimed_real);
-        //     }
-        // }
+        let score: Score = (0..1000).fake();
 
-        if with_claim && hour as i32 == walkchain_updates[walkchain_update_index] - 2 {
-            claimed_ideal += ctx.claim_total(alice());
-            claimed_real += ctx.claim_total(bob());
+        score_history.push(score);
+        ctx.record_score(UTC(day * MS_IN_DAY), score, alice());
 
-            // assert_eq!(claimed_ideal, claimed_real);
+        if day > 1 {
+            ctx.record_score(UTC((day - 1) * MS_IN_DAY), score, alice());
         }
 
-        // if with_claim && hour == (24 * 7) - 1 {
-        //     claimed_ideal += ctx.claim_total(alice());
-        //     claimed_real += ctx.claim_total(bob());
-        //
-        //     assert_eq!(claimed_ideal - claimed_real, 2);
-        // }
+        score_walked = u128::from(score);
 
-        if hour as i32 == walkchain_updates[walkchain_update_index] {
-            walkchain_updates[walkchain_update_index];
-            walkchain_update_index += 1;
-
-            ctx.record_score(day * MS_IN_DAY, score_history[day as usize].try_into().unwrap(), bob());
-        }
-
-        claimed_ideal += ctx.claim_total(alice());
-        claimed_real += ctx.claim_total(bob());
+        let (today, yesterday) = ctx.score(JAR);
 
         result.push((
             score_walked,
-            ctx.interest(IDEAL_JAR),
-            ctx.interest(REAL_JAR),
-            claimed_ideal,
-            claimed_real,
+            ctx.interest(JAR),
+            claimed,
+            today as u128,
+            yesterday as u128,
         ));
     }
 
@@ -143,12 +111,12 @@ fn generate_first_week_data(with_claim: bool) -> (Vec<u128>, Vec<u128>, Vec<u128
 #[test]
 #[ignore]
 fn plot_first_week() -> Result<()> {
-    let (score_walked, ideal_jar, real_jar, _claimed_ideal, _claimed_real) = generate_first_week_data(false);
+    let (score_walked, interest, _claimed, today, yesterday) = generate_first_week_data(false);
 
     render_chart(Graph {
         title: "Step Jars First Week",
-        data: [&score_walked, &ideal_jar, &real_jar],
-        legend: ["Steps Walked", "Ideal jar", "Real Jar"],
+        data: [&score_walked, &interest, &today, &yesterday],
+        legend: ["Steps Walked", "Interest", "Today", "Yesterday"],
         x_title: "Hours",
         y_title: "Interest",
         output_file: "../docs/first_week.png",
@@ -161,17 +129,17 @@ fn plot_first_week() -> Result<()> {
 #[test]
 #[ignore]
 fn plot_first_week_with_claim() -> Result<()> {
-    let (score_walked, ideal_jar, real_jar, claimed_ideal, claimed_real) = generate_first_week_data(true);
-
-    render_chart(Graph {
-        title: "Step Jars First Week With Claim",
-        data: [&score_walked, &ideal_jar, &real_jar, &claimed_ideal, &claimed_real],
-        legend: ["Steps Walked", "Ideal jar", "Real Jar", "Claimed Ideal", "Claimed Real"],
-        x_title: "Hours",
-        y_title: "Interest",
-        output_file: "../docs/first_week_claim.png",
-        ..Default::default()
-    })?;
+    // let (score_walked, ideal_jar, real_jar, claimed_ideal, claimed_real) = generate_first_week_data(true);
+    //
+    // render_chart(Graph {
+    //     title: "Step Jars First Week With Claim",
+    //     data: [&score_walked, &ideal_jar, &real_jar, &claimed_ideal, &claimed_real],
+    //     legend: ["Steps Walked", "Ideal jar", "Real Jar", "Claimed Ideal", "Claimed Real"],
+    //     x_title: "Hours",
+    //     y_title: "Interest",
+    //     output_file: "../docs/first_week_claim.png",
+    //     ..Default::default()
+    // })?;
 
     Ok(())
 }

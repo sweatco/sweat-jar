@@ -2,7 +2,7 @@ use near_sdk::AccountId;
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, ScoreApi},
     jar::JarId,
-    Score,
+    Score, UTC,
 };
 
 use crate::{common::tests::Context, jar::model::Jar, product::model::Product, test_utils::UnwrapPromise};
@@ -10,10 +10,11 @@ use crate::{common::tests::Context, jar::model::Jar, product::model::Product, te
 pub trait TestAccess {
     fn _product(&self, id: &str) -> Product;
     fn interest(&self, id: JarId) -> u128;
-    fn record_score(&mut self, timestamp: u64, score: Score, account_id: AccountId);
+    fn record_score(&mut self, timestamp: UTC, score: Score, account_id: AccountId);
     fn claim_total(&mut self, account_id: AccountId) -> u128;
     fn jar(&self, id: JarId) -> Jar;
     fn jar_account_for_id(&self, id: JarId) -> AccountId;
+    fn score(&self, id: JarId) -> (Score, Score);
 }
 
 impl TestAccess for Context {
@@ -26,9 +27,9 @@ impl TestAccess for Context {
         self.contract().get_interest(vec![id.into()], account_id).amount.total.0
     }
 
-    fn record_score(&mut self, timestamp: u64, score: Score, account_id: AccountId) {
+    fn record_score(&mut self, timestamp: UTC, score: Score, account_id: AccountId) {
         self.contract()
-            .record_score(vec![(account_id, vec![(score, timestamp.into())])])
+            .record_score(vec![(account_id, vec![(score, timestamp)])])
     }
 
     fn claim_total(&mut self, account_id: AccountId) -> u128 {
@@ -49,5 +50,14 @@ impl TestAccess for Context {
         }
 
         panic!("Accound for jar id: {id} not found")
+    }
+
+    fn score(&self, id: JarId) -> (Score, Score) {
+        let account_id = self.jar_account_for_id(id);
+        self.contract()
+            .account_score
+            .get(&account_id)
+            .expect("No account score")
+            .scores()
     }
 }

@@ -27,6 +27,10 @@ impl AccountScore {
         }
     }
 
+    pub fn scores(&self) -> (Score, Score) {
+        (self.scores[0], self.scores[1])
+    }
+
     pub fn claimable_score(&self) -> Vec<Score> {
         if self.update_day() == self.timezone.today() {
             vec![self.scores[1]]
