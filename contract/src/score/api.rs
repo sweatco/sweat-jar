@@ -10,6 +10,8 @@ use crate::{
 #[near_bindgen]
 impl ScoreApi for Contract {
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
+        self.assert_manager();
+
         let mut event = vec![];
 
         let now = block_timestamp_ms();
