@@ -61,18 +61,18 @@ impl Contract {
 
         for jar in &unlocked_jars {
             let product = self.get_product(&jar.product_id);
-            let (available_interest, remainder) = jar.get_interest(&score, &product, now);
+            let (interest, remainder) = jar.get_interest(&score, &product, now);
 
-            if available_interest > 0 {
+            if interest > 0 {
                 let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
 
                 jar.claim_remainder = remainder;
 
-                jar.claim(available_interest, available_interest, now).lock();
+                jar.claim(interest, now).lock();
 
-                accumulator.add(jar.id, available_interest);
+                accumulator.add(jar.id, interest);
 
-                event_data.push((jar.id, U128(available_interest)));
+                event_data.push((jar.id, U128(interest)));
             }
         }
 

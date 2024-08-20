@@ -6,6 +6,7 @@ use crate::MS_IN_DAY;
 
 pub type Day = Local;
 
+/// Timestamp in UTC timezone
 #[repr(transparent)]
 #[near(serializers=[json, borsh])]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -25,6 +26,7 @@ impl From<Timestamp> for UTC {
     }
 }
 
+/// Timestamp in Local user timezone
 #[repr(transparent)]
 #[near(serializers=[json, borsh])]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]

@@ -82,17 +82,12 @@ impl JarLastVersion {
         self
     }
 
-    pub(crate) fn claim(
-        &mut self,
-        available_yield: TokenAmount,
-        claimed_amount: TokenAmount,
-        now: Timestamp,
-    ) -> &mut Self {
+    pub(crate) fn claim(&mut self, claimed_amount: TokenAmount, now: Timestamp) -> &mut Self {
         self.claimed_balance += claimed_amount;
 
         self.cache = Some(JarCache {
             updated_at: now,
-            interest: available_yield - claimed_amount,
+            interest: 0,
         });
         self
     }

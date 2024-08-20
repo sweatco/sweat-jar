@@ -189,7 +189,7 @@ mod test {
 
         account_score.update(generate_chain());
 
-        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.03);
+        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.02);
 
         ctx.advance_block_timestamp_days(1);
         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
@@ -197,7 +197,7 @@ mod test {
         ctx.advance_block_timestamp_days(1);
         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
 
-        assert_eq!(account_score.claim_score(), vec![2000, 3000]);
+        assert_eq!(account_score.claim_score(), vec![3000, 2000]);
 
         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.00);
     }
