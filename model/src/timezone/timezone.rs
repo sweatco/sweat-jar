@@ -7,7 +7,7 @@ use crate::{timezone::timestamps::TimeHelper, Day, Local, MS_IN_HOUR, UTC};
 /// Timezone described as time shift from UTC in ms
 #[repr(transparent)]
 #[near(serializers=[json, borsh])]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Timezone(i64);
 
 impl Timezone {

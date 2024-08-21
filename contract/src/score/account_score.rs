@@ -11,7 +11,7 @@ const DAYS_STORED: usize = 2;
 type Chain = Vec<(Score, Local)>;
 
 #[near]
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AccountScore {
     pub updated: UTC,
     pub timezone: Timezone,
@@ -59,20 +59,23 @@ impl AccountScore {
         result
     }
 
-    pub fn update(&mut self, chain: Chain) -> Vec<Score> {
+    pub fn update(&mut self, chain: Chain) {
         let today = self.timezone.today();
 
         let chain = self.convert_chain(today, chain);
 
-        let result = match (today - self.update_day()).0 {
+        let remaining_steps = match (today - self.update_day()).0 {
             0 => self.update_today(chain),
             1 => self.update_yesterday(chain),
             _ => self.update_older_than_yesterday(chain),
         };
 
-        self.updated = block_timestamp_ms().into();
+        assert!(
+            remaining_steps.is_empty(),
+            "Updating scores while some of them weren't added to balance"
+        );
 
-        result
+        self.updated = block_timestamp_ms().into();
     }
 
     /// Update on the same day - just add values
@@ -112,6 +115,7 @@ impl AccountScore {
         self.timezone.adjust(self.updated).day()
     }
 
+    /// Convert walkchain timestamps to days
     fn convert_chain(&self, today: Day, walkchain: Chain) -> Chain {
         let now = self.timezone.now();
         walkchain
@@ -125,9 +129,9 @@ impl AccountScore {
                     ));
                 }
 
-                let day = today - timestamp.day();
+                let days_ago = today - timestamp.day();
 
-                if day >= DAYS_STORED.into() {
+                if days_ago >= DAYS_STORED.into() {
                     log!(
                         "WARN: Walk data is too old: {:?}. It will be ignored",
                         (score, timestamp)
@@ -135,7 +139,7 @@ impl AccountScore {
                     return None;
                 }
 
-                (score, day).into()
+                (score, days_ago).into()
             })
             .collect()
     }
@@ -192,12 +196,12 @@ mod test {
         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.02);
 
         ctx.advance_block_timestamp_days(1);
-        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
+        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.03);
 
         ctx.advance_block_timestamp_days(1);
-        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
+        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.03);
 
-        assert_eq!(account_score.claim_score(), vec![3000, 2000]);
+        assert_eq!(account_score.claim_score(), vec![1000, 2000]);
 
         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.00);
     }

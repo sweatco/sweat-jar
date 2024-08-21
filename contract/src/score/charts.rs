@@ -95,14 +95,13 @@ fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Ve
         ctx.record_score(UTC(day * MS_IN_DAY), score, bob());
 
         if day > 1 {
-            ctx.switch_account(admin());
             ctx.record_score(UTC((day - 1) * MS_IN_DAY), score, alice());
             ctx.record_score(UTC((day - 1) * MS_IN_DAY), score, bob());
         }
 
         score_walked = u128::from(score);
 
-        let (today, yesterday) = ctx.score(ALICE_JAR);
+        let (today, yesterday) = ctx.score(ALICE_JAR).scores();
 
         // if hour % 15 == 0 {
         let claimed = ctx.claim_total(bob());
@@ -118,7 +117,7 @@ fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Ve
         ));
     }
 
-    let (today, yesterday) = ctx.score(ALICE_JAR);
+    let (today, yesterday) = ctx.score(BOB_JAR).scores();
 
     let claimed = ctx.claim_total(bob());
     total_claimed += claimed;

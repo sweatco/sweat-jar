@@ -9,7 +9,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     jar::{JarId, JarView},
-    ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_YEAR,
+    ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
@@ -110,26 +110,14 @@ impl JarLastVersion {
         self.principal == 0
     }
 
-    pub(crate) fn get_interest_with_apy(&self, apy: UDecimal, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
-        let (base_date, base_interest) = if let Some(cache) = &self.cache {
-            (cache.updated_at, cache.interest)
-        } else {
-            (self.created_at, 0)
-        };
-        let until_date = self.get_interest_until_date(product, now);
-        let effective_term = if until_date > base_date {
-            until_date - base_date
-        } else {
-            return (base_interest, 0);
-        };
+    fn get_interest_for_term(&self, cache: u128, apy: UDecimal, term: Timestamp) -> (TokenAmount, u64) {
+        let term_in_milliseconds: u128 = term.into();
 
-        let term_in_milliseconds = u128::from(effective_term);
-
-        let total_interest = apy * self.principal;
+        let yearly_interest = apy * self.principal;
 
         let ms_in_year: u128 = MS_IN_YEAR.into();
 
-        let interest = term_in_milliseconds * total_interest;
+        let interest = term_in_milliseconds * yearly_interest;
 
         // This will never fail because `MS_IN_YEAR` is u64
         // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
@@ -140,14 +128,48 @@ impl JarLastVersion {
         let total_remainder = self.claim_remainder + remainder;
 
         (
-            base_interest + interest + u128::from(total_remainder / MS_IN_YEAR),
+            cache + interest + u128::from(total_remainder / MS_IN_YEAR),
             total_remainder % MS_IN_YEAR,
         )
     }
 
+    fn get_interest_with_apy(&self, apy: UDecimal, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
+        let (base_date, cache_interest) = if let Some(cache) = &self.cache {
+            (cache.updated_at, cache.interest)
+        } else {
+            (self.created_at, 0)
+        };
+
+        let until_date = self.get_interest_until_date(product, now);
+
+        let effective_term = if until_date > base_date {
+            until_date - base_date
+        } else {
+            return (cache_interest, 0);
+        };
+
+        self.get_interest_for_term(cache_interest, apy, effective_term)
+    }
+
+    fn get_score_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
+        let cache = self.cache.map(|c| c.interest).unwrap_or_default();
+
+        if let Terms::Fixed(end_term) = &product.terms {
+            if now > end_term.lockup_term {
+                return (cache, 0);
+            }
+        }
+
+        let apy = product.apy_for_score(score);
+        self.get_interest_for_term(cache, apy, MS_IN_DAY)
+    }
+
     pub(crate) fn get_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
-        let apy = self.get_apy(product) + product.apy_for_score(score);
-        self.get_interest_with_apy(apy, product, now)
+        if product.is_score_product() {
+            self.get_score_interest(score, product, now)
+        } else {
+            self.get_interest_with_apy(self.get_apy(product), product, now)
+        }
     }
 
     pub(crate) fn get_apy(&self, product: &Product) -> UDecimal {

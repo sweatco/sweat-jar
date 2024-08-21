@@ -5,7 +5,13 @@ use sweat_jar_model::{
     Score, UTC,
 };
 
-use crate::{common::tests::Context, jar::model::Jar, product::model::Product, test_utils::UnwrapPromise};
+use crate::{
+    common::tests::Context,
+    jar::model::Jar,
+    product::model::Product,
+    score::AccountScore,
+    test_utils::{admin, UnwrapPromise},
+};
 
 pub trait TestAccess {
     fn _product(&self, id: &str) -> Product;
@@ -14,7 +20,7 @@ pub trait TestAccess {
     fn claim_total(&mut self, account_id: AccountId) -> u128;
     fn jar(&self, id: JarId) -> Jar;
     fn jar_account_for_id(&self, id: JarId) -> AccountId;
-    fn score(&self, id: JarId) -> (Score, Score);
+    fn score(&self, id: JarId) -> AccountScore;
 }
 
 impl TestAccess for Context {
@@ -28,6 +34,7 @@ impl TestAccess for Context {
     }
 
     fn record_score(&mut self, timestamp: UTC, score: Score, account_id: AccountId) {
+        self.switch_account(admin());
         self.contract()
             .record_score(vec![(account_id, vec![(score, timestamp)])])
     }
@@ -49,15 +56,15 @@ impl TestAccess for Context {
             }
         }
 
-        panic!("Accound for jar id: {id} not found")
+        panic!("Account for jar id: {id} not found")
     }
 
-    fn score(&self, id: JarId) -> (Score, Score) {
+    fn score(&self, id: JarId) -> AccountScore {
         let account_id = self.jar_account_for_id(id);
-        self.contract()
+        *self
+            .contract()
             .account_score
             .get(&account_id)
             .expect("No account score")
-            .scores()
     }
 }
