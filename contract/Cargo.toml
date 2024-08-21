@@ -1,6 +1,6 @@
 [package]
 name = "sweat_jar"
-version = "3.1.0"
+version = "3.2.0"
 authors = ["Sweat Economy"]
 edition = "2021"
 
@@ -11,8 +11,8 @@ crate-type = ["cdylib"]
 default = ["release"]
 release = ["sweat-jar-model/release-api"]
 integration-test = [
-  "sweat-jar-model/release-api",
-  "sweat-jar-model/integration-methods",
+    "sweat-jar-model/release-api",
+    "sweat-jar-model/integration-methods",
 ]
 integration-api = ["sweat-jar-model/integration-api"]
 

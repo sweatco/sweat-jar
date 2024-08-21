@@ -154,14 +154,14 @@ impl From<EventKind> for SweatJarEvent {
 #[mutants::skip]
 #[cfg(not(test))]
 pub(crate) fn emit(event: EventKind) {
-    log!(SweatJarEvent::from(event).to_json_event_string());
+    log!("{}", SweatJarEvent::from(event).to_json_event_string());
 }
 
 #[mutants::skip]
 #[cfg(test)]
 pub(crate) fn emit(event: EventKind) {
     if crate::common::test_data::should_log_events() {
-        log!(SweatJarEvent::from(event).to_json_event_string());
+        log!("{}", SweatJarEvent::from(event).to_json_event_string());
     }
 }
 
@@ -179,11 +179,13 @@ impl SweatJarEvent {
 #[cfg(test)]
 mod test {
 
-    use near_sdk::json_types::U128;
+    use std::str::FromStr;
+
+    use near_sdk::{json_types::U128, AccountId};
 
     use crate::{
         common::tests::Context,
-        event::{EventKind, SweatJarEvent, TopUpData},
+        event::{EventKind, ScoreData, SweatJarEvent, TopUpData},
         jar::model::{Jar, JarLastVersion},
         test_utils::admin,
     };
@@ -192,7 +194,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.1.0");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-3.2.0");
     }
 
     #[test]
@@ -205,7 +207,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -233,7 +235,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "event": "create_jar",
   "data": {
     "id": 555,
@@ -253,7 +255,7 @@ mod test {
             SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "event": "claim",
   "data": [
     [
@@ -267,49 +269,44 @@ mod test {
   ]
 }"#
         );
-        //
-        //         println!(
-        //             "{}",
-        //             SweatJarEvent::from(EventKind::RecordScore(vec![
-        //                 ScoreData {
-        //                     account_id: AccountId::from_str("alice.near").unwrap(),
-        //                     score: 5_000.into(),
-        //                 },
-        //                 ScoreData {
-        //                     account_id: AccountId::from_str("bob.near").unwrap(),
-        //                     score: 10_000.into(),
-        //                 }
-        //             ]))
-        //             .to_json_event_string()
-        //         );
-        //
-        //         assert_eq!(
-        //             SweatJarEvent::from(EventKind::RecordScore(vec![
-        //                 ScoreData {
-        //                     account_id: AccountId::from_str("alice.near").unwrap(),
-        //                     score: 5_000.into(),
-        //                 },
-        //                 ScoreData {
-        //                     account_id: AccountId::from_str("bob.near").unwrap(),
-        //                     score: 10_000.into(),
-        //                 }
-        //             ]))
-        //             .to_json_event_string(),
-        //             r#"EVENT_JSON:{
-        //   "standard": "sweat_jar",
-        //   "version": "3.0.0",
-        //   "event": "record_score",
-        //   "data": [
-        //     {
-        //       "account_id": "alice.near",
-        //       "score": "5000"
-        //     },
-        //     {
-        //       "account_id": "bob.near",
-        //       "score": "10000"
-        //     }
-        //   ]
-        // }"#
-        //         );
+
+        assert_eq!(
+            SweatJarEvent::from(EventKind::RecordScore(vec![
+                ScoreData {
+                    account_id: AccountId::from_str("alice.near").unwrap(),
+                    score: vec![(10.into(), 10.into())],
+                },
+                ScoreData {
+                    account_id: AccountId::from_str("bob.near").unwrap(),
+                    score: vec![(20.into(), 20.into())],
+                }
+            ]))
+            .to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "3.2.0",
+  "event": "record_score",
+  "data": [
+    {
+      "account_id": "alice.near",
+      "score": [
+        [
+          "10",
+          10
+        ]
+      ]
+    },
+    {
+      "account_id": "bob.near",
+      "score": [
+        [
+          "20",
+          20
+        ]
+      ]
+    }
+  ]
+}"#
+        );
     }
 }
