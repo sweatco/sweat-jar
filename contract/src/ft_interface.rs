@@ -46,6 +46,7 @@ trait FungibleTokenPromise {
 }
 
 impl FungibleTokenPromise for Promise {
+    #[mutants::skip] // Covered by integration tests
     fn ft_transfer(self, receiver_id: &AccountId, amount: TokenAmount, memo: Option<String>) -> Promise {
         let args = serde_json::to_vec(&json!({
             "receiver_id": receiver_id,

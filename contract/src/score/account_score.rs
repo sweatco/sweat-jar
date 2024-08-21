@@ -64,16 +64,9 @@ impl AccountScore {
 
         let chain = self.convert_chain(today, chain);
 
-        let remaining_steps = match (today - self.update_day()).0 {
-            0 => self.update_today(chain),
-            1 => self.update_yesterday(chain),
-            _ => self.update_older_than_yesterday(chain),
-        };
+        assert_eq!((today - self.update_day()).0, 0, "Updating scores before claiming them");
 
-        assert!(
-            remaining_steps.is_empty(),
-            "Updating scores while some of them weren't added to balance"
-        );
+        self.update_today(chain);
 
         self.updated = block_timestamp_ms().into();
     }
@@ -85,30 +78,6 @@ impl AccountScore {
             self.scores[day_index] += score;
         }
         vec![]
-    }
-
-    /// Last update was yesterday. We need to shift values by 1 day and return score for last day.
-    fn update_yesterday(&mut self, chain: Chain) -> Vec<Score> {
-        let score = self.scores[1];
-
-        self.scores[1] = self.scores[0];
-        self.scores[0] = 0;
-
-        self.update_today(chain);
-
-        vec![score]
-    }
-
-    /// Last update was 2 or more days ago. Reset and return steps for both days.
-    fn update_older_than_yesterday(&mut self, chain: Chain) -> Vec<Score> {
-        let score = vec![self.scores[0], self.scores[1]];
-
-        self.scores[0] = 0;
-        self.scores[1] = 0;
-
-        self.update_today(chain);
-
-        score
     }
 
     fn update_day(&self) -> Day {
@@ -147,25 +116,16 @@ impl AccountScore {
 
 #[cfg(test)]
 mod test {
-    use std::time::{SystemTime, UNIX_EPOCH};
-
     use near_sdk::env::block_timestamp_ms;
-    use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR};
+    use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC};
 
     use crate::{product::model::Product, score::account_score::Chain, test_builder::TestBuilder, AccountScore};
 
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
+    const TODAY: u64 = 1722234632000;
 
     fn generate_chain() -> Chain {
-        let start = SystemTime::now();
-        let today: u64 = start
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_millis()
-            .try_into()
-            .unwrap();
-
-        let today: Day = today.into();
+        let today: Day = TODAY.into();
 
         vec![
             (1_000, today),
@@ -185,7 +145,7 @@ mod test {
     fn test_account_score() {
         let mut ctx = TestBuilder::new().build();
 
-        ctx.set_block_timestamp_today();
+        ctx.set_block_timestamp_in_ms(TODAY);
 
         let product = Product::new().score_cap(20_000);
 
@@ -193,15 +153,15 @@ mod test {
 
         account_score.update(generate_chain());
 
-        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.02);
-
-        ctx.advance_block_timestamp_days(1);
         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.03);
 
         ctx.advance_block_timestamp_days(1);
-        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.03);
+        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
 
-        assert_eq!(account_score.claim_score(), vec![1000, 2000]);
+        ctx.advance_block_timestamp_days(1);
+        assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
+
+        assert_eq!(account_score.claim_score(), vec![2000, 3000]);
 
         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.00);
     }
@@ -214,5 +174,27 @@ mod test {
 
         let mut account_score = AccountScore::new(TIMEZONE);
         account_score.update(vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())]);
+    }
+
+    #[test]
+    fn updated_on_different_days() {
+        let mut score = AccountScore {
+            updated: UTC(MS_IN_DAY * 10),
+            timezone: Timezone::hour_shift(0),
+            scores: [1000, 2000],
+        };
+
+        let mut ctx = TestBuilder::new().build();
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
+
+        score.update(vec![(6, (MS_IN_DAY * 10).into()), (5, (MS_IN_DAY * 9).into())]);
+
+        assert_eq!(score.updated, (MS_IN_DAY * 10).into());
+        assert_eq!(score.scores(), (1006, 2005));
+        assert_eq!(score.claim_score(), vec![2005]);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
+        assert_eq!(score.claim_score(), vec![1006, 0]);
     }
 }
