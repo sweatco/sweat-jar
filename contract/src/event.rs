@@ -2,7 +2,7 @@ use near_sdk::{
     json_types::{Base64VecU8, U128},
     log, near, serde_json, AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId, TokenAmount, U32, UTC};
+use sweat_jar_model::{jar::JarId, Local, ProductId, Score, TokenAmount, U32, UTC};
 
 use crate::{
     common::Timestamp,
@@ -30,6 +30,7 @@ pub enum EventKind {
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
     RecordScore(Vec<ScoreData>),
+    OldScoreWarning((Score, Local)),
 }
 
 #[derive(Debug)]
@@ -182,6 +183,7 @@ mod test {
     use std::str::FromStr;
 
     use near_sdk::{json_types::U128, AccountId};
+    use sweat_jar_model::Local;
 
     use crate::{
         common::tests::Context,
@@ -305,6 +307,19 @@ mod test {
         ]
       ]
     }
+  ]
+}"#
+        );
+
+        assert_eq!(
+            SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "3.2.0",
+  "event": "old_score_warning",
+  "data": [
+    111,
+    5
   ]
 }"#
         );

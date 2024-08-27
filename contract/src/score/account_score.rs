@@ -2,9 +2,11 @@ use std::convert::TryInto;
 
 use near_sdk::{
     env::{block_timestamp_ms, panic_str},
-    log, near,
+    near,
 };
 use sweat_jar_model::{Day, Local, Score, TimeHelper, Timezone, UTC};
+
+use crate::event::{emit, EventKind};
 
 const DAYS_STORED: usize = 2;
 
@@ -101,10 +103,8 @@ impl AccountScore {
                 let days_ago = today - timestamp.day();
 
                 if days_ago >= DAYS_STORED.into() {
-                    log!(
-                        "WARN: Walk data is too old: {:?}. It will be ignored",
-                        (score, timestamp)
-                    );
+                    emit(EventKind::OldScoreWarning((score, timestamp)));
+
                     return None;
                 }
 
