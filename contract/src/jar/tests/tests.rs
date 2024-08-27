@@ -68,6 +68,7 @@ mod signature_tests {
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(123000000),
+            timezone: None,
         };
 
         let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
@@ -91,6 +92,7 @@ mod signature_tests {
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(100000000),
+            timezone: None,
         };
 
         let signature: Vec<u8> = vec![0, 1, 2];
@@ -115,6 +117,7 @@ mod signature_tests {
         let ticket_for_another_product = JarTicket {
             product_id: another_product.id,
             valid_until: U64(100000000),
+            timezone: None,
         };
 
         // signature made for wrong product
@@ -148,6 +151,7 @@ mod signature_tests {
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(100000000),
+            timezone: None,
         };
 
         let signature = signer.sign(context.get_signature_material(&alice, &ticket, amount).as_str());
@@ -173,6 +177,7 @@ mod signature_tests {
         let ticket = JarTicket {
             product_id: not_existing_product.id,
             valid_until: U64(100000000),
+            timezone: None,
         };
 
         let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
@@ -195,6 +200,7 @@ mod signature_tests {
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(100000000),
+            timezone: None,
         };
 
         context.contract().verify(&admin, amount, &ticket, None);
@@ -211,6 +217,7 @@ mod signature_tests {
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
+            timezone: None,
         };
 
         context.contract().verify(&admin, amount, &ticket, None);
@@ -228,9 +235,8 @@ mod signature_tests {
         let ticket = JarTicket {
             product_id: product.id,
             valid_until: U64(0),
+            timezone: None,
         };
-        context
-            .contract()
-            .create_jar(alice, ticket, U128(1_000_000), None, None);
+        context.contract().create_jar(alice, ticket, U128(1_000_000), None);
     }
 }

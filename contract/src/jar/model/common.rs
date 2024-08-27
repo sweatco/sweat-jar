@@ -40,6 +40,9 @@ pub struct JarTicket {
     /// until the specified timestamp. After this timestamp, the ticket becomes
     /// invalid and should not be accepted.
     pub valid_until: U64,
+
+    /// An optional user timezone. Required for creating step jars.
+    pub timezone: Option<Timezone>,
 }
 
 impl JarLastVersion {
@@ -210,14 +213,13 @@ impl Contract {
         ticket: JarTicket,
         amount: U128,
         signature: Option<Base64VecU8>,
-        timezone: Option<Timezone>,
     ) -> JarView {
         let amount = amount.0;
         let product_id = &ticket.product_id;
         let product = self.get_product(product_id);
 
         if product.is_score_product() {
-            match (timezone, self.account_score.get(&account_id)) {
+            match (ticket.timezone, self.account_score.get(&account_id)) {
                 // Time zone already set. No actions required.
                 (Some(_) | None, Some(_)) => (),
                 (Some(timezone), None) => {

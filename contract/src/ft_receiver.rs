@@ -1,9 +1,6 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::{
-    jar::{CeFiJar, JarId},
-    Timezone,
-};
+use sweat_jar_model::jar::{CeFiJar, JarId};
 
 use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
 
@@ -32,10 +29,7 @@ pub struct StakeMessage {
     signature: Option<Base64VecU8>,
 
     /// An optional account ID representing the intended owner of the created jar.
-    receiver_id: Option<crate::AccountId>,
-
-    /// An optional user timezone. Required for creating step jars.
-    timezone: Option<Timezone>,
+    receiver_id: Option<AccountId>,
 }
 
 #[near_bindgen]
@@ -48,7 +42,7 @@ impl FungibleTokenReceiver for Contract {
         match ft_message {
             FtMessage::Stake(message) => {
                 let receiver_id = message.receiver_id.unwrap_or(sender_id);
-                self.create_jar(receiver_id, message.ticket, amount, message.signature, message.timezone);
+                self.create_jar(receiver_id, message.ticket, amount, message.signature);
             }
             FtMessage::Migrate(jars) => {
                 require!(sender_id == self.manager, "Migration can be performed only by admin");
