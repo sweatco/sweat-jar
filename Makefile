@@ -50,9 +50,6 @@ lint: ##@Chores Run lint checks with Clippy.
 hash: ##@Chores Check if contract in commit has valid hash.
 	./scripts/check-contract-hash.sh
 
-all: ##@Chores Run all checks.
-	make lint && make test && make int
-
 HELP_FUN = \
     %help; while(<>){push@{$$help{$$2//'options'}},[$$1,$$3] \
     if/^([\w-_]+)\s*:.*\#\#(?:@(\w+))?\s(.*)$$/}; \
