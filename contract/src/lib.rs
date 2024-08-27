@@ -1,6 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-use ed25519_dalek::Signature;
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -9,7 +8,10 @@ use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
-use crate::jar::model::{AccountJarsLegacy, Jar};
+use crate::{
+    jar::model::{AccountJarsLegacy, Jar},
+    score::AccountScore,
+};
 
 mod assert;
 mod claim;
@@ -23,6 +25,8 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
+mod score;
+mod test_builder;
 mod test_utils;
 mod tests;
 mod withdraw;
@@ -53,6 +57,8 @@ pub struct Contract {
     pub account_jars: LookupMap<AccountId, AccountJars>,
 
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+
+    pub account_score: LookupMap<AccountId, AccountScore>,
 }
 
 #[near]
@@ -86,6 +92,9 @@ pub(crate) enum StorageKey {
     AccountJarsV1,
     /// Products migrated to near_sdk 5
     ProductsV1,
+    /// Products migrated to step jars
+    ProductsV2,
+    Scores,
 }
 
 #[near_bindgen]
@@ -101,6 +110,7 @@ impl InitApi for Contract {
             account_jars: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
+            account_score: LookupMap::new(StorageKey::Scores),
         }
     }
 }

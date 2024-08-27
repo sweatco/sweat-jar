@@ -161,7 +161,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
             .with_user(account)
     }
 
-    async fn block_timestamp_ms(&self) -> anyhow::Result<Timestamp> {
+    async fn block_timestamp_ms(&self) -> Result<Timestamp> {
         println!("▶️ block_timestamp_ms");
         let result = self.contract.view("block_timestamp_ms").await?.json()?;
         println!("   ✅ {:?}", result);

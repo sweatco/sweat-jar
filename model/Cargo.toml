@@ -1,6 +1,6 @@
 [package]
 name = "sweat-jar-model"
-version = "3.1.0"
+version = "3.2.0"
 publish = false
 edition = "2021"
 
@@ -23,3 +23,6 @@ nitka-proc = { workspace = true }
 nitka = { workspace = true, optional = true }
 
 near-workspaces = { workspace = true, optional = true }
+
+[dev-dependencies]
+fake = { workspace = true }

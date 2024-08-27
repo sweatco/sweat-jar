@@ -1,3 +1,5 @@
+#![cfg(not(test))]
+
 use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Gas, NearToken, Promise};
 use sweat_jar_model::{withdraw::Fee, TokenAmount};
 
@@ -44,6 +46,7 @@ trait FungibleTokenPromise {
 }
 
 impl FungibleTokenPromise for Promise {
+    #[mutants::skip] // Covered by integration tests
     fn ft_transfer(self, receiver_id: &AccountId, amount: TokenAmount, memo: Option<String>) -> Promise {
         let args = serde_json::to_vec(&json!({
             "receiver_id": receiver_id,

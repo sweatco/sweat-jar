@@ -1,26 +1,20 @@
 use near_sdk::{
     json_types::{Base64VecU8, U128},
-    log,
-    serde::{Deserialize, Serialize},
-    serde_json, AccountId,
+    log, near, serde_json, AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
+use sweat_jar_model::{jar::JarId, Local, ProductId, Score, TokenAmount, U32, UTC};
 
 use crate::{
     common::Timestamp,
     env,
-    jar::model::{JarCache, JarV1},
+    jar::model::{Jar, JarCache},
     product::model::Product,
     PACKAGE_NAME, VERSION,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(
-    crate = "near_sdk::serde",
-    tag = "event",
-    content = "data",
-    rename_all = "snake_case"
-)]
+#[derive(Debug)]
+#[near(serializers=[json])]
+#[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
     RegisterProduct(Product),
     CreateJar(EventJar),
@@ -35,10 +29,12 @@ pub enum EventKind {
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     TopUp(TopUpData),
+    RecordScore(Vec<ScoreData>),
+    OldScoreWarning((Score, Local)),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct EventJar {
     id: JarId,
     account_id: AccountId,
@@ -51,24 +47,24 @@ pub struct EventJar {
     is_penalty_applied: bool,
 }
 
-impl From<JarV1> for EventJar {
-    fn from(value: JarV1) -> Self {
+impl From<Jar> for EventJar {
+    fn from(jar: Jar) -> Self {
         Self {
-            id: value.id,
-            account_id: value.account_id,
-            product_id: value.product_id,
-            created_at: value.created_at,
-            principal: value.principal,
-            cache: value.cache,
-            claimed_balance: value.claimed_balance,
-            is_pending_withdraw: value.is_pending_withdraw,
-            is_penalty_applied: value.is_penalty_applied,
+            id: jar.id,
+            account_id: jar.account_id.clone(),
+            product_id: jar.product_id.clone(),
+            created_at: jar.created_at,
+            principal: jar.principal,
+            cache: jar.cache,
+            claimed_balance: jar.claimed_balance,
+            is_pending_withdraw: jar.is_pending_withdraw,
+            is_penalty_applied: jar.is_penalty_applied,
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 struct SweatJarEvent {
     standard: &'static str,
     version: &'static str,
@@ -79,64 +75,71 @@ struct SweatJarEvent {
 /// `JarId` and interest to claim
 pub type ClaimEventItem = (JarId, U128);
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct WithdrawData {
     pub id: JarId,
     pub fee: U128,
     pub amount: U128,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct MigrationEventItem {
     pub original_id: String,
     pub id: JarId,
     pub account_id: AccountId,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct RestakeData {
     pub old_id: JarId,
     pub new_id: JarId,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct PenaltyData {
     pub id: JarId,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct BatchPenaltyData {
     pub jars: Vec<JarId>,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct EnableProductData {
     pub id: ProductId,
     pub is_enabled: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct ChangeProductPublicKeyData {
     pub product_id: ProductId,
     pub pk: Base64VecU8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug)]
+#[near(serializers=[json])]
 pub struct TopUpData {
     pub id: JarId,
     pub amount: U128,
+}
+
+#[derive(Debug)]
+#[near(serializers=[json])]
+pub struct ScoreData {
+    pub account_id: AccountId,
+    pub score: Vec<(U32, UTC)>,
 }
 
 impl From<EventKind> for SweatJarEvent {
@@ -152,14 +155,14 @@ impl From<EventKind> for SweatJarEvent {
 #[mutants::skip]
 #[cfg(not(test))]
 pub(crate) fn emit(event: EventKind) {
-    log!(SweatJarEvent::from(event).to_json_event_string());
+    log!("{}", SweatJarEvent::from(event).to_json_event_string());
 }
 
 #[mutants::skip]
 #[cfg(test)]
 pub(crate) fn emit(event: EventKind) {
     if crate::common::test_data::should_log_events() {
-        log!(SweatJarEvent::from(event).to_json_event_string());
+        log!("{}", SweatJarEvent::from(event).to_json_event_string());
     }
 }
 
@@ -176,12 +179,16 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::json_types::U128;
+
+    use std::str::FromStr;
+
+    use near_sdk::{json_types::U128, AccountId};
+    use sweat_jar_model::Local;
 
     use crate::{
         common::tests::Context,
-        event::{EventKind, SweatJarEvent, TopUpData},
-        jar::model::JarV1,
+        event::{EventKind, ScoreData, SweatJarEvent, TopUpData},
+        jar::model::{Jar, JarLastVersion},
         test_utils::admin,
     };
 
@@ -189,7 +196,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.1.0");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-3.2.0");
     }
 
     #[test]
@@ -202,7 +209,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -213,7 +220,7 @@ mod test {
 
         assert_eq!(
             SweatJarEvent::from(EventKind::CreateJar(
-                JarV1 {
+                Jar::V1(JarLastVersion {
                     id: 555,
                     account_id: "bob.near".to_string().try_into().unwrap(),
                     product_id: "some_product".to_string(),
@@ -224,13 +231,13 @@ mod test {
                     is_pending_withdraw: false,
                     is_penalty_applied: false,
                     claim_remainder: 55555,
-                }
+                })
                 .into()
             ))
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "event": "create_jar",
   "data": {
     "id": 555,
@@ -250,7 +257,7 @@ mod test {
             SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "event": "claim",
   "data": [
     [
@@ -261,6 +268,58 @@ mod test {
       2,
       "2"
     ]
+  ]
+}"#
+        );
+
+        assert_eq!(
+            SweatJarEvent::from(EventKind::RecordScore(vec![
+                ScoreData {
+                    account_id: AccountId::from_str("alice.near").unwrap(),
+                    score: vec![(10.into(), 10.into())],
+                },
+                ScoreData {
+                    account_id: AccountId::from_str("bob.near").unwrap(),
+                    score: vec![(20.into(), 20.into())],
+                }
+            ]))
+            .to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "3.2.0",
+  "event": "record_score",
+  "data": [
+    {
+      "account_id": "alice.near",
+      "score": [
+        [
+          "10",
+          10
+        ]
+      ]
+    },
+    {
+      "account_id": "bob.near",
+      "score": [
+        [
+          "20",
+          20
+        ]
+      ]
+    }
+  ]
+}"#
+        );
+
+        assert_eq!(
+            SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string(),
+            r#"EVENT_JSON:{
+  "standard": "sweat_jar",
+  "version": "3.2.0",
+  "event": "old_score_warning",
+  "data": [
+    111,
+    5
   ]
 }"#
         );

@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use near_sdk::{
     json_types::{U128, U64},
-    near,
-    serde::{Deserialize, Serialize},
-    AccountId, Timestamp,
+    near, AccountId, Timestamp,
 };
 
 use crate::{numbers::U32, ProductId};
@@ -13,8 +11,8 @@ pub type JarId = u32;
 
 pub type JarIdView = U32;
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
 pub struct JarView {
     pub id: JarIdView,
     pub account_id: AccountId,
@@ -23,11 +21,12 @@ pub struct JarView {
     pub principal: U128,
     pub claimed_balance: U128,
     pub is_penalty_applied: bool,
+    #[serde(default)]
     pub is_pending_withdraw: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug, Clone, PartialEq)]
+#[near(serializers=[json])]
 pub struct AggregatedTokenAmountView {
     pub detailed: HashMap<JarIdView, U128>,
     pub total: U128,
@@ -42,16 +41,14 @@ impl Default for AggregatedTokenAmountView {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug, PartialEq)]
+#[near(serializers=[json])]
 pub struct AggregatedInterestView {
     pub amount: AggregatedTokenAmountView,
     pub timestamp: Timestamp,
 }
 
-#[near]
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[json])]
 pub struct CeFiJar {
     pub id: String,
     pub account_id: AccountId,

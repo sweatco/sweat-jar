@@ -10,6 +10,7 @@ use sweat_jar_model::{
 use crate::{
     event::{emit, EventKind, RestakeData},
     jar::model::Jar,
+    score::AccountScore,
     Contract, ContractExt, JarsStorage,
 };
 
@@ -46,8 +47,14 @@ impl Contract {
             now,
         );
 
-        let withdraw_jar = jar.withdrawn(&product, principal, now);
-        let should_be_closed = withdraw_jar.should_be_closed(&product, now);
+        let score = self
+            .account_score
+            .get(&account_id)
+            .map(AccountScore::claimable_score)
+            .unwrap_or_default();
+
+        let withdraw_jar = jar.withdrawn(&score, &product, principal, now);
+        let should_be_closed = withdraw_jar.should_be_closed(&score, &product, now);
 
         if should_be_closed {
             self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);
@@ -127,8 +134,14 @@ impl JarApi for Contract {
         let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
+        let score = self
+            .account_score
+            .get(&account_id)
+            .map(AccountScore::claimable_score)
+            .unwrap_or_default();
+
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let interest = jar.get_interest(&self.get_product(&jar.product_id), now).0;
+            let interest = jar.get_interest(&score, &self.get_product(&jar.product_id), now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
@@ -144,7 +157,7 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
-        self.migrate_account_jars_if_needed(env::predecessor_account_id());
+        self.migrate_account_jars_if_needed(&env::predecessor_account_id());
         let (old_id, jar) = self.restake_internal(jar_id);
 
         emit(EventKind::Restake(RestakeData {
@@ -158,7 +171,7 @@ impl JarApi for Contract {
     fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView> {
         let account_id = env::predecessor_account_id();
 
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_jars_if_needed(&account_id);
 
         let now = env::block_timestamp_ms();
 
