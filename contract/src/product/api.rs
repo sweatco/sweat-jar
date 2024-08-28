@@ -28,7 +28,6 @@ impl ProductApi for Contract {
                 Apy::Downgradable(_) => panic_str("Step based products do not support downgradable APY"),
             };
 
-            dbg!(&apy);
             assert!(apy.is_zero(), "Step based products do not support constant APY");
 
             if let Terms::Fixed(fixed) = &product.terms {
