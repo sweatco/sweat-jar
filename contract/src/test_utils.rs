@@ -105,9 +105,13 @@ pub fn expect_panic(ctx: &impl AfterCatchUnwind, msg: &str, action: impl FnOnce(
         return;
     }
 
-    let panic_msg = panic_msg
-        .downcast_ref::<String>()
-        .expect(&format!("Contract didn't panic with String.\nExpected message: {msg}"));
+    let panic_msg = if let Some(msg) = panic_msg.downcast_ref::<&str>() {
+        msg.to_string()
+    } else if let Some(msg) = panic_msg.downcast_ref::<String>() {
+        msg.clone()
+    } else {
+        panic!("Contract didn't panic with String or &str.\nExpected message: {msg}")
+    };
 
     assert!(
         panic_msg.contains(msg),

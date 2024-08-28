@@ -138,7 +138,7 @@ impl Context {
         self.set_deposit_yocto(0);
     }
 
-    fn set_deposit_yocto(&mut self, amount: Balance) {
+    pub(crate) fn set_deposit_yocto(&mut self, amount: Balance) {
         self.builder.attached_deposit(NearToken::from_yoctonear(amount));
         testing_env!(self.builder.build());
     }
