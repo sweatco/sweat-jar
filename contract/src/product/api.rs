@@ -1,4 +1,4 @@
-use near_sdk::{assert_one_yocto, near_bindgen, require};
+use near_sdk::{assert_one_yocto, env::panic_str, near_bindgen, require};
 use sweat_jar_model::{
     api::ProductApi,
     product::{ProductView, RegisterProductCommand},
@@ -23,10 +23,13 @@ impl ProductApi for Contract {
         let product: Product = command.into();
 
         if product.is_score_product() {
-            assert!(
-                matches!(product.apy, Apy::Constant(_)),
-                "Step based products support only constant APY"
-            );
+            let apy = match product.apy {
+                Apy::Constant(apy) => apy,
+                Apy::Downgradable(_) => panic_str("Step based products do not support downgradable APY"),
+            };
+
+            dbg!(&apy);
+            assert!(apy.is_zero(), "Step based products do not support constant APY");
 
             if let Terms::Fixed(fixed) = &product.terms {
                 assert!(!fixed.allows_top_up, "Step based products don't support top up");

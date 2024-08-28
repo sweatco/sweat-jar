@@ -33,6 +33,10 @@ impl UDecimal {
     pub fn to_f32(self) -> f32 {
         self.significand as f32 / 10u128.pow(self.exponent) as f32
     }
+
+    pub const fn is_zero(&self) -> bool {
+        self.significand == 0
+    }
 }
 
 impl Mul<u128> for UDecimal {

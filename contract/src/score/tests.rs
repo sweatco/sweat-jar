@@ -5,12 +5,17 @@ use near_sdk::{
     test_utils::test_env::{alice, bob},
     NearToken,
 };
-use sweat_jar_model::{api::ScoreApi, jar::JarId, Score, Timezone, MS_IN_DAY, UTC};
+use sweat_jar_model::{
+    api::{ProductApi, ScoreApi},
+    jar::JarId,
+    product::RegisterProductCommand,
+    Score, Timezone, MS_IN_DAY, UTC,
+};
 
 use crate::{
     common::{test_data::set_test_log_events, tests::Context},
     test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
-    test_utils::{admin, PRODUCT, SCORE_PRODUCT},
+    test_utils::{admin, expect_panic, PRODUCT, SCORE_PRODUCT},
 };
 
 #[test]
@@ -18,6 +23,38 @@ use crate::{
 fn record_score_by_non_manager() {
     let ctx = TestBuilder::new().build();
     ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
+}
+
+#[test]
+fn create_invalid_step_product() {
+    let mut ctx = TestBuilder::new().build();
+
+    let mut command = RegisterProductCommand {
+        id: "aa".to_string(),
+        apy_default: (10.into(), 3),
+        apy_fallback: None,
+        cap_min: Default::default(),
+        cap_max: Default::default(),
+        terms: Default::default(),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: false,
+        score_cap: 1000,
+    };
+
+    ctx.switch_account(admin());
+
+    ctx.set_deposit_yocto(1);
+
+    expect_panic(&ctx, "Step based products do not support constant APY", || {
+        ctx.contract().register_product(command.clone());
+    });
+
+    command.apy_fallback = Some((10.into(), 3));
+
+    expect_panic(&ctx, "Step based products do not support downgradable APY", || {
+        ctx.contract().register_product(command);
+    });
 }
 
 /// 12% jar should have the same interest as 12_000 score jar walking to the limit every day
