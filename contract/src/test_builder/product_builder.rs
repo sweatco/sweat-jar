@@ -1,4 +1,4 @@
-use sweat_jar_model::Score;
+use sweat_jar_model::{Score, MS_IN_DAY};
 
 use crate::product::model::Product;
 
@@ -13,6 +13,7 @@ pub(crate) trait ProductBuilder: Sized {
 pub(crate) enum ProductField {
     APY(u32),
     ScoreCap(Score),
+    TermDays(u64),
 }
 
 impl ProductBuilder for ProductField {
@@ -20,6 +21,7 @@ impl ProductBuilder for ProductField {
         match self {
             ProductField::APY(apy) => product.apy(apy),
             ProductField::ScoreCap(cap) => product.score_cap(cap),
+            ProductField::TermDays(days) => product.lockup_term(days * MS_IN_DAY),
         }
     }
 }
