@@ -6,7 +6,7 @@ use near_sdk::{
     NearToken,
 };
 use sweat_jar_model::{
-    api::{ProductApi, ScoreApi},
+    api::{ProductApi, ScoreApi, WithdrawApi},
     jar::JarId,
     product::RegisterProductCommand,
     Score, Timezone, MS_IN_DAY, UTC,
@@ -15,7 +15,7 @@ use sweat_jar_model::{
 use crate::{
     common::{test_data::set_test_log_events, tests::Context},
     test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
-    test_utils::{admin, expect_panic, PRODUCT, SCORE_PRODUCT},
+    test_utils::{admin, expect_panic, UnwrapPromise, PRODUCT, SCORE_PRODUCT},
 };
 
 #[test]
@@ -200,4 +200,65 @@ fn interest_does_not_increase_with_no_steps() {
 
     ctx.set_block_timestamp_in_days(100);
     assert_eq!(interest_for_one_day, ctx.interest(ALICE_JAR));
+}
+
+#[test]
+fn withdraw_score_jar() {
+    const ALICE_JAR: JarId = 0;
+    const BOB_JAR: JarId = 1;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(7), ScoreCap(20_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .jar(
+            BOB_JAR,
+            [JarField::Account(bob()), JarField::Timezone(Timezone::hour_shift(0))],
+        )
+        .build();
+
+    for i in 0..=10 {
+        ctx.set_block_timestamp_in_days(i);
+
+        ctx.record_score((i * MS_IN_DAY).into(), 1000, alice());
+        ctx.record_score((i * MS_IN_DAY).into(), 1000, bob());
+
+        if i == 5 {
+            let claimed_alice = ctx.claim_total(alice());
+            let claimed_bob = ctx.claim_total(bob());
+            assert_eq!(claimed_alice, claimed_bob);
+        }
+    }
+
+    // Alice claims first and then withdraws
+    ctx.switch_account(alice());
+    let claimed_alice = ctx.claim_total(alice());
+    let withdrawn_alice = ctx
+        .contract()
+        .withdraw(ALICE_JAR.into(), None)
+        .unwrap()
+        .withdrawn_amount
+        .0;
+
+    assert_eq!(ctx.claim_total(alice()), 0);
+
+    // Bob withdraws first and then claims
+    ctx.switch_account(bob());
+    let withdrawn_bob = ctx
+        .contract()
+        .withdraw(BOB_JAR.into(), None)
+        .unwrap()
+        .withdrawn_amount
+        .0;
+    let claimed_bob = ctx.claim_total(bob());
+
+    assert_eq!(ctx.claim_total(bob()), 0);
+
+    assert_eq!(claimed_alice, claimed_bob);
+    assert_eq!(withdrawn_alice, withdrawn_bob);
+
+    // All jars were closed and deleted after full withdraw and claim
+    assert!(ctx.contract().account_jars(&alice()).is_empty());
+    assert!(ctx.contract().account_jars(&bob()).is_empty());
 }
