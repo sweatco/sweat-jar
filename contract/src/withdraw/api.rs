@@ -1,5 +1,5 @@
 use near_sdk::{
-    ext_contract, is_promise_success,
+    ext_contract,
     json_types::U128,
     near_bindgen,
     serde::{Deserialize, Serialize},
@@ -11,6 +11,8 @@ use sweat_jar_model::{
     withdraw::{BulkWithdrawView, Fee, WithdrawView},
     TokenAmount,
 };
+
+use crate::internal::is_promise_success;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
