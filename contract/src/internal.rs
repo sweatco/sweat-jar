@@ -138,6 +138,7 @@ mod test {
 }
 
 #[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
 pub fn is_promise_success() -> bool {
     near_sdk::is_promise_success()
 }
