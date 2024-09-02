@@ -280,24 +280,24 @@ fn revert_scores_on_failed_claim() {
     for day in 0..=10 {
         ctx.set_block_timestamp_in_days(day);
 
-        ctx.record_score((day * MS_IN_DAY).into(), 1000, alice());
+        ctx.record_score((day * MS_IN_DAY).into(), 500, alice());
         if day > 1 {
             ctx.record_score(((day - 1) * MS_IN_DAY).into(), 1000, alice());
         }
 
         // Normal claim. Score should change:
         if day == 4 {
-            assert_eq!(ctx.score(ALICE_JAR).scores(), (1000, 1000));
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
             assert_ne!(ctx.claim_total(alice()), 0);
-            assert_eq!(ctx.score(ALICE_JAR).scores(), (1000, 0));
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 0));
         }
 
         // Failed claim. Score should stay the same:
         if day == 8 {
             set_test_future_success(false);
-            assert_eq!(ctx.score(ALICE_JAR).scores(), (1000, 1000));
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
             assert_eq!(ctx.claim_total(alice()), 0);
-            assert_eq!(ctx.score(ALICE_JAR).scores(), (1000, 1000));
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
         }
     }
 }
