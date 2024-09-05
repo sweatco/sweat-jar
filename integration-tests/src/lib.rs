@@ -14,5 +14,6 @@ mod premium_product;
 mod product;
 mod product_actions;
 mod restake;
+mod step_jars;
 mod withdraw_all;
 mod withdraw_fee;
