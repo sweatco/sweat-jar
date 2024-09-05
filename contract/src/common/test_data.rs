@@ -5,6 +5,8 @@ use std::{
     sync::{Mutex, MutexGuard},
 };
 
+use crate::internal::is_promise_success;
+
 type ThreadId = String;
 type ValueKey = String;
 type Value = String;
@@ -81,9 +83,9 @@ fn thread_name_test() {
 
 #[test]
 fn test_data_storage() {
-    assert_eq!(get_test_future_success(), true);
+    assert_eq!(is_promise_success(), true);
     set_test_future_success(false);
-    assert_eq!(get_test_future_success(), false);
+    assert_eq!(is_promise_success(), false);
     set_test_future_success(true);
-    assert_eq!(get_test_future_success(), true)
+    assert_eq!(is_promise_success(), true)
 }

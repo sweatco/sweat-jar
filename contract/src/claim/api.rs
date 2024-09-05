@@ -1,4 +1,4 @@
-use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
+use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi,
     claimed_amount_view::ClaimedAmountView,
@@ -9,6 +9,7 @@ use sweat_jar_model::{
 use crate::{
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
+    internal::is_promise_success,
     jar::model::Jar,
     score::AccountScore,
     Contract, ContractExt, JarsStorage,
@@ -21,6 +22,7 @@ pub trait ClaimCallbacks {
         &mut self,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> ClaimedAmountView;
@@ -57,6 +59,8 @@ impl Contract {
 
         let account_score = self.account_score.get_mut(&account_id);
 
+        let account_score_before_transfer = account_score.as_ref().map(|s| **s);
+
         let score = account_score.map(AccountScore::claim_score).unwrap_or_default();
 
         for jar in &unlocked_jars {
@@ -81,6 +85,7 @@ impl Contract {
                 &account_id,
                 accumulator,
                 unlocked_jars,
+                account_score_before_transfer,
                 EventKind::Claim(event_data),
                 now,
             )
@@ -97,15 +102,17 @@ impl Contract {
         _account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
         PromiseOrValue::Value(self.after_claim_internal(
             claimed_amount,
             jars_before_transfer,
+            score_before_transfer,
             event,
             now,
-            crate::common::test_data::get_test_future_success(),
+            is_promise_success(),
         ))
     }
 
@@ -116,6 +123,7 @@ impl Contract {
         account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
@@ -131,7 +139,13 @@ impl Contract {
 
         self.ft_contract()
             .ft_transfer(account_id, claimed_amount.get_total().0, "claim", &None)
-            .then(after_claim_call(claimed_amount, jars_before_transfer, event, now))
+            .then(after_claim_call(
+                claimed_amount,
+                jars_before_transfer,
+                score_before_transfer,
+                event,
+                now,
+            ))
             .into()
     }
 
@@ -139,6 +153,7 @@ impl Contract {
         &mut self,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
         is_promise_success: bool,
@@ -174,11 +189,19 @@ impl Contract {
 
             claimed_amount
         } else {
-            for jar_before_transfer in jars_before_transfer {
-                let account_id = jar_before_transfer.account_id.clone();
-                let jar_id = jar_before_transfer.id;
+            let account_id = jars_before_transfer
+                .first()
+                .expect("After claim without jars")
+                .account_id
+                .clone();
 
+            for jar_before_transfer in jars_before_transfer {
+                let jar_id = jar_before_transfer.id;
                 *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
+            }
+
+            if let Some(score) = score_before_transfer {
+                self.account_score.insert(account_id, score);
             }
 
             match claimed_amount {
@@ -196,10 +219,18 @@ impl ClaimCallbacks for Contract {
         &mut self,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> ClaimedAmountView {
-        self.after_claim_internal(claimed_amount, jars_before_transfer, event, now, is_promise_success())
+        self.after_claim_internal(
+            claimed_amount,
+            jars_before_transfer,
+            score_before_transfer,
+            event,
+            now,
+            is_promise_success(),
+        )
     }
 }
 
@@ -208,10 +239,11 @@ impl ClaimCallbacks for Contract {
 fn after_claim_call(
     claimed_amount: ClaimedAmountView,
     jars_before_transfer: Vec<Jar>,
+    score_before_transfer: Option<AccountScore>,
     event: EventKind,
     now: Timestamp,
 ) -> near_sdk::Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_CLAIM)
-        .after_claim(claimed_amount, jars_before_transfer, event, now)
+        .after_claim(claimed_amount, jars_before_transfer, score_before_transfer, event, now)
 }

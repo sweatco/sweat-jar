@@ -78,13 +78,6 @@ pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {
         }))
 }
 
-pub fn _generate_product(id: &str) -> Product {
-    Product::new()
-        .id(id)
-        .cap(0, 100_000_000_000)
-        .apy(Apy::Constant(UDecimal::new(20, 2)))
-}
-
 pub trait AfterCatchUnwind {
     fn after_catch_unwind(&self);
 }

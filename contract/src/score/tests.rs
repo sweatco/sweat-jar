@@ -13,7 +13,10 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::{test_data::set_test_log_events, tests::Context},
+    common::{
+        test_data::{set_test_future_success, set_test_log_events},
+        tests::Context,
+    },
     test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
     test_utils::{admin, expect_panic, UnwrapPromise, PRODUCT, SCORE_PRODUCT},
 };
@@ -261,4 +264,40 @@ fn withdraw_score_jar() {
     // All jars were closed and deleted after full withdraw and claim
     assert!(ctx.contract().account_jars(&alice()).is_empty());
     assert!(ctx.contract().account_jars(&bob()).is_empty());
+}
+
+#[test]
+fn revert_scores_on_failed_claim() {
+    const ALICE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .build();
+
+    for day in 0..=10 {
+        ctx.set_block_timestamp_in_days(day);
+
+        ctx.record_score((day * MS_IN_DAY).into(), 500, alice());
+        if day > 1 {
+            ctx.record_score(((day - 1) * MS_IN_DAY).into(), 1000, alice());
+        }
+
+        // Normal claim. Score should change:
+        if day == 4 {
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
+            assert_ne!(ctx.claim_total(alice()), 0);
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 0));
+        }
+
+        // Failed claim. Score should stay the same:
+        if day == 8 {
+            set_test_future_success(false);
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
+            assert_eq!(ctx.claim_total(alice()), 0);
+            assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
+        }
+    }
 }

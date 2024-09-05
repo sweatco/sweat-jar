@@ -12,7 +12,7 @@ const DAYS_STORED: usize = 2;
 
 type Chain = Vec<(Score, Local)>;
 
-#[near]
+#[near(serializers=[borsh, json])]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AccountScore {
     pub updated: UTC,

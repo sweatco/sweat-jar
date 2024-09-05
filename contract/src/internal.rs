@@ -136,3 +136,14 @@ mod test {
         assert_gas(gas_left - GAS_FOR_ASSERT_CALL - 1, || "Error message");
     }
 }
+
+#[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
+pub fn is_promise_success() -> bool {
+    near_sdk::is_promise_success()
+}
+
+#[cfg(test)]
+pub fn is_promise_success() -> bool {
+    crate::common::test_data::get_test_future_success()
+}
