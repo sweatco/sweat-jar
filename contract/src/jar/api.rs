@@ -48,8 +48,7 @@ impl Contract {
         );
 
         let score = self
-            .account_score
-            .get(&account_id)
+            .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 
@@ -147,8 +146,7 @@ impl JarApi for Contract {
         let mut total_amount: TokenAmount = 0;
 
         let score = self
-            .account_score
-            .get(&account_id)
+            .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 

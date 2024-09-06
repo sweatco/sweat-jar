@@ -12,7 +12,6 @@ use crate::{
         model::{AccountJarsLegacy, Jar},
     },
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
-    score::AccountScore,
 };
 
 mod assert;
@@ -60,8 +59,6 @@ pub struct Contract {
 
     pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
-
-    pub account_score: LookupMap<AccountId, AccountScore>,
 }
 
 #[near]
@@ -75,7 +72,6 @@ pub(crate) enum StorageKey {
     ProductsV1,
     /// Products migrated to step jars
     ProductsV2,
-    Scores,
     AccountJarsVersioned,
 }
 
@@ -92,7 +88,6 @@ impl InitApi for Contract {
             account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
-            account_score: LookupMap::new(StorageKey::Scores),
             account_jars: LookupMap::new(StorageKey::AccountJarsVersioned),
         }
     }

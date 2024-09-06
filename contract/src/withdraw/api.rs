@@ -76,8 +76,7 @@ impl WithdrawApi for Contract {
         assert_is_liquidable(&jar, &product, now);
 
         let score = self
-            .account_score
-            .get(&account_id)
+            .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 
@@ -100,8 +99,7 @@ impl WithdrawApi for Contract {
         };
 
         let score = self
-            .account_score
-            .get(&account_id)
+            .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 

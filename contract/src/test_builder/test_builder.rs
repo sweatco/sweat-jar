@@ -44,15 +44,18 @@ impl TestBuilder {
         let account_id = &jar.account_id;
 
         if product.is_score_product() {
-            if self.context.contract().account_score.get(account_id).is_none() {
+            if self.context.contract().get_score(account_id).is_none() {
                 let Some(timezone) = builder.timezone() else {
                     panic!("Step jar without timezone");
                 };
 
                 self.context
                     .contract()
-                    .account_score
-                    .insert(account_id.clone(), AccountScore::new(timezone));
+                    .account_jars
+                    .entry(account_id.clone())
+                    .or_default();
+
+                self.context.contract().account_jars.get_mut(account_id).unwrap().score = AccountScore::new(timezone);
             }
         }
 

@@ -19,14 +19,14 @@ impl ScoreApi for Contract {
         for (account, new_score) in batch {
             self.migrate_account_jars_if_needed(&account);
 
-            let account_score = self
-                .account_score
-                .get_mut(&account)
-                .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't have score jars")));
-
-            let score = account_score.claim_score();
-
             let account_jars = self.account_jars.entry(account.clone()).or_default();
+
+            assert!(
+                account_jars.has_score_jars(),
+                "Account '{account}' doesn't have score jars"
+            );
+
+            let score = account_jars.score.claim_score();
 
             for jar in &mut account_jars.jars {
                 let product = self
@@ -51,10 +51,10 @@ impl ScoreApi for Contract {
             // Convert walkchain to user timezone
             let converted_score = new_score
                 .iter()
-                .map(|score| (score.0, account_score.timezone.adjust(score.1)))
+                .map(|score| (score.0, account_jars.score.timezone.adjust(score.1)))
                 .collect();
 
-            account_score.update(converted_score);
+            account_jars.score.update(converted_score);
 
             event.push(ScoreData {
                 account_id: account,

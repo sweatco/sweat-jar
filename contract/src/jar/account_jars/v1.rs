@@ -6,6 +6,7 @@ use sweat_jar_model::jar::JarId;
 use crate::{
     jar::model::{AccountJarsLegacy, Jar},
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
+    score::AccountScore,
 };
 
 #[near]
@@ -14,6 +15,7 @@ pub struct AccountJarsV1 {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_id: JarId,
     pub jars: Vec<Jar>,
+    pub score: AccountScore,
 }
 
 impl Deref for AccountJarsV1 {
@@ -35,6 +37,7 @@ impl From<AccountJarsLegacy> for AccountJarsV1 {
         Self {
             last_id: value.last_id,
             jars: value.jars.into_iter().map(Into::into).collect(),
+            score: AccountScore::default(),
         }
     }
 }
@@ -44,6 +47,7 @@ impl From<AccountJarsNonVersioned> for AccountJarsV1 {
         Self {
             last_id: value.last_id,
             jars: value.jars,
+            score: AccountScore::default(),
         }
     }
 }

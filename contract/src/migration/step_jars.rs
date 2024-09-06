@@ -70,7 +70,6 @@ impl MigrationToStepJars for Contract {
             account_jars: LookupMap::new(StorageKey::AccountJarsVersioned),
             account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
-            account_score: LookupMap::new(StorageKey::Scores),
         }
     }
 }

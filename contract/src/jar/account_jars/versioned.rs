@@ -11,6 +11,7 @@ use crate::{
         model::AccountJarsLegacy,
     },
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
+    score::AccountScore,
 };
 
 pub type AccountJars = AccountJarsVersioned;
@@ -19,6 +20,28 @@ pub type AccountJars = AccountJarsVersioned;
 #[borsh(crate = "near_sdk::borsh")]
 pub enum AccountJarsVersioned {
     V1(AccountJarsV1),
+}
+
+impl AccountJarsVersioned {
+    pub fn score(&self) -> Option<&AccountScore> {
+        if self.has_score_jars() {
+            Some(&self.score)
+        } else {
+            None
+        }
+    }
+
+    pub fn score_mut(&mut self) -> Option<&mut AccountScore> {
+        if self.has_score_jars() {
+            Some(&mut self.score)
+        } else {
+            None
+        }
+    }
+
+    pub fn has_score_jars(&self) -> bool {
+        self.score.is_valid()
+    }
 }
 
 /// Custom `BorshDeserialize` implementation is needed to automatically

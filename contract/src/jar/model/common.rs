@@ -219,12 +219,11 @@ impl Contract {
         let product = self.get_product(product_id);
 
         if product.is_score_product() {
-            match (ticket.timezone, self.account_score.get(&account_id)) {
+            match (ticket.timezone, self.get_score_mut(&account_id)) {
                 // Time zone already set. No actions required.
                 (Some(_) | None, Some(_)) => (),
                 (Some(timezone), None) => {
-                    self.account_score
-                        .insert(account_id.clone(), AccountScore::new(timezone));
+                    self.account_jars.entry(account_id.clone()).or_default().score = AccountScore::new(timezone);
                 }
                 (None, None) => {
                     panic_str(&format!(
@@ -287,6 +286,14 @@ impl Contract {
             .unwrap_or_else(|| panic_str(&format!("Jar with id {jar_id} doesn't exist")));
 
         jars.swap_remove(jar_position);
+    }
+
+    pub(crate) fn get_score(&self, account: &AccountId) -> Option<&AccountScore> {
+        self.account_jars.get(account).and_then(|a| a.score())
+    }
+
+    pub(crate) fn get_score_mut(&mut self, account: &AccountId) -> Option<&mut AccountScore> {
+        self.account_jars.get_mut(account).and_then(|a| a.score_mut())
     }
 
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {

@@ -61,10 +61,6 @@ impl TestAccess for Context {
 
     fn score(&self, id: JarId) -> AccountScore {
         let account_id = self.jar_account_for_id(id);
-        *self
-            .contract()
-            .account_score
-            .get(&account_id)
-            .expect("No account score")
+        *self.contract().get_score(&account_id).expect("No account score")
     }
 }
