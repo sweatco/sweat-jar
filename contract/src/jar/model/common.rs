@@ -308,6 +308,15 @@ impl Contract {
                 .into();
         }
 
+        if let Some(jars) = self.account_jars_non_versioned.get(account) {
+            return jars
+                .jars
+                .iter()
+                .find(|jar| jar.id == id)
+                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
+                .clone();
+        }
+
         self.account_jars
             .get(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))

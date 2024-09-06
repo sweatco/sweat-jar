@@ -85,6 +85,18 @@ impl JarApi for Contract {
 
             return jar.into();
         }
+
+        if let Some(record) = self.account_jars_non_versioned.get(&account_id) {
+            let jar: Jar = record
+                .jars
+                .iter()
+                .find(|jar| jar.id == jar_id.0)
+                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
+                .clone();
+
+            return jar.into();
+        }
+
         self.account_jars
             .get(&account_id)
             .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")))
@@ -213,6 +225,7 @@ impl JarApi for Contract {
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_manager();
+        self.migrate_account_jars_if_needed(&account_id);
 
         let jars = self
             .account_jars

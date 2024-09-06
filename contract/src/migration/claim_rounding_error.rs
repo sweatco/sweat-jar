@@ -16,13 +16,15 @@ impl MigrationToClaimRemainder for Contract {
 }
 
 impl Contract {
-    // TODO: remove after V2 migration
+    /// Dynamic jars migration method
     #[mutants::skip]
     pub fn migrate_account_jars_if_needed(&mut self, account_id: &AccountId) {
-        let Some(jars) = self.account_jars_v1.remove(account_id) else {
-            return;
+        if let Some(jars) = self.account_jars_v1.remove(account_id) {
+            self.account_jars.insert(account_id.clone(), jars.into());
         };
 
-        self.account_jars.insert(account_id.clone(), jars.into());
+        if let Some(jars) = self.account_jars_non_versioned.remove(account_id) {
+            self.account_jars.insert(account_id.clone(), jars.into());
+        };
     }
 }

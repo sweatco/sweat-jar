@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -9,7 +7,11 @@ use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::{
-    jar::model::{AccountJarsLegacy, Jar},
+    jar::{
+        account_jars::versioned::AccountJars,
+        model::{AccountJarsLegacy, Jar},
+    },
+    migration::account_jars_non_versioned::AccountJarsNonVersioned,
     score::AccountScore,
 };
 
@@ -56,31 +58,10 @@ pub struct Contract {
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub account_jars: LookupMap<AccountId, AccountJars>,
 
+    pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 
     pub account_score: LookupMap<AccountId, AccountScore>,
-}
-
-#[near]
-#[derive(Default)]
-pub struct AccountJars {
-    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
-    pub last_id: JarId,
-    pub jars: Vec<Jar>,
-}
-
-impl Deref for AccountJars {
-    type Target = Vec<Jar>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.jars
-    }
-}
-
-impl DerefMut for AccountJars {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.jars
-    }
 }
 
 #[near]
@@ -95,6 +76,7 @@ pub(crate) enum StorageKey {
     /// Products migrated to step jars
     ProductsV2,
     Scores,
+    AccountJarsVersioned,
 }
 
 #[near_bindgen]
@@ -107,10 +89,11 @@ impl InitApi for Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::ProductsV1),
-            account_jars: LookupMap::new(StorageKey::AccountJarsV1),
+            account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
             account_score: LookupMap::new(StorageKey::Scores),
+            account_jars: LookupMap::new(StorageKey::AccountJarsVersioned),
         }
     }
 }

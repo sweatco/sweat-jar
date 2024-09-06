@@ -44,6 +44,10 @@ impl Contract {
             return record.jars.iter().map(|j| j.clone().into()).collect();
         }
 
+        if let Some(record) = self.account_jars_non_versioned.get(account_id) {
+            return record.jars.clone();
+        }
+
         self.account_jars
             .get(account_id)
             .map_or(vec![], |record| record.jars.clone())
