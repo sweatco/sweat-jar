@@ -16,7 +16,7 @@ use crate::{
 
 pub type AccountJars = AccountJarsVersioned;
 
-#[derive(BorshSerialize)]
+#[derive(BorshSerialize, Debug, PartialEq)]
 #[borsh(crate = "near_sdk::borsh")]
 pub enum AccountJarsVersioned {
     V1(AccountJarsV1),
