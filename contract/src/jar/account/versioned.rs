@@ -7,22 +7,22 @@ use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 
 use crate::{
     jar::{
-        account_jars::{v1::AccountJarsV1, AccountJarsLastVersion},
+        account::{v1::AccountV1, AccountJarsLastVersion},
         model::AccountJarsLegacy,
     },
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
     score::AccountScore,
 };
 
-pub type AccountJars = AccountJarsVersioned;
+pub type Account = AccountVersioned;
 
 #[derive(BorshSerialize, Debug, PartialEq)]
 #[borsh(crate = "near_sdk::borsh")]
-pub enum AccountJarsVersioned {
-    V1(AccountJarsV1),
+pub enum AccountVersioned {
+    V1(AccountV1),
 }
 
-impl AccountJarsVersioned {
+impl AccountVersioned {
     pub fn score(&self) -> Option<&AccountScore> {
         if self.has_score_jars() {
             Some(&self.score)
@@ -46,12 +46,12 @@ impl AccountJarsVersioned {
 
 /// Custom `BorshDeserialize` implementation is needed to automatically
 /// convert old versions to latest version
-impl BorshDeserialize for AccountJarsVersioned {
+impl BorshDeserialize for AccountVersioned {
     fn deserialize_reader<R: Read>(reader: &mut R) -> Result<Self, Error> {
         let tag: u8 = BorshDeserialize::deserialize_reader(reader)?;
 
         let result = match tag {
-            0 => AccountJarsVersioned::V1(BorshDeserialize::deserialize_reader(reader)?),
+            0 => AccountVersioned::V1(BorshDeserialize::deserialize_reader(reader)?),
             // Add new versions here:
             _ => return Err(Error::new(InvalidData, format!("Unexpected variant tag: {tag:?}"))),
         };
@@ -60,13 +60,13 @@ impl BorshDeserialize for AccountJarsVersioned {
     }
 }
 
-impl Default for AccountJarsVersioned {
+impl Default for AccountVersioned {
     fn default() -> Self {
-        Self::V1(AccountJarsV1::default())
+        Self::V1(AccountV1::default())
     }
 }
 
-impl Deref for AccountJarsVersioned {
+impl Deref for AccountVersioned {
     type Target = AccountJarsLastVersion;
     fn deref(&self) -> &Self::Target {
         match self {
@@ -77,7 +77,7 @@ impl Deref for AccountJarsVersioned {
     }
 }
 
-impl DerefMut for AccountJarsVersioned {
+impl DerefMut for AccountVersioned {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
             Self::V1(jars) => jars,
@@ -87,13 +87,13 @@ impl DerefMut for AccountJarsVersioned {
     }
 }
 
-impl From<AccountJarsLegacy> for AccountJars {
+impl From<AccountJarsLegacy> for Account {
     fn from(value: AccountJarsLegacy) -> Self {
         Self::V1(value.into())
     }
 }
 
-impl From<AccountJarsNonVersioned> for AccountJars {
+impl From<AccountJarsNonVersioned> for Account {
     fn from(value: AccountJarsNonVersioned) -> Self {
         Self::V1(value.into())
     }

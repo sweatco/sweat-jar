@@ -255,14 +255,7 @@ fn test_failed_withdraw_internal() {
     let mut contract = context.contract();
 
     let jar_view = contract.get_jar(alice.clone(), U32(reference_jar.id));
-    let jar = contract
-        .account_jars
-        .get(&alice)
-        .unwrap()
-        .iter()
-        .next()
-        .unwrap()
-        .clone();
+    let jar = contract.accounts.get(&alice).unwrap().iter().next().unwrap().clone();
 
     let withdraw =
         contract.after_withdraw_internal(jar.account_id.clone(), jar.id, true, withdrawn_amount, None, false);
@@ -284,14 +277,7 @@ fn test_failed_bulk_withdraw_internal() {
     let mut contract = context.contract();
 
     let jar_view = contract.get_jar(alice.clone(), U32(reference_jar.id));
-    let jar = contract
-        .account_jars
-        .get(&alice)
-        .unwrap()
-        .iter()
-        .next()
-        .unwrap()
-        .clone();
+    let jar = contract.accounts.get(&alice).unwrap().iter().next().unwrap().clone();
 
     let withdraw = contract.after_bulk_withdraw_internal(
         jar.account_id.clone(),

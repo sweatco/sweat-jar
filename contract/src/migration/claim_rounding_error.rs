@@ -10,7 +10,7 @@ impl MigrationToClaimRemainder for Contract {
     #[mutants::skip]
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>) {
         for account in accounts {
-            self.migrate_account_jars_if_needed(&account);
+            self.migrate_account_if_needed(&account);
         }
     }
 }
@@ -18,11 +18,11 @@ impl MigrationToClaimRemainder for Contract {
 impl Contract {
     /// Dynamic jars migration method
     #[mutants::skip]
-    pub fn migrate_account_jars_if_needed(&mut self, account_id: &AccountId) {
+    pub fn migrate_account_if_needed(&mut self, account_id: &AccountId) {
         if let Some(jars) = self.account_jars_v1.remove(account_id) {
-            self.account_jars.insert(account_id.clone(), jars.into());
+            self.accounts.insert(account_id.clone(), jars.into());
         } else if let Some(jars) = self.account_jars_non_versioned.remove(account_id) {
-            self.account_jars.insert(account_id.clone(), jars.into());
+            self.accounts.insert(account_id.clone(), jars.into());
         };
     }
 }
@@ -34,7 +34,7 @@ mod test {
     use crate::{
         common::tests::Context,
         jar::{
-            account_jars::{versioned::AccountJars, AccountJarsLastVersion},
+            account::{versioned::Account, AccountJarsLastVersion},
             model::{AccountJarsLegacy, Jar, JarCache, JarLastVersion, JarLegacy},
         },
         migration::account_jars_non_versioned::AccountJarsNonVersioned,
@@ -67,11 +67,11 @@ mod test {
             },
         );
 
-        contract.migrate_account_jars_if_needed(&alice());
+        contract.migrate_account_if_needed(&alice());
 
         assert_eq!(
-            contract.account_jars.get(&alice()).unwrap(),
-            &AccountJars::V1(AccountJarsLastVersion {
+            contract.accounts.get(&alice()).unwrap(),
+            &Account::V1(AccountJarsLastVersion {
                 last_id: 5,
                 jars: vec![Jar::V1(JarLastVersion {
                     id: 5,
@@ -120,11 +120,11 @@ mod test {
             },
         );
 
-        contract.migrate_account_jars_if_needed(&alice());
+        contract.migrate_account_if_needed(&alice());
 
         assert_eq!(
-            contract.account_jars.get(&alice()).unwrap(),
-            &AccountJars::V1(AccountJarsLastVersion {
+            contract.accounts.get(&alice()).unwrap(),
+            &Account::V1(AccountJarsLastVersion {
                 last_id: 5,
                 jars: vec![Jar::V1(JarLastVersion {
                     id: 5,

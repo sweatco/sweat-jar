@@ -32,7 +32,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(&account_id);
+        self.migrate_account_if_needed(&account_id);
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars_internal(account_id, jar_ids, detailed)
     }
@@ -170,7 +170,7 @@ impl Contract {
                     .unwrap_or_default();
 
                 let jar = self
-                    .account_jars
+                    .accounts
                     .get_mut(&jar_before_transfer.account_id)
                     .unwrap_or_else(|| {
                         env::panic_str(&format!("Account '{}' doesn't exist", jar_before_transfer.account_id))
@@ -200,7 +200,7 @@ impl Contract {
             }
 
             if let Some(score) = score_before_transfer {
-                self.account_jars
+                self.accounts
                     .get_mut(&account_id)
                     .unwrap_or_else(|| panic!("Account: {account_id} does not exist"))
                     .score = score;

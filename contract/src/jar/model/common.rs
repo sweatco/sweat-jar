@@ -223,7 +223,7 @@ impl Contract {
                 // Time zone already set. No actions required.
                 (Some(_) | None, Some(_)) => (),
                 (Some(timezone), None) => {
-                    self.account_jars.entry(account_id.clone()).or_default().score = AccountScore::new(timezone);
+                    self.accounts.entry(account_id.clone()).or_default().score = AccountScore::new(timezone);
                 }
                 (None, None) => {
                     panic_str(&format!(
@@ -249,7 +249,7 @@ impl Contract {
     }
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
-        self.migrate_account_jars_if_needed(account);
+        self.migrate_account_if_needed(account);
 
         let jar = self.get_jar_internal(account, jar_id).clone();
         let product = self.get_product(&jar.product_id).clone();
@@ -271,7 +271,7 @@ impl Contract {
 
     pub(crate) fn delete_jar(&mut self, account_id: &AccountId, jar_id: JarId) {
         let jars = self
-            .account_jars
+            .accounts
             .get_mut(account_id)
             .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")));
 
@@ -289,15 +289,15 @@ impl Contract {
     }
 
     pub(crate) fn get_score(&self, account: &AccountId) -> Option<&AccountScore> {
-        self.account_jars.get(account).and_then(|a| a.score())
+        self.accounts.get(account).and_then(|a| a.score())
     }
 
     pub(crate) fn get_score_mut(&mut self, account: &AccountId) -> Option<&mut AccountScore> {
-        self.account_jars.get_mut(account).and_then(|a| a.score_mut())
+        self.accounts.get_mut(account).and_then(|a| a.score_mut())
     }
 
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
-        self.account_jars
+        self.accounts
             .get_mut(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar_mut(id)
@@ -324,7 +324,7 @@ impl Contract {
                 .clone();
         }
 
-        self.account_jars
+        self.accounts
             .get(account)
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar(id)
@@ -338,9 +338,9 @@ impl Contract {
         ticket: &JarTicket,
         signature: Option<Base64VecU8>,
     ) {
-        self.migrate_account_jars_if_needed(account_id);
+        self.migrate_account_if_needed(account_id);
 
-        let last_jar_id = self.account_jars.get(account_id).map(|jars| jars.last_id);
+        let last_jar_id = self.accounts.get(account_id).map(|jars| jars.last_id);
         let product = self.get_product(&ticket.product_id);
 
         if let Some(pk) = &product.public_key {

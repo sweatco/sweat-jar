@@ -67,7 +67,7 @@ impl MigrationToStepJars for Contract {
             manager: old_state.manager,
             products,
             last_jar_id: old_state.last_jar_id,
-            account_jars: LookupMap::new(StorageKey::AccountJarsVersioned),
+            accounts: LookupMap::new(StorageKey::AccountsVersioned),
             account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
         }

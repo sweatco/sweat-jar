@@ -49,13 +49,9 @@ impl TestBuilder {
                     panic!("Step jar without timezone");
                 };
 
-                self.context
-                    .contract()
-                    .account_jars
-                    .entry(account_id.clone())
-                    .or_default();
+                self.context.contract().accounts.entry(account_id.clone()).or_default();
 
-                self.context.contract().account_jars.get_mut(account_id).unwrap().score = AccountScore::new(timezone);
+                self.context.contract().accounts.get_mut(account_id).unwrap().score = AccountScore::new(timezone);
             }
         }
 

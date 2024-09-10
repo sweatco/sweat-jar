@@ -8,7 +8,7 @@ use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::{
     jar::{
-        account_jars::versioned::AccountJars,
+        account::versioned::Account,
         model::{AccountJarsLegacy, Jar},
     },
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
@@ -55,7 +55,7 @@ pub struct Contract {
     pub last_jar_id: JarId,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub account_jars: LookupMap<AccountId, AccountJars>,
+    pub accounts: LookupMap<AccountId, Account>,
 
     pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
@@ -72,7 +72,7 @@ pub(crate) enum StorageKey {
     ProductsV1,
     /// Products migrated to step jars
     ProductsV2,
-    AccountJarsVersioned,
+    AccountsVersioned,
 }
 
 #[near_bindgen]
@@ -88,7 +88,7 @@ impl InitApi for Contract {
             account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
-            account_jars: LookupMap::new(StorageKey::AccountJarsVersioned),
+            accounts: LookupMap::new(StorageKey::AccountsVersioned),
         }
     }
 }

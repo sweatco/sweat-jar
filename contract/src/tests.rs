@@ -116,7 +116,7 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
     let jar = Jar::new(jar_id).principal(100_000_000);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract().accounts.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_minutes(30);
@@ -138,7 +138,7 @@ fn get_total_interest_with_single_jar_on_maturity() {
     let jar = Jar::new(jar_id).principal(100_000_000);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract().accounts.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(365);
@@ -165,7 +165,7 @@ fn get_total_interest_with_single_jar_after_maturity() {
     let jar = Jar::new(jar_id).principal(100_000_000);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract().accounts.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(400);
@@ -185,7 +185,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
     let jar = Jar::new(jar_id).principal(100_000_000);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
-    let contract_jar = JarView::from(context.contract().account_jars.get(&alice).unwrap().get_jar(jar_id));
+    let contract_jar = JarView::from(context.contract().accounts.get(&alice).unwrap().get_jar(jar_id));
     assert_eq!(JarView::from(jar), contract_jar);
 
     context.set_block_timestamp_in_days(182);

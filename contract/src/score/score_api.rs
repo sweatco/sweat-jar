@@ -17,9 +17,9 @@ impl ScoreApi for Contract {
         let now = block_timestamp_ms();
 
         for (account, new_score) in batch {
-            self.migrate_account_jars_if_needed(&account);
+            self.migrate_account_if_needed(&account);
 
-            let account_jars = self.account_jars.entry(account.clone()).or_default();
+            let account_jars = self.accounts.entry(account.clone()).or_default();
 
             assert!(
                 account_jars.has_score_jars(),

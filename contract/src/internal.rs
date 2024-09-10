@@ -48,7 +48,7 @@ impl Contract {
             return record.jars.clone();
         }
 
-        self.account_jars
+        self.accounts
             .get(account_id)
             .map_or(vec![], |record| record.jars.clone())
     }
@@ -71,8 +71,8 @@ impl Contract {
     }
 
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.migrate_account_jars_if_needed(account_id);
-        let jars = self.account_jars.entry(account_id.clone()).or_default();
+        self.migrate_account_if_needed(account_id);
+        let jars = self.accounts.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
         jars.push(jar);
     }
