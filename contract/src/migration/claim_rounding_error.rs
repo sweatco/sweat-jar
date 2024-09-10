@@ -28,3 +28,9 @@ impl Contract {
         };
     }
 }
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn account_jars_migration() {}
+}
