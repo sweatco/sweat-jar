@@ -32,7 +32,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(&account_id);
+        self.migrate_account_if_needed(&account_id);
         let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
         self.claim_jars_internal(account_id, jar_ids, detailed)
     }
@@ -57,7 +57,7 @@ impl Contract {
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
-        let account_score = self.account_score.get_mut(&account_id);
+        let account_score = self.get_score_mut(&account_id);
 
         let account_score_before_transfer = account_score.as_ref().map(|s| **s);
 
@@ -164,8 +164,13 @@ impl Contract {
                     env::panic_str(&format!("Product '{}' doesn't exist", jar_before_transfer.product_id))
                 });
 
+                let score = self
+                    .get_score(&jar_before_transfer.account_id)
+                    .map(AccountScore::claimable_score)
+                    .unwrap_or_default();
+
                 let jar = self
-                    .account_jars
+                    .accounts
                     .get_mut(&jar_before_transfer.account_id)
                     .unwrap_or_else(|| {
                         env::panic_str(&format!("Account '{}' doesn't exist", jar_before_transfer.account_id))
@@ -173,12 +178,6 @@ impl Contract {
                     .get_jar_mut(jar_before_transfer.id);
 
                 jar.unlock();
-
-                let score = self
-                    .account_score
-                    .get(&jar_before_transfer.account_id)
-                    .map(AccountScore::claimable_score)
-                    .unwrap_or_default();
 
                 if jar.should_be_closed(&score, &product, now) {
                     self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
@@ -201,7 +200,10 @@ impl Contract {
             }
 
             if let Some(score) = score_before_transfer {
-                self.account_score.insert(account_id, score);
+                self.accounts
+                    .get_mut(&account_id)
+                    .unwrap_or_else(|| panic!("Account: {account_id} does not exist"))
+                    .score = score;
             }
 
             match claimed_amount {

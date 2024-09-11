@@ -21,6 +21,10 @@ pub struct AccountScore {
 }
 
 impl AccountScore {
+    pub fn is_valid(&self) -> bool {
+        self.timezone.is_valid()
+    }
+
     pub fn new(timezone: Timezone) -> Self {
         Self {
             updated: block_timestamp_ms().into(),
@@ -114,12 +118,26 @@ impl AccountScore {
     }
 }
 
+impl Default for AccountScore {
+    fn default() -> Self {
+        Self {
+            updated: block_timestamp_ms().into(),
+            timezone: Timezone::invalid(),
+            scores: [0, 0],
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use near_sdk::env::block_timestamp_ms;
     use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC};
 
-    use crate::{product::model::Product, score::account_score::Chain, test_builder::TestBuilder, AccountScore};
+    use crate::{
+        product::model::Product,
+        score::{account_score::Chain, AccountScore},
+        test_builder::TestBuilder,
+    };
 
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
     const TODAY: u64 = 1722234632000;

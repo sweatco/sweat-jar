@@ -11,6 +11,14 @@ use crate::{timezone::timestamps::TimeHelper, Day, Local, MS_IN_HOUR, UTC};
 pub struct Timezone(i64);
 
 impl Timezone {
+    pub const fn invalid() -> Self {
+        Self(i64::MIN)
+    }
+
+    pub const fn is_valid(&self) -> bool {
+        self.0 != i64::MIN
+    }
+
     pub const fn hour_shift(hour: i64) -> Self {
         // MS_IN_HOUR won't wrap
         #[allow(clippy::cast_possible_wrap)]

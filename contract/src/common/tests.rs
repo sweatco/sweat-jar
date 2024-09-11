@@ -73,7 +73,7 @@ impl Context {
                 .push(jar.id);
 
             self.contract()
-                .account_jars
+                .accounts
                 .entry(jar.account_id.clone())
                 .or_default()
                 .push(jar.clone());

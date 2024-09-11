@@ -3,8 +3,9 @@ use sweat_jar_model::{api::MigrationToStepJars, jar::JarId, ProductId};
 
 use crate::{
     jar::model::AccountJarsLegacy,
+    migration::account_jars_non_versioned::AccountJarsNonVersioned,
     product::model::{Apy, Cap, Product, Terms, WithdrawalFee},
-    AccountJars, Contract, ContractExt, StorageKey,
+    Contract, ContractExt, StorageKey,
 };
 
 #[near(serializers=[borsh, json])]
@@ -27,7 +28,7 @@ pub struct ContractBeforeStepJars {
     pub manager: AccountId,
     pub products: UnorderedMap<ProductId, ProductBeforeStepJars>,
     pub last_jar_id: JarId,
-    pub account_jars: LookupMap<AccountId, AccountJars>,
+    pub account_jars: LookupMap<AccountId, AccountJarsNonVersioned>,
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
 }
 
@@ -66,9 +67,9 @@ impl MigrationToStepJars for Contract {
             manager: old_state.manager,
             products,
             last_jar_id: old_state.last_jar_id,
-            account_jars: LookupMap::new(StorageKey::AccountJarsV1),
+            accounts: LookupMap::new(StorageKey::AccountsVersioned),
+            account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
-            account_score: LookupMap::new(StorageKey::Scores),
         }
     }
 }

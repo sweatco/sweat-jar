@@ -50,8 +50,8 @@ impl Contract {
 
             let id = self.increment_and_get_last_jar_id();
 
-            self.migrate_account_jars_if_needed(&ce_fi_jar.account_id);
-            let account_jars = self.account_jars.entry(ce_fi_jar.account_id.clone()).or_default();
+            self.migrate_account_if_needed(&ce_fi_jar.account_id);
+            let account_jars = self.accounts.entry(ce_fi_jar.account_id.clone()).or_default();
 
             let jar = JarLastVersion {
                 id,

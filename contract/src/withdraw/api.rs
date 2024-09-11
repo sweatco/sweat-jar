@@ -60,7 +60,7 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(&account_id);
+        self.migrate_account_if_needed(&account_id);
 
         let jar = self.get_jar_internal(&account_id, jar_id.0).clone();
 
@@ -76,8 +76,7 @@ impl WithdrawApi for Contract {
         assert_is_liquidable(&jar, &product, now);
 
         let score = self
-            .account_score
-            .get(&account_id)
+            .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 
@@ -92,16 +91,15 @@ impl WithdrawApi for Contract {
 
     fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(&account_id);
+        self.migrate_account_if_needed(&account_id);
         let now = env::block_timestamp_ms();
 
-        let Some(account_jars) = self.account_jars.get(&account_id) else {
+        let Some(account_jars) = self.accounts.get(&account_id) else {
             return PromiseOrValue::Value(BulkWithdrawView::default());
         };
 
         let score = self
-            .account_score
-            .get(&account_id)
+            .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 

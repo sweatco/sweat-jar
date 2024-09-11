@@ -2,6 +2,7 @@
 
 use fake::Fake;
 use near_sdk::{
+    store::LookupMap,
     test_utils::test_env::{alice, bob},
     NearToken,
 };
@@ -19,6 +20,7 @@ use crate::{
     },
     test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
     test_utils::{admin, expect_panic, UnwrapPromise, PRODUCT, SCORE_PRODUCT},
+    StorageKey,
 };
 
 #[test]
@@ -283,6 +285,12 @@ fn revert_scores_on_failed_claim() {
         ctx.record_score((day * MS_IN_DAY).into(), 500, alice());
         if day > 1 {
             ctx.record_score(((day - 1) * MS_IN_DAY).into(), 1000, alice());
+        }
+
+        // Clear accounts cache to test deserialization
+        if day == 3 {
+            ctx.contract().accounts.flush();
+            ctx.contract().accounts = LookupMap::new(StorageKey::AccountsVersioned);
         }
 
         // Normal claim. Score should change:
