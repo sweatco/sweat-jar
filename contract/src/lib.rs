@@ -72,6 +72,8 @@ pub(crate) enum StorageKey {
     ProductsV1,
     /// Products migrated to step jars
     ProductsV2,
+    /// Previous implementation of Score storage used on testnet. Is not used anymore.
+    AccountScore,
     AccountsVersioned,
 }
 
