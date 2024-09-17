@@ -1,6 +1,7 @@
 mod common;
 mod legacy;
 mod v1;
+mod v2;
 mod versioned;
 
 pub use common::{JarCache, JarTicket};
