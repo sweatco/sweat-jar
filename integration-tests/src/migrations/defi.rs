@@ -15,10 +15,10 @@ async fn defi_migration() -> anyhow::Result<()> {
 
     let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
 
-    let manager = &context.account("manager").await?;
-    let alice = &context.account("alice").await?;
-    let bob = &context.account("bob").await?;
-    let fee_account = &context.account("fee").await?;
+    let manager = &context.manager().await?;
+    let alice = &context.alice().await?;
+    let bob = &context.bob().await?;
+    let fee_account = &context.fee().await?;
 
     context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
     context

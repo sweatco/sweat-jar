@@ -1,16 +1,15 @@
+use std::collections::HashMap;
+
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    api::ClaimApi,
-    claimed_amount_view::ClaimedAmountView,
-    jar::{AggregatedTokenAmountView, JarIdView},
-    U32,
+    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, ProductId, TokenAmount,
 };
 
 use crate::{
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
-    Contract, ContractExt, JarsStorage,
+    Contract, ContractExt, JarsStorage, Product,
 };
 
 #[ext_contract(ext_self)]
@@ -29,8 +28,7 @@ impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
         self.migrate_account_jars_if_needed(account_id.clone());
-        let jar_ids = self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect();
-        self.claim_jars_internal(account_id, jar_ids, detailed)
+        self.claim_jars_internal(account_id, detailed)
     }
 }
 
@@ -38,35 +36,45 @@ impl Contract {
     fn claim_jars_internal(
         &mut self,
         account_id: AccountId,
-        jar_ids: Vec<JarIdView>,
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
         let now = env::block_timestamp_ms();
         let mut accumulator = ClaimedAmountView::new(detailed);
 
-        let unlocked_jars: Vec<Jar> = self
-            .account_jars(&account_id)
+        let account_jars = self.account_jars(&account_id);
+
+        // UnorderedMap doesn't have cache and deserializes `Product` on each get
+        // This cache significantly reduces gas usage
+        let mut products_cache: HashMap<ProductId, Product> = HashMap::new();
+
+        let mut unlocked_jars: Vec<((TokenAmount, u64), &Jar)> = account_jars
             .iter()
-            .filter(|jar| !jar.is_pending_withdraw && jar_ids.contains(&U32(jar.id)))
-            .cloned()
+            .filter(|jar| !jar.is_pending_withdraw)
+            .map(|jar| {
+                let product = products_cache
+                    .entry(jar.product_id.clone())
+                    .or_insert_with(|| self.get_product(&jar.product_id));
+                (jar.get_interest(product, now), jar)
+            })
             .collect();
+
+        unlocked_jars.sort_by(|a, b| b.0 .0.cmp(&a.0 .0));
+
+        let jars_to_claim: Vec<_> = unlocked_jars.into_iter().take(100).collect();
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 
-        for jar in &unlocked_jars {
-            let product = self.get_product(&jar.product_id);
-            let (available_interest, remainder) = jar.get_interest(&product, now);
-
-            if available_interest > 0 {
+        for ((available_interest, remainder), jar) in &jars_to_claim {
+            if *available_interest > 0 {
                 let jar = self.get_jar_mut_internal(&jar.account_id, jar.id);
 
-                jar.claim_remainder = remainder;
+                jar.claim_remainder = *remainder;
 
-                jar.claim(available_interest, available_interest, now).lock();
+                jar.claim(*available_interest, *available_interest, now).lock();
 
-                accumulator.add(jar.id, available_interest);
+                accumulator.add(jar.id, *available_interest);
 
-                event_data.push((jar.id, U128(available_interest)));
+                event_data.push((jar.id, U128(*available_interest)));
             }
         }
 
@@ -74,7 +82,7 @@ impl Contract {
             self.claim_interest(
                 &account_id,
                 accumulator,
-                unlocked_jars,
+                jars_to_claim.into_iter().map(|a| a.1).cloned().collect(),
                 EventKind::Claim(event_data),
                 now,
             )
