@@ -19,11 +19,12 @@ ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
 tokio = { workspace = true }
 mutants = { workspace = true }
+dirs = { workspace = true }
 
 sweat-jar-model = { workspace = true, features = [
-  "integration-test",
-  "integration-methods",
-  "integration-api",
+    "integration-test",
+    "integration-methods",
+    "integration-api",
 ] }
 sweat-model = { workspace = true, features = ["integration-api"] }
 
