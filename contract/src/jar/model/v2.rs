@@ -10,17 +10,11 @@ pub struct JarV2 {
     /// The unique identifier for the jar.
     pub id: JarId,
 
-    /// The account ID of the owner of the jar.
-    pub account_id: AccountId,
-
     /// The product ID that describes the terms of the deposit associated with the jar.
     pub product_id: ProductId,
 
-    /// The timestamp of when the jar was created, measured in milliseconds since Unix epoch.
-    pub created_at: Timestamp,
-
-    /// The principal amount of the deposit stored in the jar.
-    pub principal: Vec<TopUp>,
+    /// Deposits stored in the jar.
+    pub deposits: Vec<Deposit>,
 
     /// A cached value that stores calculated interest based on the current state of the jar.
     /// This cache is updated whenever properties that impact interest calculation change,
@@ -44,10 +38,16 @@ pub struct JarV2 {
 
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct TopUp {
+pub struct Deposit {
     /// The timestamp of when the top-up was added, measured in milliseconds since Unix epoch.
     pub created_at: Timestamp,
 
     /// The amount of the top-up.
-    pub amount: TokenAmount,
+    pub principal: TokenAmount,
+}
+
+impl Deposit {
+    pub fn new(created_at: Timestamp, principal: TokenAmount) -> Self {
+        Deposit { created_at, principal }
+    }
 }

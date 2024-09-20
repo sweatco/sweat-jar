@@ -8,4 +8,4 @@ pub use common::{JarCache, JarTicket};
 pub use legacy::*;
 pub use versioned::Jar;
 
-pub type JarLastVersion = v1::JarV1;
+pub type JarLastVersion = v2::JarV2;

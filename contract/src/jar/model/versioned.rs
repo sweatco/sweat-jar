@@ -5,6 +5,7 @@ use near_sdk::{
         io::{Error, ErrorKind::InvalidData, Read},
         BorshDeserialize, BorshSerialize,
     },
+    env::panic_str,
     serde::{Deserialize, Serialize},
     AccountId,
 };
@@ -12,7 +13,11 @@ use sweat_jar_model::{jar::JarId, ProductId, Score, TokenAmount};
 
 use crate::{
     common::Timestamp,
-    jar::model::{v1::JarV1, JarCache, JarLastVersion},
+    jar::model::{
+        v1::JarV1,
+        v2::{Deposit, JarV2},
+        JarCache, JarLastVersion,
+    },
     product::model::Product,
 };
 
@@ -23,6 +28,7 @@ pub type Jar = JarVersioned;
 #[borsh(crate = "near_sdk::borsh")]
 pub enum JarVersioned {
     V1(JarV1),
+    V2(JarV2),
 }
 
 /// Custom `BorshDeserialize` implementation is needed to automatically
@@ -33,6 +39,7 @@ impl BorshDeserialize for JarVersioned {
 
         let result = match tag {
             0 => JarVersioned::V1(BorshDeserialize::deserialize_reader(reader)?),
+            1 => JarVersioned::V2(BorshDeserialize::deserialize_reader(reader)?),
             // Add new versions here:
             _ => return Err(Error::new(InvalidData, format!("Unexpected variant tag: {tag:?}"))),
         };
@@ -42,19 +49,11 @@ impl BorshDeserialize for JarVersioned {
 }
 
 impl JarVersioned {
-    pub fn create(
-        id: JarId,
-        account_id: AccountId,
-        product_id: ProductId,
-        principal: TokenAmount,
-        created_at: Timestamp,
-    ) -> Self {
+    pub fn create(id: JarId, product_id: ProductId, principal: TokenAmount, created_at: Timestamp) -> Self {
         JarLastVersion {
             id,
-            account_id,
             product_id,
-            principal,
-            created_at,
+            deposits: vec![Deposit::new(created_at, principal)],
             cache: None,
             claimed_balance: 0,
             is_pending_withdraw: false,
@@ -85,8 +84,8 @@ impl JarVersioned {
         self
     }
 
-    pub fn withdrawn(&self, score: &[Score], product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
-        JarV1 {
+    pub fn withdrawn(&self, score: &[Score], product: &Product, now: Timestamp) -> Self {
+        JarV2 {
             principal: self.principal - withdrawn_amount,
             cache: Some(JarCache {
                 updated_at: now,
@@ -102,9 +101,8 @@ impl Deref for JarVersioned {
     type Target = JarLastVersion;
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::V1(jar) => jar,
-            // Guaranteed by `BorshDeserialize` implementation
-            // Self::V2(jar) => jar, <- Add new version here
+            Self::V2(jar) => jar,
+            _ => panic_str("Cannot deref outdated version"),
         }
     }
 }
@@ -112,9 +110,8 @@ impl Deref for JarVersioned {
 impl DerefMut for JarVersioned {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::V1(jar) => jar,
-            // Guaranteed by `BorshDeserialize` implementation
-            // Self::V2(jar) => jar, <- Add new version here
+            Self::V2(jar) => jar,
+            _ => panic_str("Cannot deref outdated version"),
         }
     }
 }
@@ -122,5 +119,11 @@ impl DerefMut for JarVersioned {
 impl From<JarV1> for JarVersioned {
     fn from(value: JarV1) -> Self {
         Self::V1(value)
+    }
+}
+
+impl From<JarV2> for JarVersioned {
+    fn from(value: JarV2) -> Self {
+        Self::V2(value)
     }
 }

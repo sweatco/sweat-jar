@@ -15,7 +15,7 @@ use sweat_jar_model::{
 use crate::{
     common::Timestamp,
     event::{emit, EventKind, TopUpData},
-    jar::model::{Jar, JarLastVersion},
+    jar::model::{v2::Deposit, Jar, JarLastVersion},
     product::model::{Apy, Product, Terms},
     score::AccountScore,
     Contract, JarsStorage,
@@ -113,60 +113,6 @@ impl JarLastVersion {
         self.principal == 0
     }
 
-    fn get_interest_for_term(&self, cache: u128, apy: UDecimal, term: Timestamp) -> (TokenAmount, u64) {
-        let term_in_milliseconds: u128 = term.into();
-
-        let yearly_interest = apy * self.principal;
-
-        let ms_in_year: u128 = MS_IN_YEAR.into();
-
-        let interest = term_in_milliseconds * yearly_interest;
-
-        // This will never fail because `MS_IN_YEAR` is u64
-        // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
-        let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
-
-        let interest = interest / ms_in_year;
-
-        let total_remainder = self.claim_remainder + remainder;
-
-        (
-            cache + interest + u128::from(total_remainder / MS_IN_YEAR),
-            total_remainder % MS_IN_YEAR,
-        )
-    }
-
-    fn get_interest_with_apy(&self, apy: UDecimal, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
-        let (base_date, cache_interest) = if let Some(cache) = &self.cache {
-            (cache.updated_at, cache.interest)
-        } else {
-            (self.created_at, 0)
-        };
-
-        let until_date = self.get_interest_until_date(product, now);
-
-        let effective_term = if until_date > base_date {
-            until_date - base_date
-        } else {
-            return (cache_interest, 0);
-        };
-
-        self.get_interest_for_term(cache_interest, apy, effective_term)
-    }
-
-    fn get_score_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
-        let cache = self.cache.map(|c| c.interest).unwrap_or_default();
-
-        if let Terms::Fixed(end_term) = &product.terms {
-            if now > end_term.lockup_term {
-                return (cache, 0);
-            }
-        }
-
-        let apy = product.apy_for_score(score);
-        self.get_interest_for_term(cache, apy, MS_IN_DAY)
-    }
-
     pub(crate) fn get_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
         if product.is_score_product() {
             self.get_score_interest(score, product, now)
@@ -188,11 +134,50 @@ impl JarLastVersion {
         }
     }
 
-    fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
-        match product.terms.clone() {
-            Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
-            Terms::Flexible => now,
+    fn get_interest_with_apy(&self, apy: UDecimal, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
+        let (cache_date, cached_interest) = if let Some(cache) = &self.cache {
+            (Some(cache.updated_at), cache.interest)
+        } else {
+            (None, 0)
+        };
+
+        let mut interest = 0;
+        let mut remainder = 0;
+        for deposit in self.deposits.iter() {
+            let deposit_interest = deposit.get_interest_with_apy(apy, product, now, cache_date);
+            interest += deposit_interest.0;
+            remainder += deposit_interest.1;
         }
+
+        (
+            cached_interest + interest + u128::from(remainder / MS_IN_YEAR),
+            remainder % MS_IN_YEAR,
+        )
+    }
+
+    fn get_score_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
+        let cached_interest = self.cache.map(|c| c.interest).unwrap_or_default();
+
+        if let Terms::Fixed(end_term) = &product.terms {
+            if now > end_term.lockup_term {
+                return (cached_interest, 0);
+            }
+        }
+
+        let apy = product.apy_for_score(score);
+
+        let mut interest = 0;
+        let mut remainder = 0;
+        for deposit in self.deposits.iter() {
+            let deposit_interest = deposit.get_interest_for_term(apy, MS_IN_DAY);
+            interest += deposit_interest.0;
+            remainder += deposit_interest.1;
+        }
+
+        (
+            cached_interest + interest + u128::from(remainder / MS_IN_YEAR),
+            remainder % MS_IN_YEAR,
+        )
     }
 }
 
@@ -204,6 +189,52 @@ impl JarLastVersion {
 pub struct JarCache {
     pub updated_at: Timestamp,
     pub interest: TokenAmount,
+}
+
+impl Deposit {
+    fn get_interest_with_apy(
+        &self,
+        apy: UDecimal,
+        product: &Product,
+        now: Timestamp,
+        since_date: Option<Timestamp>,
+    ) -> (TokenAmount, u64) {
+        let since_date = since_date.unwrap_or(self.created_at);
+
+        let until_date = self.get_interest_until_date(product, now);
+
+        let effective_term = if until_date > since_date {
+            until_date - since_date
+        } else {
+            return (0, 0);
+        };
+
+        self.get_interest_for_term(apy, effective_term)
+    }
+
+    fn get_interest_for_term(&self, apy: UDecimal, term: Timestamp) -> (TokenAmount, u64) {
+        let term_in_milliseconds: u128 = term.into();
+
+        let yearly_interest = apy * self.principal;
+
+        let ms_in_year: u128 = MS_IN_YEAR.into();
+
+        let interest = term_in_milliseconds * yearly_interest;
+
+        // This will never fail because `MS_IN_YEAR` is u64
+        // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
+        let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
+        let interest = interest / ms_in_year;
+
+        (interest, remainder)
+    }
+
+    fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
+        match product.terms.clone() {
+            Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
+            Terms::Flexible => now,
+        }
+    }
 }
 
 impl Contract {
@@ -239,7 +270,7 @@ impl Contract {
 
         let id = self.increment_and_get_last_jar_id();
         let now = env::block_timestamp_ms();
-        let jar = Jar::create(id, account_id.clone(), product_id.clone(), amount, now);
+        let jar = Jar::create(id, product_id.clone(), amount, now);
 
         self.add_new_jar(&account_id, jar.clone());
 
