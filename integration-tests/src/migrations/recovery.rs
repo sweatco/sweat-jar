@@ -10,7 +10,7 @@ use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration},
     claimed_amount_view::ClaimedAmountView,
     product::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
-    MS_IN_SECOND,
+    MS_IN_MINUTE, MS_IN_SECOND,
 };
 use sweat_model::SweatContract;
 use tokio::time::sleep;
@@ -45,6 +45,10 @@ async fn token_testnet_contract(worker: &Worker<Testnet>) -> Result<Contract> {
 
 async fn testnet_user(worker: &Worker<Testnet>) -> Result<Account> {
     acc_with_name("testnet_user.testnet", worker).await
+}
+
+async fn testnet_user_2(worker: &Worker<Testnet>) -> Result<Account> {
+    acc_with_name("testnet_user_2.testnet", worker).await
 }
 
 async fn jar_manager(worker: &Worker<Testnet>) -> Result<Account> {
@@ -111,13 +115,13 @@ fn _get_products() -> Vec<RegisterProductCommand> {
 
 async fn _register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -> Result<()> {
     jar.register_product(RegisterProductCommand {
-        id: "testnet_migration_test_product".to_string(),
-        apy_default: (1.into(), 0),
+        id: "5min_50apy_restakable_no_signature".to_string(),
+        apy_default: (5.into(), 1),
         apy_fallback: None,
         cap_min: 1_000_000.into(),
         cap_max: 500000000000000000000000.into(),
         terms: TermsDto::Fixed(FixedProductTermsDto {
-            lockup_term: (MS_IN_SECOND * 5).into(),
+            lockup_term: (MS_IN_MINUTE * 5).into(),
             allows_top_up: false,
             allows_restaking: false,
         }),
@@ -128,6 +132,41 @@ async fn _register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -
     })
     .with_user(manager)
     .await?;
+    Ok(())
+}
+
+#[ignore]
+#[tokio::test]
+async fn create_many_jars() -> Result<()> {
+    let worker = near_workspaces::testnet().await?;
+
+    let user = testnet_user_2(&worker).await?;
+    let _manager = jar_manager(&worker).await?;
+    let token = token_testnet_contract(&worker).await?;
+    let token = SweatContract { contract: &token };
+
+    let jar = jar_testnet_contract(&worker).await?;
+    let jar = SweatJarContract { contract: &jar };
+
+    let jars = jar.get_jars_for_account(user.to_near()).await?;
+
+    dbg!(&jars.len());
+
+    // for _ in 0..1000 {
+    //     jar.create_jar(
+    //         &user,
+    //         "5min_50apy_restakable_no_signature".to_string(),
+    //         1000000000000000000,
+    //         &token,
+    //     )
+    //     .await?
+    //     .0;
+    // }
+
+    let jars = jar.get_jars_for_account(user.to_near()).await?;
+
+    dbg!(&jars.len());
+
     Ok(())
 }
 
