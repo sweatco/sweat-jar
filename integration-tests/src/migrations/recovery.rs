@@ -10,7 +10,7 @@ use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration},
     claimed_amount_view::ClaimedAmountView,
     product::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
-    MS_IN_MINUTE, MS_IN_SECOND,
+    MS_IN_DAY, MS_IN_SECOND,
 };
 use sweat_model::SweatContract;
 use tokio::time::sleep;
@@ -113,25 +113,38 @@ fn _get_products() -> Vec<RegisterProductCommand> {
     products
 }
 
-async fn _register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -> Result<()> {
+async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -> Result<()> {
     jar.register_product(RegisterProductCommand {
-        id: "5min_50apy_restakable_no_signature".to_string(),
-        apy_default: (5.into(), 1),
+        id: "5_days_20000_steps".to_string(),
+        apy_default: (0.into(), 0),
         apy_fallback: None,
         cap_min: 1_000_000.into(),
         cap_max: 500000000000000000000000.into(),
         terms: TermsDto::Fixed(FixedProductTermsDto {
-            lockup_term: (MS_IN_MINUTE * 5).into(),
+            lockup_term: (MS_IN_DAY * 5).into(),
             allows_top_up: false,
             allows_restaking: false,
         }),
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
-        score_cap: 0,
+        score_cap: 20_000,
     })
     .with_user(manager)
     .await?;
+    Ok(())
+}
+
+#[ignore]
+#[tokio::test]
+async fn register_product() -> Result<()> {
+    let worker = near_workspaces::testnet().await?;
+
+    let jar = jar_testnet_contract(&worker).await?;
+    let jar = SweatJarContract { contract: &jar };
+
+    register_test_product(&jar_manager(&worker).await?, &jar).await?;
+
     Ok(())
 }
 
@@ -152,16 +165,16 @@ async fn create_many_jars() -> Result<()> {
 
     dbg!(&jars.len());
 
-    // for _ in 0..1000 {
-    //     jar.create_jar(
-    //         &user,
-    //         "5min_50apy_restakable_no_signature".to_string(),
-    //         1000000000000000000,
-    //         &token,
-    //     )
-    //     .await?
-    //     .0;
-    // }
+    for _ in 0..1000 {
+        jar.create_jar(
+            &user,
+            "5min_50apy_restakable_no_signature".to_string(),
+            1000000000000000000,
+            &token,
+        )
+        .await?
+        .0;
+    }
 
     let jars = jar.get_jars_for_account(user.to_near()).await?;
 
