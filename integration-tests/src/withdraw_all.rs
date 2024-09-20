@@ -59,6 +59,9 @@ async fn withdraw_all() -> Result<()> {
 
     context.fast_forward_minutes(6).await?;
 
+    // 3 calls to claim all 210 jars
+    context.sweat_jar().claim_total(None).with_user(&alice).await?;
+    context.sweat_jar().claim_total(None).with_user(&alice).await?;
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
     let alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
