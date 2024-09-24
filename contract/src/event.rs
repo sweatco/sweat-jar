@@ -75,13 +75,8 @@ struct SweatJarEvent {
 /// `JarId` and interest to claim
 pub type ClaimEventItem = (JarId, U128);
 
-#[derive(Debug)]
-#[near(serializers=[json])]
-pub struct WithdrawData {
-    pub id: JarId,
-    pub fee: U128,
-    pub amount: U128,
-}
+/// (id, fee, amount)
+pub type WithdrawData = (JarId, U128, U128);
 
 #[derive(Debug)]
 #[near(serializers=[json])]
@@ -91,12 +86,8 @@ pub struct MigrationEventItem {
     pub account_id: AccountId,
 }
 
-#[derive(Debug)]
-#[near(serializers=[json])]
-pub struct RestakeData {
-    pub old_id: JarId,
-    pub new_id: JarId,
-}
+/// (`old_id`, `new_id`)
+pub type RestakeData = (JarId, JarId);
 
 #[derive(Debug)]
 #[near(serializers=[json])]
@@ -196,7 +187,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.3.0");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-3.3.4");
     }
 
     #[test]
@@ -209,7 +200,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.0",
+  "version": "3.3.4",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -237,7 +228,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.0",
+  "version": "3.3.4",
   "event": "create_jar",
   "data": {
     "id": 555,
@@ -257,7 +248,7 @@ mod test {
             SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.0",
+  "version": "3.3.4",
   "event": "claim",
   "data": [
     [
@@ -286,7 +277,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.0",
+  "version": "3.3.4",
   "event": "record_score",
   "data": [
     {
@@ -315,7 +306,7 @@ mod test {
             SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.0",
+  "version": "3.3.4",
   "event": "old_score_warning",
   "data": [
     111,

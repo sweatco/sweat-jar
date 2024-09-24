@@ -1,3 +1,5 @@
+use std::{cell::RefCell, collections::HashMap};
+
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -59,6 +61,11 @@ pub struct Contract {
 
     pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+
+    /// Cache to make access to products faster
+    /// Is not stored in contract state so it should be always skipped by borsh
+    #[borsh(skip)]
+    pub products_cache: RefCell<HashMap<ProductId, Product>>,
 }
 
 #[near]
@@ -91,6 +98,7 @@ impl InitApi for Contract {
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
             accounts: LookupMap::new(StorageKey::AccountsVersioned),
+            products_cache: HashMap::default().into(),
         }
     }
 }

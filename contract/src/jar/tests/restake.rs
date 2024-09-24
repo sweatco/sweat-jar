@@ -84,6 +84,8 @@ fn restake_with_disabled_product() {
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id, false));
 
+    context.contract().products_cache.borrow_mut().clear();
+
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
