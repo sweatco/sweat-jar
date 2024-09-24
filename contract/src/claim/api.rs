@@ -1,8 +1,6 @@
-use std::collections::HashMap;
-
 use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, ProductId, TokenAmount,
+    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, TokenAmount,
 };
 
 use crate::{
@@ -11,7 +9,7 @@ use crate::{
     internal::is_promise_success,
     jar::model::Jar,
     score::AccountScore,
-    Contract, ContractExt, JarsStorage, Product,
+    Contract, ContractExt, JarsStorage,
 };
 
 #[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
@@ -47,10 +45,6 @@ impl Contract {
 
         let account_jars = self.account_jars(&account_id);
 
-        // UnorderedMap doesn't have cache and deserializes `Product` on each get
-        // This cache significantly reduces gas usage
-        let mut products_cache: HashMap<ProductId, Product> = HashMap::new();
-
         let account_score = self.get_score_mut(&account_id);
 
         let account_score_before_transfer = account_score.as_ref().map(|s| **s);
@@ -61,10 +55,8 @@ impl Contract {
             .iter()
             .filter(|jar| !jar.is_pending_withdraw)
             .map(|jar| {
-                let product = products_cache
-                    .entry(jar.product_id.clone())
-                    .or_insert_with(|| self.get_product(&jar.product_id));
-                (jar.get_interest(&score, product, now), jar)
+                let product = self.get_product(&jar.product_id);
+                (jar.get_interest(&score, &product, now), jar)
             })
             .collect();
 

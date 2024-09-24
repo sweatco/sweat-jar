@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use near_sdk::{collections::UnorderedMap, env, near, near_bindgen, store::LookupMap, AccountId, PanicOnDefault};
 use sweat_jar_model::{api::MigrationToStepJars, jar::JarId, ProductId};
 
@@ -70,6 +72,7 @@ impl MigrationToStepJars for Contract {
             accounts: LookupMap::new(StorageKey::AccountsVersioned),
             account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
+            products_cache: HashMap::default().into(),
         }
     }
 }

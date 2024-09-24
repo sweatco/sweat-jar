@@ -4,13 +4,12 @@ use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, Acc
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
-    ProductId, TokenAmount, U32,
+    TokenAmount, U32,
 };
 
 use crate::{
     event::{emit, EventKind, RestakeData},
     jar::model::Jar,
-    product::model::Product,
     score::AccountScore,
     Contract, ContractExt, JarsStorage,
 };
@@ -146,21 +145,15 @@ impl JarApi for Contract {
         let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        // UnorderedMap doesn't have cache and deserializes `Product` on each get
-        // This cache significantly reduces gas usage
-        let mut products_cache: HashMap<ProductId, Product> = HashMap::new();
-
         let score = self
             .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let product = products_cache
-                .entry(jar.product_id.clone())
-                .or_insert_with(|| self.get_product(&jar.product_id));
+            let product = self.get_product(&jar.product_id);
 
-            let interest = jar.get_interest(&score, product, now).0;
+            let interest = jar.get_interest(&score, &product, now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;

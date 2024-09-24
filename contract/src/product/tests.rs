@@ -44,6 +44,8 @@ fn disable_product_when_enabled() {
         context.contract().set_enabled(product.id.to_string(), false)
     });
 
+    context.contract().products_cache.borrow_mut().clear();
+
     product = context.contract().get_product(&product.id);
     assert!(!product.is_enabled);
 }
