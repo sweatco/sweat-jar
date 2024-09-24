@@ -8,7 +8,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    event::{emit, EventKind, RestakeData},
+    event::{emit, EventKind},
     jar::model::Jar,
     score::AccountScore,
     Contract, ContractExt, JarsStorage,
@@ -172,10 +172,7 @@ impl JarApi for Contract {
         self.migrate_account_if_needed(&env::predecessor_account_id());
         let (old_id, jar) = self.restake_internal(jar_id);
 
-        emit(EventKind::Restake(RestakeData {
-            old_id,
-            new_id: jar.id.0,
-        }));
+        emit(EventKind::Restake((old_id, jar.id.0)));
 
         jar
     }
@@ -198,6 +195,7 @@ impl JarApi for Contract {
             .jars
             .iter()
             .filter(|j| self.can_be_restaked(j, now))
+            .take(100)
             .cloned()
             .collect();
 
@@ -211,10 +209,7 @@ impl JarApi for Contract {
 
         for jar in &jars {
             let (old_id, restaked) = self.restake_internal(jar.id.into());
-            event_data.push(RestakeData {
-                old_id,
-                new_id: restaked.id.0,
-            });
+            event_data.push((old_id, restaked.id.0));
             result.push(restaked);
         }
 

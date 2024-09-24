@@ -1,6 +1,8 @@
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
-use sweat_jar_model::api::{ClaimApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration};
+use sweat_jar_model::api::{
+    ClaimApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, WithdrawApiIntegration,
+};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -70,6 +72,22 @@ async fn claim_many_jars() -> Result<()> {
             .amount
             .total
             .0,
+        0
+    );
+
+    assert_eq!(
+        context.sweat_jar().get_jars_for_account(alice.to_near()).await?.len(),
+        4000
+    );
+
+    for _ in 0..40 {
+        let withdrawn_summ = context.sweat_jar().withdraw_all(None).with_user(&alice).await?;
+        assert_eq!(withdrawn_summ.jars.len(), 100);
+        assert_eq!(withdrawn_summ.total_amount.0, 1000 * 100);
+    }
+
+    assert_eq!(
+        context.sweat_jar().get_jars_for_account(alice.to_near()).await?.len(),
         0
     );
 
