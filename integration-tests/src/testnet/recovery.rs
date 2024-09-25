@@ -1,7 +1,7 @@
 use std::{fs::read_to_string, time::Duration};
 
 use anyhow::Result;
-use near_workspaces::{network::Testnet, Account, Contract, Worker};
+use near_workspaces::Account;
 use nitka::{
     misc::ToNear,
     near_sdk::{serde_json, serde_json::Value},
@@ -12,48 +12,9 @@ use sweat_jar_model::{
     product::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
     MS_IN_DAY, MS_IN_SECOND,
 };
-use sweat_model::SweatContract;
 use tokio::time::sleep;
 
-use crate::jar_contract_extensions::JarContractExtensions;
-
-async fn acc_from_file(path: &str, worker: &Worker<Testnet>) -> Result<Account> {
-    let account = Account::from_file(path, &worker)?;
-    Ok(account)
-}
-
-async fn acc_with_name(name: &str, worker: &Worker<Testnet>) -> Result<Account> {
-    let home = dirs::home_dir().unwrap();
-    acc_from_file(
-        &format!("{}/.near-credentials/testnet/{name}.json", home.display()),
-        worker,
-    )
-    .await
-}
-
-async fn jar_testnet_contract(worker: &Worker<Testnet>) -> Result<Contract> {
-    let account = acc_with_name("v8.jar.sweatty.testnet", worker).await?;
-    let contract = Contract::from_secret_key(account.id().clone(), account.secret_key().clone(), worker);
-    Ok(contract)
-}
-
-async fn token_testnet_contract(worker: &Worker<Testnet>) -> Result<Contract> {
-    let account = acc_with_name("vfinal.token.sweat.testnet", worker).await?;
-    let contract = Contract::from_secret_key(account.id().clone(), account.secret_key().clone(), worker);
-    Ok(contract)
-}
-
-async fn testnet_user(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("testnet_user.testnet", worker).await
-}
-
-async fn testnet_user_2(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("testnet_user_2.testnet", worker).await
-}
-
-async fn jar_manager(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("bob_account.testnet", worker).await
-}
+use crate::{jar_contract_extensions::JarContractExtensions, testnet::testnet_context::TestnetContext};
 
 fn _get_products() -> Vec<RegisterProductCommand> {
     let json_str = read_to_string("../products_testnet.json").unwrap();
@@ -138,12 +99,9 @@ async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) ->
 #[ignore]
 #[tokio::test]
 async fn register_product() -> Result<()> {
-    let worker = near_workspaces::testnet().await?;
+    let ctx = TestnetContext::new().await?;
 
-    let jar = jar_testnet_contract(&worker).await?;
-    let jar = SweatJarContract { contract: &jar };
-
-    register_test_product(&jar_manager(&worker).await?, &jar).await?;
+    register_test_product(&ctx.manager, &ctx.jar()).await?;
 
     Ok(())
 }
@@ -151,32 +109,25 @@ async fn register_product() -> Result<()> {
 #[ignore]
 #[tokio::test]
 async fn create_many_jars() -> Result<()> {
-    let worker = near_workspaces::testnet().await?;
+    let ctx = TestnetContext::new().await?;
 
-    let user = testnet_user_2(&worker).await?;
-    let _manager = jar_manager(&worker).await?;
-    let token = token_testnet_contract(&worker).await?;
-    let token = SweatContract { contract: &token };
-
-    let jar = jar_testnet_contract(&worker).await?;
-    let jar = SweatJarContract { contract: &jar };
-
-    let jars = jar.get_jars_for_account(user.to_near()).await?;
+    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
 
     dbg!(&jars.len());
 
     for _ in 0..1000 {
-        jar.create_jar(
-            &user,
-            "5min_50apy_restakable_no_signature".to_string(),
-            1000000000000000000,
-            &token,
-        )
-        .await?
-        .0;
+        ctx.jar()
+            .create_jar(
+                &ctx.user,
+                "5min_50apy_restakable_no_signature".to_string(),
+                1000000000000000000,
+                &ctx.token(),
+            )
+            .await?
+            .0;
     }
 
-    let jars = jar.get_jars_for_account(user.to_near()).await?;
+    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
 
     dbg!(&jars.len());
 
@@ -190,23 +141,16 @@ async fn testnet_sanity_check() -> Result<()> {
     const PRODUCT_ID: &str = "testnet_migration_test_product";
     const PRINCIPAL: u128 = 1222333334567778000;
 
-    let worker = near_workspaces::testnet().await?;
+    let ctx = TestnetContext::new().await?;
 
-    let user = testnet_user(&worker).await?;
-    let _manager = jar_manager(&worker).await?;
-    let token = token_testnet_contract(&worker).await?;
-    let token = SweatContract { contract: &token };
+    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
 
-    let jar = jar_testnet_contract(&worker).await?;
-    let jar = SweatJarContract { contract: &jar };
-
-    let jars = jar.get_jars_for_account(user.to_near()).await?;
-
-    jar.create_jar(&user, PRODUCT_ID.to_string(), PRINCIPAL, &token)
+    ctx.jar()
+        .create_jar(&ctx.user, PRODUCT_ID.to_string(), PRINCIPAL, &ctx.token())
         .await?
         .0;
 
-    let jars_after = jar.get_jars_for_account(user.to_near()).await?;
+    let jars_after = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
 
     assert_eq!(jars.len() + 1, jars_after.len());
 
@@ -221,11 +165,11 @@ async fn testnet_sanity_check() -> Result<()> {
 
     sleep(Duration::from_secs(5)).await;
 
-    let withdrawn = jar.withdraw_all(None).with_user(&user).await?;
+    let withdrawn = ctx.jar().withdraw_all(None).with_user(&ctx.user).await?;
 
     assert!(withdrawn.jars.into_iter().any(|j| j.withdrawn_amount.0 == PRINCIPAL));
 
-    let ClaimedAmountView::Detailed(claimed) = jar.claim_total(Some(true)).with_user(&user).await? else {
+    let ClaimedAmountView::Detailed(claimed) = ctx.jar().claim_total(Some(true)).with_user(&ctx.user).await? else {
         panic!()
     };
 
@@ -233,10 +177,29 @@ async fn testnet_sanity_check() -> Result<()> {
 
     assert_eq!(claimed_jar.0, 193799678869);
 
-    let jars = jar.get_jars_for_account(user.to_near()).await?;
+    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
 
     // Jar is deleted after full claim and withdraw
     assert!(!jars.into_iter().any(|j| j.id == new_jar.id));
+
+    Ok(())
+}
+
+#[ignore]
+#[tokio::test]
+async fn sandbox() -> Result<()> {
+    let ctx = TestnetContext::new().await?;
+
+    let jars = ctx.jar().get_jars_for_account(ctx.user2.to_near()).await?;
+    dbg!(&jars);
+
+    ctx.jar()
+        .unlock_jars_for_account(ctx.user2.to_near())
+        .with_user(&ctx.manager)
+        .await?;
+
+    let jars = ctx.jar().get_jars_for_account(ctx.user2.to_near()).await?;
+    dbg!(&jars);
 
     Ok(())
 }
