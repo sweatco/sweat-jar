@@ -60,11 +60,13 @@ impl JarLastVersion {
             "Applying penalty is not supported for score based jars"
         );
 
-        let current_interest = self.get_interest(&[], product, now).0;
+        let (interest, remainder) = self.get_interest(&[], product, now);
+
+        self.claim_remainder = remainder;
 
         self.cache = Some(JarCache {
             updated_at: now,
-            interest: current_interest,
+            interest,
         });
         self.is_penalty_applied = is_applied;
     }

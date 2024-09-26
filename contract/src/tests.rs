@@ -290,7 +290,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
     context.set_block_timestamp_in_ms(3_700_000);
 
     let interest = context.contract().get_total_interest(alice.clone()).amount.total.0;
-    assert_eq!(interest, 1_613_140_537_798_072_042);
+    assert_eq!(interest, 1_613_140_537_798_072_044);
 }
 
 #[test]
@@ -344,10 +344,10 @@ fn apply_penalty_in_batch() {
     context.set_block_timestamp_in_days(365);
 
     let interest = context.contract().get_total_interest(alice.clone()).amount.total.0;
-    assert_eq!(interest, 1_498_630_000);
+    assert_eq!(interest, 1_498_630_100);
 
     let interest = context.contract().get_total_interest(bob.clone()).amount.total.0;
-    assert_eq!(interest, 749_315_000);
+    assert_eq!(interest, 749_315_050);
 
     let alice_jars = context.contract().get_jars_for_account(alice);
     let bob_jars = context.contract().get_jars_for_account(bob);
