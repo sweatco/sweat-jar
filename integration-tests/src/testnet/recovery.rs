@@ -101,7 +101,7 @@ async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) ->
 async fn register_product() -> Result<()> {
     let ctx = TestnetContext::new().await?;
 
-    register_test_product(&ctx.manager, &ctx.jar()).await?;
+    register_test_product(&ctx.manager, &ctx.jar_contract()).await?;
 
     Ok(())
 }
@@ -111,23 +111,23 @@ async fn register_product() -> Result<()> {
 async fn create_many_jars() -> Result<()> {
     let ctx = TestnetContext::new().await?;
 
-    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
     dbg!(&jars.len());
 
     for _ in 0..1000 {
-        ctx.jar()
+        ctx.jar_contract()
             .create_jar(
                 &ctx.user,
                 "5min_50apy_restakable_no_signature".to_string(),
                 1000000000000000000,
-                &ctx.token(),
+                &ctx.token_contract(),
             )
             .await?
             .0;
     }
 
-    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
     dbg!(&jars.len());
 
@@ -143,14 +143,14 @@ async fn testnet_sanity_check() -> Result<()> {
 
     let ctx = TestnetContext::new().await?;
 
-    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
-    ctx.jar()
-        .create_jar(&ctx.user, PRODUCT_ID.to_string(), PRINCIPAL, &ctx.token())
+    ctx.jar_contract()
+        .create_jar(&ctx.user, PRODUCT_ID.to_string(), PRINCIPAL, &ctx.token_contract())
         .await?
         .0;
 
-    let jars_after = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
+    let jars_after = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
     assert_eq!(jars.len() + 1, jars_after.len());
 
@@ -165,11 +165,12 @@ async fn testnet_sanity_check() -> Result<()> {
 
     sleep(Duration::from_secs(5)).await;
 
-    let withdrawn = ctx.jar().withdraw_all(None).with_user(&ctx.user).await?;
+    let withdrawn = ctx.jar_contract().withdraw_all(None).with_user(&ctx.user).await?;
 
     assert!(withdrawn.jars.into_iter().any(|j| j.withdrawn_amount.0 == PRINCIPAL));
 
-    let ClaimedAmountView::Detailed(claimed) = ctx.jar().claim_total(Some(true)).with_user(&ctx.user).await? else {
+    let ClaimedAmountView::Detailed(claimed) = ctx.jar_contract().claim_total(Some(true)).with_user(&ctx.user).await?
+    else {
         panic!()
     };
 
@@ -177,7 +178,7 @@ async fn testnet_sanity_check() -> Result<()> {
 
     assert_eq!(claimed_jar.0, 193799678869);
 
-    let jars = ctx.jar().get_jars_for_account(ctx.user.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
     // Jar is deleted after full claim and withdraw
     assert!(!jars.into_iter().any(|j| j.id == new_jar.id));
@@ -190,15 +191,15 @@ async fn testnet_sanity_check() -> Result<()> {
 async fn sandbox() -> Result<()> {
     let ctx = TestnetContext::new().await?;
 
-    let jars = ctx.jar().get_jars_for_account(ctx.user2.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
     dbg!(&jars);
 
-    ctx.jar()
+    ctx.jar_contract()
         .unlock_jars_for_account(ctx.user2.to_near())
         .with_user(&ctx.manager)
         .await?;
 
-    let jars = ctx.jar().get_jars_for_account(ctx.user2.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
     dbg!(&jars);
 
     Ok(())

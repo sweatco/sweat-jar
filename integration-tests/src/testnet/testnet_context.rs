@@ -34,13 +34,13 @@ impl TestnetContext {
         })
     }
 
-    pub fn jar(&self) -> SweatJarContract<'_> {
+    pub fn jar_contract(&self) -> SweatJarContract<'_> {
         SweatJarContract {
             contract: &self.jar_contract,
         }
     }
 
-    pub fn token(&self) -> SweatContract<'_> {
+    pub fn token_contract(&self) -> SweatContract<'_> {
         SweatContract {
             contract: &self.token_contract,
         }
