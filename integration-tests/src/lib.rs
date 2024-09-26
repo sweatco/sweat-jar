@@ -15,5 +15,6 @@ mod product;
 mod product_actions;
 mod restake;
 mod step_jars;
+mod testnet;
 mod withdraw_all;
 mod withdraw_fee;
