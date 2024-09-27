@@ -1,16 +1,15 @@
 use std::{fs::read_to_string, time::Duration};
 
 use anyhow::Result;
-use near_workspaces::Account;
 use nitka::{
     misc::ToNear,
     near_sdk::{serde_json, serde_json::Value},
 };
 use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration},
+    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, WithdrawApiIntegration},
     claimed_amount_view::ClaimedAmountView,
     product::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
-    MS_IN_DAY, MS_IN_SECOND,
+    MS_IN_MINUTE, MS_IN_SECOND,
 };
 use tokio::time::sleep;
 
@@ -74,34 +73,30 @@ fn _get_products() -> Vec<RegisterProductCommand> {
     products
 }
 
-async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -> Result<()> {
-    jar.register_product(RegisterProductCommand {
-        id: "5_days_20000_steps".to_string(),
-        apy_default: (0.into(), 0),
-        apy_fallback: None,
-        cap_min: 1_000_000.into(),
-        cap_max: 500000000000000000000000.into(),
-        terms: TermsDto::Fixed(FixedProductTermsDto {
-            lockup_term: (MS_IN_DAY * 5).into(),
-            allows_top_up: false,
-            allows_restaking: false,
-        }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        score_cap: 20_000,
-    })
-    .with_user(manager)
-    .await?;
-    Ok(())
-}
-
 #[ignore]
 #[tokio::test]
 async fn register_product() -> Result<()> {
     let ctx = TestnetContext::new().await?;
 
-    register_test_product(&ctx.manager, &ctx.jar_contract()).await?;
+    ctx.jar_contract()
+        .register_product(RegisterProductCommand {
+            id: "5_min_100_apy_restackable".to_string(),
+            apy_default: (100.into(), 2),
+            apy_fallback: None,
+            cap_min: 1_000.into(),
+            cap_max: 500000000000000000000000.into(),
+            terms: TermsDto::Fixed(FixedProductTermsDto {
+                lockup_term: (MS_IN_MINUTE * 5).into(),
+                allows_top_up: false,
+                allows_restaking: true,
+            }),
+            withdrawal_fee: None,
+            public_key: None,
+            is_enabled: true,
+            score_cap: 0,
+        })
+        .with_user(&ctx.manager)
+        .await?;
 
     Ok(())
 }
@@ -111,23 +106,24 @@ async fn register_product() -> Result<()> {
 async fn create_many_jars() -> Result<()> {
     let ctx = TestnetContext::new().await?;
 
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
 
     dbg!(&jars.len());
 
-    for _ in 0..1000 {
+    // Creates 25 * 40 = 1000 jars
+    for _ in 0..10 {
         ctx.jar_contract()
-            .create_jar(
-                &ctx.user,
-                "5min_50apy_restakable_no_signature".to_string(),
-                1000000000000000000,
+            .create_many_jars(
+                &ctx.user2,
+                "5_min_100_apy_restackable".to_string(),
+                300_000_000_000_000_000_000_00,
+                30,
                 &ctx.token_contract(),
             )
-            .await?
-            .0;
+            .await?;
     }
 
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
 
     dbg!(&jars.len());
 
@@ -192,15 +188,7 @@ async fn sandbox() -> Result<()> {
     let ctx = TestnetContext::new().await?;
 
     let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
-    dbg!(&jars);
-
-    ctx.jar_contract()
-        .unlock_jars_for_account(ctx.user2.to_near())
-        .with_user(&ctx.manager)
-        .await?;
-
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
-    dbg!(&jars);
+    dbg!(&jars.len());
 
     Ok(())
 }
