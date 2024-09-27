@@ -1,6 +1,6 @@
 use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, TokenAmount,
+    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, TokenAmount, JAR_BATCH_SIZE,
 };
 
 use crate::{
@@ -62,7 +62,7 @@ impl Contract {
 
         unlocked_jars.sort_by(|a, b| b.0 .0.cmp(&a.0 .0));
 
-        let jars_to_claim: Vec<_> = unlocked_jars.into_iter().take(100).collect();
+        let jars_to_claim: Vec<_> = unlocked_jars.into_iter().take(JAR_BATCH_SIZE).collect();
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 

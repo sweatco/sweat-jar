@@ -113,13 +113,10 @@ async fn restake_all() -> Result<()> {
 
     // Restaking in batches
     let restaked = context.sweat_jar().restake_all(None).with_user(&alice).await?;
-    assert_eq!(restaked.len(), 100);
+    assert_eq!(restaked.len(), 200);
 
     let restaked_2 = context.sweat_jar().restake_all(None).with_user(&alice).await?;
-    assert_eq!(restaked_2.len(), 100);
-
-    let restaked_3 = context.sweat_jar().restake_all(None).with_user(&alice).await?;
-    assert_eq!(restaked_3.len(), 12);
+    assert_eq!(restaked_2.len(), 12);
 
     assert_eq!(
         restaked.into_iter().map(|j| j.principal).collect::<Vec<_>>()[..2],
