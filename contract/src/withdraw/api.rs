@@ -9,7 +9,7 @@ use sweat_jar_model::{
     api::WithdrawApi,
     jar::{JarId, JarIdView},
     withdraw::{BulkWithdrawView, Fee, WithdrawView},
-    TokenAmount,
+    TokenAmount, JAR_BATCH_SIZE,
 };
 
 use crate::internal::is_promise_success;
@@ -124,7 +124,7 @@ impl WithdrawApi for Contract {
 
                 (jar, product).into()
             })
-            .take(100)
+            .take(JAR_BATCH_SIZE)
             .collect();
 
         let jars: Vec<JarWithdraw> = jars

@@ -4,7 +4,7 @@ use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, Acc
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
-    TokenAmount, U32,
+    TokenAmount, JAR_BATCH_SIZE, U32,
 };
 
 use crate::{
@@ -195,7 +195,7 @@ impl JarApi for Contract {
             .jars
             .iter()
             .filter(|j| self.can_be_restaked(j, now))
-            .take(100)
+            .take(JAR_BATCH_SIZE)
             .cloned()
             .collect();
 

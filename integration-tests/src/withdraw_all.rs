@@ -59,8 +59,7 @@ async fn withdraw_all() -> Result<()> {
 
     context.fast_forward_minutes(6).await?;
 
-    // 3 calls to claim all 210 jars
-    context.sweat_jar().claim_total(None).with_user(&alice).await?;
+    // 2 calls to claim all 210 jars
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
@@ -71,13 +70,10 @@ async fn withdraw_all() -> Result<()> {
         .await?;
 
     let withdrawn = context.sweat_jar().withdraw_all(None).with_user(&alice).await?;
-    assert_eq!(withdrawn.jars.len(), 100);
+    assert_eq!(withdrawn.jars.len(), 200);
 
     let withdrawn_2 = context.sweat_jar().withdraw_all(None).with_user(&alice).await?;
-    assert_eq!(withdrawn_2.jars.len(), 100);
-
-    let withdrawn_3 = context.sweat_jar().withdraw_all(None).with_user(&alice).await?;
-    assert_eq!(withdrawn_3.jars.len(), 12);
+    assert_eq!(withdrawn_2.jars.len(), 12);
 
     let alice_balance_after = context.ft_contract().ft_balance_of(alice.to_near()).await?;
     let jar_balance_after = context
@@ -88,9 +84,8 @@ async fn withdraw_all() -> Result<()> {
     assert_eq!(alice_balance_after.0 - alice_balance.0, BULK_PRINCIPAL + 2000003);
     assert_eq!(jar_balance.0 - jar_balance_after.0, BULK_PRINCIPAL + 2000003);
 
-    assert_eq!(withdrawn.total_amount.0, 100000003);
-    assert_eq!(withdrawn_2.total_amount.0, PRINCIPAL * 100);
-    assert_eq!(withdrawn_3.total_amount.0, PRINCIPAL * 12);
+    assert_eq!(withdrawn.total_amount.0, 200000003);
+    assert_eq!(withdrawn_2.total_amount.0, PRINCIPAL * 12);
 
     assert_eq!(
         withdrawn.jars.iter().map(|j| j.withdrawn_amount).collect::<Vec<_>>()[..2],
