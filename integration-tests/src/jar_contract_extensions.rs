@@ -7,7 +7,7 @@ use nitka::{
     },
     ContractCall,
 };
-use sweat_jar_model::{api::SweatJarContract, jar::JarId, Timezone};
+use sweat_jar_model::{api::SweatJarContract, jar::JarId, ProductId, Timezone};
 use sweat_model::{FungibleTokenCoreIntegration, SweatContract};
 
 trait Internal {
@@ -43,6 +43,15 @@ impl Internal for SweatJarContract<'_> {
 }
 
 pub trait JarContractExtensions {
+    fn create_many_jars(
+        &self,
+        user: &Account,
+        product_id: ProductId,
+        amount: u128,
+        count: u16,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
+
     fn create_jar(
         &self,
         user: &Account,
@@ -89,6 +98,40 @@ pub trait JarContractExtensions {
 }
 
 impl JarContractExtensions for SweatJarContract<'_> {
+    fn create_many_jars(
+        &self,
+        user: &Account,
+        product_id: ProductId,
+        amount: u128,
+        count: u16,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
+        println!(
+            "▶️ Create many jars(product = {:?}) for user {:?} count: {:?} with {:?} tokens",
+            product_id,
+            user.id(),
+            count,
+            amount,
+        );
+
+        let msg = json!({
+            "type": "stake_many",
+            "data":
+                [
+                    {
+                        "ticket": {
+                            "product_id": product_id,
+                            "valid_until": "0",
+                        }
+                    },
+                    count
+                ]
+
+        });
+
+        self.create_jar_internal(user, msg, amount, ft_contract)
+    }
+
     fn create_jar(
         &self,
         user: &Account,
