@@ -2,7 +2,7 @@
 
 use std::panic::{catch_unwind, UnwindSafe};
 
-use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
+use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::{TokenAmount, UDecimal};
 
 use crate::{
@@ -28,10 +28,8 @@ impl Jar {
     pub(crate) fn new(id: u32) -> Jar {
         JarLastVersion {
             id,
-            account_id: alice(),
             product_id: PRODUCT.to_string(),
-            created_at: 0,
-            principal: 1_000_000,
+            deposits: vec![Deposit::new(0, 1_000_000)],
             cache: None,
             claimed_balance: 0,
             is_pending_withdraw: false,
@@ -46,18 +44,8 @@ impl Jar {
         self
     }
 
-    pub(crate) fn account_id(mut self, account_id: &AccountId) -> Jar {
-        self.account_id = account_id.clone();
-        self
-    }
-
-    pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {
-        self.principal = principal;
-        self
-    }
-
-    pub(crate) fn created_at(mut self, created_at: Timestamp) -> Jar {
-        self.created_at = created_at;
+    pub(crate) fn single_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Jar {
+        self.deposits = vec![Deposit::new(0, 1_000_000)];
         self
     }
 

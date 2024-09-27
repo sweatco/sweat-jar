@@ -11,6 +11,11 @@ pub type JarId = u32;
 
 pub type JarIdView = U32;
 
+enum JarViewVersioned {
+    V1(JarViewV1),
+    V2(JarViewV2),
+}
+
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers=[json])]
 pub struct JarView {

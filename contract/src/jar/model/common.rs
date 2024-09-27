@@ -1,6 +1,8 @@
 use std::cmp;
 
 use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
+use itertools::Itertools;
+use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{
     env,
     env::{panic_str, sha256},
@@ -13,7 +15,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::Timestamp,
+    common::{Duration, Timestamp},
     event::{emit, EventKind, TopUpData},
     jar::model::{v2::Deposit, Jar, JarLastVersion},
     product::model::{Apy, Product, Terms},
@@ -54,6 +56,75 @@ impl JarLastVersion {
         self.is_pending_withdraw = false;
     }
 
+    pub(crate) fn principal(&self) -> TokenAmount {
+        self.deposits.iter().map(|deposit| deposit.principal).sum()
+    }
+
+    pub(crate) fn liquidable_principal(&self, product: &Product, now: Timestamp) -> TokenAmount {
+        match &product.terms {
+            Terms::Fixed(value) => self
+                .deposits
+                .iter()
+                .filter_map(|deposit: Deposit| {
+                    if deposit.is_liquidable(now, value.lockup_term) {
+                        Some(deposit.principal)
+                    } else {
+                        None
+                    }
+                })
+                .sum(),
+            Terms::Flexible => {
+                self.deposits
+                    .first()
+                    .expect("Flexible product must contain single deposit")
+                    .principal
+            }
+        }
+    }
+
+    pub(crate) fn withdraw(&mut self, score: &[Score], product: &Product, now: Timestamp) -> TokenAmount {
+        let (interest, interest_remainder) = self.get_interest(score, product, now);
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest,
+        });
+        self.claim_remainder += interest_remainder;
+
+        if !self.is_liquidable(product, now) {
+            return 0;
+        }
+
+        match &product.terms {
+            Terms::Fixed(product_terms) => {
+                let mut last_mature_deposit_index = 0;
+                let mut amount_to_withdraw = 0;
+
+                for (index, deposit) in self.deposits.iter().enumerate() {
+                    if !deposit.is_liquidable(now, product_terms.lockup_term) {
+                        break;
+                    }
+
+                    last_mature_deposit_index = index;
+                    amount_to_withdraw += deposit.principal;
+                }
+
+                self.deposits.drain(0..last_mature_deposit_index);
+
+                amount_to_withdraw
+            }
+            Terms::Flexible => {
+                self.deposits
+                    .first()
+                    .expect("Flexible product must contain single deposit")
+                    .principal
+            }
+        }
+    }
+
+    pub(crate) fn deposit(&mut self, amount: TokenAmount, now: Timestamp) {
+        self.deposits.push(Deposit::new(now, amount));
+    }
+
     pub(crate) fn apply_penalty(&mut self, product: &Product, is_applied: bool, now: Timestamp) {
         assert!(
             !product.is_score_product(),
@@ -77,11 +148,12 @@ impl JarLastVersion {
 
         let current_interest = self.get_interest(&[], product, now).0;
 
-        self.principal += amount;
+        self.deposits.first_mut().expect("Deposits are empty").principal += amount;
         self.cache = Some(JarCache {
             updated_at: now,
             interest: current_interest,
         });
+
         self
     }
 
@@ -96,7 +168,7 @@ impl JarLastVersion {
     }
 
     pub(crate) fn should_be_closed(&self, score: &[Score], product: &Product, now: Timestamp) -> bool {
-        !product.is_flexible() && self.principal == 0 && self.get_interest(score, product, now).0 == 0
+        !product.is_flexible() && self.principal() == 0 && self.get_interest(score, product, now).0 == 0
     }
 
     /// Indicates whether a user can withdraw tokens from the jar at the moment or not.
@@ -104,13 +176,16 @@ impl JarLastVersion {
     /// For Fixed product it's defined by the lockup term.
     pub(crate) fn is_liquidable(&self, product: &Product, now: Timestamp) -> bool {
         match &product.terms {
-            Terms::Fixed(value) => now - self.created_at > value.lockup_term,
+            Terms::Fixed(product_terms) => self.deposits.first().map_or_else(
+                |deposit: &Deposit| deposit.is_liquidable(now, product_terms.lockup_term),
+                false,
+            ),
             Terms::Flexible => true,
         }
     }
 
     pub(crate) fn is_empty(&self) -> bool {
-        self.principal == 0
+        self.principal() == 0
     }
 
     pub(crate) fn get_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
@@ -235,6 +310,10 @@ impl Deposit {
             Terms::Flexible => now,
         }
     }
+
+    fn is_liquidable(&self, now: Timestamp, term: Duration) -> bool {
+        now - self.created_at > term
+    }
 }
 
 impl Contract {
@@ -286,14 +365,14 @@ impl Contract {
         let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
-        product.assert_cap(jar.principal + amount.0);
+        product.assert_cap(jar.principal() + amount.0);
 
         let now = env::block_timestamp_ms();
 
         let principal = self
             .get_jar_mut_internal(account, jar_id)
             .top_up(amount.0, &product, now)
-            .principal;
+            .principal();
 
         emit(EventKind::TopUp(TopUpData { id: jar_id, amount }));
 

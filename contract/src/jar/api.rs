@@ -20,51 +20,29 @@ impl Contract {
         !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
     }
 
-    fn restake_internal(&mut self, jar_id: JarIdView) -> (JarId, JarView) {
+    fn restake_internal(&mut self, jar_id: JarIdView) -> (JarView, TokenAmount) {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
 
-        let restaked_jar_id = self.increment_and_get_last_jar_id();
-
-        let jar = self.get_jar_internal(&account_id, jar_id);
-
+        let jar = self.get_jar_mut_internal(&account_id, jar_id);
         let product = self.get_product(&jar.product_id);
 
         require!(product.allows_restaking(), "The product doesn't support restaking");
         require!(product.is_enabled, "The product is disabled");
 
         let now = env::block_timestamp_ms();
-        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
+        require!(jar.is_liquidable(&product, now), "The jar has no mature deposits");
         require!(!jar.is_empty(), "The jar is empty, nothing to restake");
-
-        let principal = jar.principal;
-
-        let new_jar = Jar::create(
-            restaked_jar_id,
-            jar.account_id.clone(),
-            jar.product_id.clone(),
-            principal,
-            now,
-        );
 
         let score = self
             .get_score(&account_id)
             .map(AccountScore::claimable_score)
             .unwrap_or_default();
 
-        let withdraw_jar = jar.withdrawn(&score, &product, principal, now);
-        let should_be_closed = withdraw_jar.should_be_closed(&score, &product, now);
+        let principal_to_restake = jar.withdraw(&score, &product, now);
+        jar.deposit(principal_to_restake, now);
 
-        if should_be_closed {
-            self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);
-        } else {
-            let jar_id = withdraw_jar.id;
-            *self.get_jar_mut_internal(&account_id, jar_id) = withdraw_jar;
-        }
-
-        self.add_new_jar(&account_id, new_jar.clone());
-
-        (jar_id, new_jar.into())
+        (jar.into(), principal_to_restake)
     }
 }
 
@@ -168,11 +146,11 @@ impl JarApi for Contract {
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
         self.migrate_account_if_needed(&env::predecessor_account_id());
-        let (old_id, jar) = self.restake_internal(jar_id);
+        let (jar, amount) = self.restake_internal(jar_id);
 
         emit(EventKind::Restake(RestakeData {
-            old_id,
-            new_id: jar.id.0,
+            jar_id: jar.id.0,
+            amount,
         }));
 
         jar
@@ -208,10 +186,10 @@ impl JarApi for Contract {
         let mut event_data = vec![];
 
         for jar in &jars {
-            let (old_id, restaked) = self.restake_internal(jar.id.into());
+            let (jar, amount) = self.restake_internal(jar.id.into());
             event_data.push(RestakeData {
-                old_id,
-                new_id: restaked.id.0,
+                jar_id: jar.id.0,
+                amount,
             });
             result.push(restaked);
         }

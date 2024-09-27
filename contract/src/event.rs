@@ -94,8 +94,8 @@ pub struct MigrationEventItem {
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct RestakeData {
-    pub old_id: JarId,
-    pub new_id: JarId,
+    pub jar_id: JarId,
+    pub amount: TokenAmount,
 }
 
 #[derive(Debug)]

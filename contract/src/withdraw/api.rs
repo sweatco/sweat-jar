@@ -84,7 +84,7 @@ impl WithdrawApi for Contract {
         let close_jar = withdrawn_jar.should_be_closed(&score, &product, now);
 
         withdrawn_jar.lock();
-        *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
+        *self.get_jar_mut_internal(&account_id, jar.id) = withdrawn_jar;
 
         self.transfer_withdraw(&account_id, amount, &jar, close_jar)
     }
