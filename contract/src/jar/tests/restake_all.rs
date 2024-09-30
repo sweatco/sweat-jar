@@ -60,7 +60,7 @@ fn restake_all() {
 
     context.switch_account(&alice);
 
-    let restaked_jars = context.contract().restake_all();
+    let restaked_jars = context.contract().restake_all(None);
 
     assert_eq!(restaked_jars.len(), 2);
     assert_eq!(restaked_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(), vec![1, 2]);
@@ -95,7 +95,7 @@ fn restake_all_after_maturity_for_restakable_product_one_jar() {
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
-    let restaked = context.contract().restake_all().into_iter().next().unwrap();
+    let restaked = context.contract().restake_all(None).into_iter().next().unwrap();
 
     assert_eq!(restaked.account_id, alice);
     assert_eq!(restaked.principal.0, PRINCIPAL);

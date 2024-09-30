@@ -9,7 +9,7 @@ use sweat_jar_model::{
     api::WithdrawApi,
     jar::{JarId, JarIdView},
     withdraw::{BulkWithdrawView, Fee, WithdrawView},
-    TokenAmount,
+    TokenAmount, JAR_BATCH_SIZE,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -26,7 +26,7 @@ use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     assert::{assert_is_liquidable, assert_not_locked, assert_sufficient_balance},
     env,
-    event::{emit, EventKind, WithdrawData},
+    event::{emit, EventKind},
     jar::model::Jar,
     product::model::WithdrawalFee,
     AccountId, Contract, ContractExt, Product,
@@ -80,7 +80,7 @@ impl WithdrawApi for Contract {
         self.transfer_withdraw(&account_id, amount, &jar, close_jar)
     }
 
-    fn withdraw_all(&mut self) -> PromiseOrValue<BulkWithdrawView> {
+    fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
         self.migrate_account_jars_if_needed(account_id.clone());
         let now = env::block_timestamp_ms();
@@ -89,7 +89,9 @@ impl WithdrawApi for Contract {
             return PromiseOrValue::Value(BulkWithdrawView::default());
         };
 
-        let jars: Vec<JarWithdraw> = account_jars
+        let jars_filter: Option<Vec<JarId>> = jars.map(|jars| jars.into_iter().map(|j| j.0).collect());
+
+        let jars: Vec<_> = account_jars
             .jars
             .clone()
             .into_iter()
@@ -100,11 +102,21 @@ impl WithdrawApi for Contract {
                     return None;
                 }
 
-                let amount = jar.principal;
-
-                if amount == 0 {
-                    return None;
+                if let Some(jars_filter) = &jars_filter {
+                    if !jars_filter.contains(&jar.id) {
+                        return None;
+                    }
                 }
+
+                (jar, product).into()
+            })
+            .take(JAR_BATCH_SIZE)
+            .collect();
+
+        let jars: Vec<JarWithdraw> = jars
+            .into_iter()
+            .map(|(jar, product)| {
+                let amount = jar.principal;
 
                 let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
                 let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
@@ -118,7 +130,6 @@ impl WithdrawApi for Contract {
                     amount,
                     fee: None,
                 }
-                .into()
             })
             .collect();
 
@@ -156,11 +167,11 @@ impl Contract {
 
         let withdrawal_result = WithdrawView::new(withdrawn_amount, fee);
 
-        emit(EventKind::Withdraw(WithdrawData {
-            id: jar_id,
-            amount: withdrawal_result.withdrawn_amount,
-            fee: withdrawal_result.fee,
-        }));
+        emit(EventKind::Withdraw((
+            jar_id,
+            withdrawal_result.fee,
+            withdrawal_result.withdrawn_amount,
+        )));
 
         withdrawal_result
     }
@@ -196,11 +207,7 @@ impl Contract {
 
             let jar_result = WithdrawView::new(withdraw.amount, self.make_fee(withdraw.fee));
 
-            event_data.push(WithdrawData {
-                id: withdraw.jar.id,
-                amount: jar_result.withdrawn_amount,
-                fee: jar_result.fee,
-            });
+            event_data.push((withdraw.jar.id, jar_result.fee, jar_result.withdrawn_amount));
 
             withdrawal_result.total_amount.0 += jar_result.withdrawn_amount.0;
             withdrawal_result.jars.push(jar_result);

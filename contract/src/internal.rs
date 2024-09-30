@@ -32,12 +32,6 @@ impl Contract {
         self.last_jar_id
     }
 
-    pub(crate) fn get_product(&self, product_id: &ProductId) -> Product {
-        self.products
-            .get(product_id)
-            .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
-    }
-
     pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
         // TODO: Remove after complete migration and return '&[Jar]`
         if let Some(record) = self.account_jars_v1.get(account_id) {
@@ -71,6 +65,20 @@ impl Contract {
         let jars = self.account_jars.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
         jars.push(jar);
+    }
+
+    // UnorderedMap doesn't have cache and deserializes `Product` on each get
+    // This cached getter significantly reduces gas usage
+    pub fn get_product(&self, product_id: &ProductId) -> Product {
+        self.products_cache
+            .borrow_mut()
+            .entry(product_id.clone())
+            .or_insert_with(|| {
+                self.products
+                    .get(product_id)
+                    .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
+            })
+            .clone()
     }
 }
 

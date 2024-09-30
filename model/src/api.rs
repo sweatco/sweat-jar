@@ -27,7 +27,9 @@ pub trait InitApi {
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
 #[make_integration_version]
 pub trait ClaimApi {
-    /// Claims all available interest from all deposit jars belonging to the calling account.
+    /// Claims available interest from up to 100 jars with the most interest for the calling account.
+    /// If the calling account has more than 100 jars, the user will need to call this method multiple times
+    /// to claim interest from all jars.
     ///
     /// * `detailed` – An optional boolean value specifying if the method must return only total amount of claimed tokens
     ///                or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
@@ -135,7 +137,7 @@ pub trait JarApi {
     /// - If the original jar is not yet mature.
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
 
-    fn restake_all(&mut self) -> Vec<JarView>;
+    fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView>;
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
 }
@@ -261,18 +263,12 @@ pub trait WithdrawApi {
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
-    fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+    fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
 #[cfg(feature = "integration-methods")]
 #[make_integration_version]
 pub trait IntegrationTestMethods {
     fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
-    fn bulk_create_jars(
-        &mut self,
-        account_id: AccountId,
-        product_id: ProductId,
-        principal: u128,
-        number_of_jars: u16,
-    ) -> Vec<JarView>;
+    fn bulk_create_jars(&mut self, account_id: AccountId, product_id: ProductId, principal: u128, number_of_jars: u16);
 }

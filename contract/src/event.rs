@@ -79,13 +79,11 @@ struct SweatJarEvent {
 /// `JarId` and interest to claim
 pub type ClaimEventItem = (JarId, U128);
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct WithdrawData {
-    pub id: JarId,
-    pub fee: U128,
-    pub amount: U128,
-}
+/// (id, fee, amount)
+pub type WithdrawData = (JarId, U128, U128);
+
+/// (`old_id`, `new_id`)
+pub type RestakeData = (JarId, JarId);
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -93,13 +91,6 @@ pub struct MigrationEventItem {
     pub original_id: String,
     pub id: JarId,
     pub account_id: AccountId,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct RestakeData {
-    pub old_id: JarId,
-    pub new_id: JarId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -189,7 +180,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.0.0");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-3.0.1");
     }
 
     #[test]
@@ -202,7 +193,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -230,7 +221,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "event": "create_jar",
   "data": {
     "id": 555,
@@ -250,7 +241,7 @@ mod test {
             SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "event": "claim",
   "data": [
     [

@@ -111,9 +111,12 @@ async fn restake_all() -> Result<()> {
 
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
-    let restaked = context.sweat_jar().restake_all().with_user(&alice).await?; // 212 jars: ⛽ 91 TGas 566 GGas total: 91566686658202. 1 jar: ⛽ 6 TGas 410 GGas total: 6410903482276
+    // Restaking in batches
+    let restaked = context.sweat_jar().restake_all(None).with_user(&alice).await?;
+    assert_eq!(restaked.len(), 200);
 
-    assert_eq!(restaked.len(), 212);
+    let restaked_2 = context.sweat_jar().restake_all(None).with_user(&alice).await?;
+    assert_eq!(restaked_2.len(), 12);
 
     assert_eq!(
         restaked.into_iter().map(|j| j.principal).collect::<Vec<_>>()[..2],

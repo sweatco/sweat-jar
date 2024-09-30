@@ -4,11 +4,11 @@ use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, Acc
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
-    TokenAmount, U32,
+    TokenAmount, JAR_BATCH_SIZE, U32,
 };
 
 use crate::{
-    event::{emit, EventKind, RestakeData},
+    event::{emit, EventKind},
     jar::model::Jar,
     Contract, ContractExt, JarsStorage,
 };
@@ -128,7 +128,9 @@ impl JarApi for Contract {
         let mut total_amount: TokenAmount = 0;
 
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let interest = jar.get_interest(&self.get_product(&jar.product_id), now).0;
+            let product = self.get_product(&jar.product_id);
+
+            let interest = jar.get_interest(&product, now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
@@ -147,22 +149,21 @@ impl JarApi for Contract {
         self.migrate_account_jars_if_needed(env::predecessor_account_id());
         let (old_id, jar) = self.restake_internal(jar_id);
 
-        emit(EventKind::Restake(RestakeData {
-            old_id,
-            new_id: jar.id.0,
-        }));
+        emit(EventKind::Restake((old_id, jar.id.0)));
 
         jar
     }
 
-    fn restake_all(&mut self) -> Vec<JarView> {
+    fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView> {
         let account_id = env::predecessor_account_id();
 
         self.migrate_account_jars_if_needed(account_id.clone());
 
         let now = env::block_timestamp_ms();
 
-        let jars: Vec<Jar> = self
+        let jars_filter: Option<Vec<JarId>> = jars.map(|jars| jars.into_iter().map(|j| j.0).collect());
+
+        let mut jars: Vec<Jar> = self
             .account_jars
             .get(&account_id)
             .unwrap_or_else(|| {
@@ -171,8 +172,13 @@ impl JarApi for Contract {
             .jars
             .iter()
             .filter(|j| self.can_be_restaked(j, now))
+            .take(JAR_BATCH_SIZE)
             .cloned()
             .collect();
+
+        if let Some(jars_filter) = jars_filter {
+            jars.retain(|jar| jars_filter.contains(&jar.id));
+        }
 
         let mut result = vec![];
 
@@ -180,10 +186,7 @@ impl JarApi for Contract {
 
         for jar in &jars {
             let (old_id, restaked) = self.restake_internal(jar.id.into());
-            event_data.push(RestakeData {
-                old_id,
-                new_id: restaked.id.0,
-            });
+            event_data.push((old_id, restaked.id.0));
             result.push(restaked);
         }
 

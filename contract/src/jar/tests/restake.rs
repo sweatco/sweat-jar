@@ -26,7 +26,7 @@ fn restake_by_not_owner() {
     });
 
     expect_panic(&ctx, "Jars for account bob.near don't exist", || {
-        ctx.contract().restake_all();
+        ctx.contract().restake_all(None);
     });
 
     ctx.switch_account(carol());
@@ -35,7 +35,7 @@ fn restake_by_not_owner() {
     });
 
     expect_panic(&ctx, "Jars for account carol.near don't exist", || {
-        ctx.contract().restake_all();
+        ctx.contract().restake_all(None);
     });
 }
 
@@ -50,7 +50,7 @@ fn restake_before_maturity() {
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.switch_account(&alice);
-    assert!(context.contract().restake_all().is_empty());
+    assert!(context.contract().restake_all(None).is_empty());
     context.contract().restake(U32(jar.id));
 }
 
@@ -65,7 +65,7 @@ fn restake_when_restaking_is_not_supported() {
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.switch_account(&alice);
-    assert!(context.contract().restake_all().is_empty());
+    assert!(context.contract().restake_all(None).is_empty());
     context.contract().restake(U32(jar.id));
 }
 
@@ -84,10 +84,12 @@ fn restake_with_disabled_product() {
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id, false));
 
+    context.contract().products_cache.borrow_mut().clear();
+
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
-    assert!(context.contract().restake_all().is_empty());
+    assert!(context.contract().restake_all(None).is_empty());
     context.contract().restake(U32(jar.id));
 }
 
@@ -106,7 +108,7 @@ fn restake_empty_jar() {
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
-    assert!(context.contract().restake_all().is_empty());
+    assert!(context.contract().restake_all(None).is_empty());
     context.contract().restake(U32(jar.id));
 }
 
@@ -151,6 +153,6 @@ fn restake_after_maturity_for_not_restakable_product() {
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
-    assert!(context.contract().restake_all().is_empty());
+    assert!(context.contract().restake_all(None).is_empty());
     context.contract().restake(U32(jar.id));
 }
