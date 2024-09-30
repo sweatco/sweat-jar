@@ -1,5 +1,6 @@
 mod legacy;
 mod v1;
+mod v2;
 mod versioned;
 
 pub use legacy::AccountJarsLegacy;
