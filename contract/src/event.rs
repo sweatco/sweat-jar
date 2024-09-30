@@ -79,13 +79,11 @@ struct SweatJarEvent {
 /// `JarId` and interest to claim
 pub type ClaimEventItem = (JarId, U128);
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct WithdrawData {
-    pub id: JarId,
-    pub fee: U128,
-    pub amount: U128,
-}
+/// (id, fee, amount)
+pub type WithdrawData = (JarId, U128, U128);
+
+/// (`old_id`, `new_id`)
+pub type RestakeData = (JarId, JarId);
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -93,13 +91,6 @@ pub struct MigrationEventItem {
     pub original_id: String,
     pub id: JarId,
     pub account_id: AccountId,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
-pub struct RestakeData {
-    pub old_id: JarId,
-    pub new_id: JarId,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

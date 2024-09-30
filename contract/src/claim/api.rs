@@ -1,15 +1,13 @@
-use std::collections::HashMap;
-
 use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, ProductId, TokenAmount,
+    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, TokenAmount, JAR_BATCH_SIZE,
 };
 
 use crate::{
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
     jar::model::Jar,
-    Contract, ContractExt, JarsStorage, Product,
+    Contract, ContractExt, JarsStorage,
 };
 
 #[ext_contract(ext_self)]
@@ -43,24 +41,18 @@ impl Contract {
 
         let account_jars = self.account_jars(&account_id);
 
-        // UnorderedMap doesn't have cache and deserializes `Product` on each get
-        // This cache significantly reduces gas usage
-        let mut products_cache: HashMap<ProductId, Product> = HashMap::new();
-
         let mut unlocked_jars: Vec<((TokenAmount, u64), &Jar)> = account_jars
             .iter()
             .filter(|jar| !jar.is_pending_withdraw)
             .map(|jar| {
-                let product = products_cache
-                    .entry(jar.product_id.clone())
-                    .or_insert_with(|| self.get_product(&jar.product_id));
-                (jar.get_interest(product, now), jar)
+                let product = self.get_product(&jar.product_id);
+                (jar.get_interest(&product, now), jar)
             })
             .collect();
 
         unlocked_jars.sort_by(|a, b| b.0 .0.cmp(&a.0 .0));
 
-        let jars_to_claim: Vec<_> = unlocked_jars.into_iter().take(100).collect();
+        let jars_to_claim: Vec<_> = unlocked_jars.into_iter().take(JAR_BATCH_SIZE).collect();
 
         let mut event_data: Vec<ClaimEventItem> = vec![];
 

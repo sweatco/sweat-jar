@@ -28,7 +28,7 @@ async fn measure_restake_all() -> Result<()> {
 
     let gas = context
         .sweat_jar()
-        .restake_all()
+        .restake_all(None)
         .with_user(&alice)
         .result()
         .await?

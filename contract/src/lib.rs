@@ -1,4 +1,8 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+};
 
 use ed25519_dalek::Signature;
 use near_sdk::{
@@ -53,6 +57,11 @@ pub struct Contract {
     pub account_jars: LookupMap<AccountId, AccountJars>,
 
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+
+    /// Cache to make access to products faster
+    /// Is not stored in contract state so it should be always skipped by borsh
+    #[borsh(skip)]
+    pub products_cache: RefCell<HashMap<ProductId, Product>>,
 }
 
 #[near]
@@ -101,6 +110,7 @@ impl InitApi for Contract {
             account_jars: LookupMap::new(StorageKey::AccountJarsV1),
             account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
+            products_cache: RefCell::new(HashMap::default()),
         }
     }
 }

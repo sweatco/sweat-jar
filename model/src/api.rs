@@ -137,7 +137,7 @@ pub trait JarApi {
     /// - If the original jar is not yet mature.
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
 
-    fn restake_all(&mut self) -> Vec<JarView>;
+    fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView>;
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
 }
@@ -263,7 +263,7 @@ pub trait WithdrawApi {
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
-    fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+    fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
 #[cfg(feature = "integration-methods")]
