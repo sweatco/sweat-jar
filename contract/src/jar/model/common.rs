@@ -1,11 +1,16 @@
+use std::cmp;
+
 use near_sdk::{
     json_types::U64,
     near,
     serde::{Deserialize, Serialize},
 };
-use sweat_jar_model::TokenAmount;
+use sweat_jar_model::{TokenAmount, MS_IN_YEAR};
 
-use crate::common::Timestamp;
+use crate::{
+    common::{udecimal::UDecimal, Duration, Timestamp},
+    product::model::{Product, Terms},
+};
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
@@ -52,5 +57,55 @@ pub struct Deposit {
 impl Deposit {
     pub fn new(created_at: Timestamp, principal: TokenAmount) -> Self {
         Deposit { created_at, principal }
+    }
+}
+
+impl Deposit {
+    pub(crate) fn get_interest_with_apy(
+        &self,
+        apy: UDecimal,
+        product: &Product,
+        now: Timestamp,
+        since_date: Option<Timestamp>,
+    ) -> (TokenAmount, u64) {
+        let since_date = since_date.unwrap_or(self.created_at);
+
+        let until_date = self.get_interest_until_date(product, now);
+
+        let effective_term = if until_date > since_date {
+            until_date - since_date
+        } else {
+            return (0, 0);
+        };
+
+        self.get_interest_for_term(apy, effective_term)
+    }
+
+    pub(crate) fn get_interest_for_term(&self, apy: UDecimal, term: Timestamp) -> (TokenAmount, u64) {
+        let term_in_milliseconds: u128 = term.into();
+
+        let yearly_interest = apy * self.principal;
+
+        let ms_in_year: u128 = MS_IN_YEAR.into();
+
+        let interest = term_in_milliseconds * yearly_interest;
+
+        // This will never fail because `MS_IN_YEAR` is u64
+        // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
+        let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
+        let interest = interest / ms_in_year;
+
+        (interest, remainder)
+    }
+
+    fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
+        match product.terms.clone() {
+            Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
+            Terms::Flexible => now,
+        }
+    }
+
+    pub(crate) fn is_liquidable(&self, now: Timestamp, term: Duration) -> bool {
+        now - self.created_at > term
     }
 }
