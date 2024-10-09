@@ -124,6 +124,7 @@ pub struct Cap {
 }
 
 impl ProductV2 {
+    // TODO: should it test total principal?
     pub(crate) fn assert_cap(&self, amount: TokenAmount) {
         if self.cap.min > amount || amount > self.cap.max {
             env::panic_str(&format!(
@@ -156,10 +157,9 @@ impl ProductV2 {
 }
 
 pub(crate) trait InterestCalculator {
-    fn get_interest(&self, account: AccountV2, jar: JarV2) -> (TokenAmount, UDecimal) {
-        let now = env::block_timestamp_ms();
+    fn get_interest(&self, account: &AccountV2, jar: &JarV2) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
-        let apy = self.get_apy(&account);
+        let apy = self.get_apy(account);
 
         let (interest, remainder): (TokenAmount, u64) = jar
             .deposits
@@ -186,6 +186,24 @@ pub(crate) trait InterestCalculator {
     fn get_apy(&self, account: &AccountV2) -> UDecimal;
 
     fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Duration;
+}
+
+impl InterestCalculator for Terms {
+    fn get_apy(&self, account: &AccountV2) -> UDecimal {
+        match self {
+            Terms::Fixed(terms) => terms.get_apy(account),
+            Terms::Flexible(terms) => terms.get_apy(account),
+            Terms::ScoreBased(terms) => terms.get_apy(account),
+        }
+    }
+
+    fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Duration {
+        match self {
+            Terms::Fixed(terms) => terms.get_interest_calculation_term(last_cached_at, deposit),
+            Terms::Flexible(terms) => terms.get_interest_calculation_term(last_cached_at, deposit),
+            Terms::ScoreBased(terms) => terms.get_interest_calculation_term(last_cached_at, deposit),
+        }
+    }
 }
 
 impl InterestCalculator for FixedProductTerms {
@@ -221,7 +239,8 @@ impl InterestCalculator for ScoreBasedProductTerms {
     fn get_apy(&self, account: &AccountV2) -> UDecimal {
         let score = account.score.claimable_score();
 
-        self.get_apy(&score, account.is_penalty_applied)
+        let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
+        self.base_apy.get_effective(account.is_penalty_applied) + total_score.to_apy()
     }
 
     fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Timestamp {
@@ -231,13 +250,6 @@ impl InterestCalculator for ScoreBasedProductTerms {
         let until_date = cmp::min(env::block_timestamp_ms(), deposit.created_at + self.lockup_term);
 
         until_date.checked_sub(since_date).unwrap_or(0)
-    }
-}
-
-impl ScoreBasedProductTerms {
-    fn get_apy(&self, score: &[Score], is_penalty_applied: bool) -> UDecimal {
-        let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
-        self.base_apy.get_effective(is_penalty_applied) + total_score.to_apy()
     }
 }
 

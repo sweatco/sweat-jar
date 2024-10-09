@@ -2,7 +2,7 @@ use near_sdk::{json_types::U128, near};
 
 use crate::{
     jar::{AggregatedTokenAmountView, JarId},
-    TokenAmount, U32,
+    ProductId, TokenAmount, U32,
 };
 
 #[derive(Debug, PartialEq, Clone)]
@@ -29,14 +29,14 @@ impl ClaimedAmountView {
         }
     }
 
-    pub fn add(&mut self, jar_id: JarId, amount: TokenAmount) {
+    pub fn add(&mut self, product_id: &ProductId, amount: TokenAmount) {
         match self {
             ClaimedAmountView::Total(value) => {
                 value.0 += amount;
             }
             ClaimedAmountView::Detailed(value) => {
                 value.total.0 += amount;
-                value.detailed.insert(U32(jar_id), U128(amount));
+                value.detailed.insert(product_id.clone(), U128(amount));
             }
         }
     }

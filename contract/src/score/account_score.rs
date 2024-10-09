@@ -46,6 +46,7 @@ impl AccountScore {
     }
 
     /// On claim we need to clear active scores so they aren't claimed twice or more.
+    // TODO: at least rename
     pub fn claim_score(&mut self) -> Vec<Score> {
         let today = self.timezone.today();
 

@@ -6,7 +6,7 @@ use sweat_jar_model::{
     ProductId,
 };
 
-use crate::{env, jar::model::Jar, AccountId, Contract, Product};
+use crate::{env, jar::model::Jar, product::model::v2::ProductV2, AccountId, Contract, Product};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -73,7 +73,7 @@ impl Contract {
 
     // UnorderedMap doesn't have cache and deserializes `Product` on each get
     // This cached getter significantly reduces gas usage
-    pub fn get_product(&self, product_id: &ProductId) -> Product {
+    pub fn get_product(&self, product_id: &ProductId) -> ProductV2 {
         self.products_cache
             .borrow_mut()
             .entry(product_id.clone())

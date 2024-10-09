@@ -10,10 +10,11 @@ use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::{
     jar::{
-        account::versioned::Account,
+        account::{v2::AccountV2, versioned::Account},
         model::{AccountJarsLegacy, Jar},
     },
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
+    product::model::v2::ProductV2,
 };
 
 mod assert;
@@ -51,10 +52,12 @@ pub struct Contract {
     pub manager: AccountId,
 
     /// A collection of products, each representing terms for specific deposit jars.
-    pub products: UnorderedMap<ProductId, Product>,
+    pub products: UnorderedMap<ProductId, ProductV2>,
 
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_jar_id: JarId,
+
+    pub accounts_v2: LookupMap<AccountId, AccountV2>,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub accounts: LookupMap<AccountId, Account>,
@@ -65,7 +68,7 @@ pub struct Contract {
     /// Cache to make access to products faster
     /// Is not stored in contract state so it should be always skipped by borsh
     #[borsh(skip)]
-    pub products_cache: RefCell<HashMap<ProductId, Product>>,
+    pub products_cache: RefCell<HashMap<ProductId, ProductV2>>,
 }
 
 #[near]

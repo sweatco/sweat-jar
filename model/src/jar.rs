@@ -28,7 +28,7 @@ pub struct JarView {
 #[derive(Debug, Clone, PartialEq)]
 #[near(serializers=[json])]
 pub struct AggregatedTokenAmountView {
-    pub detailed: HashMap<JarIdView, U128>,
+    pub detailed: HashMap<ProductId, U128>,
     pub total: U128,
 }
 

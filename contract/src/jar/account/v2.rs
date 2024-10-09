@@ -1,12 +1,17 @@
-use std::ops::{Deref, DerefMut};
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+};
 
-use near_sdk::near;
-use sweat_jar_model::jar::JarId;
+use near_sdk::{env, env::panic_str, near, AccountId};
+use sweat_jar_model::{jar::JarId, ProductId, Timezone, TokenAmount};
 
 use crate::{
-    jar::model::{AccountJarsLegacy, Jar},
+    common::Timestamp,
+    jar::model::{AccountJarsLegacy, Deposit, Jar, JarV2, JarV2Companion},
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
     score::AccountScore,
+    Contract,
 };
 
 #[near]
@@ -14,7 +19,85 @@ use crate::{
 pub struct AccountV2 {
     /// Is used as nonce in `get_ticket_hash` method.
     pub nonce: u32,
-    pub jars: Vec<Jar>,
+    pub jars: HashMap<ProductId, JarV2>,
     pub score: AccountScore,
     pub is_penalty_applied: bool,
+}
+
+#[near(serializers=[json])]
+#[derive(Default, Debug, PartialEq)]
+pub struct AccountV2Companion {
+    pub nonce: Option<u32>,
+    pub jars: Option<HashMap<ProductId, JarV2Companion>>,
+    pub score: Option<AccountScore>,
+    pub is_penalty_applied: Option<bool>,
+}
+
+impl Contract {
+    pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut AccountV2 {
+        if !self.accounts_v2.contains_key(&account_id) {
+            self.accounts_v2.insert(account_id.clone(), AccountV2::default());
+        }
+
+        self.accounts_v2.get_mut(account_id).expect("Account is not presented")
+    }
+}
+
+impl AccountV2 {
+    pub(crate) fn deposit(&mut self, product_id: &ProductId, principal: TokenAmount) {
+        let deposit = Deposit::new(env::block_timestamp_ms(), principal);
+
+        if let Some(jar) = self.jars.get_mut(product_id) {
+            jar.deposits.push(deposit);
+        } else {
+            let mut jar = JarV2::default();
+            jar.deposits.push(deposit);
+
+            self.jars.insert(product_id.clone(), jar);
+        }
+    }
+
+    pub(crate) fn clean_up_jars(&mut self, product_id: &ProductId) {
+        if let Some(jar) = self.jars.get_mut(product_id) {
+            if let Some(last_index_to_remove) = jar.deposits.iter().position(|deposit| deposit.principal != 0) {
+                jar.deposits.drain(0..=last_index_to_remove);
+            }
+        }
+    }
+
+    pub(crate) fn try_set_timezone(&mut self, timezone: Option<Timezone>) {
+        match (timezone, self.score.borrow_mut()) {
+            // Time zone already set. No actions required.
+            (Some(_) | None, Some(_)) => (),
+            (Some(timezone), None) => {
+                self.score = AccountScore::new(timezone);
+            }
+            (None, None) => {
+                panic_str(&format!(
+                    "Trying to create step base jar for account: '{account_id}' without providing time zone"
+                ));
+            }
+        }
+    }
+
+    pub(crate) fn apply(&mut self, companion: &AccountV2Companion) {
+        if let Some(nonce) = companion.nonce {
+            self.nonce = nonce;
+        }
+
+        if let Some(jars) = companion.jars.iter() {
+            for (product_id, jar_companion) in jars {
+                let jar = self.jars.get_mut(&product_id).expect("Jar is not found");
+                jar.apply(jar_companion);
+            }
+        }
+
+        if let Some(score) = companion.score {
+            self.score = score;
+        }
+
+        if let Some(is_penalty_applied) = companion.is_penalty_applied {
+            self.is_penalty_applied = is_penalty_applied;
+        }
+    }
 }

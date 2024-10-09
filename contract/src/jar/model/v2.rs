@@ -1,17 +1,30 @@
-use near_sdk::{near, AccountId};
-use sweat_jar_model::{jar::JarId, ProductId, TokenAmount, UDecimal, MS_IN_YEAR};
+use near_sdk::near;
+use sweat_jar_model::{TokenAmount, UDecimal};
 
-use crate::{common::Timestamp, jar::model::JarCache};
+use crate::{
+    common::{Duration, Timestamp},
+    jar::model::JarCache,
+};
 
 /// The `Jar` struct represents a deposit jar within the smart contract.
 #[near(serializers=[borsh, json])]
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
 pub struct JarV2 {
     pub deposits: Vec<Deposit>,
     pub cache: Option<JarCache>,
     pub claimed_balance: TokenAmount,
     pub is_pending_withdraw: bool,
     pub claim_remainder: u64,
+}
+
+#[near(serializers=[json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
+pub struct JarV2Companion {
+    pub deposits: Option<Vec<Deposit>>,
+    pub cache: Option<Option<JarCache>>,
+    pub claimed_balance: Option<TokenAmount>,
+    pub is_pending_withdraw: Option<bool>,
+    pub claim_remainder: Option<u64>,
 }
 
 #[near(serializers=[borsh, json])]
@@ -21,52 +34,61 @@ pub struct Deposit {
     pub principal: TokenAmount,
 }
 
-impl Deposit {
-    fn get_interest_with_apy(
-        &self,
-        apy: UDecimal,
-        product: &Product,
-        now: Timestamp,
-        since_date: Option<Timestamp>,
-    ) -> (TokenAmount, u64) {
-        let since_date = since_date.unwrap_or(self.created_at);
+impl JarV2 {
+    pub(crate) fn lock(&mut self) -> &mut Self {
+        self.is_pending_withdraw = true;
 
-        let until_date = self.get_interest_until_date(product, now);
-
-        let effective_term = if until_date > since_date {
-            until_date - since_date
-        } else {
-            return (0, 0);
-        };
-
-        self.get_interest_for_term(apy, effective_term)
+        self
     }
 
-    fn get_interest_for_term(&self, apy: UDecimal, term: Timestamp) -> (TokenAmount, u64) {
-        let term_in_milliseconds: u128 = term.into();
+    pub(crate) fn unlock(&mut self) -> &mut Self {
+        self.is_pending_withdraw = false;
 
-        let yearly_interest = apy * self.principal;
-
-        let ms_in_year: u128 = MS_IN_YEAR.into();
-
-        let interest = term_in_milliseconds * yearly_interest;
-
-        // This will never fail because `MS_IN_YEAR` is u64
-        // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
-        let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
-        let interest = interest / ms_in_year;
-
-        (interest, remainder)
+        self
     }
 
-    fn get_interest_until_date(&self, product: &Product, now: Timestamp) -> Timestamp {
-        match product.terms.clone() {
-            Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
-            Terms::Flexible => now,
+    pub(crate) fn claim(&mut self, claimed_amount: TokenAmount, remainder: u64, now: Timestamp) -> &mut Self {
+        self.claimed_balance += claimed_amount;
+        self.claim_remainder = remainder;
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: 0,
+        });
+
+        self
+    }
+
+    pub(crate) fn apply(&mut self, companion: JarV2Companion) -> &mut Self {
+        if let Some(claim_remainder) = companion.claim_remainder {
+            self.claim_remainder = claim_remainder;
         }
+
+        if let Some(claimed_balance) = companion.claimed_balance {
+            self.claimed_balance = claimed_balance;
+        }
+
+        if let Some(cache) = companion.cache {
+            self.cache = cache;
+        }
+
+        if let Some(deposits) = companion.deposits {
+            self.deposits = deposits;
+        }
+
+        if let Some(is_pending_withdraw) = companion.is_pending_withdraw {
+            self.is_pending_withdraw = is_pending_withdraw;
+        }
+
+        self
+    }
+}
+
+impl Deposit {
+    pub(crate) fn new(created_at: Timestamp, principal: TokenAmount) -> Self {
+        Self { created_at, principal }
     }
 
-    fn is_liquidable(&self, now: Timestamp, term: Duration) -> bool {
+    pub(crate) fn is_liquidable(&self, now: Timestamp, term: Duration) -> bool {
         now - self.created_at > term
     }
 }

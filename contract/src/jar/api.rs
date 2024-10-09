@@ -71,6 +71,7 @@ impl Contract {
 #[near_bindgen]
 impl JarApi for Contract {
     // TODO: restore previous version after V2 migration
+    // TODO: add v2 support
     #[mutants::skip]
     fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
         if let Some(record) = self.account_jars_v1.get(&account_id) {
@@ -103,10 +104,12 @@ impl JarApi for Contract {
             .into()
     }
 
+    // TODO: add v2 support
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
         self.account_jars(&account_id).iter().map(Into::into).collect()
     }
 
+    // TODO: add v2 support
     fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
         self.get_principal(
             self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
@@ -114,6 +117,7 @@ impl JarApi for Contract {
         )
     }
 
+    // TODO: add v2 support
     fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView {
         let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
@@ -132,6 +136,7 @@ impl JarApi for Contract {
         }
     }
 
+    // TODO: add v2 support
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
         self.get_interest(
             self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
@@ -139,6 +144,7 @@ impl JarApi for Contract {
         )
     }
 
+    // TODO: add v2 support
     fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView {
         let now = env::block_timestamp_ms();
 
@@ -168,6 +174,7 @@ impl JarApi for Contract {
         }
     }
 
+    // TODO: add v2 support
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
         self.migrate_account_if_needed(&env::predecessor_account_id());
         let (old_id, jar) = self.restake_internal(jar_id);
@@ -218,6 +225,7 @@ impl JarApi for Contract {
         result
     }
 
+    // TODO: add v2 support
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_manager();
         self.migrate_account_if_needed(&account_id);
