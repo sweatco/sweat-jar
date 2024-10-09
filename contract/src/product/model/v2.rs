@@ -11,6 +11,7 @@ use crate::{
         model::{Deposit, JarV2},
     },
     score::AccountScore,
+    Contract,
 };
 
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
@@ -282,5 +283,13 @@ impl Apy {
                 }
             }
         }
+    }
+}
+
+impl Contract {
+    pub(crate) fn get_product(&self, product_id: &ProductId) -> ProductV2 {
+        self.products
+            .get(product_id)
+            .unwrap_or_else(|| env::panic_str(format!("Product {product_id} is not found").as_str()))
     }
 }

@@ -91,16 +91,18 @@ pub type RestakeData = (JarId, JarId);
 
 #[derive(Debug)]
 #[near(serializers=[json])]
+// TODO: doc change
 pub struct PenaltyData {
-    pub id: JarId,
+    pub account_id: AccountId,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
 #[derive(Debug)]
 #[near(serializers=[json])]
+// TODO: doc change
 pub struct BatchPenaltyData {
-    pub jars: Vec<JarId>,
+    pub account_ids: Vec<AccountId>,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }

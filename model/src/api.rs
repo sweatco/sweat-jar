@@ -174,7 +174,7 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool);
+    fn set_penalty(&mut self, account_id: AccountId, value: bool);
 
     /// Batched version of `set_penalty`
     ///
@@ -186,7 +186,7 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool);
+    fn batch_set_penalty(&mut self, account_ids: Vec<AccountId>, value: bool);
 }
 
 /// The `ProductApi` trait defines methods for managing products within the smart contract.

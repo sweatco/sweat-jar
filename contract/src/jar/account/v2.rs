@@ -8,8 +8,9 @@ use sweat_jar_model::{jar::JarId, ProductId, Timezone, TokenAmount};
 
 use crate::{
     common::Timestamp,
-    jar::model::{AccountJarsLegacy, Deposit, Jar, JarV2, JarV2Companion},
+    jar::model::{AccountJarsLegacy, Deposit, Jar, JarCache, JarV2, JarV2Companion},
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
+    product::model::v2::InterestCalculator,
     score::AccountScore,
     Contract,
 };
@@ -34,6 +35,12 @@ pub struct AccountV2Companion {
 }
 
 impl Contract {
+    pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut AccountV2 {
+        self.accounts_v2
+            .get_mut(account_id)
+            .unwrap_or_else(|| env::panic_str(format!("Account {account_id} is not found").as_str()))
+    }
+
     pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut AccountV2 {
         if !self.accounts_v2.contains_key(&account_id) {
             self.accounts_v2.insert(account_id.clone(), AccountV2::default());
@@ -98,6 +105,24 @@ impl AccountV2 {
 
         if let Some(is_penalty_applied) = companion.is_penalty_applied {
             self.is_penalty_applied = is_penalty_applied;
+        }
+    }
+}
+
+impl Contract {
+    pub(crate) fn update_cache(&mut self, account: &mut AccountV2) {
+        let now = env::block_timestamp_ms();
+
+        for (product_id, jar) in account.jars.iter_mut() {
+            let product = self.get_product(product_id);
+
+            let (interest, remainder) = product.terms.get_interest(account, jar);
+            jar.cache = Some(JarCache {
+                updated_at: now,
+                interest,
+            });
+            // TODO: adjust remainder
+            jar.claim_remainder += remainder;
         }
     }
 }
