@@ -11,7 +11,7 @@ use crate::{
     jar::model::Jar,
     product::model::{Apy, Product, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise, PRINCIPAL},
-    withdraw::api::JarWithdraw,
+    withdraw::api::WithdrawalRequest,
 };
 
 fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
@@ -281,7 +281,7 @@ fn test_failed_bulk_withdraw_internal() {
 
     let withdraw = contract.after_bulk_withdraw_internal(
         jar.account_id.clone(),
-        vec![JarWithdraw {
+        vec![WithdrawalRequest {
             jar: jar.clone(),
             should_be_closed: true,
             amount: jar.principal,

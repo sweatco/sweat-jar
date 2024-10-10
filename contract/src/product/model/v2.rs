@@ -1,5 +1,6 @@
 use std::{cmp, iter::Sum};
 
+use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{near, require};
 use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_YEAR};
 
@@ -124,7 +125,27 @@ pub struct Cap {
     pub max: TokenAmount,
 }
 
+impl Terms {
+    pub(crate) fn allows_early_withdrawal(&self) -> bool {
+        match self {
+            Terms::Flexible(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl ProductV2 {
+    pub(crate) fn calculate_fee(&self, principal: TokenAmount) -> TokenAmount {
+        if let Some(fee) = self.withdrawal_fee.clone() {
+            return match fee {
+                WithdrawalFee::Fix(amount) => *amount,
+                WithdrawalFee::Percent(percent) => percent * principal,
+            };
+        }
+
+        0
+    }
+
     // TODO: should it test total principal?
     pub(crate) fn assert_cap(&self, amount: TokenAmount) {
         if self.cap.min > amount || amount > self.cap.max {

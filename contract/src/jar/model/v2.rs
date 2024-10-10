@@ -88,7 +88,7 @@ impl Deposit {
         Self { created_at, principal }
     }
 
-    pub(crate) fn is_liquidable(&self, now: Timestamp, term: Duration) -> bool {
+    pub(crate) fn is_liquid(&self, now: Timestamp, term: Duration) -> bool {
         now - self.created_at > term
     }
 }

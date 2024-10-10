@@ -159,7 +159,7 @@ impl Contract {
 
             claimed_amount
         } else {
-            let account = self.accounts_v2.get_mut(&account_id).expect("Account is not found");
+            let account = self.get_account_mut(&account_id);
             account.apply(&account_rollback);
 
             match claimed_amount {

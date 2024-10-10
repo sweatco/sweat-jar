@@ -265,10 +265,10 @@ pub trait WithdrawApi {
     /// - If the caller is not the owner of the specified jar.
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
+    fn withdraw(&mut self, product_id: ProductId) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
     /// Withdraws all jars for user, or only specified list of jars if `jars` argument is `Some`
-    fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+    fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
 #[make_integration_version]

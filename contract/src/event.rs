@@ -76,7 +76,7 @@ struct SweatJarEvent {
 pub type ClaimEventItem = (JarId, U128);
 
 /// (id, fee, amount)
-pub type WithdrawData = (JarId, U128, U128);
+pub type WithdrawData = (ProductId, U128, U128);
 
 #[derive(Debug)]
 #[near(serializers=[json])]
