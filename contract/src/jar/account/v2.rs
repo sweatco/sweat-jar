@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt::format,
     ops::{Deref, DerefMut},
 };
 
@@ -51,6 +52,12 @@ impl Contract {
 }
 
 impl AccountV2 {
+    pub(crate) fn get_jar_mut(&mut self, product_id: &ProductId) -> &mut JarV2 {
+        self.jars
+            .get_mut(&product_id)
+            .unwrap_or_else(|| env::panic_str(format!("Jar for product {product_id} is not found").as_str()))
+    }
+
     pub(crate) fn deposit(&mut self, product_id: &ProductId, principal: TokenAmount) {
         let deposit = Deposit::new(env::block_timestamp_ms(), principal);
 
@@ -61,14 +68,6 @@ impl AccountV2 {
             jar.deposits.push(deposit);
 
             self.jars.insert(product_id.clone(), jar);
-        }
-    }
-
-    pub(crate) fn clean_up_jars(&mut self, product_id: &ProductId) {
-        if let Some(jar) = self.jars.get_mut(product_id) {
-            if let Some(last_index_to_remove) = jar.deposits.iter().position(|deposit| deposit.principal != 0) {
-                jar.deposits.drain(0..=last_index_to_remove);
-            }
         }
     }
 

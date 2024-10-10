@@ -40,7 +40,7 @@ use crate::{
     },
     env,
     event::{emit, EventKind},
-    jar::model::JarV2,
+    jar::{account::v2::AccountV2, model::JarV2},
     product::model::v2::Terms,
     AccountId, Contract, ContractExt,
 };
@@ -62,7 +62,7 @@ impl WithdrawApi for Contract {
 
         let account = self.get_account_mut(&account_id);
 
-        let jar = account.jars.get_mut(&product_id).expect("No jar for the product");
+        let jar = account.get_jar_mut(&product_id);
         assert_not_locked(jar);
         jar.lock();
 
@@ -131,25 +131,14 @@ impl Contract {
         is_promise_success: bool,
     ) -> WithdrawView {
         let account = self.get_account_mut(&account_id);
-        let jar = account
-            .jars
-            .get_mut(&request.product_id)
-            .expect("No jar found for the product");
+        let jar = account.get_jar_mut(&request.product_id);
         jar.unlock();
 
         if !is_promise_success {
             return WithdrawView::new(0, None);
         }
 
-        if jar.deposits.len() == request.partition_index {
-            jar.deposits.clear();
-        } else {
-            jar.deposits.drain(..request.partition_index);
-        }
-
-        if jar.should_close() {
-            account.jars.remove(&request.product_id);
-        }
+        clean_up(&request, account, jar);
 
         let withdrawal_result = WithdrawView::new(request.amount, self.wrap_fee(request.fee));
 
@@ -177,10 +166,7 @@ impl Contract {
 
         if !is_promise_success {
             for request in request.requests {
-                let jar = account
-                    .jars
-                    .get_mut(&request.product_id)
-                    .expect("No jar for the product");
+                let jar = account.get_jar_mut(&request.product_id);
                 jar.unlock();
             }
 
@@ -190,22 +176,10 @@ impl Contract {
         let mut event_data = vec![];
 
         for request in request.requests {
-            let jar = account
-                .jars
-                .get_mut(&request.product_id)
-                .expect("No jar found for the product");
-
+            let jar = account.get_jar_mut(&request.product_id);
             jar.unlock();
 
-            if jar.deposits.len() == request.partition_index {
-                jar.deposits.clear();
-            } else {
-                jar.deposits.drain(..request.partition_index);
-            }
-
-            if jar.should_close() {
-                account.jars.remove(&request.product_id);
-            }
+            clean_up(&request, account, jar);
 
             let deposit_withdrawal = WithdrawView::new(request.amount, self.wrap_fee(request.fee));
 
@@ -233,6 +207,18 @@ impl Contract {
                 amount,
             })
         }
+    }
+}
+
+fn clean_up(request: &WithdrawalRequest, account: &mut AccountV2, jar: &mut JarV2) {
+    if jar.deposits.len() == request.partition_index {
+        jar.deposits.clear();
+    } else {
+        jar.deposits.drain(..request.partition_index);
+    }
+
+    if jar.should_close() {
+        account.jars.remove(&request.product_id);
     }
 }
 
@@ -337,7 +323,7 @@ impl JarV2 {
 impl WithdrawCallbacks for Contract {
     #[private]
     fn after_withdraw(&mut self, account_id: AccountId, request: WithdrawalRequest) -> WithdrawView {
-        self.after_withdraw_internal(account_id, request)
+        self.after_withdraw_internal(account_id, request, is_promise_success())
     }
 
     #[private]

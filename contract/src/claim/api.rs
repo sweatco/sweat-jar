@@ -149,7 +149,7 @@ impl Contract {
             let jars = account_rollback.jars.expect("Jars are required in rollback account");
 
             for (product_id, _) in jars {
-                let jar = account.jars.get_mut(&product_id).expect("Jar is not found");
+                let jar = account.get_jar_mut(&product_id);
                 jar.unlock();
 
                 // TODO: check if should delete jar
