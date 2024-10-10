@@ -4,6 +4,7 @@ use sweat_jar_model::{TokenAmount, UDecimal};
 use crate::{
     common::{Duration, Timestamp},
     jar::model::JarCache,
+    product::model::v2::Terms,
 };
 
 /// The `Jar` struct represents a deposit jar within the smart contract.
@@ -35,6 +36,28 @@ pub struct Deposit {
 }
 
 impl JarV2 {
+    pub(crate) fn get_liquid_balance(&self, terms: &Terms, now: Timestamp) -> (TokenAmount, usize) {
+        if terms.allows_early_withdrawal() {
+            let sum = self.deposits.iter().map(|deposit| deposit.principal).sum();
+            let partition_index = self.deposits.len();
+
+            (sum, partition_index)
+        } else {
+            let partition_index = self.deposits.partition_point(|deposit| deposit.is_liquid(now, todo!()));
+
+            let sum = self.deposits[..partition_index]
+                .iter()
+                .map(|deposit| deposit.principal)
+                .sum();
+
+            (sum, partition_index)
+        }
+    }
+
+    pub(crate) fn should_close(&self) -> bool {
+        self.deposits.is_empty() && self.cache.map_or(true, |cache| cache.interest == 0)
+    }
+
     pub(crate) fn lock(&mut self) -> &mut Self {
         self.is_pending_withdraw = true;
 

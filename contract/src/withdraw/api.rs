@@ -34,14 +34,10 @@ use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     assert::assert_not_locked,
     common,
-    common::{
-        gas_data::{GAS_FOR_BULK_AFTER_WITHDRAW, GAS_FOR_FT_TRANSFER},
-        Timestamp,
-    },
+    common::gas_data::{GAS_FOR_BULK_AFTER_WITHDRAW, GAS_FOR_FT_TRANSFER},
     env,
     event::{emit, EventKind},
     jar::{account::v2::AccountV2, model::JarV2},
-    product::model::v2::Terms,
     AccountId, Contract, ContractExt,
 };
 
@@ -291,30 +287,6 @@ impl Contract {
             self.after_bulk_withdraw_internal(account_id.clone(), request, test_data::get_test_future_success());
 
         PromiseOrValue::Value(withdrawn)
-    }
-}
-
-impl JarV2 {
-    fn get_liquid_balance(&self, terms: &Terms, now: Timestamp) -> (TokenAmount, usize) {
-        if terms.allows_early_withdrawal() {
-            let sum = self.deposits.iter().map(|deposit| deposit.principal).sum();
-            let partition_index = self.deposits.len();
-
-            (sum, partition_index)
-        } else {
-            let partition_index = self.deposits.partition_point(|deposit| deposit.is_liquid(now, todo!()));
-
-            let sum = self.deposits[..partition_index]
-                .iter()
-                .map(|deposit| deposit.principal)
-                .sum();
-
-            (sum, partition_index)
-        }
-    }
-
-    fn should_close(&self) -> bool {
-        self.deposits.is_empty() && self.cache.map_or(true, |cache| cache.interest == 0)
     }
 }
 

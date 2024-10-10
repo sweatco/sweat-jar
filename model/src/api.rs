@@ -133,10 +133,10 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, jar_id: JarIdView) -> JarView;
+    fn restake(&mut self, product_id: ProductId);
 
     /// Restakes all jars for user, or only specified list of jars if `jars` argument is `Some`
-    fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView>;
+    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>);
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
 }

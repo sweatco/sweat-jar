@@ -4,7 +4,7 @@ use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, Acc
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
-    TokenAmount, JAR_BATCH_SIZE, U32,
+    ProductId, TokenAmount, JAR_BATCH_SIZE, U32,
 };
 
 use crate::{
@@ -15,56 +15,30 @@ use crate::{
 };
 
 impl Contract {
-    fn can_be_restaked(&self, jar: &Jar, now: u64) -> bool {
-        let product = self.get_product(&jar.product_id);
-        !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
-    }
-
-    fn restake_internal(&mut self, jar_id: JarIdView) -> (JarId, JarView) {
-        let jar_id = jar_id.0;
-        let account_id = env::predecessor_account_id();
-
-        let restaked_jar_id = self.increment_and_get_last_jar_id();
-
-        let jar = self.get_jar_internal(&account_id, jar_id);
-
-        let product = self.get_product(&jar.product_id);
-
-        require!(product.allows_restaking(), "The product doesn't support restaking");
+    fn restake_internal(&mut self, product_id: &ProductId) {
+        let product = self.get_product(product_id);
         require!(product.is_enabled, "The product is disabled");
 
+        let account_id = env::predecessor_account_id();
+        let account = self.get_account_mut(&account_id);
+        let jar = account.get_jar_mut(product_id);
+
         let now = env::block_timestamp_ms();
-        require!(jar.is_liquidable(&product, now), "The jar is not mature yet");
-        require!(!jar.is_empty(), "The jar is empty, nothing to restake");
+        let (amount, partition_index) = jar.get_liquid_balance(product.terms, now);
 
-        let principal = jar.principal;
+        require!(amount > 0, "Nothing to restake");
 
-        let new_jar = Jar::create(
-            restaked_jar_id,
-            jar.account_id.clone(),
-            jar.product_id.clone(),
-            principal,
-            now,
-        );
+        // TODO: use update for a single jar
+        self.update_cache(account);
 
-        let score = self
-            .get_score(&account_id)
-            .map(AccountScore::claimable_score)
-            .unwrap_or_default();
-
-        let withdraw_jar = jar.withdrawn(&score, &product, principal, now);
-        let should_be_closed = withdraw_jar.should_be_closed(&score, &product, now);
-
-        if should_be_closed {
-            self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);
+        // TODO: extract method and use in `clean_up()`
+        if partition_index == jar.deposits.len() {
+            jar.deposits.clear();
         } else {
-            let jar_id = withdraw_jar.id;
-            *self.get_jar_mut_internal(&account_id, jar_id) = withdraw_jar;
+            jar.deposits.drain(..partition_index);
         }
 
-        self.add_new_jar(&account_id, new_jar.clone());
-
-        (jar_id, new_jar.into())
+        account.deposit(product_id, amount);
     }
 }
 
@@ -174,55 +148,24 @@ impl JarApi for Contract {
         }
     }
 
-    // TODO: add v2 support
-    fn restake(&mut self, jar_id: JarIdView) -> JarView {
+    fn restake(&mut self, product_id: ProductId) {
         self.migrate_account_if_needed(&env::predecessor_account_id());
-        let (old_id, jar) = self.restake_internal(jar_id);
+        self.restake_internal(&product_id);
 
-        emit(EventKind::Restake((old_id, jar.id.0)));
-
-        jar
+        // TODO: add event logging
     }
 
-    fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView> {
+    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) {
         let account_id = env::predecessor_account_id();
 
         self.migrate_account_if_needed(&account_id);
 
-        let now = env::block_timestamp_ms();
-
-        let jars_filter: Option<Vec<JarId>> = jars.map(|jars| jars.into_iter().map(|j| j.0).collect());
-
-        let mut jars: Vec<Jar> = self
-            .accounts
-            .get(&account_id)
-            .unwrap_or_else(|| {
-                panic_str(&format!("Jars for account {account_id} don't exist"));
-            })
-            .jars
-            .iter()
-            .filter(|j| self.can_be_restaked(j, now))
-            .take(JAR_BATCH_SIZE)
-            .cloned()
-            .collect();
-
-        if let Some(jars_filter) = jars_filter {
-            jars.retain(|jar| jars_filter.contains(&jar.id));
+        let product_ids = product_ids.unwrap_or_else(|| self.get_account(&account_id).jars.keys().collect());
+        for product_id in product_ids {
+            self.restake_internal(&product_id);
         }
 
-        let mut result = vec![];
-
-        let mut event_data = vec![];
-
-        for jar in &jars {
-            let (old_id, restaked) = self.restake_internal(jar.id.into());
-            event_data.push((old_id, restaked.id.0));
-            result.push(restaked);
-        }
-
-        emit(EventKind::RestakeAll(event_data));
-
-        result
+        // TODO: add event logging
     }
 
     // TODO: add v2 support

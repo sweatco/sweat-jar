@@ -36,6 +36,12 @@ pub struct AccountV2Companion {
 }
 
 impl Contract {
+    pub(crate) fn get_account(&mut self, account_id: &AccountId) -> &AccountV2 {
+        self.accounts_v2
+            .get(account_id)
+            .unwrap_or_else(|| env::panic_str(format!("Account {account_id} is not found").as_str()))
+    }
+
     pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut AccountV2 {
         self.accounts_v2
             .get_mut(account_id)
