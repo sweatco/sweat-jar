@@ -10,6 +10,8 @@ pub struct TestnetContext {
     pub user: Account,
     #[allow(dead_code)]
     pub user2: Account,
+    #[allow(dead_code)]
+    pub bob: Account,
 
     jar_contract: Contract,
 }
@@ -22,7 +24,7 @@ impl TestnetContext {
         let user2 = testnet_user_2(&worker).await?;
         let manager = jar_manager(&worker).await?;
         let token_contract = token_testnet_contract(&worker).await?;
-
+        let bob = acc_with_name("bob_account.testnet.json", &worker).await?;
         let jar_contract = jar_testnet_contract(&worker).await?;
 
         Ok(Self {
@@ -30,6 +32,7 @@ impl TestnetContext {
             manager,
             user,
             user2,
+            bob,
             jar_contract,
         })
     }

@@ -43,6 +43,7 @@ impl Internal for SweatJarContract<'_> {
 }
 
 pub trait JarContractExtensions {
+    #[allow(dead_code)]
     fn create_many_jars(
         &self,
         user: &Account,

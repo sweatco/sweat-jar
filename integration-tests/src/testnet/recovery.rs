@@ -111,19 +111,19 @@ async fn create_many_jars() -> Result<()> {
     dbg!(&jars.len());
 
     // Creates 25 * 40 = 1000 jars
-    for _ in 0..10 {
-        ctx.jar_contract()
-            .create_many_jars(
-                &ctx.user2,
-                "5_min_100_apy_restackable".to_string(),
-                300_000_000_000_000_000_000_00,
-                30,
-                &ctx.token_contract(),
-            )
-            .await?;
-    }
+    // for _ in 0..10 {
+    //     ctx.jar_contract()
+    //         .create_many_jars(
+    //             &ctx.user2,
+    //             "5_min_100_apy_restackable".to_string(),
+    //             300_000_000_000_000_000_000_00,
+    //             30,
+    //             &ctx.token_contract(),
+    //         )
+    //         .await?;
+    // }
 
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
+    let jars = ctx.jar_contract().get_jars_for_account(ctx.bob.to_near()).await?;
 
     dbg!(&jars.len());
 

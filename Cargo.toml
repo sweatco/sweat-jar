@@ -23,13 +23,13 @@ itertools = "0.13"
 tokio = { version = "1.37", features = ["full"] }
 dirs = "5.0"
 
-nitka = "0.4.0"
-nitka-proc = "0.4.0"
+nitka = "=0.4.1"
+nitka-proc = "=0.4.0"
 
 sweat-jar-model = { path = "model" }
-sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "537ef7d0aa3bf58d87b77a1c9660b2d0299b6c00" }
+sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "5eca0e39622b5180bd43049fdeb0feae4c8aaf23" }
 
-near-workspaces = "0.10.0"
+near-workspaces = "0.14.0"
 near-self-update-proc = "0.1.2"
 
 near-sdk = "5.5.0"
