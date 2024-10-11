@@ -308,9 +308,17 @@ impl Apy {
 }
 
 impl Contract {
+    // UnorderedMap doesn't have cache and deserializes `Product` on each get
+    // This cached getter significantly reduces gas usage
     pub(crate) fn get_product(&self, product_id: &ProductId) -> ProductV2 {
-        self.products
-            .get(product_id)
-            .unwrap_or_else(|| env::panic_str(format!("Product {product_id} is not found").as_str()))
+        self.products_cache
+            .borrow_mut()
+            .entry(product_id.clone())
+            .or_insert_with(|| {
+                self.products
+                    .get(product_id)
+                    .unwrap_or_else(|| env::panic_str(format!("Product {product_id} is not found").as_str()))
+            })
+            .clone()
     }
 }

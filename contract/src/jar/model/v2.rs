@@ -81,6 +81,14 @@ impl JarV2 {
         self
     }
 
+    pub(crate) fn clean_up_deposits(&mut self, partition_index: usize) {
+        if partition_index == self.deposits.len() {
+            self.deposits.clear();
+        } else {
+            self.deposits.drain(..partition_index);
+        }
+    }
+
     pub(crate) fn apply(&mut self, companion: JarV2Companion) -> &mut Self {
         if let Some(claim_remainder) = companion.claim_remainder {
             self.claim_remainder = claim_remainder;

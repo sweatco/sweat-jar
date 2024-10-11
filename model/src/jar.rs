@@ -9,20 +9,15 @@ use crate::{numbers::U32, ProductId};
 
 pub type JarId = u32;
 
-pub type JarIdView = U32;
+pub type JarIdView = String;
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers=[json])]
 pub struct JarView {
     pub id: JarIdView,
-    pub account_id: AccountId,
     pub product_id: ProductId,
     pub created_at: U64,
     pub principal: U128,
-    pub claimed_balance: U128,
-    pub is_penalty_applied: bool,
-    #[serde(default)]
-    pub is_pending_withdraw: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,7 +36,7 @@ impl Default for AggregatedTokenAmountView {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 #[near(serializers=[json])]
 pub struct AggregatedInterestView {
     pub amount: AggregatedTokenAmountView,

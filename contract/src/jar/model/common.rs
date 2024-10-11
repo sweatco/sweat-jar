@@ -1,12 +1,21 @@
+use std::cmp;
+
 use near_sdk::{
     env,
     json_types::{Base64VecU8, U128, U64},
     near, AccountId,
 };
-use sweat_jar_model::{jar::JarId, Timezone, TokenAmount};
+use sweat_jar_model::{jar::JarId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR};
 
 use crate::{
-    common::Timestamp, jar::model::Jar, product::model::v2::Terms, score::AccountScore, Contract, JarsStorage,
+    common::Timestamp,
+    jar::model::{Jar, JarLastVersion},
+    product::model::{
+        v1::{Apy, Product},
+        v2::{ProductV2, Terms},
+    },
+    score::AccountScore,
+    Contract, JarsStorage,
 };
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
@@ -69,67 +78,6 @@ impl Contract {
         account.deposit(product_id, amount);
     }
 
-    // pub(crate) fn create_jar(
-    //     &mut self,
-    //     account_id: AccountId,
-    //     ticket: JarTicket,
-    //     amount: U128,
-    //     signature: Option<Base64VecU8>,
-    // ) -> JarView {
-    //     let amount = amount.0;
-    //     let product_id = &ticket.product_id;
-    //     let product = self.get_product(product_id);
-    //
-    //     product.assert_enabled();
-    //     product.assert_cap(amount);
-    //
-    //     if matches!(product.terms, Terms::ScoreBased(_)) {
-    //         match (ticket.timezone, self.get_score_mut(&account_id)) {
-    //             // Time zone already set. No actions required.
-    //             (Some(_) | None, Some(_)) => (),
-    //             (Some(timezone), None) => {
-    //                 self.accounts.entry(account_id.clone()).or_default().score = AccountScore::new(timezone);
-    //             }
-    //             (None, None) => {
-    //                 panic_str(&format!(
-    //                     "Trying to create step base jar for account: '{account_id}' without providing time zone"
-    //                 ));
-    //             }
-    //         }
-    //     }
-    //
-    //     self.verify(&account_id, amount, &ticket, signature);
-    //
-    //     let id = self.increment_and_get_last_jar_id();
-    //     let now = env::block_timestamp_ms();
-    //     let jar = Jar::create(id, account_id.clone(), product_id.clone(), amount, now);
-    //
-    //     self.add_new_jar(&account_id, jar.clone());
-    //
-    //     emit(EventKind::CreateJar(jar.clone().into()));
-    //
-    //     jar.into()
-    // }
-
-    // pub(crate) fn delete_jar(&mut self, account_id: &AccountId, jar_id: JarId) {
-    //     let jars = self
-    //         .accounts
-    //         .get_mut(account_id)
-    //         .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")));
-    //
-    //     require!(
-    //         !jars.is_empty(),
-    //         "Trying to delete a jar from account without any jars."
-    //     );
-    //
-    //     let jar_position = jars
-    //         .iter()
-    //         .position(|j| j.id == jar_id)
-    //         .unwrap_or_else(|| panic_str(&format!("Jar with id {jar_id} doesn't exist")));
-    //
-    //     jars.swap_remove(jar_position);
-    // }
-
     pub(crate) fn get_score(&self, account: &AccountId) -> Option<&AccountScore> {
         self.accounts.get(account).and_then(|a| a.score())
     }
@@ -171,5 +119,90 @@ impl Contract {
             .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
             .get_jar(id)
             .clone()
+    }
+}
+
+impl JarLastVersion {
+    pub(crate) fn get_interest(&self, score: &[Score], product: &ProductV2, now: Timestamp) -> (TokenAmount, u64) {
+        if product.is_score_product() {
+            self.get_score_interest(score, product, now)
+        } else {
+            self.get_interest_with_apy(self.get_apy(product), product, now)
+        }
+    }
+
+    fn get_apy(&self, product: &ProductV2) -> UDecimal {
+        match product.apy.clone() {
+            Apy::Constant(apy) => apy,
+            Apy::Downgradable(apy) => {
+                if self.is_penalty_applied {
+                    apy.fallback
+                } else {
+                    apy.default
+                }
+            }
+        }
+    }
+
+    fn get_interest_for_term(&self, cache: u128, apy: UDecimal, term: Timestamp) -> (TokenAmount, u64) {
+        let term_in_milliseconds: u128 = term.into();
+
+        let yearly_interest = apy * self.principal;
+
+        let ms_in_year: u128 = MS_IN_YEAR.into();
+
+        let interest = term_in_milliseconds * yearly_interest;
+
+        // This will never fail because `MS_IN_YEAR` is u64
+        // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
+        let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
+
+        let interest = interest / ms_in_year;
+
+        let total_remainder = self.claim_remainder + remainder;
+
+        (
+            cache + interest + u128::from(total_remainder / MS_IN_YEAR),
+            total_remainder % MS_IN_YEAR,
+        )
+    }
+
+    fn get_interest_with_apy(&self, apy: UDecimal, product: &ProductV2, now: Timestamp) -> (TokenAmount, u64) {
+        let (base_date, cache_interest) = if let Some(cache) = &self.cache {
+            (cache.updated_at, cache.interest)
+        } else {
+            (self.created_at, 0)
+        };
+
+        let until_date = self.get_interest_until_date(product, now);
+
+        let effective_term = if until_date > base_date {
+            until_date - base_date
+        } else {
+            return (cache_interest, 0);
+        };
+
+        self.get_interest_for_term(cache_interest, apy, effective_term)
+    }
+
+    fn get_score_interest(&self, score: &[Score], product: &ProductV2, now: Timestamp) -> (TokenAmount, u64) {
+        let cache = self.cache.map(|c| c.interest).unwrap_or_default();
+
+        if let Terms::Fixed(end_term) = &product.terms {
+            if now > end_term.lockup_term {
+                return (cache, 0);
+            }
+        }
+
+        let apy = product.apy_for_score(score);
+        self.get_interest_for_term(cache, apy, MS_IN_DAY)
+    }
+
+    fn get_interest_until_date(&self, product: &ProductV2, now: Timestamp) -> Timestamp {
+        match product.terms.clone() {
+            Terms::Fixed(value) => cmp::min(now, self.created_at + value.lockup_term),
+            Terms::ScoreBased(value) => cmp::min(now, self.created_at + value.lockup_term),
+            Terms::Flexible(_) => now,
+        }
     }
 }

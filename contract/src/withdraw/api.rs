@@ -62,11 +62,10 @@ impl WithdrawApi for Contract {
         assert_not_locked(jar);
         jar.lock();
 
-        // TODO: add method for withdrawal on a single jar
-        self.update_cache(account);
+        self.update_jar_cache(account, &product_id);
 
         let product = self.get_product(&product_id);
-        let (amount, partition_index) = jar.get_liquid_balance(product.terms, env::block_timestamp_ms());
+        let (amount, partition_index) = jar.get_liquid_balance(&product.terms, env::block_timestamp_ms());
         let fee = product.calculate_fee(amount);
 
         let request = WithdrawalRequest {
@@ -207,11 +206,7 @@ impl Contract {
 }
 
 fn clean_up(request: &WithdrawalRequest, account: &mut AccountV2, jar: &mut JarV2) {
-    if jar.deposits.len() == request.partition_index {
-        jar.deposits.clear();
-    } else {
-        jar.deposits.drain(..request.partition_index);
-    }
+    jar.clean_up_deposits(request.partition_index);
 
     if jar.should_close() {
         account.jars.remove(&request.product_id);

@@ -6,7 +6,15 @@ use sweat_jar_model::{
     ProductId,
 };
 
-use crate::{env, jar::model::Jar, product::model::v2::ProductV2, AccountId, Contract, Product};
+use crate::{
+    env,
+    jar::{
+        account::{v1::AccountV1, versioned::Account},
+        model::Jar,
+    },
+    product::model::v2::ProductV2,
+    AccountId, Contract,
+};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -32,36 +40,29 @@ impl Contract {
         self.last_jar_id
     }
 
-    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
+    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Option<Vec<Jar>> {
         // TODO: Remove after complete migration and return '&[Jar]`
         if let Some(record) = self.account_jars_v1.get(account_id) {
-            return record.jars.iter().map(|j| j.clone().into()).collect();
+            return Some(record.jars.iter().map(|j| j.clone().into()).collect());
         }
 
         if let Some(record) = self.account_jars_non_versioned.get(account_id) {
-            return record.jars.clone();
+            return Some(record.jars.clone());
         }
 
-        self.accounts
-            .get(account_id)
-            .map_or(vec![], |record| record.jars.clone())
+        self.accounts.get(account_id).map(|record| record.jars.clone())
     }
 
-    // TODO: Restore previous version after V2 migration
-    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<Jar> {
-        // iterates once over jars and once over ids
-        let mut jars: HashMap<JarId, Jar> = self
-            .account_jars(account_id)
-            .into_iter()
-            .map(|jar| (jar.id, jar))
-            .collect();
+    pub(crate) fn get_account_legacy(&self, account_id: &AccountId) -> Option<&Account> {
+        if let Some(record) = self.account_jars_v1.get(account_id) {
+            return Account::from(record).into();
+        }
 
-        ids.iter()
-            .map(|id| {
-                jars.remove(&id.0)
-                    .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0)))
-            })
-            .collect()
+        if let Some(record) = self.account_jars_non_versioned.get(account_id) {
+            return Account::from(record).into();
+        }
+
+        self.accounts.get(account_id)
     }
 
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
@@ -69,20 +70,6 @@ impl Contract {
         let jars = self.accounts.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
         jars.push(jar);
-    }
-
-    // UnorderedMap doesn't have cache and deserializes `Product` on each get
-    // This cached getter significantly reduces gas usage
-    pub fn get_product(&self, product_id: &ProductId) -> ProductV2 {
-        self.products_cache
-            .borrow_mut()
-            .entry(product_id.clone())
-            .or_insert_with(|| {
-                self.products
-                    .get(product_id)
-                    .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
-            })
-            .clone()
     }
 }
 

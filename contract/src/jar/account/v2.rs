@@ -11,7 +11,7 @@ use crate::{
     common::Timestamp,
     jar::model::{AccountJarsLegacy, Deposit, Jar, JarCache, JarV2, JarV2Companion},
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
-    product::model::v2::InterestCalculator,
+    product::model::v2::{InterestCalculator, ProductV2},
     score::AccountScore,
     Contract,
 };
@@ -36,7 +36,11 @@ pub struct AccountV2Companion {
 }
 
 impl Contract {
-    pub(crate) fn get_account(&mut self, account_id: &AccountId) -> &AccountV2 {
+    pub(crate) fn try_get_account(&self, account_id: &AccountId) -> Option<&AccountV2> {
+        self.accounts_v2.get(account_id)
+    }
+
+    pub(crate) fn get_account(&self, account_id: &AccountId) -> &AccountV2 {
         self.accounts_v2
             .get(account_id)
             .unwrap_or_else(|| env::panic_str(format!("Account {account_id} is not found").as_str()))
@@ -66,7 +70,11 @@ impl AccountV2 {
 
     pub(crate) fn deposit(&mut self, product_id: &ProductId, principal: TokenAmount) {
         let deposit = Deposit::new(env::block_timestamp_ms(), principal);
+        self.push(product_id, deposit);
+    }
 
+    // TODO: refactor, move to some container
+    pub(crate) fn push(&mut self, product_id: &ProductId, deposit: Deposit) {
         if let Some(jar) = self.jars.get_mut(product_id) {
             jar.deposits.push(deposit);
         } else {
@@ -115,19 +123,30 @@ impl AccountV2 {
 }
 
 impl Contract {
-    pub(crate) fn update_cache(&mut self, account: &mut AccountV2) {
+    pub(crate) fn update_account_cache(&mut self, account: &mut AccountV2) {
         let now = env::block_timestamp_ms();
 
         for (product_id, jar) in account.jars.iter_mut() {
-            let product = self.get_product(product_id);
-
-            let (interest, remainder) = product.terms.get_interest(account, jar);
-            jar.cache = Some(JarCache {
-                updated_at: now,
-                interest,
-            });
-            // TODO: adjust remainder
-            jar.claim_remainder += remainder;
+            let product = &self.get_product(product_id);
+            jar.update_cache(account, product, now);
         }
+    }
+
+    pub(crate) fn update_jar_cache(&mut self, account: &mut AccountV2, product_id: &ProductId) {
+        let product = &self.get_product(product_id);
+        let jar = account.get_jar_mut(product_id);
+        jar.update_cache(account, product, env::block_timestamp_ms());
+    }
+}
+
+impl JarV2 {
+    fn update_cache(&mut self, account: &AccountV2, product: &ProductV2, now: Timestamp) {
+        let (interest, remainder) = product.terms.get_interest(account, self);
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest,
+        });
+        // TODO: adjust remainder
+        self.claim_remainder += remainder;
     }
 }

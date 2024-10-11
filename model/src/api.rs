@@ -44,17 +44,6 @@ pub trait ClaimApi {
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
 #[make_integration_version]
 pub trait JarApi {
-    /// Retrieves information about a specific deposit jar by its index.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_id` - The ID of the deposit jar for which information is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView;
-
     /// Retrieves information about all deposit jars associated with a given account.
     ///
     /// # Arguments
@@ -65,32 +54,6 @@ pub trait JarApi {
     ///
     /// A `Vec<JarView>` containing details about all deposit jars belonging to the specified account.
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView>;
-
-    /// Retrieves the total principal amount across all deposit jars for a provided account.
-    ///
-    /// # Arguments
-    ///
-    /// * `account_id` - The `AccountId` of the account for which the total principal is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// An `U128` representing the sum of principal amounts across all deposit jars for the specified account.
-    /// Returns 0 if the account has no associated jars.
-    fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView;
-
-    /// Retrieves the principal amount for a specific set of deposit jars.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
-    ///                   principal is being retrieved.
-    ///
-    /// * `account_id` - The `AccountId` of the account for which the principal is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -103,19 +66,6 @@ pub trait JarApi {
     /// An `U128` representing the sum of interest amounts across all deposit jars for the specified account.
     /// Returns 0 if the account has no associated jars.
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView;
-
-    /// Retrieves the interest amount for a specific set of deposit jars.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
-    ///                   interest is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// An `U128` representing the sum of interest amounts for the specified deposit jars.
-    ///
-    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///

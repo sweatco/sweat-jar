@@ -9,148 +9,70 @@ use sweat_jar_model::{
 
 use crate::{
     event::{emit, EventKind},
-    jar::model::Jar,
+    jar::{
+        account::{v1::AccountV1, v2::AccountV2},
+        model::{Deposit, Jar, JarV2},
+        view::DetailedJarV2,
+    },
+    product::model::v2::{InterestCalculator, ProductV2},
     score::AccountScore,
     Contract, ContractExt, JarsStorage,
 };
 
 impl Contract {
-    fn restake_internal(&mut self, product_id: &ProductId) {
-        let product = self.get_product(product_id);
+    fn restake_internal(&mut self, product: &ProductV2) {
         require!(product.is_enabled, "The product is disabled");
 
         let account_id = env::predecessor_account_id();
         let account = self.get_account_mut(&account_id);
-        let jar = account.get_jar_mut(product_id);
+        let jar = account.get_jar_mut(&product.id);
 
         let now = env::block_timestamp_ms();
-        let (amount, partition_index) = jar.get_liquid_balance(product.terms, now);
+        let (amount, partition_index) = jar.get_liquid_balance(&product.terms, now);
 
         require!(amount > 0, "Nothing to restake");
 
-        // TODO: use update for a single jar
-        self.update_cache(account);
-
-        // TODO: extract method and use in `clean_up()`
-        if partition_index == jar.deposits.len() {
-            jar.deposits.clear();
-        } else {
-            jar.deposits.drain(..partition_index);
-        }
-
-        account.deposit(product_id, amount);
+        self.update_jar_cache(account, &product.id);
+        jar.clean_up_deposits(partition_index);
+        account.deposit(&product.id, amount);
     }
 }
 
 #[near_bindgen]
 impl JarApi for Contract {
-    // TODO: restore previous version after V2 migration
-    // TODO: add v2 support
-    #[mutants::skip]
-    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
-        if let Some(record) = self.account_jars_v1.get(&account_id) {
-            let jar: Jar = record
-                .jars
-                .iter()
-                .find(|jar| jar.id == jar_id.0)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
-                .clone()
-                .into();
-
-            return jar.into();
-        }
-
-        if let Some(record) = self.account_jars_non_versioned.get(&account_id) {
-            let jar: Jar = record
-                .jars
-                .iter()
-                .find(|jar| jar.id == jar_id.0)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
-                .clone();
-
-            return jar.into();
-        }
-
-        self.accounts
-            .get(&account_id)
-            .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")))
-            .get_jar(jar_id.0)
-            .into()
-    }
-
-    // TODO: add v2 support
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
-        self.account_jars(&account_id).iter().map(Into::into).collect()
-    }
-
-    // TODO: add v2 support
-    fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView {
-        self.get_principal(
-            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
-            account_id,
-        )
-    }
-
-    // TODO: add v2 support
-    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView {
-        let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
-        let mut total_amount: TokenAmount = 0;
-
-        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let id = jar.id;
-            let principal = jar.principal;
-
-            detailed_amounts.insert(U32(id), U128(principal));
-            total_amount += principal;
+        if let Some(account) = self.try_get_account(&account_id) {
+            return account
+                .jars
+                .iter()
+                .flat_map(|(product_id, jar)| DetailedJarV2(product_id.clone(), jar.clone()).into())
+                .collect();
         }
 
-        AggregatedTokenAmountView {
-            detailed: detailed_amounts,
-            total: U128(total_amount),
+        if let Some(jars) = self.account_jars(&account_id) {
+            return jars.iter().map(Into::into).collect();
         }
+
+        vec![]
     }
 
     // TODO: add v2 support
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
-        self.get_interest(
-            self.account_jars(&account_id).iter().map(|a| U32(a.id)).collect(),
-            account_id,
-        )
-    }
-
-    // TODO: add v2 support
-    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView {
-        let now = env::block_timestamp_ms();
-
-        let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
-        let mut total_amount: TokenAmount = 0;
-
-        let score = self
-            .get_score(&account_id)
-            .map(AccountScore::claimable_score)
-            .unwrap_or_default();
-
-        for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
-            let product = self.get_product(&jar.product_id);
-
-            let interest = jar.get_interest(&score, &product, now).0;
-
-            detailed_amounts.insert(U32(jar.id), U128(interest));
-            total_amount += interest;
+        if let Some(account) = self.try_get_account(&account_id) {
+            return account.get_total_interest();
         }
 
-        AggregatedInterestView {
-            amount: AggregatedTokenAmountView {
-                detailed: detailed_amounts,
-                total: U128(total_amount),
-            },
-            timestamp: now,
+        if let Some(account) = self.get_account_legacy(&account_id) {
+            return AccountV2::from(account).get_total_interest();
         }
+
+        AggregatedInterestView::default()
     }
 
     fn restake(&mut self, product_id: ProductId) {
         self.migrate_account_if_needed(&env::predecessor_account_id());
-        self.restake_internal(&product_id);
+
+        self.restake_internal(&self.get_product(&product_id));
 
         // TODO: add event logging
     }
@@ -160,23 +82,75 @@ impl JarApi for Contract {
 
         self.migrate_account_if_needed(&account_id);
 
-        let product_ids = product_ids.unwrap_or_else(|| self.get_account(&account_id).jars.keys().collect());
-        for product_id in product_ids {
-            self.restake_internal(&product_id);
+        let product_ids = product_ids.unwrap_or_else(|| {
+            self.get_account(&account_id)
+                .jars
+                .keys()
+                .filter(|product_id| self.get_product(product_id).is_enabled)
+                .collect()
+        });
+        for product_id in product_ids.iter() {
+            self.restake_internal(&self.get_product(product_id));
         }
 
         // TODO: add event logging
     }
 
-    // TODO: add v2 support
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_manager();
         self.migrate_account_if_needed(&account_id);
 
-        let jars = self.accounts.get_mut(&account_id).expect("Account doesn't have jars");
-
-        for jar in &mut jars.jars {
+        let account = self.get_account_mut(&account_id);
+        for (_, jar) in account.jars.iter_mut() {
             jar.is_pending_withdraw = false;
         }
+    }
+}
+
+impl AccountV2 {
+    fn get_total_interest(&self) -> AggregatedInterestView {
+        let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
+        let mut total_amount: TokenAmount = 0;
+
+        for (product_id, jar) in self.jars {
+            let product = self.get_product(&product_id);
+            let interest = product.terms.get_interest(self, &jar).0;
+
+            detailed_amounts.insert(product_id, interest.into());
+            total_amount += interest;
+        }
+
+        AggregatedInterestView {
+            amount: AggregatedTokenAmountView {
+                detailed: detailed_amounts,
+                total: U128(total_amount),
+            },
+            timestamp: env::block_timestamp_ms(),
+        };
+    }
+}
+
+impl From<&AccountV1> for AccountV2 {
+    fn from(value: &AccountV1) -> Self {
+        let mut account = AccountV2 {
+            nonce: value.last_id,
+            jars: Default::default(),
+            score: value.score,
+            is_penalty_applied: false,
+        };
+
+        for jar in value.jars {
+            let deposit = Deposit::new(jar.created_at, jar.principal);
+            account.push(&jar.product_id, deposit);
+
+            if !account.is_penalty_applied {
+                account.is_penalty_applied = jar.is_penalty_applied;
+            }
+        }
+
+        // TODO: update and migrate cache
+        // TODO: migrate remainders
+
+        account
     }
 }
