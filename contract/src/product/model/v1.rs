@@ -1,7 +1,7 @@
-use near_sdk::{near, require};
-use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal};
+use near_sdk::near;
+use sweat_jar_model::{ProductId, Score, TokenAmount, UDecimal};
 
-use crate::{common::Duration, env};
+use crate::common::Duration;
 
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[near(serializers=[borsh, json])]
@@ -103,74 +103,4 @@ pub struct Cap {
 
     /// The maximum amount of tokens that can be stored in the jar.
     pub max: TokenAmount,
-}
-
-impl Product {
-    pub(crate) fn is_score_product(&self) -> bool {
-        self.score_cap > 0
-    }
-
-    pub(crate) fn apy_for_score(&self, score: &[Score]) -> UDecimal {
-        let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
-        total_score.to_apy()
-    }
-
-    pub(crate) fn is_flexible(&self) -> bool {
-        self.terms == Terms::Flexible
-    }
-
-    pub(crate) fn allows_top_up(&self) -> bool {
-        self.is_enabled
-            && match &self.terms {
-                Terms::Fixed(value) => value.allows_top_up,
-                Terms::Flexible => true,
-            }
-    }
-
-    pub(crate) fn allows_restaking(&self) -> bool {
-        match &self.terms {
-            Terms::Fixed(value) => value.allows_restaking,
-            Terms::Flexible => false,
-        }
-    }
-
-    pub(crate) fn assert_cap(&self, amount: TokenAmount) {
-        if self.cap.min > amount || amount > self.cap.max {
-            env::panic_str(&format!(
-                "Total amount is out of product bounds: [{}..{}]",
-                self.cap.min, self.cap.max
-            ));
-        }
-    }
-
-    pub(crate) fn assert_enabled(&self) {
-        require!(self.is_enabled, "It's not possible to create new jars for this product");
-    }
-
-    /// Check if fee in new product is not to high
-    pub(crate) fn assert_fee_amount(&self) {
-        let Some(ref fee) = self.withdrawal_fee else {
-            return;
-        };
-
-        let fee_ok = match fee {
-            WithdrawalFee::Fix(amount) => amount < &self.cap.min,
-            WithdrawalFee::Percent(percent) => percent.to_f32() < 100.0,
-        };
-
-        require!(
-            fee_ok,
-            "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
-        );
-    }
-}
-
-#[cfg(test)]
-impl Product {
-    pub(crate) fn get_lockup_term(&self) -> Option<Duration> {
-        match self.clone().terms {
-            Terms::Fixed(value) => Some(value.lockup_term),
-            Terms::Flexible => None,
-        }
-    }
 }

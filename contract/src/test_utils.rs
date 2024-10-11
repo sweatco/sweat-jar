@@ -8,10 +8,7 @@ use sweat_jar_model::{TokenAmount, UDecimal};
 use crate::{
     common::Timestamp,
     jar::model::{Jar, JarLastVersion},
-    product::{
-        helpers::MessageSigner,
-        model::{Apy, DowngradableApy, Product},
-    },
+    product::helpers::MessageSigner,
 };
 
 pub const PRINCIPAL: u128 = 1_000_000;

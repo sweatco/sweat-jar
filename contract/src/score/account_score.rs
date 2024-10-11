@@ -135,7 +135,6 @@ mod test {
     use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC};
 
     use crate::{
-        product::model::Product,
         score::{account_score::Chain, AccountScore},
         test_builder::TestBuilder,
     };
