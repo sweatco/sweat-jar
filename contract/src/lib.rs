@@ -5,7 +5,6 @@ use near_sdk::{
     BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
-use product::model::{Apy, Product};
 use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::{
@@ -85,6 +84,7 @@ pub(crate) enum StorageKey {
     /// Previous implementation of Score storage used on testnet. Is not used anymore.
     AccountScore,
     AccountsVersioned,
+    AccountsV2,
 }
 
 #[near_bindgen]
@@ -102,6 +102,7 @@ impl InitApi for Contract {
             last_jar_id: 0,
             accounts: LookupMap::new(StorageKey::AccountsVersioned),
             products_cache: HashMap::default().into(),
+            accounts_v2: LookupMap::new(StorageKey::AccountsV2),
         }
     }
 }

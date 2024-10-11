@@ -1,9 +1,6 @@
 use near_sdk::{json_types::U128, near};
 
-use crate::{
-    jar::{AggregatedTokenAmountView, JarId},
-    ProductId, TokenAmount, U32,
-};
+use crate::{jar::AggregatedTokenAmountView, ProductId, TokenAmount};
 
 #[derive(Debug, PartialEq, Clone)]
 #[near(serializers=[json])]

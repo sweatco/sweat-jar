@@ -1,4 +1,4 @@
-use std::{cmp, iter::Sum};
+use std::cmp;
 
 use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{near, require};
@@ -8,7 +8,7 @@ use crate::{
     common::{Duration, Timestamp},
     env,
     jar::{
-        account::{v2::AccountV2, versioned::Account},
+        account::v2::AccountV2,
         model::{Deposit, JarV2},
     },
     score::AccountScore,

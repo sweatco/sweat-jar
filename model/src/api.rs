@@ -1,14 +1,11 @@
-use near_sdk::{
-    json_types::{Base64VecU8, U128},
-    AccountId,
-};
+use near_sdk::{json_types::Base64VecU8, AccountId};
 #[cfg(feature = "integration-api")]
 use nitka::near_sdk;
 use nitka_proc::make_integration_version;
 
 use crate::{
     claimed_amount_view::ClaimedAmountView,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
+    jar::{AggregatedInterestView, JarView},
     product::{ProductView, RegisterProductCommand},
     withdraw::{BulkWithdrawView, WithdrawView},
     ProductId, Score, UTC,

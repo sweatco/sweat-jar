@@ -1,5 +1,5 @@
 use near_sdk::near;
-use sweat_jar_model::{TokenAmount, UDecimal};
+use sweat_jar_model::TokenAmount;
 
 use crate::{
     common::{Duration, Timestamp},
@@ -43,6 +43,7 @@ impl JarV2 {
 
             (sum, partition_index)
         } else {
+            // TODO: add argument to `is_liquid`
             let partition_index = self.deposits.partition_point(|deposit| deposit.is_liquid(now, todo!()));
 
             let sum = self.deposits[..partition_index]

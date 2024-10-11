@@ -3,13 +3,10 @@ use sweat_jar_model::product::{
     ApyView, CapView, DowngradableApyView, FixedProductTermsView, ProductView, TermsView, WithdrawalFeeView,
 };
 
-use crate::{
-    product::model::{Cap, DowngradableApy, Terms, WithdrawalFee},
-    Apy, Product,
-};
+use crate::product::model::ProductV2;
 
-impl From<Product> for ProductView {
-    fn from(value: Product) -> Self {
+impl From<ProductV2> for ProductView {
+    fn from(value: ProductV2) -> Self {
         Self {
             id: value.id,
             apy: value.apy.into(),

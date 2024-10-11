@@ -25,7 +25,7 @@ impl From<&Jar> for JarView {
     }
 }
 
-pub struct DetailedJarV2(ProductId, JarV2);
+pub(crate) struct DetailedJarV2(pub(crate) ProductId, pub(crate) JarV2);
 
 impl From<&DetailedJarV2> for Vec<JarView> {
     fn from(value: &DetailedJarV2) -> Self {

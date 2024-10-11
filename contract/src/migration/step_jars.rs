@@ -6,7 +6,7 @@ use sweat_jar_model::{api::MigrationToStepJars, jar::JarId, ProductId};
 use crate::{
     jar::model::AccountJarsLegacy,
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
-    product::model::{Apy, Cap, Product, Terms, WithdrawalFee},
+    product::model::v1::{Apy, Cap, Product, Terms, WithdrawalFee},
     Contract, ContractExt, StorageKey,
 };
 

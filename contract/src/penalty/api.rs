@@ -1,5 +1,5 @@
 use near_sdk::{env, near_bindgen, AccountId};
-use sweat_jar_model::{api::PenaltyApi, jar::JarIdView};
+use sweat_jar_model::api::PenaltyApi;
 
 use crate::{
     event::{
@@ -7,8 +7,7 @@ use crate::{
         EventKind::{ApplyPenalty, BatchApplyPenalty},
         PenaltyData,
     },
-    product::model::Apy,
-    Contract, ContractExt, JarsStorage,
+    Contract, ContractExt,
 };
 
 #[near_bindgen]

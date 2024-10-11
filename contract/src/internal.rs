@@ -1,17 +1,11 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use near_sdk::require;
-use sweat_jar_model::{
-    jar::{JarId, JarIdView},
-    ProductId,
-};
+use sweat_jar_model::jar::JarId;
 
 use crate::{
     env,
-    jar::{
-        account::{v1::AccountV1, versioned::Account},
-        model::Jar,
-    },
+    jar::{account::versioned::Account, model::Jar},
     product::model::v2::ProductV2,
     AccountId, Contract,
 };

@@ -8,7 +8,7 @@ use crate::{
     common::Timestamp,
     env,
     jar::model::{Jar, JarCache},
-    product::model::Product,
+    product::model::ProductV2,
     PACKAGE_NAME, VERSION,
 };
 
@@ -16,7 +16,7 @@ use crate::{
 #[near(serializers=[json])]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
-    RegisterProduct(Product),
+    RegisterProduct(ProductV2),
     CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
@@ -146,12 +146,6 @@ impl From<EventKind> for SweatJarEvent {
 }
 
 #[mutants::skip]
-#[cfg(not(test))]
-pub(crate) fn emit(event: EventKind) {
-    log!("{}", SweatJarEvent::from(event).to_json_event_string());
-}
-
-#[mutants::skip]
 #[cfg(test)]
 pub(crate) fn emit(event: EventKind) {
     if crate::common::test_data::should_log_events() {
@@ -172,7 +166,6 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-
     use std::str::FromStr;
 
     use near_sdk::{json_types::U128, AccountId};

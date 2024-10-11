@@ -1,21 +1,12 @@
-use std::cmp;
-
 use near_sdk::{
     env,
     json_types::{Base64VecU8, U128, U64},
     near, AccountId,
 };
-use sweat_jar_model::{jar::JarId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR};
+use sweat_jar_model::{jar::JarId, Timezone, TokenAmount};
 
 use crate::{
-    common::Timestamp,
-    jar::model::{Jar, JarLastVersion},
-    product::model::{
-        v1::{Apy, Product},
-        v2::{ProductV2, Terms},
-    },
-    score::AccountScore,
-    Contract, JarsStorage,
+    common::Timestamp, jar::model::Jar, product::model::v2::Terms, score::AccountScore, Contract, JarsStorage,
 };
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.

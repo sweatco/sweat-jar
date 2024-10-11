@@ -5,7 +5,7 @@ use near_sdk::{
     near, AccountId, Timestamp,
 };
 
-use crate::{numbers::U32, ProductId};
+use crate::ProductId;
 
 pub type JarId = u32;
 

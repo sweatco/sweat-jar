@@ -4,7 +4,6 @@ use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, Pro
 use sweat_jar_model::{api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView};
 
 use crate::{
-    common::Timestamp,
     event::{emit, EventKind},
     internal::is_promise_success,
     jar::{
@@ -12,7 +11,7 @@ use crate::{
         model::{JarV2, JarV2Companion},
     },
     product::model::v2::InterestCalculator,
-    Contract, ContractExt, JarsStorage,
+    Contract, ContractExt,
 };
 
 #[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.

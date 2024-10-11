@@ -1,16 +1,11 @@
-use std::{
-    collections::HashMap,
-    fmt::format,
-    ops::{Deref, DerefMut},
-};
+use std::collections::HashMap;
 
 use near_sdk::{env, env::panic_str, near, AccountId};
-use sweat_jar_model::{jar::JarId, ProductId, Timezone, TokenAmount};
+use sweat_jar_model::{ProductId, Timezone, TokenAmount};
 
 use crate::{
     common::Timestamp,
-    jar::model::{AccountJarsLegacy, Deposit, Jar, JarCache, JarV2, JarV2Companion},
-    migration::account_jars_non_versioned::AccountJarsNonVersioned,
+    jar::model::{Deposit, JarCache, JarV2, JarV2Companion},
     product::model::v2::{InterestCalculator, ProductV2},
     score::AccountScore,
     Contract,

@@ -1,22 +1,20 @@
 use std::collections::HashMap;
 
-use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, AccountId};
+use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
-    ProductId, TokenAmount, JAR_BATCH_SIZE, U32,
+    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
+    ProductId, TokenAmount,
 };
 
 use crate::{
-    event::{emit, EventKind},
     jar::{
         account::{v1::AccountV1, v2::AccountV2},
-        model::{Deposit, Jar, JarV2},
+        model::Deposit,
         view::DetailedJarV2,
     },
-    product::model::v2::{InterestCalculator, ProductV2},
-    score::AccountScore,
-    Contract, ContractExt, JarsStorage,
+    product::model::v2::ProductV2,
+    Contract, ContractExt,
 };
 
 impl Contract {

@@ -1,4 +1,4 @@
-use near_sdk::{assert_one_yocto, env::panic_str, near_bindgen, require};
+use near_sdk::{assert_one_yocto, near_bindgen, require};
 use sweat_jar_model::{
     api::ProductApi,
     product::{ProductView, RegisterProductCommand},
