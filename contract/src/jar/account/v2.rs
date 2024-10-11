@@ -53,7 +53,7 @@ impl Contract {
     }
 
     pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut AccountV2 {
-        if !self.accounts_v2.contains_key(&account_id) {
+        if !self.accounts_v2.contains_key(account_id) {
             self.accounts_v2.insert(account_id.clone(), AccountV2::default());
         }
 
@@ -64,7 +64,7 @@ impl Contract {
 impl AccountV2 {
     pub(crate) fn get_jar_mut(&mut self, product_id: &ProductId) -> &mut JarV2 {
         self.jars
-            .get_mut(&product_id)
+            .get_mut(product_id)
             .unwrap_or_else(|| env::panic_str(format!("Jar for product {product_id} is not found").as_str()))
     }
 

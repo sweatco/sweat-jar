@@ -79,7 +79,6 @@ impl Contract {
                 account_rollback,
                 // TODO: add events
                 EventKind::Claim(vec![]),
-                now,
             )
         } else {
             PromiseOrValue::Value(accumulator)
@@ -95,7 +94,6 @@ impl Contract {
         claimed_amount: ClaimedAmountView,
         account_rollback: AccountV2Companion,
         event: EventKind,
-        now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
         PromiseOrValue::Value(self.after_claim_internal(
             account_id.clone(),

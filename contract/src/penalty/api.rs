@@ -20,7 +20,7 @@ impl PenaltyApi for Contract {
 
         let account = self.get_account_mut(&account_id);
         account.is_penalty_applied = value;
-        self.update_cache(account);
+        self.update_account_cache(account);
 
         emit(ApplyPenalty(PenaltyData {
             account_id,
@@ -37,7 +37,7 @@ impl PenaltyApi for Contract {
 
             let account = self.get_account_mut(account_id);
             account.is_penalty_applied = value;
-            self.update_cache(account);
+            self.update_account_cache(account);
         }
 
         emit(BatchApplyPenalty(BatchPenaltyData {
