@@ -1,4 +1,5 @@
-use common::test_data;
+#[cfg(test)]
+use common::test_data::get_test_future_success;
 use near_sdk::{
     ext_contract, near_bindgen,
     serde::{Deserialize, Serialize},
@@ -268,7 +269,7 @@ impl Contract {
         account_id: &AccountId,
         request: WithdrawalRequest,
     ) -> PromiseOrValue<WithdrawView> {
-        let withdrawn = self.after_withdraw_internal(account_id.clone(), request, test_data::get_test_future_success());
+        let withdrawn = self.after_withdraw_internal(account_id.clone(), request, get_test_future_success());
 
         PromiseOrValue::Value(withdrawn)
     }
@@ -278,8 +279,7 @@ impl Contract {
         account_id: &AccountId,
         request: BulkWithdrawalRequest,
     ) -> PromiseOrValue<BulkWithdrawView> {
-        let withdrawn =
-            self.after_bulk_withdraw_internal(account_id.clone(), request, test_data::get_test_future_success());
+        let withdrawn = self.after_bulk_withdraw_internal(account_id.clone(), request, get_test_future_success());
 
         PromiseOrValue::Value(withdrawn)
     }

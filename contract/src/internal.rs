@@ -6,7 +6,6 @@ use sweat_jar_model::jar::JarId;
 use crate::{
     env,
     jar::{account::versioned::Account, model::Jar},
-    product::model::v2::ProductV2,
     AccountId, Contract,
 };
 

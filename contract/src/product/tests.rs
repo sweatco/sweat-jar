@@ -7,7 +7,7 @@ use near_sdk::{
 use sweat_jar_model::{
     api::ProductApi,
     product::{
-        ApyView, DowngradableApyView, FixedProductTermsDto, ProductView, RegisterProductCommand, TermsDto, TermsView,
+        ApyView, DowngradableApyView, FixedProductTermsDto, ProductDto, ProductView, TermsDto, TermsView,
         WithdrawalFeeDto, WithdrawalFeeView,
     },
     UDecimal, MS_IN_YEAR,
@@ -22,8 +22,8 @@ use crate::{
     test_utils::admin,
 };
 
-pub(crate) fn get_register_product_command() -> RegisterProductCommand {
-    RegisterProductCommand {
+pub(crate) fn get_register_product_command() -> ProductDto {
+    ProductDto {
         id: "product".to_string(),
         ..Default::default()
     }
@@ -87,7 +87,7 @@ fn register_product_with_existing_id() {
     });
 }
 
-fn register_product(command: RegisterProductCommand) -> (Product, ProductView) {
+fn register_product(command: ProductDto) -> (Product, ProductView) {
     let admin = admin();
 
     let mut context = Context::new(admin.clone());
@@ -103,7 +103,7 @@ fn register_product(command: RegisterProductCommand) -> (Product, ProductView) {
 
 #[test]
 fn register_downgradable_product() {
-    let (product, view) = register_product(RegisterProductCommand {
+    let (product, view) = register_product(ProductDto {
         id: "downgradable_product".to_string(),
         apy_fallback: Some((U128(10), 3)),
         ..Default::default()
@@ -137,7 +137,7 @@ fn register_downgradable_product() {
     expected = "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
 )]
 fn register_product_with_too_high_fixed_fee() {
-    register_product(RegisterProductCommand {
+    register_product(ProductDto {
         id: "product_with_fixed_fee".to_string(),
         withdrawal_fee: WithdrawalFeeDto::Fix(U128(200)).into(),
         terms: TermsDto::Fixed(FixedProductTermsDto {
@@ -154,7 +154,7 @@ fn register_product_with_too_high_fixed_fee() {
     expected = "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
 )]
 fn register_product_with_too_high_percent_fee() {
-    register_product(RegisterProductCommand {
+    register_product(ProductDto {
         id: "product_with_fixed_fee".to_string(),
         withdrawal_fee: WithdrawalFeeDto::Percent(U128(100), 0).into(),
         ..Default::default()
@@ -163,7 +163,7 @@ fn register_product_with_too_high_percent_fee() {
 
 #[test]
 fn register_product_with_fee() {
-    let (product, view) = register_product(RegisterProductCommand {
+    let (product, view) = register_product(ProductDto {
         id: "product_with_fixed_fee".to_string(),
         withdrawal_fee: WithdrawalFeeDto::Fix(U128(10)).into(),
         ..Default::default()
@@ -173,7 +173,7 @@ fn register_product_with_fee() {
 
     assert_eq!(view.withdrawal_fee, Some(WithdrawalFeeView::Fix(U128(10))));
 
-    let (product, view) = register_product(RegisterProductCommand {
+    let (product, view) = register_product(ProductDto {
         id: "product_with_percent_fee".to_string(),
         withdrawal_fee: WithdrawalFeeDto::Percent(U128(12), 2).into(),
         ..Default::default()
@@ -192,7 +192,7 @@ fn register_product_with_fee() {
 
 #[test]
 fn register_product_with_flexible_terms() {
-    let (product, view) = register_product(RegisterProductCommand {
+    let (product, view) = register_product(ProductDto {
         id: "product_with_fixed_fee".to_string(),
         terms: TermsDto::Flexible,
         ..Default::default()

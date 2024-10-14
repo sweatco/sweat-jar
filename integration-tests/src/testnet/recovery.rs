@@ -9,19 +9,19 @@ use nitka::{
 use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration},
     claimed_amount_view::ClaimedAmountView,
-    product::{FixedProductTermsDto, RegisterProductCommand, TermsDto, WithdrawalFeeDto},
+    product::{FixedProductTermsDto, ProductDto, TermsDto, WithdrawalFeeDto},
     MS_IN_DAY, MS_IN_SECOND,
 };
 use tokio::time::sleep;
 
 use crate::{jar_contract_extensions::JarContractExtensions, testnet::testnet_context::TestnetContext};
 
-fn _get_products() -> Vec<RegisterProductCommand> {
+fn _get_products() -> Vec<ProductDto> {
     let json_str = read_to_string("../products_testnet.json").unwrap();
 
     let json: Value = serde_json::from_str(&json_str).unwrap();
 
-    let mut products: Vec<RegisterProductCommand> = vec![];
+    let mut products: Vec<ProductDto> = vec![];
 
     for product_val in json.as_array().unwrap() {
         let id = product_val["product_id"].as_str().unwrap().to_string();
@@ -53,7 +53,7 @@ fn _get_products() -> Vec<RegisterProductCommand> {
 
         let lockup_seconds = product_val["lockup_seconds"].as_u64().unwrap();
 
-        products.push(RegisterProductCommand {
+        products.push(ProductDto {
             id,
             apy_default: (((apy * 1000.0) as u128).into(), 3),
             apy_fallback: None,
@@ -75,7 +75,7 @@ fn _get_products() -> Vec<RegisterProductCommand> {
 }
 
 async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -> Result<()> {
-    jar.register_product(RegisterProductCommand {
+    jar.register_product(ProductDto {
         id: "5_days_20000_steps".to_string(),
         apy_default: (0.into(), 0),
         apy_fallback: None,

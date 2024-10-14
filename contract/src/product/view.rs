@@ -1,20 +1,22 @@
 use near_sdk::json_types::{U128, U64};
 use sweat_jar_model::product::{
-    ApyView, CapView, DowngradableApyView, FixedProductTermsView, ProductView, TermsView, WithdrawalFeeView,
+    ApyView, CapView, DowngradableApyView, FixedProductTermsView, FlexibleProductTermsView, ProductView,
+    ScoreBasedProductTermsView, TermsView, WithdrawalFeeView,
 };
 
-use crate::product::model::ProductV2;
+use crate::product::model::{
+    v2::{Apy, Cap, DowngradableApy, Terms, WithdrawalFee},
+    ProductV2,
+};
 
 impl From<ProductV2> for ProductView {
     fn from(value: ProductV2) -> Self {
         Self {
             id: value.id,
-            apy: value.apy.into(),
             cap: value.cap.into(),
             terms: value.terms.into(),
             withdrawal_fee: value.withdrawal_fee.map(Into::into),
             is_enabled: value.is_enabled,
-            score_cap: value.score_cap,
         }
     }
 }
@@ -23,11 +25,15 @@ impl From<Terms> for TermsView {
     fn from(value: Terms) -> Self {
         match value {
             Terms::Fixed(value) => TermsView::Fixed(FixedProductTermsView {
+                apy: value.apy.into(),
                 lockup_term: U64(value.lockup_term),
-                allows_top_up: value.allows_top_up,
-                allows_restaking: value.allows_restaking,
             }),
-            Terms::Flexible => TermsView::Flexible,
+            Terms::Flexible(value) => TermsView::Flexible(FlexibleProductTermsView { apy: value.apy.into() }),
+            Terms::ScoreBased(value) => TermsView::ScoreBased(ScoreBasedProductTermsView {
+                base_apy: value.base_apy.into(),
+                lockup_term: value.lockup_term.into(),
+                score_cap: value.score_cap,
+            }),
         }
     }
 }

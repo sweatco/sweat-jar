@@ -42,7 +42,7 @@ impl RegisterProductCommand {
         json
     }
 
-    pub(crate) fn get(self) -> sweat_jar_model::product::RegisterProductCommand {
+    pub(crate) fn get(self) -> sweat_jar_model::product::ProductDto {
         from_value(self.json()).unwrap()
     }
 

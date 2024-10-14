@@ -1,5 +1,5 @@
 use near_sdk::json_types::{U128, U64};
-use sweat_jar_model::{jar::JarView, ProductId, U32};
+use sweat_jar_model::{jar::JarView, ProductId};
 
 use crate::jar::model::{Jar, JarV2};
 

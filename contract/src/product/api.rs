@@ -1,7 +1,7 @@
 use near_sdk::{assert_one_yocto, near_bindgen, require};
 use sweat_jar_model::{
     api::ProductApi,
-    product::{ProductView, RegisterProductCommand},
+    product::{ProductDto, ProductView},
     ProductId,
 };
 
@@ -14,7 +14,7 @@ use crate::{
 #[near_bindgen]
 impl ProductApi for Contract {
     #[payable]
-    fn register_product(&mut self, command: RegisterProductCommand) {
+    fn register_product(&mut self, command: ProductDto) {
         self.assert_manager();
         assert_one_yocto();
 

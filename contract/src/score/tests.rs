@@ -9,7 +9,7 @@ use near_sdk::{
 use sweat_jar_model::{
     api::{ProductApi, ScoreApi, WithdrawApi},
     jar::JarId,
-    product::RegisterProductCommand,
+    product::ProductDto,
     Score, Timezone, MS_IN_DAY, UTC,
 };
 
@@ -34,7 +34,7 @@ fn record_score_by_non_manager() {
 fn create_invalid_step_product() {
     let mut ctx = TestBuilder::new().build();
 
-    let mut command = RegisterProductCommand {
+    let mut command = ProductDto {
         id: "aa".to_string(),
         apy_default: (10.into(), 3),
         apy_fallback: None,

@@ -1,6 +1,5 @@
 use std::cmp;
 
-use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{near, require};
 use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_YEAR};
 
@@ -11,7 +10,6 @@ use crate::{
         account::v2::AccountV2,
         model::{Deposit, JarV2},
     },
-    score::AccountScore,
     Contract,
 };
 

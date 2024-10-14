@@ -146,6 +146,12 @@ impl From<EventKind> for SweatJarEvent {
 }
 
 #[mutants::skip]
+#[cfg(not(test))]
+pub(crate) fn emit(event: EventKind) {
+    log!("{}", SweatJarEvent::from(event).to_json_event_string());
+}
+
+#[mutants::skip]
 #[cfg(test)]
 pub(crate) fn emit(event: EventKind) {
     if crate::common::test_data::should_log_events() {

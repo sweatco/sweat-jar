@@ -1,12 +1,13 @@
+#[cfg(not(feature = "integration-api"))]
 use near_sdk::{json_types::Base64VecU8, AccountId};
 #[cfg(feature = "integration-api")]
-use nitka::near_sdk;
+use nitka::near_sdk::{json_types::Base64VecU8, AccountId};
 use nitka_proc::make_integration_version;
 
 use crate::{
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedInterestView, JarView},
-    product::{ProductView, RegisterProductCommand},
+    product::{ProductDto, ProductView},
     withdraw::{BulkWithdrawView, WithdrawView},
     ProductId, Score, UTC,
 };
@@ -149,7 +150,7 @@ pub trait ProductApi {
     /// # Panics
     ///
     /// This method will panic if a product with the same id already exists.
-    fn register_product(&mut self, command: RegisterProductCommand);
+    fn register_product(&mut self, command: ProductDto);
 
     #[deposit_one_yocto]
     /// Sets the enabled status of a specific product.
