@@ -87,13 +87,13 @@ impl AccountV2 {
     }
 
     pub(crate) fn try_set_timezone(&mut self, timezone: Option<Timezone>) {
-        match (timezone, self.score.borrow_mut()) {
+        match (timezone, self.score.is_valid()) {
             // Time zone already set. No actions required.
-            (Some(_) | None, Some(_)) => (),
-            (Some(timezone), None) => {
+            (Some(_) | None, true) => (),
+            (Some(timezone), false) => {
                 self.score = AccountScore::new(timezone);
             }
-            (None, None) => {
+            (None, false) => {
                 panic_str("Trying to create score based jar for without providing time zone");
             }
         }
@@ -104,9 +104,9 @@ impl AccountV2 {
             self.nonce = nonce;
         }
 
-        if let Some(jars) = companion.jars.iter() {
+        if let Some(jars) = &companion.jars {
             for (product_id, jar_companion) in jars {
-                let jar = self.jars.get_mut(&product_id).expect("Jar is not found");
+                let jar = self.jars.get_mut(product_id).expect("Jar is not found");
                 jar.apply(jar_companion);
             }
         }
@@ -119,30 +119,39 @@ impl AccountV2 {
             self.is_penalty_applied = is_penalty_applied;
         }
     }
+
+    fn update_jar_cache(&mut self, product: &ProductV2, now: Timestamp) {
+        let jar = self.get_jar(&product.id);
+        let (interest, remainder) = product.terms.get_interest(self, jar);
+        self.get_jar_mut(&product.id).update_cache(interest, remainder, now);
+    }
 }
 
 impl Contract {
     pub(crate) fn update_account_cache(&mut self, account_id: &AccountId) {
         let now = env::block_timestamp_ms();
-        let account = self.get_account_mut(account_id);
+        let products: Vec<ProductV2> = self
+            .get_account(&account_id)
+            .jars
+            .iter()
+            .map(|(product_id, _)| self.get_product(product_id))
+            .collect();
 
-        for (product_id, jar) in account.jars.iter_mut() {
-            let product = &self.get_product(product_id);
-            jar.update_cache(account, product, now);
+        let account = self.get_account_mut(&account_id);
+        for product in products {
+            account.update_jar_cache(&product, now);
         }
     }
 
     pub(crate) fn update_jar_cache(&mut self, account_id: &AccountId, product_id: &ProductId) {
-        let account = self.get_account_mut(account_id);
         let product = &self.get_product(product_id);
-        let jar = account.get_jar_mut(product_id);
-        jar.update_cache(account, product, env::block_timestamp_ms());
+        let account = self.get_account_mut(account_id);
+        account.update_jar_cache(product, env::block_timestamp_ms());
     }
 }
 
 impl JarV2 {
-    fn update_cache(&mut self, account: &AccountV2, product: &ProductV2, now: Timestamp) {
-        let (interest, remainder) = product.terms.get_interest(account, self);
+    fn update_cache(&mut self, interest: TokenAmount, remainder: u64, now: Timestamp) {
         self.cache = Some(JarCache {
             updated_at: now,
             interest,

@@ -96,7 +96,7 @@ impl JarV2 {
         }
     }
 
-    pub(crate) fn apply(&mut self, companion: JarV2Companion) -> &mut Self {
+    pub(crate) fn apply(&mut self, companion: &JarV2Companion) -> &mut Self {
         if let Some(claim_remainder) = companion.claim_remainder {
             self.claim_remainder = claim_remainder;
         }
@@ -109,8 +109,8 @@ impl JarV2 {
             self.cache = cache;
         }
 
-        if let Some(deposits) = companion.deposits {
-            self.deposits = deposits;
+        if let Some(deposits) = &companion.deposits {
+            self.deposits = deposits.iter().cloned().collect();
         }
 
         if let Some(is_pending_withdraw) = companion.is_pending_withdraw {
