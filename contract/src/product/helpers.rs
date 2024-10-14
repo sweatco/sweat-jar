@@ -6,12 +6,15 @@ use ed25519_dalek::{Signer, SigningKey};
 use general_purpose::STANDARD;
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
-use sweat_jar_model::{Score, TokenAmount, UDecimal, MS_IN_YEAR};
+use sweat_jar_model::{TokenAmount, UDecimal, MS_IN_YEAR};
 
 use crate::{
-    common::{tests::Context, Duration},
+    common::tests::Context,
     jar::model::JarTicket,
-    product::model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
+    product::model::{
+        v2::{Apy, Cap, DowngradableApy, FixedProductTerms, Terms, WithdrawalFee},
+        ProductV2,
+    },
     test_utils::PRODUCT,
     Contract,
 };
@@ -43,26 +46,26 @@ impl MessageSigner {
     }
 }
 
-impl Product {
+impl ProductV2 {
     pub fn new() -> Self {
         Self {
             id: PRODUCT.to_string(),
-            apy: Apy::Constant(UDecimal::new(12, 2)),
             cap: Cap { min: 0, max: 1_000_000 },
             terms: Terms::Fixed(FixedProductTerms {
                 lockup_term: MS_IN_YEAR,
-                allows_top_up: false,
-                allows_restaking: false,
+                apy: Apy::Downgradable(DowngradableApy {
+                    default: UDecimal::new(20, 2),
+                    fallback: UDecimal::new(10, 2),
+                }),
             }),
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
-            score_cap: 0,
         }
     }
 }
 
-impl Product {
+impl ProductV2 {
     pub(crate) fn id(mut self, id: &str) -> Self {
         self.id = id.to_string();
         self
@@ -83,68 +86,13 @@ impl Product {
         self
     }
 
-    pub(crate) fn flexible(mut self) -> Self {
-        self.terms = Terms::Flexible;
-        self
-    }
-
     pub(crate) fn with_withdrawal_fee(mut self, fee: WithdrawalFee) -> Self {
         self.withdrawal_fee = Some(fee);
         self
     }
 
-    pub(crate) fn lockup_term(mut self, term: Duration) -> Self {
-        self.terms = match self.terms {
-            Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
-                lockup_term: term,
-                ..terms
-            }),
-            Terms::Flexible => Terms::Fixed(FixedProductTerms {
-                lockup_term: term,
-                allows_top_up: false,
-                allows_restaking: false,
-            }),
-        };
-
-        self
-    }
-
-    pub(crate) fn with_allows_top_up(mut self, allows_top_up: bool) -> Self {
-        self.terms = match self.terms {
-            Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms { allows_top_up, ..terms }),
-            Terms::Flexible => Terms::Fixed(FixedProductTerms {
-                allows_top_up,
-                lockup_term: MS_IN_YEAR,
-                allows_restaking: false,
-            }),
-        };
-
-        self
-    }
-
-    pub(crate) fn with_allows_restaking(mut self, allows_restaking: bool) -> Self {
-        self.terms = match self.terms {
-            Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
-                allows_restaking,
-                ..terms
-            }),
-            Terms::Flexible => Terms::Fixed(FixedProductTerms {
-                allows_restaking,
-                lockup_term: MS_IN_YEAR,
-                allows_top_up: false,
-            }),
-        };
-
-        self
-    }
-
-    pub(crate) fn apy(mut self, apy: impl Into<Apy>) -> Self {
-        self.apy = apy.into();
-        self
-    }
-
-    pub(crate) fn score_cap(mut self, cap: Score) -> Self {
-        self.score_cap = cap;
+    pub(crate) fn terms(mut self, terms: Terms) -> Self {
+        self.terms = terms;
         self
     }
 }

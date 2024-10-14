@@ -57,6 +57,12 @@ impl Contract {
 }
 
 impl AccountV2 {
+    pub(crate) fn get_jar(&self, product_id: &ProductId) -> &JarV2 {
+        self.jars
+            .get(product_id)
+            .unwrap_or_else(|| env::panic_str(format!("Jar for product {product_id} is not found").as_str()))
+    }
+
     pub(crate) fn get_jar_mut(&mut self, product_id: &ProductId) -> &mut JarV2 {
         self.jars
             .get_mut(product_id)
@@ -116,8 +122,9 @@ impl AccountV2 {
 }
 
 impl Contract {
-    pub(crate) fn update_account_cache(&mut self, account: &mut AccountV2) {
+    pub(crate) fn update_account_cache(&mut self, account_id: &AccountId) {
         let now = env::block_timestamp_ms();
+        let account = self.get_account_mut(account_id);
 
         for (product_id, jar) in account.jars.iter_mut() {
             let product = &self.get_product(product_id);
@@ -125,7 +132,8 @@ impl Contract {
         }
     }
 
-    pub(crate) fn update_jar_cache(&mut self, account: &mut AccountV2, product_id: &ProductId) {
+    pub(crate) fn update_jar_cache(&mut self, account_id: &AccountId, product_id: &ProductId) {
+        let account = self.get_account_mut(account_id);
         let product = &self.get_product(product_id);
         let jar = account.get_jar_mut(product_id);
         jar.update_cache(account, product, env::block_timestamp_ms());

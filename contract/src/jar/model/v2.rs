@@ -2,6 +2,7 @@ use near_sdk::near;
 use sweat_jar_model::TokenAmount;
 
 use crate::{
+    assert::assert_not_locked,
     common::{Duration, Timestamp},
     jar::model::JarCache,
     product::model::v2::Terms,
@@ -63,6 +64,11 @@ impl JarV2 {
         self.is_pending_withdraw = true;
 
         self
+    }
+
+    pub(crate) fn try_lock(&mut self) -> &mut Self {
+        assert_not_locked(self);
+        self.lock()
     }
 
     pub(crate) fn unlock(&mut self) -> &mut Self {

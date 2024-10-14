@@ -11,7 +11,7 @@ use near_contract_standards::fungible_token::Balance;
 use near_sdk::{env::block_timestamp_ms, test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
 use sweat_jar_model::{api::InitApi, jar::JarId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
-use crate::{jar::model::Jar, product::model::Product, test_utils::AfterCatchUnwind, Contract};
+use crate::{jar::model::Jar, product::model::ProductV2, test_utils::AfterCatchUnwind, Contract};
 
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
@@ -51,7 +51,7 @@ impl Context {
         self.contract.try_lock().expect("Contract is already locked")
     }
 
-    pub(crate) fn with_products(self, products: &[Product]) -> Self {
+    pub(crate) fn with_products(self, products: &[ProductV2]) -> Self {
         for product in products {
             self.contract().products.insert(&product.id, product);
         }

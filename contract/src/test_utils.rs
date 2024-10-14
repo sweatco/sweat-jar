@@ -3,12 +3,18 @@
 use std::panic::{catch_unwind, UnwindSafe};
 
 use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
-use sweat_jar_model::{TokenAmount, UDecimal};
+use sweat_jar_model::{TokenAmount, UDecimal, MS_IN_YEAR};
 
 use crate::{
     common::Timestamp,
     jar::model::{Jar, JarLastVersion},
-    product::helpers::MessageSigner,
+    product::{
+        helpers::MessageSigner,
+        model::{
+            v2::{Apy, DowngradableApy, FixedProductTerms, Terms},
+            ProductV2,
+        },
+    },
 };
 
 pub const PRINCIPAL: u128 = 1_000_000;
@@ -64,14 +70,17 @@ impl Jar {
     }
 }
 
-pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {
-    Product::new()
+pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> ProductV2 {
+    ProductV2::new()
         .id(id)
         .public_key(signer.public_key())
         .cap(0, 100_000_000_000)
-        .apy(Apy::Downgradable(DowngradableApy {
-            default: UDecimal::new(20, 2),
-            fallback: UDecimal::new(10, 2),
+        .terms(Terms::Fixed(FixedProductTerms {
+            apy: Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(20, 2),
+                fallback: UDecimal::new(10, 2),
+            }),
+            lockup_term: MS_IN_YEAR,
         }))
 }
 

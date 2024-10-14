@@ -33,12 +33,10 @@ pub struct BulkWithdrawalRequest {
 #[cfg(not(test))]
 use crate::ft_interface::FungibleTokenInterface;
 use crate::{
-    assert::assert_not_locked,
     common,
     common::gas_data::{GAS_FOR_BULK_AFTER_WITHDRAW, GAS_FOR_FT_TRANSFER},
     env,
     event::{emit, EventKind},
-    jar::{account::v2::AccountV2, model::JarV2},
     AccountId, Contract, ContractExt,
 };
 
@@ -57,14 +55,10 @@ impl WithdrawApi for Contract {
         let account_id = env::predecessor_account_id();
         self.migrate_account_if_needed(&account_id);
 
-        let account = self.get_account_mut(&account_id);
+        self.get_account_mut(&account_id).get_jar_mut(&product_id).try_lock();
+        self.update_jar_cache(&account_id, &product_id);
 
-        let jar = account.get_jar_mut(&product_id);
-        assert_not_locked(jar);
-        jar.lock();
-
-        self.update_jar_cache(account, &product_id);
-
+        let jar = self.get_account(&account_id).get_jar(&product_id);
         let product = self.get_product(&product_id);
         let (amount, partition_index) = jar.get_liquid_balance(&product.terms, env::block_timestamp_ms());
         let fee = product.calculate_fee(amount);
@@ -82,34 +76,36 @@ impl WithdrawApi for Contract {
     fn withdraw_all(&mut self) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
         self.migrate_account_if_needed(&account_id);
+
+        self.update_account_cache(&account_id);
+
         let now = env::block_timestamp_ms();
+        let mut request = BulkWithdrawalRequest::default();
 
-        let account = self.get_account_mut(&account_id);
-        self.update_cache(account);
+        for (product_id, jar) in &self.get_account(&account_id).jars {
+            if jar.is_pending_withdraw {
+                continue;
+            }
 
-        let request: BulkWithdrawalRequest = account
-            .jars
-            .iter_mut()
-            .filter(|(_, jar)| !jar.is_pending_withdraw)
-            .fold(
-                BulkWithdrawalRequest::default(),
-                |acc: &mut BulkWithdrawalRequest, (product_id, jar)| {
-                    let product = self.get_product(&product_id);
-                    jar.lock();
+            let product = self.get_product(product_id);
+            let (amount, partition_index) = jar.get_liquid_balance(&product.terms, now);
+            let fee = product.calculate_fee(amount);
 
-                    let (amount, partition_index) = jar.get_liquid_balance(product.terms, now);
-                    let fee = product.calculate_fee(amount);
+            request.requests.push(WithdrawalRequest {
+                amount,
+                partition_index,
+                product_id: product.id,
+                fee,
+            });
+            request.total_amount += amount;
+            request.total_fee += fee;
+        }
 
-                    acc.requests.push(WithdrawalRequest {
-                        amount,
-                        partition_index,
-                        product_id,
-                        fee,
-                    });
-                    acc.total_amount += amount;
-                    acc.total_fee += fee;
-                },
-            );
+        for request in request.requests.iter() {
+            self.get_account_mut(&account_id)
+                .get_jar_mut(&request.product_id)
+                .lock();
+        }
 
         if request.requests.is_empty() {
             return PromiseOrValue::Value(BulkWithdrawView::default());
@@ -127,14 +123,13 @@ impl Contract {
         is_promise_success: bool,
     ) -> WithdrawView {
         let account = self.get_account_mut(&account_id);
-        let jar = account.get_jar_mut(&request.product_id);
-        jar.unlock();
+        account.get_jar_mut(&request.product_id).unlock();
 
         if !is_promise_success {
             return WithdrawView::new(0, None);
         }
 
-        clean_up(&request, account, jar);
+        self.clean_up(&account_id, &request);
 
         let withdrawal_result = WithdrawView::new(request.amount, self.wrap_fee(request.fee));
 
@@ -153,14 +148,13 @@ impl Contract {
         request: BulkWithdrawalRequest,
         is_promise_success: bool,
     ) -> BulkWithdrawView {
-        let account = self.get_account_mut(&account_id);
-
         let mut withdrawal_result = BulkWithdrawView {
             total_amount: 0.into(),
             withdrawals: vec![],
         };
 
         if !is_promise_success {
+            let account = self.get_account_mut(&account_id);
             for request in request.requests {
                 let jar = account.get_jar_mut(&request.product_id);
                 jar.unlock();
@@ -171,22 +165,25 @@ impl Contract {
 
         let mut event_data = vec![];
 
-        for request in request.requests {
-            let jar = account.get_jar_mut(&request.product_id);
-            jar.unlock();
+        for request in &request.requests {
+            self.get_account_mut(&account_id)
+                .get_jar_mut(&request.product_id)
+                .unlock();
 
-            clean_up(&request, account, jar);
-
-            let deposit_withdrawal = WithdrawView::new(request.amount, self.wrap_fee(request.fee));
+            let deposit_withdrawal = WithdrawView::new(request.amount.clone(), self.wrap_fee(request.fee.clone()));
 
             event_data.push((
-                request.product_id,
+                request.product_id.clone(),
                 deposit_withdrawal.fee,
                 deposit_withdrawal.withdrawn_amount,
             ));
 
             withdrawal_result.total_amount.0 += deposit_withdrawal.withdrawn_amount.0;
             withdrawal_result.withdrawals.push(deposit_withdrawal);
+        }
+
+        for request in &request.requests {
+            self.clean_up(&account_id, request);
         }
 
         emit(EventKind::WithdrawAll(event_data));
@@ -206,11 +203,15 @@ impl Contract {
     }
 }
 
-fn clean_up(request: &WithdrawalRequest, account: &mut AccountV2, jar: &mut JarV2) {
-    jar.clean_up_deposits(request.partition_index);
+impl Contract {
+    fn clean_up(&mut self, account_id: &AccountId, request: &WithdrawalRequest) {
+        let jar = self.get_account_mut(account_id).get_jar_mut(&request.product_id);
+        jar.clean_up_deposits(request.partition_index);
 
-    if jar.should_close() {
-        account.jars.remove(&request.product_id);
+        let jar = self.get_account(account_id).get_jar(&request.product_id);
+        if jar.should_close() {
+            self.get_account_mut(account_id).jars.remove(&request.product_id);
+        }
     }
 }
 
