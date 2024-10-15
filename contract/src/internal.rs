@@ -5,7 +5,10 @@ use sweat_jar_model::jar::JarId;
 
 use crate::{
     env,
-    jar::{account::versioned::Account, model::Jar},
+    jar::{
+        account::versioned::Account,
+        model::{AccountJarsLegacy, Jar},
+    },
     AccountId, Contract,
 };
 
@@ -46,16 +49,18 @@ impl Contract {
         self.accounts.get(account_id).map(|record| record.jars.clone())
     }
 
-    pub(crate) fn get_account_legacy(&self, account_id: &AccountId) -> Option<&Account> {
+    pub(crate) fn get_account_legacy(&self, account_id: &AccountId) -> Option<Account> {
         if let Some(record) = self.account_jars_v1.get(account_id) {
-            return Account::from(record).into();
+            let account: Account = record.clone().into();
+            return Some(account);
         }
 
         if let Some(record) = self.account_jars_non_versioned.get(account_id) {
-            return Account::from(record).into();
+            let account: Account = record.clone().into();
+            return Some(account);
         }
 
-        self.accounts.get(account_id)
+        self.accounts.get(account_id).cloned()
     }
 
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {

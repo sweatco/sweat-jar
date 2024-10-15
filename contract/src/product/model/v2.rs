@@ -130,13 +130,22 @@ impl Terms {
             _ => false,
         }
     }
+
+    pub(crate) fn is_liquid(&self, deposit: &Deposit) -> bool {
+        let now = env::block_timestamp_ms();
+        match self {
+            Terms::Fixed(terms) => deposit.is_liquid(now, terms.lockup_term),
+            Terms::Flexible(_) => true,
+            Terms::ScoreBased(terms) => deposit.is_liquid(now, terms.lockup_term),
+        }
+    }
 }
 
 impl ProductV2 {
     pub(crate) fn calculate_fee(&self, principal: TokenAmount) -> TokenAmount {
         if let Some(fee) = self.withdrawal_fee.clone() {
             return match fee {
-                WithdrawalFee::Fix(amount) => *amount,
+                WithdrawalFee::Fix(amount) => amount.clone(),
                 WithdrawalFee::Percent(percent) => percent * principal,
             };
         }
@@ -197,8 +206,8 @@ pub(crate) trait InterestCalculator {
                 (acc.0 + interest, acc.1 + remainder)
             });
 
-        let remainder: u64 = (remainder % MS_IN_YEAR.into()).try_into().unwrap();
-        let extra_interest = remainder / MS_IN_YEAR.into();
+        let remainder: u64 = remainder % MS_IN_YEAR;
+        let extra_interest = (remainder / MS_IN_YEAR) as u128;
 
         (interest + extra_interest, remainder)
     }

@@ -6,7 +6,7 @@ use crate::jar::model::{Jar, JarV2};
 impl From<Jar> for JarView {
     fn from(value: Jar) -> Self {
         Self {
-            id: value.id.into(),
+            id: value.id.to_string(),
             product_id: value.product_id.clone(),
             created_at: U64(value.created_at),
             principal: U128(value.principal),
@@ -17,7 +17,7 @@ impl From<Jar> for JarView {
 impl From<&Jar> for JarView {
     fn from(value: &Jar) -> Self {
         Self {
-            id: value.id.into(),
+            id: value.id.to_string(),
             product_id: value.product_id.clone(),
             created_at: U64(value.created_at),
             principal: U128(value.principal),
@@ -35,8 +35,8 @@ impl From<&DetailedJarV2> for Vec<JarView> {
             .deposits
             .iter()
             .map(|deposit| JarView {
-                product_id,
-                id: format!("{product_id}_{}", deposit.created_at),
+                id: format!("{}_{}", product_id.clone(), deposit.created_at),
+                product_id: product_id.clone(),
                 created_at: deposit.created_at.into(),
                 principal: deposit.principal.into(),
             })

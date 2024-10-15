@@ -1,7 +1,7 @@
 #[cfg(not(feature = "integration-api"))]
 use near_sdk::{json_types::Base64VecU8, AccountId};
 #[cfg(feature = "integration-api")]
-use nitka::near_sdk::{json_types::Base64VecU8, AccountId};
+use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
 
 use crate::{

@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
 use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
-use sweat_jar_model::{api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView};
+use sweat_jar_model::{
+    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, ProductId, TokenAmount,
+};
 
 use crate::{
     event::{emit, EventKind},
@@ -46,12 +48,14 @@ impl Contract {
         let now = env::block_timestamp_ms();
 
         let mut rollback_jars = HashMap::new();
-        for (product_id, jar) in account.jars.iter_mut() {
+        let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
+
+        for (product_id, jar) in account.jars.iter() {
             if jar.is_pending_withdraw {
                 continue;
             }
 
-            rollback_jars.insert(product_id, jar.to_rollback());
+            rollback_jars.insert(product_id.clone(), jar.to_rollback());
 
             let product = self.products.get(product_id).expect("Product is not found");
             let (interest, remainder) = product.terms.get_interest(account, jar);
@@ -60,14 +64,18 @@ impl Contract {
                 continue;
             }
 
-            jar.claim(interest, remainder, now).lock();
-
+            interest_per_jar.insert(product_id.clone(), (interest, remainder));
             accumulator.add(product_id, interest);
+        }
+
+        for (product_id, (interest, remainder)) in interest_per_jar {
+            let jar = account.get_jar_mut(&product_id);
+            jar.claim(interest, remainder, now).lock();
         }
 
         let mut account_rollback = AccountV2Companion::default();
         account_rollback.score = Some(account.score);
-        account_rollback.jars = Some(*rollback_jars);
+        account_rollback.jars = Some(rollback_jars);
 
         account.score.claim_score();
 

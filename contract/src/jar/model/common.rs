@@ -6,7 +6,7 @@ use near_sdk::{
 use sweat_jar_model::{jar::JarId, Timezone, TokenAmount};
 
 use crate::{
-    common::Timestamp, jar::model::Jar, product::model::v2::Terms, score::AccountScore, Contract, JarsStorage,
+    common::Timestamp, jar::model::Jar, product::model::v2::Terms, Contract, JarsStorage,
 };
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
@@ -67,21 +67,6 @@ impl Contract {
 
         let account = self.get_or_create_account_mut(&account_id);
         account.deposit(product_id, amount);
-    }
-
-    pub(crate) fn get_score(&self, account: &AccountId) -> Option<&AccountScore> {
-        self.accounts.get(account).and_then(|a| a.score())
-    }
-
-    pub(crate) fn get_score_mut(&mut self, account: &AccountId) -> Option<&mut AccountScore> {
-        self.accounts.get_mut(account).and_then(|a| a.score_mut())
-    }
-
-    pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
-        self.accounts
-            .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
-            .get_jar_mut(id)
     }
 
     #[mutants::skip]

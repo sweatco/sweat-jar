@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[near]
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct AccountV1 {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_id: JarId,
