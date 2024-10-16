@@ -1,43 +1,40 @@
-// use near_sdk::test_utils::test_env::{alice, bob, carol};
-// use sweat_jar_model::{
-//     api::{JarApi, ProductApi},
-//     U32,
-// };
-//
-// use crate::{
-//     common::tests::Context,
-//     jar::model::Jar,
-//     product::model::Product,
-//     test_utils::{admin, expect_panic},
-// };
-//
-// #[test]
-// fn restake_by_not_owner() {
-//     let product = Product::new().with_allows_restaking(true);
-//     let alice_jar = Jar::new(0);
-//     let mut ctx = Context::new(admin())
-//         .with_products(&[product])
-//         .with_jars(&[alice_jar.clone()]);
-//
-//     ctx.switch_account(bob());
-//     expect_panic(&ctx, "Account 'bob.near' doesn't exist", || {
-//         ctx.contract().restake(U32(alice_jar.id));
-//     });
-//
-//     expect_panic(&ctx, "Jars for account bob.near don't exist", || {
-//         ctx.contract().restake_all(None);
-//     });
-//
-//     ctx.switch_account(carol());
-//     expect_panic(&ctx, "Account 'carol.near' doesn't exist", || {
-//         ctx.contract().restake(U32(alice_jar.id));
-//     });
-//
-//     expect_panic(&ctx, "Jars for account carol.near don't exist", || {
-//         ctx.contract().restake_all(None);
-//     });
-// }
-//
+use near_sdk::test_utils::test_env::{alice, bob, carol};
+use sweat_jar_model::api::JarApi;
+
+use crate::{
+    common::tests::Context,
+    jar::model::JarV2,
+    product::model::ProductV2,
+    test_utils::{admin, expect_panic},
+};
+
+#[test]
+fn restake_by_not_owner() {
+    let product = ProductV2::new();
+    let alice_jar = JarV2::new();
+    let mut ctx = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), alice_jar.clone())]);
+
+    ctx.switch_account(bob());
+    expect_panic(&ctx, "Account bob.near is not found", || {
+        ctx.contract().restake(product.id.clone());
+    });
+
+    expect_panic(&ctx, "Account bob.near is not found", || {
+        ctx.contract().restake_all(None);
+    });
+
+    ctx.switch_account(carol());
+    expect_panic(&ctx, "Account carol.near is not found", || {
+        ctx.contract().restake(product.id);
+    });
+
+    expect_panic(&ctx, "Account carol.near is not found", || {
+        ctx.contract().restake_all(None);
+    });
+}
+
 // #[test]
 // #[should_panic(expected = "The jar is not mature yet")]
 // fn restake_before_maturity() {

@@ -9,9 +9,14 @@ use std::{
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{env::block_timestamp_ms, test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, jar::JarId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use sweat_jar_model::{api::InitApi, jar::JarId, ProductId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
-use crate::{jar::model::Jar, product::model::ProductV2, test_utils::AfterCatchUnwind, Contract};
+use crate::{
+    jar::{account::v2::AccountV2, model::JarV2},
+    product::model::ProductV2,
+    test_utils::AfterCatchUnwind,
+    Contract,
+};
 
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
@@ -59,29 +64,16 @@ impl Context {
         self
     }
 
-    pub(crate) fn with_jars(mut self, jars: &[Jar]) -> Self {
+    pub(crate) fn with_jars(mut self, account_id: &AccountId, jars: &[(ProductId, JarV2)]) -> Self {
         if jars.is_empty() {
             return self;
         }
 
-        let max_id = jars.iter().map(|j| j.id).max().unwrap();
-
-        for jar in jars {
-            self.account_jars
-                .entry(jar.account_id.clone())
-                .or_default()
-                .push(jar.id);
-
-            self.contract()
-                .accounts
-                .entry(jar.account_id.clone())
-                .or_default()
-                .push(jar.clone());
+        let mut account = AccountV2::default();
+        for (product_id, jar) in jars.iter() {
+            account.jars.insert(product_id.clone(), jar.clone());
         }
-
-        if max_id > self.contract().last_jar_id {
-            self.contract().last_jar_id = max_id;
-        }
+        self.contract().accounts_v2.insert(account_id.clone(), account);
 
         self
     }
