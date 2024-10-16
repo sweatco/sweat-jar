@@ -15,6 +15,8 @@ use crate::{
 #[derive(Default, Debug, PartialEq)]
 pub struct AccountV2 {
     /// Is used as nonce in `get_ticket_hash` method.
+    /// TODO: check logic behind it
+    /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, JarV2>,
     pub score: AccountScore,
@@ -122,7 +124,7 @@ impl AccountV2 {
 
     fn update_jar_cache(&mut self, product: &ProductV2, now: Timestamp) {
         let jar = self.get_jar(&product.id);
-        let (interest, remainder) = product.terms.get_interest(self, jar);
+        let (interest, remainder) = product.terms.get_interest(self, jar, now);
         self.get_jar_mut(&product.id).update_cache(interest, remainder, now);
     }
 }

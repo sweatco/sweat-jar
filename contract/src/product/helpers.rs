@@ -63,6 +63,11 @@ impl ProductV2 {
             is_enabled: true,
         }
     }
+
+    pub fn with_terms(mut self, terms: Terms) -> Self {
+        self.terms = terms;
+        self
+    }
 }
 
 impl ProductV2 {
@@ -110,7 +115,7 @@ impl Context {
             &ticket.product_id,
             amount,
             ticket.valid_until.0,
-            None,
+            0,
         )
     }
 }

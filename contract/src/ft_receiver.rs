@@ -39,7 +39,7 @@ impl FungibleTokenReceiver for Contract {
         match ft_message {
             FtMessage::Stake(message) => {
                 let receiver_id = message.receiver_id.unwrap_or(sender_id);
-                self.deposit(receiver_id, message.ticket, amount, message.signature);
+                self.deposit(receiver_id, message.ticket, amount, &message.signature);
             }
             FtMessage::Migrate(jars) => {
                 require!(sender_id == self.manager, "Migration can be performed only by admin");

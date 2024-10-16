@@ -45,7 +45,7 @@ impl Contract {
 
         for (product_id, jar) in account.jars.iter() {
             let product = self.get_product(product_id);
-            let interest = product.terms.get_interest(account, &jar).0;
+            let interest = product.terms.get_interest(account, &jar, env::block_timestamp_ms()).0;
 
             detailed_amounts.insert(product_id.clone(), interest.into());
             total_amount += interest;

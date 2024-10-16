@@ -186,7 +186,7 @@ impl ProductV2 {
 }
 
 pub(crate) trait InterestCalculator {
-    fn get_interest(&self, account: &AccountV2, jar: &JarV2) -> (TokenAmount, u64) {
+    fn get_interest(&self, account: &AccountV2, jar: &JarV2, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
         let apy = self.get_apy(account);
 
@@ -194,7 +194,7 @@ pub(crate) trait InterestCalculator {
             .deposits
             .iter()
             .map(|deposit| {
-                let term = self.get_interest_calculation_term(since_date, deposit);
+                let term = self.get_interest_calculation_term(now, since_date, deposit);
 
                 if term > 0 {
                     get_interest(deposit.principal, apy, term)
@@ -214,7 +214,12 @@ pub(crate) trait InterestCalculator {
 
     fn get_apy(&self, account: &AccountV2) -> UDecimal;
 
-    fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Duration;
+    fn get_interest_calculation_term(
+        &self,
+        now: Timestamp,
+        last_cached_at: Option<Timestamp>,
+        deposit: &Deposit,
+    ) -> Duration;
 }
 
 impl InterestCalculator for Terms {
@@ -226,11 +231,16 @@ impl InterestCalculator for Terms {
         }
     }
 
-    fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Duration {
+    fn get_interest_calculation_term(
+        &self,
+        now: Timestamp,
+        last_cached_at: Option<Timestamp>,
+        deposit: &Deposit,
+    ) -> Duration {
         match self {
-            Terms::Fixed(terms) => terms.get_interest_calculation_term(last_cached_at, deposit),
-            Terms::Flexible(terms) => terms.get_interest_calculation_term(last_cached_at, deposit),
-            Terms::ScoreBased(terms) => terms.get_interest_calculation_term(last_cached_at, deposit),
+            Terms::Fixed(terms) => terms.get_interest_calculation_term(now, last_cached_at, deposit),
+            Terms::Flexible(terms) => terms.get_interest_calculation_term(now, last_cached_at, deposit),
+            Terms::ScoreBased(terms) => terms.get_interest_calculation_term(now, last_cached_at, deposit),
         }
     }
 }
@@ -240,11 +250,16 @@ impl InterestCalculator for FixedProductTerms {
         self.apy.get_effective(account.is_penalty_applied)
     }
 
-    fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Duration {
+    fn get_interest_calculation_term(
+        &self,
+        now: Timestamp,
+        last_cached_at: Option<Timestamp>,
+        deposit: &Deposit,
+    ) -> Duration {
         let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
             cmp::max(cache_date, deposit.created_at)
         });
-        let until_date = cmp::min(env::block_timestamp_ms(), deposit.created_at + self.lockup_term);
+        let until_date = cmp::min(now, deposit.created_at + self.lockup_term);
 
         until_date.checked_sub(since_date).unwrap_or(0)
     }
@@ -255,12 +270,17 @@ impl InterestCalculator for FlexibleProductTerms {
         self.apy.get_effective(account.is_penalty_applied)
     }
 
-    fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Duration {
+    fn get_interest_calculation_term(
+        &self,
+        now: Timestamp,
+        last_cached_at: Option<Timestamp>,
+        deposit: &Deposit,
+    ) -> Duration {
         let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
             cmp::max(cache_date, deposit.created_at)
         });
 
-        env::block_timestamp_ms() - since_date
+        now - since_date
     }
 }
 
@@ -272,11 +292,16 @@ impl InterestCalculator for ScoreBasedProductTerms {
         self.base_apy.get_effective(account.is_penalty_applied) + total_score.to_apy()
     }
 
-    fn get_interest_calculation_term(&self, last_cached_at: Option<Timestamp>, deposit: &Deposit) -> Timestamp {
+    fn get_interest_calculation_term(
+        &self,
+        now: Timestamp,
+        last_cached_at: Option<Timestamp>,
+        deposit: &Deposit,
+    ) -> Timestamp {
         let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
             cmp::max(cache_date, deposit.created_at)
         });
-        let until_date = cmp::min(env::block_timestamp_ms(), deposit.created_at + self.lockup_term);
+        let until_date = cmp::min(now, deposit.created_at + self.lockup_term);
 
         until_date.checked_sub(since_date).unwrap_or(0)
     }

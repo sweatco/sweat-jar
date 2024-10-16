@@ -58,7 +58,7 @@ impl Contract {
             rollback_jars.insert(product_id.clone(), jar.to_rollback());
 
             let product = self.products.get(product_id).expect("Product is not found");
-            let (interest, remainder) = product.terms.get_interest(account, jar);
+            let (interest, remainder) = product.terms.get_interest(account, jar, now);
 
             if interest == 0 {
                 continue;

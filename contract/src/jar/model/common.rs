@@ -5,9 +5,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{jar::JarId, Timezone, TokenAmount};
 
-use crate::{
-    common::Timestamp, jar::model::Jar, product::model::v2::Terms, Contract, JarsStorage,
-};
+use crate::{common::Timestamp, jar::model::Jar, product::model::v2::Terms, Contract, JarsStorage};
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
@@ -49,7 +47,7 @@ impl Contract {
         account_id: AccountId,
         ticket: JarTicket,
         amount: U128,
-        signature: Option<Base64VecU8>,
+        signature: &Option<Base64VecU8>,
     ) {
         let amount = amount.0;
         let product_id = &ticket.product_id;
@@ -60,6 +58,10 @@ impl Contract {
         self.verify(&account_id, amount, &ticket, signature);
 
         let account = self.get_or_create_account_mut(&account_id);
+
+        if signature.is_some() {
+            account.nonce += 1;
+        }
 
         if matches!(product.terms, Terms::ScoreBased(_)) {
             account.try_set_timezone(ticket.timezone);

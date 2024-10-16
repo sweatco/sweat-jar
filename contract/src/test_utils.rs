@@ -2,12 +2,12 @@
 
 use std::panic::{catch_unwind, UnwindSafe};
 
-use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
+use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::{TokenAmount, UDecimal, MS_IN_YEAR};
 
 use crate::{
     common::Timestamp,
-    jar::model::{Jar, JarLastVersion},
+    jar::model::{Deposit, JarV2},
     product::{
         helpers::MessageSigner,
         model::{
@@ -27,44 +27,23 @@ pub fn admin() -> AccountId {
     "admin".parse().unwrap()
 }
 
-impl Jar {
-    pub(crate) fn new(id: u32) -> Jar {
-        JarLastVersion {
-            id,
-            account_id: alice(),
-            product_id: PRODUCT.to_string(),
-            created_at: 0,
-            principal: 1_000_000,
+impl JarV2 {
+    pub(crate) fn new() -> Self {
+        JarV2 {
+            deposits: vec![],
             cache: None,
             claimed_balance: 0,
             is_pending_withdraw: false,
-            is_penalty_applied: false,
-            claim_remainder: Default::default(),
+            claim_remainder: 0,
         }
-        .into()
     }
 
-    pub(crate) fn product_id(mut self, product_id: &str) -> Jar {
-        self.product_id = product_id.to_string();
+    pub(crate) fn with_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Self {
+        self.deposits.push(Deposit::new(created_at, principal));
         self
     }
 
-    pub(crate) fn account_id(mut self, account_id: &AccountId) -> Jar {
-        self.account_id = account_id.clone();
-        self
-    }
-
-    pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {
-        self.principal = principal;
-        self
-    }
-
-    pub(crate) fn created_at(mut self, created_at: Timestamp) -> Jar {
-        self.created_at = created_at;
-        self
-    }
-
-    pub(crate) fn pending_withdraw(mut self) -> Jar {
+    pub(crate) fn with_pending_withdraw(mut self) -> Self {
         self.is_pending_withdraw = true;
         self
     }

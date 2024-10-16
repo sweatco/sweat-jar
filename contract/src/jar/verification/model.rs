@@ -15,11 +15,11 @@ impl Contract {
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &JarTicket,
-        signature: Option<Base64VecU8>,
+        signature: &Option<Base64VecU8>,
     ) {
         self.migrate_account_if_needed(account_id);
 
-        let last_jar_id = self.accounts.get(account_id).map(|jars| jars.last_id);
+        let account = self.get_account(account_id);
         let product = self.get_product(&ticket.product_id);
 
         if let Some(pk) = &product.public_key {
@@ -30,19 +30,14 @@ impl Contract {
             let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
             require!(is_time_valid, "Ticket is outdated");
 
-            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
+            let hash = Self::get_ticket_hash(account_id, amount, ticket, account.nonce);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
         }
     }
 
-    fn get_ticket_hash(
-        account_id: &AccountId,
-        amount: TokenAmount,
-        ticket: &JarTicket,
-        last_jar_id: Option<JarId>,
-    ) -> Vec<u8> {
+    fn get_ticket_hash(account_id: &AccountId, amount: TokenAmount, ticket: &JarTicket, nonce: u32) -> Vec<u8> {
         sha256(
             Self::get_signature_material(
                 &env::current_account_id(),
@@ -50,7 +45,7 @@ impl Contract {
                 &ticket.product_id,
                 amount,
                 ticket.valid_until.0,
-                last_jar_id,
+                nonce,
             )
             .as_bytes(),
         )
@@ -62,16 +57,11 @@ impl Contract {
         product_id: &ProductId,
         amount: TokenAmount,
         valid_until: Timestamp,
-        last_jar_id: Option<JarId>,
+        nonce: u32,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",
-            contract_account_id,
-            receiver_account_id,
-            product_id,
-            amount,
-            last_jar_id.map_or_else(String::new, |value| value.to_string()),
-            valid_until,
+            contract_account_id, receiver_account_id, product_id, amount, nonce, valid_until,
         )
     }
 
