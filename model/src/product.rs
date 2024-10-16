@@ -113,7 +113,6 @@ pub struct FixedProductTermsDto {
 #[derive(PartialEq, Clone, Debug)]
 pub struct FlexibleProductTermsDto {
     pub apy: ApyDto,
-    pub lockup_term: U64,
 }
 
 #[near(serializers=[borsh, json])]
@@ -137,14 +136,21 @@ impl Default for ProductDto {
     }
 }
 
+// TODO: move to tests
 impl Default for FixedProductTermsDto {
     fn default() -> Self {
         Self {
             lockup_term: U64(MS_IN_YEAR),
-            apy: ApyDto {
-                default: (U128(12), 2),
-                fallback: None,
-            },
+            apy: ApyDto::default(),
+        }
+    }
+}
+
+impl Default for ApyDto {
+    fn default() -> Self {
+        ApyDto {
+            default: (U128(12), 2),
+            fallback: None,
         }
     }
 }
@@ -166,4 +172,15 @@ pub enum WithdrawalFeeDto {
     /// 2. Second element is exponent as an integer
     /// I.e. "0.12" becomes ("12", 2): 12 * 10^-2
     Percent(U128, u32),
+}
+
+// TODO: move to tests
+impl ProductView {
+    pub fn get_base_apy(&self) -> &ApyView {
+        match &self.terms {
+            TermsView::Fixed(value) => &value.apy,
+            TermsView::Flexible(value) => &value.apy,
+            TermsView::ScoreBased(value) => &value.base_apy,
+        }
+    }
 }

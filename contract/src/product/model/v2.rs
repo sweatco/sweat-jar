@@ -180,7 +180,7 @@ impl ProductV2 {
 
         require!(
             fee_ok,
-            "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
+            "Fee for this product is too high. It is possible for a user to pay more in fees than they staked."
         );
     }
 }
