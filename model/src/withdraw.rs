@@ -15,9 +15,10 @@ pub struct WithdrawView {
 
 #[derive(Debug, Default)]
 #[near(serializers=[json])]
+// TODO: doc change
 pub struct BulkWithdrawView {
     pub total_amount: U128,
-    pub jars: Vec<WithdrawView>,
+    pub withdrawals: Vec<WithdrawView>,
 }
 
 impl WithdrawView {
