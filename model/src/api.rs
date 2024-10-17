@@ -9,7 +9,7 @@ use crate::{
     jar::{AggregatedInterestView, JarView},
     product::{ProductDto, ProductView},
     withdraw::{BulkWithdrawView, WithdrawView},
-    ProductId, Score, UTC,
+    ProductId, Score, TokenAmount, UTC,
 };
 
 #[cfg(feature = "integration-test")]
@@ -84,7 +84,7 @@ pub trait JarApi {
     fn restake(&mut self, product_id: ProductId);
 
     /// Restakes all jars for user, or only specified list of jars if `jars` argument is `Some`
-    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>);
+    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) -> Vec<(ProductId, TokenAmount)>;
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
 }

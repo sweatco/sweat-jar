@@ -18,7 +18,7 @@ use crate::{
 };
 
 impl Contract {
-    fn restake_internal(&mut self, product: &ProductV2) {
+    fn restake_internal(&mut self, product: &ProductV2) -> TokenAmount {
         require!(product.is_enabled, "The product is disabled");
 
         let account_id = env::predecessor_account_id();
@@ -37,6 +37,8 @@ impl Contract {
         let jar = account.get_jar_mut(&product.id);
         jar.clean_up_deposits(partition_index);
         account.deposit(&product.id, amount);
+
+        amount
     }
 
     fn get_total_interest_for_account(&self, account: &AccountV2) -> AggregatedInterestView {
@@ -103,7 +105,7 @@ impl JarApi for Contract {
         // TODO: add event logging
     }
 
-    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) {
+    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) -> Vec<(ProductId, TokenAmount)> {
         let account_id = env::predecessor_account_id();
 
         self.migrate_account_if_needed(&account_id);
@@ -116,11 +118,15 @@ impl JarApi for Contract {
                 .cloned()
                 .collect()
         });
+        let mut result: Vec<(ProductId, TokenAmount)> = vec![];
         for product_id in product_ids.iter() {
-            self.restake_internal(&self.get_product(product_id));
+            let amount = self.restake_internal(&self.get_product(product_id));
+            result.push((product_id.clone(), amount));
         }
 
         // TODO: add event logging
+
+        result
     }
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
