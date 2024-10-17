@@ -1,92 +1,99 @@
-// use near_sdk::test_utils::test_env::alice;
-// use sweat_jar_model::{
-//     api::{ClaimApi, JarApi},
-//     MS_IN_YEAR,
-// };
-//
-// use crate::{
-//     common::tests::Context,
-//     jar::model::Jar,
-//     product::model::Product,
-//     test_utils::{admin, PRINCIPAL},
-// };
-//
-// #[test]
-// fn restake_all() {
-//     let alice = alice();
-//     let admin = admin();
-//
-//     let restakable_product = Product::new().id("restakable_product").with_allows_restaking(true);
-//
-//     let disabled_restakable_product = Product::new()
-//         .id("disabled_restakable_product")
-//         .with_allows_restaking(true)
-//         .enabled(false);
-//
-//     let non_restakable_product = Product::new().id("non_restakable_product").with_allows_restaking(false);
-//
-//     let long_term_restakable_product = Product::new()
-//         .id("long_term_restakable_product")
-//         .with_allows_restaking(true)
-//         .lockup_term(MS_IN_YEAR * 2);
-//
-//     let restakable_jar_1 = Jar::new(0).product_id(&restakable_product.id).principal(PRINCIPAL);
-//     let restakable_jar_2 = Jar::new(1).product_id(&restakable_product.id).principal(PRINCIPAL);
-//
-//     let disabled_jar = Jar::new(2)
-//         .product_id(&disabled_restakable_product.id)
-//         .principal(PRINCIPAL);
-//
-//     let non_restakable_jar = Jar::new(3).product_id(&non_restakable_product.id).principal(PRINCIPAL);
-//
-//     let long_term_jar = Jar::new(4)
-//         .product_id(&long_term_restakable_product.id)
-//         .principal(PRINCIPAL);
-//
-//     let mut context = Context::new(admin)
-//         .with_products(&[
-//             restakable_product,
-//             disabled_restakable_product,
-//             non_restakable_product,
-//             long_term_restakable_product,
-//         ])
-//         .with_jars(&[
-//             restakable_jar_1.clone(),
-//             restakable_jar_2.clone(),
-//             disabled_jar.clone(),
-//             non_restakable_jar.clone(),
-//             long_term_jar.clone(),
-//         ]);
-//
-//     context.set_block_timestamp_in_days(366);
-//
-//     context.switch_account(&alice);
-//
-//     let restaked_jars = context.contract().restake_all(None);
-//
-//     assert_eq!(restaked_jars.len(), 2);
-//     assert_eq!(
-//         restaked_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
-//         // 4 was last jar is, so 2 new restaked jars will have ids 5 and 6
-//         vec![5, 6]
-//     );
-//
-//     let all_jars = context.contract().get_jars_for_account(alice);
-//
-//     assert_eq!(
-//         all_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
-//         [
-//             restakable_jar_1.id,
-//             restakable_jar_2.id,
-//             disabled_jar.id,
-//             non_restakable_jar.id,
-//             long_term_jar.id,
-//             5,
-//             6,
-//         ]
-//     )
-// }
-//
+use near_sdk::test_utils::test_env::alice;
+use sweat_jar_model::{
+    api::{JarApi, ProductApi},
+    MS_IN_DAY, MS_IN_YEAR,
+};
+
+use crate::{
+    common::tests::Context,
+    jar::{model::JarV2, view::create_synthetic_jar_id},
+    product::model::{
+        v2::{Apy, FixedProductTerms, Terms},
+        ProductV2,
+    },
+    test_utils::{admin, PRINCIPAL},
+};
+
+#[test]
+fn restake_all() {
+    let alice = alice();
+    let admin = admin();
+
+    let regular_product = ProductV2::new().id("regular_product");
+    let regular_product_to_disable = ProductV2::new().id("disabled_product");
+    let long_term_product = ProductV2::new()
+        .id("long_term_product")
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR * 2,
+            apy: Apy::new_downgradable(),
+        }));
+    let long_term_product_to_disable = ProductV2::new()
+        .id("long_term_disabled_product")
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR * 2,
+            apy: Apy::new_downgradable(),
+        }));
+
+    let regular_product_jar = JarV2::new()
+        .with_deposit(0, PRINCIPAL)
+        .with_deposit(MS_IN_DAY, PRINCIPAL);
+    let product_to_disable_jar = JarV2::new().with_deposit(0, PRINCIPAL);
+    let long_term_product_jar = JarV2::new().with_deposit(0, PRINCIPAL);
+    let long_term_product_to_disable_jar = JarV2::new().with_deposit(0, PRINCIPAL);
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[
+            regular_product.clone(),
+            regular_product_to_disable.clone(),
+            long_term_product.clone(),
+            long_term_product_to_disable.clone(),
+        ])
+        .with_jars(
+            &alice,
+            &[
+                (regular_product.id.clone(), regular_product_jar),
+                (regular_product_to_disable.id.clone(), product_to_disable_jar),
+                (long_term_product.id.clone(), long_term_product_jar),
+                (
+                    long_term_product_to_disable.id.clone(),
+                    long_term_product_to_disable_jar,
+                ),
+            ],
+        );
+
+    context.set_block_timestamp_in_ms(MS_IN_YEAR);
+
+    context.switch_account(&admin);
+    context.with_deposit_yocto(1, |context| {
+        context
+            .contract()
+            .set_enabled(regular_product_to_disable.id.clone(), false)
+    });
+    context.with_deposit_yocto(1, |context| {
+        context
+            .contract()
+            .set_enabled(long_term_product_to_disable.id.clone(), false)
+    });
+
+    let restaking_time = MS_IN_YEAR + 2 * MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restaking_time);
+
+    context.switch_account(&alice);
+    let restaked_jars = context.contract().restake_all(None);
+    assert_eq!(restaked_jars.len(), 1);
+    assert_eq!(
+        restaked_jars.first().unwrap(),
+        &(regular_product.id.clone(), PRINCIPAL * 2)
+    );
+
+    let all_jars = context.contract().get_jars_for_account(alice);
+    let all_jar_ids = all_jars.iter().map(|j| j.id.clone()).collect::<Vec<_>>();
+    assert!(all_jar_ids.contains(&create_synthetic_jar_id(regular_product.id, restaking_time)));
+    assert!(all_jar_ids.contains(&create_synthetic_jar_id(regular_product_to_disable.id, 0)));
+    assert!(all_jar_ids.contains(&create_synthetic_jar_id(long_term_product.id, 0)));
+    assert!(all_jar_ids.contains(&create_synthetic_jar_id(long_term_product_to_disable.id, 0)));
+}
+
 // #[test]
 // fn restake_all_after_maturity_for_restakable_product_one_jar() {
 //     let alice = alice();

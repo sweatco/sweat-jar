@@ -53,10 +53,7 @@ impl ProductV2 {
             cap: Cap { min: 0, max: 1_000_000 },
             terms: Terms::Fixed(FixedProductTerms {
                 lockup_term: MS_IN_YEAR,
-                apy: Apy::Downgradable(DowngradableApy {
-                    default: UDecimal::new(20, 2),
-                    fallback: UDecimal::new(10, 2),
-                }),
+                apy: Apy::new_downgradable(),
             }),
             withdrawal_fee: None,
             public_key: None,
@@ -124,5 +121,19 @@ impl Context {
 impl Into<Apy> for u32 {
     fn into(self) -> Apy {
         Apy::Constant(UDecimal::new(self.into(), 2))
+    }
+}
+
+// TODO: move to tests
+impl Apy {
+    fn new_constant() -> Self {
+        Apy::Constant(UDecimal::new(10, 2))
+    }
+
+    pub(crate) fn new_downgradable() -> Self {
+        Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        })
     }
 }

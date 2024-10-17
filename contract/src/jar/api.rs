@@ -1,4 +1,4 @@
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap, convert::Into, ops::Deref};
 
 use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
@@ -18,7 +18,7 @@ use crate::{
 };
 
 impl Contract {
-    fn restake_internal(&mut self, product: &ProductV2) -> TokenAmount {
+    fn restake_internal(&mut self, product: &ProductV2) -> Option<TokenAmount> {
         require!(product.is_enabled, "The product is disabled");
 
         let account_id = env::predecessor_account_id();
@@ -29,7 +29,9 @@ impl Contract {
 
         let (amount, partition_index) = jar.get_liquid_balance(&product.terms, now);
 
-        require!(amount > 0, "Nothing to restake");
+        if amount == 0 {
+            return None;
+        }
 
         self.update_jar_cache(&account_id, &product.id);
 
@@ -38,7 +40,7 @@ impl Contract {
         jar.clean_up_deposits(partition_index);
         account.deposit(&product.id, amount);
 
-        amount
+        Some(amount)
     }
 
     fn get_total_interest_for_account(&self, account: &AccountV2) -> AggregatedInterestView {
@@ -100,7 +102,8 @@ impl JarApi for Contract {
     fn restake(&mut self, product_id: ProductId) {
         self.migrate_account_if_needed(&env::predecessor_account_id());
 
-        self.restake_internal(&self.get_product(&product_id));
+        let result = self.restake_internal(&self.get_product(&product_id));
+        require!(result.is_some(), "Nothing to restake");
 
         // TODO: add event logging
     }
@@ -110,18 +113,24 @@ impl JarApi for Contract {
 
         self.migrate_account_if_needed(&account_id);
 
-        let product_ids = product_ids.unwrap_or_else(|| {
-            self.get_account(&account_id)
-                .jars
-                .keys()
-                .filter(|product_id| self.get_product(product_id).is_enabled)
-                .cloned()
-                .collect()
-        });
+        let products: Vec<ProductV2> = product_ids
+            .unwrap_or_else(|| {
+                self.get_account(&account_id)
+                    .jars
+                    .keys()
+                    .cloned()
+                    .collect::<Vec<ProductId>>()
+            })
+            .iter()
+            .map(|product_id| self.get_product(product_id))
+            .filter(|product| product.is_enabled)
+            .collect();
+
         let mut result: Vec<(ProductId, TokenAmount)> = vec![];
-        for product_id in product_ids.iter() {
-            let amount = self.restake_internal(&self.get_product(product_id));
-            result.push((product_id.clone(), amount));
+        for product in products.iter() {
+            if let Some(amount) = self.restake_internal(product) {
+                result.push((product.id.clone(), amount));
+            }
         }
 
         // TODO: add event logging

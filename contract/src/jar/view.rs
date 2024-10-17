@@ -1,7 +1,10 @@
 use near_sdk::json_types::{U128, U64};
 use sweat_jar_model::{jar::JarView, ProductId};
 
-use crate::jar::model::{Jar, JarV2};
+use crate::{
+    common::Timestamp,
+    jar::model::{Jar, JarV2},
+};
 
 impl From<Jar> for JarView {
     fn from(value: Jar) -> Self {
@@ -35,11 +38,15 @@ impl From<&DetailedJarV2> for Vec<JarView> {
             .deposits
             .iter()
             .map(|deposit| JarView {
-                id: format!("{}_{}", product_id.clone(), deposit.created_at),
+                id: create_synthetic_jar_id(product_id.clone(), deposit.created_at),
                 product_id: product_id.clone(),
                 created_at: deposit.created_at.into(),
                 principal: deposit.principal.into(),
             })
             .collect()
     }
+}
+
+pub fn create_synthetic_jar_id(product_id: ProductId, created_at: Timestamp) -> String {
+    format!("{}_{}", product_id.clone(), created_at)
 }
