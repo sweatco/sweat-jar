@@ -45,6 +45,14 @@ impl AccountScore {
         }
     }
 
+    pub fn try_claim_score(&mut self) -> Option<Vec<Score>> {
+        if self.is_valid() {
+            Some(self.claim_score())
+        } else {
+            None
+        }
+    }
+
     /// On claim we need to clear active scores so they aren't claimed twice or more.
     // TODO: at least rename
     pub fn claim_score(&mut self) -> Vec<Score> {

@@ -77,7 +77,7 @@ impl Contract {
         account_rollback.score = Some(account.score);
         account_rollback.jars = Some(rollback_jars);
 
-        account.score.claim_score();
+        account.score.try_claim_score();
 
         if accumulator.get_total().0 > 0 {
             self.claim_interest(
