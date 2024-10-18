@@ -6,15 +6,9 @@ use near_sdk::{
         BorshDeserialize, BorshSerialize,
     },
     serde::{Deserialize, Serialize},
-    AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId, Score, TokenAmount};
 
-use crate::{
-    common::Timestamp,
-    jar::model::{v1::JarV1, JarCache, JarLastVersion},
-    product::model::Product,
-};
+use crate::jar::model::{v1::JarV1, JarLastVersion};
 
 pub type Jar = JarVersioned;
 
@@ -38,63 +32,6 @@ impl BorshDeserialize for JarVersioned {
         };
 
         Ok(result)
-    }
-}
-
-impl JarVersioned {
-    pub fn create(
-        id: JarId,
-        account_id: AccountId,
-        product_id: ProductId,
-        principal: TokenAmount,
-        created_at: Timestamp,
-    ) -> Self {
-        JarLastVersion {
-            id,
-            account_id,
-            product_id,
-            principal,
-            created_at,
-            cache: None,
-            claimed_balance: 0,
-            is_pending_withdraw: false,
-            is_penalty_applied: false,
-            claim_remainder: 0,
-        }
-        .into()
-    }
-
-    pub fn locked(&self) -> Self {
-        JarLastVersion {
-            is_pending_withdraw: true,
-            ..self.deref().clone()
-        }
-        .into()
-    }
-
-    pub fn unlocked(&self) -> Self {
-        JarLastVersion {
-            is_pending_withdraw: false,
-            ..self.deref().clone()
-        }
-        .into()
-    }
-
-    pub fn with_id(mut self, id: JarId) -> Self {
-        self.id = id;
-        self
-    }
-
-    pub fn withdrawn(&self, score: &[Score], product: &Product, withdrawn_amount: TokenAmount, now: Timestamp) -> Self {
-        JarV1 {
-            principal: self.principal - withdrawn_amount,
-            cache: Some(JarCache {
-                updated_at: now,
-                interest: self.get_interest(score, product, now).0,
-            }),
-            ..self.deref().clone()
-        }
-        .into()
     }
 }
 
