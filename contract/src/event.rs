@@ -8,7 +8,7 @@ use crate::{
     common::Timestamp,
     env,
     jar::model::{Jar, JarCache},
-    product::model::Product,
+    product::model::ProductV2,
     PACKAGE_NAME, VERSION,
 };
 
@@ -16,7 +16,7 @@ use crate::{
 #[near(serializers=[json])]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
-    RegisterProduct(Product),
+    RegisterProduct(ProductV2),
     CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
@@ -76,7 +76,7 @@ struct SweatJarEvent {
 pub type ClaimEventItem = (JarId, U128);
 
 /// (id, fee, amount)
-pub type WithdrawData = (JarId, U128, U128);
+pub type WithdrawData = (ProductId, U128, U128);
 
 #[derive(Debug)]
 #[near(serializers=[json])]
@@ -91,16 +91,18 @@ pub type RestakeData = (JarId, JarId);
 
 #[derive(Debug)]
 #[near(serializers=[json])]
+// TODO: doc change
 pub struct PenaltyData {
-    pub id: JarId,
+    pub account_id: AccountId,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
 #[derive(Debug)]
 #[near(serializers=[json])]
+// TODO: doc change
 pub struct BatchPenaltyData {
-    pub jars: Vec<JarId>,
+    pub account_ids: Vec<AccountId>,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
@@ -170,7 +172,6 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-
     use std::str::FromStr;
 
     use near_sdk::{json_types::U128, AccountId};

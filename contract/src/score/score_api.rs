@@ -1,9 +1,8 @@
-use near_sdk::{env, env::block_timestamp_ms, near_bindgen, AccountId};
+use near_sdk::{near_bindgen, AccountId};
 use sweat_jar_model::{api::ScoreApi, Score, U32, UTC};
 
 use crate::{
     event::{emit, EventKind, ScoreData},
-    jar::model::JarCache,
     Contract, ContractExt,
 };
 
@@ -14,50 +13,24 @@ impl ScoreApi for Contract {
 
         let mut event = vec![];
 
-        let now = block_timestamp_ms();
+        for (account_id, _) in batch.iter() {
+            self.migrate_account_if_needed(account_id);
+            self.update_account_cache(account_id);
+        }
 
-        for (account, new_score) in batch {
-            self.migrate_account_if_needed(&account);
+        for (account_id, new_score) in batch {
+            let account = self.get_account_mut(&account_id);
 
-            let account_jars = self.accounts.entry(account.clone()).or_default();
-
-            assert!(
-                account_jars.has_score_jars(),
-                "Account '{account}' doesn't have score jars"
-            );
-
-            let score = account_jars.score.claim_score();
-
-            for jar in &mut account_jars.jars {
-                let product = self
-                    .products
-                    .get(&jar.product_id)
-                    .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
-
-                if !product.is_score_product() {
-                    continue;
-                }
-
-                let (interest, remainder) = jar.get_interest(&score, &product, now);
-
-                jar.claim_remainder = remainder;
-
-                jar.cache = Some(JarCache {
-                    updated_at: now,
-                    interest,
-                });
-            }
-
-            // Convert walkchain to user timezone
+            // Convert a record to user timezone
             let converted_score = new_score
                 .iter()
-                .map(|score| (score.0, account_jars.score.timezone.adjust(score.1)))
+                .map(|score| (score.0, account.score.timezone.adjust(score.1)))
                 .collect();
 
-            account_jars.score.update(converted_score);
+            account.score.update(converted_score);
 
             event.push(ScoreData {
-                account_id: account,
+                account_id,
                 score: new_score
                     .into_iter()
                     .map(|(score, timestamp)| (U32(score.into()), timestamp))

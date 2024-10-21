@@ -1,17 +1,15 @@
-use near_sdk::{
-    json_types::{Base64VecU8, U128},
-    AccountId,
-};
+#[cfg(not(feature = "integration-api"))]
+use near_sdk::{json_types::Base64VecU8, AccountId};
 #[cfg(feature = "integration-api")]
-use nitka::near_sdk;
+use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
 
 use crate::{
     claimed_amount_view::ClaimedAmountView,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
-    product::{ProductView, RegisterProductCommand},
+    jar::{AggregatedInterestView, JarView},
+    product::{ProductDto, ProductView},
     withdraw::{BulkWithdrawView, WithdrawView},
-    ProductId, Score, UTC,
+    ProductId, Score, TokenAmount, UTC,
 };
 
 #[cfg(feature = "integration-test")]
@@ -44,17 +42,6 @@ pub trait ClaimApi {
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
 #[make_integration_version]
 pub trait JarApi {
-    /// Retrieves information about a specific deposit jar by its index.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_id` - The ID of the deposit jar for which information is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// A `JarView` struct containing details about the specified deposit jar.
-    fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView;
-
     /// Retrieves information about all deposit jars associated with a given account.
     ///
     /// # Arguments
@@ -65,32 +52,6 @@ pub trait JarApi {
     ///
     /// A `Vec<JarView>` containing details about all deposit jars belonging to the specified account.
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView>;
-
-    /// Retrieves the total principal amount across all deposit jars for a provided account.
-    ///
-    /// # Arguments
-    ///
-    /// * `account_id` - The `AccountId` of the account for which the total principal is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// An `U128` representing the sum of principal amounts across all deposit jars for the specified account.
-    /// Returns 0 if the account has no associated jars.
-    fn get_total_principal(&self, account_id: AccountId) -> AggregatedTokenAmountView;
-
-    /// Retrieves the principal amount for a specific set of deposit jars.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
-    ///                   principal is being retrieved.
-    ///
-    /// * `account_id` - The `AccountId` of the account for which the principal is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// An `U128` representing the sum of principal amounts for the specified deposit jars.
-    fn get_principal(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedTokenAmountView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///
@@ -103,19 +64,6 @@ pub trait JarApi {
     /// An `U128` representing the sum of interest amounts across all deposit jars for the specified account.
     /// Returns 0 if the account has no associated jars.
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView;
-
-    /// Retrieves the interest amount for a specific set of deposit jars.
-    ///
-    /// # Arguments
-    ///
-    /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
-    ///                   interest is being retrieved.
-    ///
-    /// # Returns
-    ///
-    /// An `U128` representing the sum of interest amounts for the specified deposit jars.
-    ///
-    fn get_interest(&self, jar_ids: Vec<JarIdView>, account_id: AccountId) -> AggregatedInterestView;
 
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
@@ -133,10 +81,10 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, jar_id: JarIdView) -> JarView;
+    fn restake(&mut self, product_id: ProductId);
 
     /// Restakes all jars for user, or only specified list of jars if `jars` argument is `Some`
-    fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView>;
+    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) -> Vec<(ProductId, TokenAmount)>;
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
 }
@@ -174,7 +122,7 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool);
+    fn set_penalty(&mut self, account_id: AccountId, value: bool);
 
     /// Batched version of `set_penalty`
     ///
@@ -186,7 +134,7 @@ pub trait PenaltyApi {
     /// # Panics
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
-    fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool);
+    fn batch_set_penalty(&mut self, account_ids: Vec<AccountId>, value: bool);
 }
 
 /// The `ProductApi` trait defines methods for managing products within the smart contract.
@@ -202,7 +150,7 @@ pub trait ProductApi {
     /// # Panics
     ///
     /// This method will panic if a product with the same id already exists.
-    fn register_product(&mut self, command: RegisterProductCommand);
+    fn register_product(&mut self, command: ProductDto);
 
     #[deposit_one_yocto]
     /// Sets the enabled status of a specific product.
@@ -265,10 +213,10 @@ pub trait WithdrawApi {
     /// - If the caller is not the owner of the specified jar.
     /// - If the withdrawal amount exceeds the available balance in the jar.
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
-    fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
+    fn withdraw(&mut self, product_id: ProductId) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
     /// Withdraws all jars for user, or only specified list of jars if `jars` argument is `Some`
-    fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+    fn withdraw_all(&mut self) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
 #[make_integration_version]
