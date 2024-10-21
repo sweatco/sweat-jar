@@ -189,6 +189,7 @@ pub(crate) trait InterestCalculator {
     fn get_interest(&self, account: &AccountV2, jar: &JarV2, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
         let apy = self.get_apy(account);
+        let cached_interest = jar.cache.map_or(0, |cache| cache.interest);
 
         let (interest, remainder): (TokenAmount, u64) = jar
             .deposits
@@ -209,7 +210,7 @@ pub(crate) trait InterestCalculator {
         let remainder: u64 = remainder % MS_IN_YEAR;
         let extra_interest = (remainder / MS_IN_YEAR) as u128;
 
-        (interest + extra_interest, remainder)
+        (cached_interest + interest + extra_interest, remainder)
     }
 
     fn get_apy(&self, account: &AccountV2) -> UDecimal;

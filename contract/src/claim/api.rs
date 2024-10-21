@@ -158,6 +158,9 @@ impl Contract {
                 jar.unlock();
 
                 // TODO: check if should delete jar
+                if jar.should_close() {
+                    account.jars.remove(&product_id);
+                }
             }
 
             emit(event);
