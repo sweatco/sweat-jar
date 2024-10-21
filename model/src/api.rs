@@ -1,5 +1,5 @@
 use near_sdk::{
-    json_types::{Base64VecU8, U128},
+    json_types::{Base64VecU8, I64, U128},
     AccountId,
 };
 #[cfg(feature = "integration-api")]
@@ -289,6 +289,9 @@ pub trait ScoreApi {
     /// - This function will panic if an account does not have score jars.
     /// - This function will panic if a product associated with a jar does not exist.
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
+
+    /// Return users timezone if users has any step jars
+    fn get_timezone(&self, account_id: AccountId) -> Option<I64>;
 }
 
 #[cfg(feature = "integration-methods")]
