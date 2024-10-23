@@ -5,7 +5,7 @@
 // use crate::{
 //     common::tests::Context,
 //     jar::model::Jar,
-//     product::model::Product,
+//     product::model::{Product, ProductV2},
 //     score::AccountScore,
 //     test_builder::{jar_builder::JarBuilder, ProductBuilder},
 //     test_utils::admin,
@@ -13,7 +13,7 @@
 //
 // pub(crate) struct TestBuilder {
 //     context: Context,
-//     products: Vec<Product>,
+//     products: Vec<ProductV2>,
 //     jars: Vec<Jar>,
 // }
 //

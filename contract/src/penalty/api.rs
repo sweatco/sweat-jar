@@ -16,7 +16,7 @@ impl PenaltyApi for Contract {
         self.assert_manager();
 
         self.migrate_account_if_needed(&account_id);
-        self.update_account_cache(&account_id);
+        self.update_account_cache(&account_id, None);
 
         let account = self.get_account_mut(&account_id);
         account.is_penalty_applied = value;
@@ -33,7 +33,7 @@ impl PenaltyApi for Contract {
 
         for account_id in account_ids.iter() {
             self.migrate_account_if_needed(&account_id);
-            self.update_account_cache(&account_id);
+            self.update_account_cache(&account_id, None);
 
             let account = self.get_account_mut(account_id);
             account.is_penalty_applied = value;

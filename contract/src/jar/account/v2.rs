@@ -130,16 +130,15 @@ impl AccountV2 {
 }
 
 impl Contract {
-    pub(crate) fn update_account_cache(&mut self, account_id: &AccountId) {
+    pub(crate) fn update_account_cache(
+        &mut self,
+        account_id: &AccountId,
+        filter: Option<Box<dyn FnMut(&ProductV2) -> bool>>,
+    ) {
         let now = env::block_timestamp_ms();
-        let products: Vec<ProductV2> = self
-            .get_account(&account_id)
-            .jars
-            .iter()
-            .map(|(product_id, _)| self.get_product(product_id))
-            .collect();
+        let products = self.get_products(account_id, filter);
+        let account = self.get_account_mut(account_id);
 
-        let account = self.get_account_mut(&account_id);
         for product in products {
             account.update_jar_cache(&product, now);
         }
@@ -149,6 +148,23 @@ impl Contract {
         let product = &self.get_product(product_id);
         let account = self.get_account_mut(account_id);
         account.update_jar_cache(product, env::block_timestamp_ms());
+    }
+
+    fn get_products<P>(&self, account_id: &AccountId, filter: Option<P>) -> Vec<ProductV2>
+    where
+        P: FnMut(&ProductV2) -> bool,
+    {
+        let products = self
+            .get_account(&account_id)
+            .jars
+            .iter()
+            .map(|(product_id, _)| self.get_product(product_id));
+
+        if let Some(filter) = filter {
+            products.filter(filter).collect()
+        } else {
+            products.collect()
+        }
     }
 }
 

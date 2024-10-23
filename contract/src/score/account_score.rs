@@ -10,7 +10,7 @@ use crate::event::{emit, EventKind};
 
 const DAYS_STORED: usize = 2;
 
-type Chain = Vec<(Score, Local)>;
+pub(crate) type Chain = Vec<(Score, Local)>;
 
 #[near(serializers=[borsh, json])]
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -142,10 +142,7 @@ impl Default for AccountScore {
 //     use near_sdk::env::block_timestamp_ms;
 //     use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC};
 //
-//     use crate::{
-//         score::{account_score::Chain, AccountScore},
-//         test_builder::TestBuilder,
-//     };
+//     use crate::score::{account_score::Chain, AccountScore};
 //
 //     const TIMEZONE: Timezone = Timezone::hour_shift(3);
 //     const TODAY: u64 = 1722234632000;

@@ -1,25 +1,27 @@
-use near_sdk::AccountId;
-use sweat_jar_model::Timezone;
-
-pub(crate) enum JarField {
-    Account(AccountId),
-    Timezone(Timezone),
-}
-
-// pub(crate) trait JarBuilder: Sized {
-//     fn apply(&self, jar: Jar) -> Jar;
-//     fn timezone(&self) -> Option<Timezone>;
-// fn build(&self, id: u32, product_id: &str, principal: u128) -> JarV2 {
-//     let jar = Jar::new(id)
-//         .account_id(&alice())
-//         .product_id(product_id)
-//         .principal(NearToken::from_near(principal).as_yoctonear());
-//     self.apply(jar)
+// use near_sdk::AccountId;
+// use sweat_jar_model::Timezone;
+//
+// use crate::jar::model::JarV2;
+//
+// pub(crate) enum JarField {
+//     Account(AccountId),
+//     Timezone(Timezone),
 // }
+//
+// pub(crate) trait JarBuilder: Sized {
+//     fn apply(&self, jar: JarV2) -> JarV2;
+//     fn timezone(&self) -> Option<Timezone>;
+//     fn build(&self, id: u32, product_id: &str, principal: u128) -> JarV2 {
+//         let jar = Jar::new(id)
+//             .account_id(&alice())
+//             .product_id(product_id)
+//             .principal(NearToken::from_near(principal).as_yoctonear());
+//         self.apply(jar)
+//     }
 // }
 //
 // impl JarBuilder for () {
-//     fn apply(&self, jar: Jar) -> Jar {
+//     fn apply(&self, jar: JarV2) -> JarV2 {
 //         jar
 //     }
 //
@@ -27,9 +29,9 @@ pub(crate) enum JarField {
 //         None
 //     }
 // }
-
+//
 // impl JarBuilder for JarField {
-//     fn apply(&self, jar: Jar) -> Jar {
+//     fn apply(&self, jar: JarV2) -> JarV2 {
 //         match self {
 //             JarField::Account(account_id) => jar.account_id(&account_id),
 //             JarField::Timezone(_) => jar,

@@ -1,125 +1,116 @@
-// #![cfg(test)]
-//
-// use fake::Fake;
-// use near_sdk::{
-//     store::LookupMap,
-//     test_utils::test_env::{alice, bob},
-//     NearToken,
-// };
-// use sweat_jar_model::{
-//     api::{ProductApi, ScoreApi, WithdrawApi},
-//     jar::JarId,
-//     product::ProductDto,
-//     Score, Timezone, MS_IN_DAY, UTC,
-// };
-//
-// use crate::{
-//     common::{
-//         test_data::{set_test_future_success, set_test_log_events},
-//         tests::Context,
-//     },
-//     test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
-//     test_utils::{admin, expect_panic, UnwrapPromise, PRODUCT, SCORE_PRODUCT},
-//     StorageKey,
-// };
-//
-// #[test]
-// #[should_panic(expected = "Can be performed only by admin")]
-// fn record_score_by_non_manager() {
-//     let ctx = TestBuilder::new().build();
-//     ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
-// }
-//
-// #[test]
-// fn create_invalid_step_product() {
-//     let mut ctx = TestBuilder::new().build();
-//
-//     let mut command = ProductDto {
-//         id: "aa".to_string(),
-//         apy_default: (10.into(), 3),
-//         apy_fallback: None,
-//         cap_min: Default::default(),
-//         cap_max: Default::default(),
-//         terms: Default::default(),
-//         withdrawal_fee: None,
-//         public_key: None,
-//         is_enabled: false,
-//         score_cap: 1000,
-//     };
-//
-//     ctx.switch_account(admin());
-//
-//     ctx.set_deposit_yocto(1);
-//
-//     expect_panic(&ctx, "Step based products do not support constant APY", || {
-//         ctx.contract().register_product(command.clone());
-//     });
-//
-//     command.apy_fallback = Some((10.into(), 3));
-//
-//     expect_panic(&ctx, "Step based products do not support downgradable APY", || {
-//         ctx.contract().register_product(command);
-//     });
-// }
-//
-// /// 12% jar should have the same interest as 12_000 score jar walking to the limit every day
-// /// Also this method tests score cap
-// #[test]
-// fn same_interest_in_score_jar_as_in_const_jar() {
-//     const JAR: JarId = 0;
-//     const SCORE_JAR: JarId = 1;
-//
-//     const DAYS: u64 = 400;
-//     const HALF_PERIOD: u64 = DAYS / 2;
-//
-//     set_test_log_events(false);
-//
-//     let mut ctx = TestBuilder::new()
-//         .product(PRODUCT, APY(12))
-//         .jar(JAR, ())
-//         .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
-//         .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(3)))
-//         .build();
-//
-//     // Difference of 1 is okay because the missing yoctosweat is stored in claim remainder
-//     // and will eventually be added to total claimed balance
-//     fn compare_interest(ctx: &Context) {
-//         let diff = ctx.interest(JAR) as i128 - ctx.interest(SCORE_JAR) as i128;
-//         assert!(diff <= 1, "Diff is too big {diff}");
-//     }
-//
-//     let mut total_claimed = 0;
-//
-//     for day in 0..DAYS {
-//         ctx.set_block_timestamp_in_days(day);
-//
-//         ctx.switch_account(admin());
-//         ctx.record_score(UTC(day * MS_IN_DAY), 20_000, alice());
-//
-//         compare_interest(&ctx);
-//
-//         if day == HALF_PERIOD {
-//             let jar_interest = ctx.interest(JAR);
-//             let score_interest = ctx.interest(SCORE_JAR);
-//
-//             let claimed = ctx.claim_total(alice());
-//
-//             total_claimed += claimed;
-//
-//             assert_eq!(claimed, jar_interest + score_interest);
-//         }
-//     }
-//
-//     assert_eq!(ctx.jar(JAR).cache.unwrap().updated_at, HALF_PERIOD * MS_IN_DAY);
-//     assert_eq!(ctx.jar(SCORE_JAR).cache.unwrap().updated_at, (DAYS - 1) * MS_IN_DAY);
-//
-//     compare_interest(&ctx);
-//
-//     total_claimed += ctx.claim_total(alice());
-//
-//     assert_eq!(total_claimed, NearToken::from_near(24).as_yoctonear());
-// }
-//
+#![cfg(test)]
+
+use near_sdk::{test_utils::test_env::alice, AccountId, NearToken, PromiseOrValue};
+use sweat_jar_model::{
+    api::{ClaimApi, ScoreApi},
+    ProductId, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR, UTC,
+};
+
+use crate::{
+    common::{test_data::set_test_log_events, tests::Context},
+    jar::model::JarV2,
+    product::model::{
+        v2::{Apy, FixedProductTerms, InterestCalculator, ScoreBasedProductTerms, Terms},
+        ProductV2,
+    },
+    score::AccountScore,
+    test_utils::admin,
+};
+
+#[test]
+#[should_panic(expected = "Can be performed only by admin")]
+fn record_score_by_non_manager() {
+    let mut context = Context::new(admin());
+
+    context.switch_account(alice());
+    context.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
+}
+
+/// 12% jar should have the same interest as 12_000 score jar walking to the limit every day
+/// Also this method tests score cap
+#[test]
+fn same_interest_in_score_jar_as_in_const_jar() {
+    const DAYS: u64 = 400;
+    const HALF_PERIOD: u64 = DAYS / 2;
+
+    set_test_log_events(false);
+
+    let regular_product = ProductV2::new()
+        .with_id("regular_product".into())
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR,
+            apy: Apy::Constant(UDecimal::new(12000, 5)),
+        }));
+    let score_product = ProductV2::new()
+        .with_id("score_product".into())
+        .with_terms(Terms::ScoreBased(ScoreBasedProductTerms {
+            score_cap: 12_000,
+            base_apy: Apy::Constant(UDecimal::zero()),
+            lockup_term: MS_IN_YEAR,
+        }));
+
+    let regular_product_jar = JarV2::new().with_deposit(0, 100);
+    let score_product_jar = JarV2::new().with_deposit(0, 100);
+
+    let mut context = Context::new(admin())
+        .with_products(&[regular_product.clone(), score_product.clone()])
+        .with_jars(
+            &alice(),
+            &[
+                (regular_product.id.clone(), regular_product_jar),
+                (score_product.id.clone(), score_product_jar),
+            ],
+        );
+    context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(3));
+
+    // Difference of 1 is okay because the missing yoctosweat is stored in claim remainder
+    // and will eventually be added to total claimed balance
+    fn compare_interest(context: &Context, regular_product_id: &ProductId, score_product_id: &ProductId) {
+        let diff = context
+            .interest(&alice(), regular_product_id)
+            .abs_diff(context.interest(&alice(), score_product_id));
+        assert!(diff <= 1, "Diff is too big {diff}");
+    }
+
+    let mut total_claimed = 0;
+
+    for day in 0..DAYS {
+        context.set_block_timestamp_in_days(day);
+
+        context.switch_account(admin());
+        context
+            .contract()
+            .record_score(vec![(alice(), vec![(20_000, UTC(day * MS_IN_DAY))])]);
+
+        compare_interest(&context, &regular_product.id, &score_product.id);
+
+        if day == HALF_PERIOD {
+            let jar_interest = context.interest(&alice(), &regular_product.id);
+            let score_interest = context.interest(&alice(), &score_product.id);
+
+            let claimed = context.claim_total(&alice());
+
+            total_claimed += claimed;
+
+            assert_eq!(claimed, jar_interest + score_interest);
+        }
+    }
+
+    assert_eq!(
+        context.jar(&alice(), &regular_product.id).cache.unwrap().updated_at,
+        HALF_PERIOD * MS_IN_DAY
+    );
+    assert_eq!(
+        context.jar(&alice(), &score_product.id).cache.unwrap().updated_at,
+        (DAYS - 1) * MS_IN_DAY
+    );
+
+    compare_interest(&context, &regular_product.id, &score_product.id);
+
+    total_claimed += context.claim_total(&alice());
+    assert_eq!(total_claimed, NearToken::from_near(24).as_yoctonear());
+}
+
 // #[test]
 // fn score_jar_claim_often_vs_claim_at_the_end() {
 //     const ALICE_JAR: JarId = 0;
@@ -309,3 +300,30 @@
 //         }
 //     }
 // }
+
+impl Context {
+    fn interest(&self, account_id: &AccountId, product_id: &ProductId) -> TokenAmount {
+        let contract = self.contract();
+        let product = &contract.get_product(product_id);
+        let account = contract.get_account(account_id);
+        let jar = account.get_jar(product_id);
+
+        product.terms.get_interest(account, jar, self.now()).0
+    }
+
+    fn jar(&self, account_id: &AccountId, product_id: &ProductId) -> JarV2 {
+        let contract = self.contract();
+        let account = contract.get_account(account_id);
+
+        account.get_jar(product_id).clone()
+    }
+
+    fn claim_total(&mut self, account_id: &AccountId) -> TokenAmount {
+        self.switch_account(account_id);
+        let PromiseOrValue::Value(claim_result) = self.contract().claim_total(None) else {
+            panic!("Expected value");
+        };
+
+        claim_result.get_total().0
+    }
+}

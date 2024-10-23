@@ -2,16 +2,16 @@
 
 use std::{
     borrow::Borrow,
-    collections::HashMap,
     sync::{Arc, Mutex, MutexGuard},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{env::block_timestamp_ms, test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, jar::JarId, ProductId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use sweat_jar_model::{api::InitApi, ProductId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
 use crate::{
+    common::Timestamp,
     jar::{account::v2::AccountV2, model::JarV2},
     product::model::ProductV2,
     test_utils::AfterCatchUnwind,
@@ -23,7 +23,6 @@ pub(crate) struct Context {
     pub owner: AccountId,
     ft_contract_id: AccountId,
     builder: VMContextBuilder,
-    pub account_jars: HashMap<AccountId, Vec<JarId>>,
 }
 
 impl Context {
@@ -48,8 +47,11 @@ impl Context {
             ft_contract_id,
             builder,
             contract: Arc::new(Mutex::new(contract)),
-            account_jars: HashMap::default(),
         }
+    }
+
+    pub(crate) fn now(&self) -> Timestamp {
+        self.builder.context.block_timestamp / 1_000
     }
 
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {

@@ -77,7 +77,7 @@ impl WithdrawApi for Contract {
         let account_id = env::predecessor_account_id();
         self.migrate_account_if_needed(&account_id);
 
-        self.update_account_cache(&account_id);
+        self.update_account_cache(&account_id, None);
 
         let now = env::block_timestamp_ms();
         let mut request = BulkWithdrawalRequest::default();

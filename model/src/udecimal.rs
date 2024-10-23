@@ -27,6 +27,10 @@ impl UDecimal {
         Self { significand, exponent }
     }
 
+    pub const fn zero() -> Self {
+        Self::new(0, 0)
+    }
+
     /// Use this method only for View structures because
     /// it can cause a loss of precision
     #[allow(clippy::cast_precision_loss)]
