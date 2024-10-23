@@ -2,6 +2,7 @@
 
 use fake::Fake;
 use near_sdk::{
+    json_types::I64,
     store::LookupMap,
     test_utils::test_env::{alice, bob},
     NearToken,
@@ -80,6 +81,8 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
         .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(3)))
         .build();
+
+    assert_eq!(ctx.contract().get_timezone(alice()), Some(I64(10800000)));
 
     // Difference of 1 is okay because the missing yoctosweat is stored in claim remainder
     // and will eventually be added to total claimed balance
