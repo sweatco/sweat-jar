@@ -1,4 +1,9 @@
-use near_sdk::{env, env::block_timestamp_ms, near_bindgen, AccountId};
+use near_sdk::{
+    env,
+    env::block_timestamp_ms,
+    json_types::{I64, U128},
+    near_bindgen, AccountId,
+};
 use sweat_jar_model::{api::ScoreApi, Score, U32, UTC};
 
 use crate::{
@@ -66,5 +71,17 @@ impl ScoreApi for Contract {
         }
 
         emit(EventKind::RecordScore(event));
+    }
+
+    fn get_timezone(&self, account_id: AccountId) -> Option<I64> {
+        self.accounts
+            .get(&account_id)
+            .map(|account| I64(*account.score.timezone))
+    }
+
+    fn get_score_interest(&self, account_id: AccountId) -> Option<U128> {
+        let account = self.accounts.get(&account_id).and_then(|a| a.score())?;
+
+        Some((account.active_score() as u128).into())
     }
 }

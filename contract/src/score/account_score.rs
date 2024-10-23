@@ -45,6 +45,17 @@ impl AccountScore {
         }
     }
 
+    pub fn active_score(&self) -> Score {
+        let today = self.timezone.today();
+        let update_day = self.update_day();
+
+        if today == update_day {
+            self.scores[0]
+        } else {
+            0
+        }
+    }
+
     /// On claim we need to clear active scores so they aren't claimed twice or more.
     pub fn claim_score(&mut self) -> Vec<Score> {
         let today = self.timezone.today();
@@ -214,5 +225,24 @@ mod test {
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
         assert_eq!(score.claim_score(), vec![1006, 0]);
+    }
+
+    #[test]
+    fn active_score() {
+        let score = AccountScore {
+            updated: UTC(MS_IN_DAY * 10),
+            timezone: Timezone::hour_shift(0),
+            scores: [1000, 2000],
+        };
+
+        let mut ctx = TestBuilder::new().build();
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
+
+        assert_eq!(score.active_score(), 1000);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
+
+        assert_eq!(score.active_score(), 0);
     }
 }

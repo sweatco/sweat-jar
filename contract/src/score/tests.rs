@@ -2,6 +2,7 @@
 
 use fake::Fake;
 use near_sdk::{
+    json_types::{I64, U128},
     store::LookupMap,
     test_utils::test_env::{alice, bob},
     NearToken,
@@ -81,6 +82,8 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(3)))
         .build();
 
+    assert_eq!(ctx.contract().get_timezone(alice()), Some(I64(10800000)));
+
     // Difference of 1 is okay because the missing yoctosweat is stored in claim remainder
     // and will eventually be added to total claimed balance
     fn compare_interest(ctx: &Context) {
@@ -95,6 +98,8 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
         ctx.switch_account(admin());
         ctx.record_score(UTC(day * MS_IN_DAY), 20_000, alice());
+
+        assert_eq!(ctx.contract().get_score_interest(alice()), Some(U128(20000)));
 
         compare_interest(&ctx);
 
