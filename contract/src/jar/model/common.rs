@@ -160,7 +160,8 @@ impl JarLastVersion {
         let cache = self.cache.map(|c| c.interest).unwrap_or_default();
 
         if let Terms::Fixed(end_term) = &product.terms {
-            if now > end_term.lockup_term {
+            let end_term = cmp::max(now, self.created_at + end_term.lockup_term);
+            if now >= end_term {
                 return (cache, 0);
             }
         }

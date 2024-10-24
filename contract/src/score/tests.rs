@@ -5,13 +5,13 @@ use near_sdk::{
     json_types::{I64, U128},
     store::LookupMap,
     test_utils::test_env::{alice, bob},
-    NearToken,
+    NearToken, Timestamp,
 };
 use sweat_jar_model::{
-    api::{ProductApi, ScoreApi, WithdrawApi},
+    api::{JarApi, ProductApi, ScoreApi, WithdrawApi},
     jar::JarId,
     product::RegisterProductCommand,
-    Score, Timezone, MS_IN_DAY, UTC,
+    Score, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC,
 };
 
 use crate::{
@@ -70,7 +70,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
     const JAR: JarId = 0;
     const SCORE_JAR: JarId = 1;
 
-    const DAYS: u64 = 400;
+    const DAYS: u64 = 365;
     const HALF_PERIOD: u64 = DAYS / 2;
 
     set_test_log_events(false);
@@ -96,10 +96,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
     for day in 0..DAYS {
         ctx.set_block_timestamp_in_days(day);
 
-        ctx.switch_account(admin());
         ctx.record_score(UTC(day * MS_IN_DAY), 20_000, alice());
-
-        assert_eq!(ctx.contract().get_score_interest(alice()), Some(U128(20000)));
 
         compare_interest(&ctx);
 
@@ -122,7 +119,13 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
     total_claimed += ctx.claim_total(alice());
 
-    assert_eq!(total_claimed, NearToken::from_near(24).as_yoctonear());
+    assert_eq!(
+        total_claimed,
+        // The difference here is because the step jars doesn't receive interest for the first day
+        // Because there were no steps at -1 day
+        // But trough entire staking period the values match for regular and for step jar
+        NearToken::from_near(24).as_yoctonear() - 65_753_424_657_534_246_575_344
+    );
 }
 
 #[test]
@@ -313,4 +316,100 @@ fn revert_scores_on_failed_claim() {
             assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
         }
     }
+}
+
+#[test]
+fn timestamps() {
+    const ALICE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(4)))
+        .build();
+
+    ctx.contract()
+        .accounts
+        .get_mut(&alice())
+        .unwrap()
+        .jars
+        .first_mut()
+        .unwrap()
+        .created_at = 1729692817027;
+
+    ctx.set_block_timestamp_in_ms(1729694971000);
+
+    ctx.record_score(UTC(1729592064000), 8245, alice());
+
+    assert_eq!(
+        ctx.contract().get_total_interest(alice()).amount.total.0,
+        22589041095890410958904
+    );
+
+    for i in 0..100 {
+        ctx.set_block_timestamp_in_ms(1729694971000 + MS_IN_HOUR * i);
+
+        assert_eq!(
+            ctx.contract().get_total_interest(alice()).amount.total.0,
+            22589041095890410958904
+        );
+    }
+}
+
+#[test]
+fn test_steps_history() {
+    const ALICE_JAR: JarId = 0;
+    const BASE_TIME: Timestamp = 1729692817027;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(4)))
+        .build();
+
+    ctx.contract()
+        .accounts
+        .get_mut(&alice())
+        .unwrap()
+        .jars
+        .first_mut()
+        .unwrap()
+        .created_at = BASE_TIME;
+
+    let check_score_interest = |ctx: &Context, val: u128| {
+        assert_eq!(ctx.contract().get_score_interest(alice()), Some(U128(val)));
+    };
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.record_score(UTC(BASE_TIME - MS_IN_DAY), 8245, alice());
+
+    check_score_interest(&ctx, 8245);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 10);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 10), 10000, alice());
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 10), 101, alice());
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 9), 9000, alice());
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 9), 90, alice());
+
+    check_score_interest(&ctx, 9090);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 11);
+
+    check_score_interest(&ctx, 10101);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 12);
+
+    check_score_interest(&ctx, 0);
 }
