@@ -5,13 +5,13 @@ use near_sdk::{
     json_types::{I64, U128},
     store::LookupMap,
     test_utils::test_env::{alice, bob},
-    NearToken,
+    NearToken, Timestamp,
 };
 use sweat_jar_model::{
     api::{JarApi, ProductApi, ScoreApi, WithdrawApi},
     jar::JarId,
     product::RegisterProductCommand,
-    Score, Timezone, MS_IN_DAY, UTC,
+    Score, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC,
 };
 
 use crate::{
@@ -98,7 +98,6 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
         ctx.record_score(UTC(day * MS_IN_DAY), 20_000, alice());
 
-        assert_eq!(ctx.contract().get_score_interest(alice()), Some(U128(20000)));
         compare_interest(&ctx);
 
         if day == HALF_PERIOD {
@@ -347,4 +346,70 @@ fn timestamps() {
         ctx.contract().get_total_interest(alice()).amount.total.0,
         22589041095890410958904
     );
+
+    for i in 0..100 {
+        ctx.set_block_timestamp_in_ms(1729694971000 + MS_IN_HOUR * i);
+
+        assert_eq!(
+            ctx.contract().get_total_interest(alice()).amount.total.0,
+            22589041095890410958904
+        );
+    }
+}
+
+#[test]
+fn test_steps_history() {
+    const ALICE_JAR: JarId = 0;
+    const BASE_TIME: Timestamp = 1729692817027;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(4)))
+        .build();
+
+    ctx.contract()
+        .accounts
+        .get_mut(&alice())
+        .unwrap()
+        .jars
+        .first_mut()
+        .unwrap()
+        .created_at = BASE_TIME;
+
+    let check_score_interest = |ctx: &Context, val: u128| {
+        assert_eq!(ctx.contract().get_score_interest(alice()), Some(U128(val)));
+    };
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.record_score(UTC(BASE_TIME - MS_IN_DAY), 8245, alice());
+
+    check_score_interest(&ctx, 8245);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 10);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 10), 10000, alice());
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 10), 101, alice());
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 9), 9000, alice());
+    ctx.record_score(UTC(BASE_TIME + MS_IN_DAY * 9), 90, alice());
+
+    check_score_interest(&ctx, 9090);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 11);
+
+    check_score_interest(&ctx, 10101);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 12);
+
+    check_score_interest(&ctx, 0);
 }

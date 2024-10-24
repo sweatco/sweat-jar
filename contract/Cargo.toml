@@ -1,6 +1,6 @@
 [package]
 name = "sweat_jar"
-version = "3.3.9"
+version = "3.3.10"
 authors = ["Sweat Economy"]
 edition = "2021"
 

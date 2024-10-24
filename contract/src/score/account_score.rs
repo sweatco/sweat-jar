@@ -17,7 +17,10 @@ type Chain = Vec<(Score, Local)>;
 pub struct AccountScore {
     pub updated: UTC,
     pub timezone: Timezone,
+    /// Scores buffer used for interest calculation. Can be invalidated on claim.
     scores: [Score; DAYS_STORED],
+    /// Score history values used for displaying it in application. Will not be invalidated during claim.
+    scores_history: [Score; DAYS_STORED],
 }
 
 impl AccountScore {
@@ -30,6 +33,7 @@ impl AccountScore {
             updated: block_timestamp_ms().into(),
             timezone,
             scores: [0; DAYS_STORED],
+            scores_history: [0; DAYS_STORED],
         }
     }
 
@@ -46,11 +50,13 @@ impl AccountScore {
     }
 
     pub fn active_score(&self) -> Score {
-        let today = self.timezone.today();
         let update_day = self.update_day();
+        let today = self.timezone.today();
 
-        if today == update_day {
-            self.scores[0]
+        if update_day == today {
+            self.scores_history[1]
+        } else if update_day == Local(today.0 - 1) {
+            self.scores_history[0]
         } else {
             0
         }
@@ -59,8 +65,9 @@ impl AccountScore {
     /// On claim we need to clear active scores so they aren't claimed twice or more.
     pub fn claim_score(&mut self) -> Vec<Score> {
         let today = self.timezone.today();
+        let update_day = self.update_day();
 
-        let result = if today == self.update_day() {
+        let result = if today == update_day {
             let score = self.scores[1];
             self.scores[1] = 0;
             vec![score]
@@ -68,6 +75,16 @@ impl AccountScore {
             let score = vec![self.scores[0], self.scores[1]];
             self.scores[0] = 0;
             self.scores[1] = 0;
+
+            // If scores were updated yesterday we shift history by 1 day
+            // If older that yeterday then we wipe it
+            if update_day == Local(today.0 - 1) {
+                self.scores[1] = self.scores[0];
+                self.scores[0] = 0;
+            } else {
+                self.scores_history = [0; DAYS_STORED];
+            }
+
             score
         };
 
@@ -93,6 +110,7 @@ impl AccountScore {
         for (score, day) in chain {
             let day_index: usize = day.0.try_into().unwrap();
             self.scores[day_index] += score;
+            self.scores_history[day_index] = self.scores_history[day_index].checked_add(score).unwrap_or(u16::MAX);
         }
         vec![]
     }
@@ -135,6 +153,7 @@ impl Default for AccountScore {
             updated: block_timestamp_ms().into(),
             timezone: Timezone::invalid(),
             scores: [0, 0],
+            scores_history: [0, 0],
         }
     }
 }
@@ -211,6 +230,7 @@ mod test {
             updated: UTC(MS_IN_DAY * 10),
             timezone: Timezone::hour_shift(0),
             scores: [1000, 2000],
+            scores_history: [1000, 2000],
         };
 
         let mut ctx = TestBuilder::new().build();
@@ -233,15 +253,20 @@ mod test {
             updated: UTC(MS_IN_DAY * 10),
             timezone: Timezone::hour_shift(0),
             scores: [1000, 2000],
+            scores_history: [1000, 2000],
         };
 
         let mut ctx = TestBuilder::new().build();
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
-        assert_eq!(score.active_score(), 1000);
+        assert_eq!(score.active_score(), 2000);
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
+
+        assert_eq!(score.active_score(), 1000);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 12);
 
         assert_eq!(score.active_score(), 0);
     }
