@@ -2,16 +2,20 @@
 
 use fake::Fake;
 use near_sdk::{
+    store::LookupMap,
     test_utils::test_env::{alice, bob},
     AccountId, PromiseOrValue,
 };
 use sweat_jar_model::{
-    api::{ClaimApi, ScoreApi},
+    api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
     ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, UTC,
 };
 
 use crate::{
-    common::{test_data::set_test_log_events, tests::Context},
+    common::{
+        test_data::{set_test_future_success, set_test_log_events},
+        tests::Context,
+    },
     jar::model::JarV2,
     product::model::{
         v2::{Apy, Cap, FixedProductTerms, InterestCalculator, ScoreBasedProductTerms, Terms},
@@ -19,6 +23,7 @@ use crate::{
     },
     score::AccountScore,
     test_utils::admin,
+    StorageKey,
 };
 
 #[test]
@@ -246,108 +251,129 @@ fn interest_does_not_increase_with_no_steps() {
     assert_eq!(interest_for_one_day, context.interest(&alice(), &product.id));
 }
 
-// #[test]
-// fn withdraw_score_jar() {
-//     const &alice(), &product.id: JarId = 0;
-//     const BOB_JAR: JarId = 1;
-//
-//     set_test_log_events(false);
-//
-//     let mut ctx = TestBuilder::new()
-//         .product(SCORE_PRODUCT, [APY(0), TermDays(7), ScoreCap(20_000)])
-//         .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
-//         .jar(
-//             BOB_JAR,
-//             [JarField::Account(bob()), JarField::Timezone(Timezone::hour_shift(0))],
-//         )
-//         .build();
-//
-//     for i in 0..=10 {
-//         ctx.set_block_timestamp_in_days(i);
-//
-//         ctx.record_score((i * MS_IN_DAY).into(), 1000, alice());
-//         ctx.record_score((i * MS_IN_DAY).into(), 1000, bob());
-//
-//         if i == 5 {
-//             let claimed_alice = ctx.claim_total(alice());
-//             let claimed_bob = ctx.claim_total(bob());
-//             assert_eq!(claimed_alice, claimed_bob);
-//         }
-//     }
-//
-//     // Alice claims first and then withdraws
-//     ctx.switch_account(alice());
-//     let claimed_alice = ctx.claim_total(alice());
-//     let withdrawn_alice = ctx
-//         .contract()
-//         .withdraw(ALICE_JAR.into(), None)
-//         .unwrap()
-//         .withdrawn_amount
-//         .0;
-//
-//     assert_eq!(ctx.claim_total(alice()), 0);
-//
-//     // Bob withdraws first and then claims
-//     ctx.switch_account(bob());
-//     let withdrawn_bob = ctx
-//         .contract()
-//         .withdraw(BOB_JAR.into(), None)
-//         .unwrap()
-//         .withdrawn_amount
-//         .0;
-//     let claimed_bob = ctx.claim_total(bob());
-//
-//     assert_eq!(ctx.claim_total(bob()), 0);
-//
-//     assert_eq!(claimed_alice, claimed_bob);
-//     assert_eq!(withdrawn_alice, withdrawn_bob);
-//
-//     // All jars were closed and deleted after full withdraw and claim
-//     assert!(ctx.contract().account_jars(&alice()).is_empty());
-//     assert!(ctx.contract().account_jars(&bob()).is_empty());
-// }
-//
-// #[test]
-// fn revert_scores_on_failed_claim() {
-//     const ALICE_JAR: JarId = 0;
-//
-//     set_test_log_events(false);
-//
-//     let mut ctx = TestBuilder::new()
-//         .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
-//         .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
-//         .build();
-//
-//     for day in 0..=10 {
-//         ctx.set_block_timestamp_in_days(day);
-//
-//         ctx.record_score((day * MS_IN_DAY).into(), 500, alice());
-//         if day > 1 {
-//             ctx.record_score(((day - 1) * MS_IN_DAY).into(), 1000, alice());
-//         }
-//
-//         // Clear accounts cache to test deserialization
-//         if day == 3 {
-//             ctx.contract().accounts.flush();
-//             ctx.contract().accounts = LookupMap::new(StorageKey::AccountsVersioned);
-//         }
-//
-//         // Normal claim. Score should change:
-//         if day == 4 {
-//             assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
-//             assert_ne!(ctx.claim_total(alice()), 0);
-//             assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 0));
-//         }
-//
-//         // Failed claim. Score should stay the same:
-//         if day == 8 {
-//             set_test_future_success(false);
-//             assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
-//             assert_eq!(ctx.claim_total(alice()), 0);
-//             assert_eq!(ctx.score(ALICE_JAR).scores(), (500, 1000));
-//         }
-//     }
-// }
+#[test]
+fn withdraw_score_jar() {
+    set_test_log_events(false);
+
+    let term_in_days = 7;
+    let term_in_ms = term_in_days * MS_IN_DAY;
+
+    let product = ProductV2 {
+        id: "score_product".to_string(),
+        cap: Cap {
+            min: 0,
+            max: 1_000_000_000_000_000,
+        },
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            lockup_term: term_in_ms,
+            base_apy: Apy::Constant(UDecimal::zero()),
+            score_cap: 20_000,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    };
+
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))])
+        .with_jars(&bob(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))]);
+    context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
+    context.contract().get_account_mut(&bob()).score = AccountScore::new(Timezone::hour_shift(0));
+
+    for i in 0..=10 {
+        context.set_block_timestamp_in_days(i);
+
+        context.record_score(&alice(), (i * MS_IN_DAY).into(), 1000);
+        context.record_score(&bob(), (i * MS_IN_DAY).into(), 1000);
+
+        if i == 5 {
+            let claimed_alice = context.claim_total(&alice());
+            let claimed_bob = context.claim_total(&bob());
+            assert_eq!(claimed_alice, claimed_bob);
+        }
+    }
+
+    // Alice claims first and then withdraws
+    let claimed_alice = context.claim_total(&alice());
+    let withdrawn_alice = context.withdraw(&alice(), &product.id);
+
+    assert_eq!(context.claim_total(&alice()), 0);
+
+    // Bob withdraws first and then claims
+    context.switch_account(bob());
+    let withdrawn_bob = context.withdraw(&bob(), &product.id);
+    let claimed_bob = context.claim_total(&bob());
+
+    assert_eq!(context.claim_total(&bob()), 0);
+
+    assert_eq!(claimed_alice, claimed_bob);
+    assert_eq!(withdrawn_alice, withdrawn_bob);
+
+    // All jars were closed and deleted after full withdraw and claim
+    assert!(context.contract().get_jars_for_account(alice()).is_empty());
+    assert!(context.contract().get_jars_for_account(bob()).is_empty());
+}
+
+#[test]
+fn revert_scores_on_failed_claim() {
+    set_test_log_events(false);
+
+    let term_in_days = 10;
+    let term_in_ms = term_in_days * MS_IN_DAY;
+
+    let product = ProductV2 {
+        id: "score_product".to_string(),
+        cap: Cap {
+            min: 0,
+            max: 1_000_000_000_000_000,
+        },
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            lockup_term: term_in_ms,
+            base_apy: Apy::Constant(UDecimal::zero()),
+            score_cap: 20_000,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    };
+
+    let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
+        &alice(),
+        &[(product.id.clone(), JarV2::new().with_deposit(0, 100_000_000))],
+    );
+    context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
+
+    for day in 0..=term_in_days {
+        context.set_block_timestamp_in_days(day);
+
+        context.record_score(&alice(), (day * MS_IN_DAY).into(), 500);
+        if day > 1 {
+            context.record_score(&alice(), ((day - 1) * MS_IN_DAY).into(), 1000);
+        }
+
+        // Clear accounts cache to test deserialization
+        if day == 3 {
+            context.contract().accounts_v2.flush();
+            context.contract().accounts_v2 = LookupMap::new(StorageKey::AccountsV2);
+        }
+
+        // Normal claim. Score should change:
+        if day == 4 {
+            assert_eq!(context.score(&alice()).scores(), (500, 1000));
+            assert_ne!(context.claim_total(&alice()), 0);
+            assert_eq!(context.score(&alice()).scores(), (500, 0));
+        }
+
+        // Failed claim. Score should stay the same:
+        if day == 8 {
+            set_test_future_success(false);
+            assert_eq!(context.score(&alice()).scores(), (500, 1000));
+            assert_eq!(context.claim_total(&alice()), 0);
+            assert_eq!(context.score(&alice()).scores(), (500, 1000));
+        }
+    }
+}
 
 impl Context {
     fn interest(&self, account_id: &AccountId, product_id: &ProductId) -> TokenAmount {
@@ -379,5 +405,21 @@ impl Context {
         self.switch_account(admin());
         self.contract()
             .record_score(vec![(account_id.clone(), vec![(score, time)])]);
+    }
+
+    fn withdraw(&mut self, account_id: &AccountId, product_id: &ProductId) -> TokenAmount {
+        self.switch_account(account_id);
+        let result = self.contract().withdraw(product_id.clone());
+
+        match result {
+            PromiseOrValue::Promise(_) => {
+                panic!("Expected value");
+            }
+            PromiseOrValue::Value(value) => value.withdrawn_amount.0,
+        }
+    }
+
+    fn score(&self, account_id: &AccountId) -> AccountScore {
+        self.contract().get_account(account_id).score
     }
 }

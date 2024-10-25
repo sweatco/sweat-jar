@@ -36,7 +36,7 @@ impl Contract {
         self.last_jar_id
     }
 
-    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Option<Vec<Jar>> {
+    pub(crate) fn get_legacy_account_jars(&self, account_id: &AccountId) -> Option<Vec<Jar>> {
         // TODO: Remove after complete migration and return '&[Jar]`
         if let Some(record) = self.account_jars_v1.get(account_id) {
             return Some(record.jars.iter().map(|j| j.clone().into()).collect());

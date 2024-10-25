@@ -80,7 +80,7 @@ impl JarApi for Contract {
                 .collect();
         }
 
-        if let Some(jars) = self.account_jars(&account_id) {
+        if let Some(jars) = self.get_legacy_account_jars(&account_id) {
             return jars.iter().map(Into::into).collect();
         }
 
