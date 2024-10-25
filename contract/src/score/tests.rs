@@ -1,16 +1,20 @@
 #![cfg(test)]
 
-use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
+use fake::Fake;
+use near_sdk::{
+    test_utils::test_env::{alice, bob},
+    AccountId, PromiseOrValue,
+};
 use sweat_jar_model::{
     api::{ClaimApi, ScoreApi},
-    ProductId, Timezone, TokenAmount, UDecimal, MS_IN_DAY, UTC,
+    ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, UTC,
 };
 
 use crate::{
     common::{test_data::set_test_log_events, tests::Context},
     jar::model::JarV2,
     product::model::{
-        v2::{Apy, FixedProductTerms, InterestCalculator, ScoreBasedProductTerms, Terms},
+        v2::{Apy, Cap, FixedProductTerms, InterestCalculator, ScoreBasedProductTerms, Terms},
         ProductV2,
     },
     score::AccountScore,
@@ -30,36 +34,44 @@ fn record_score_by_non_manager() {
 /// Also this method tests score cap
 #[test]
 fn same_interest_in_score_jar_as_in_const_jar() {
-    const TERM_IN_DAYS: u64 = 365;
-    const TERM_IN_MS: u64 = TERM_IN_DAYS * MS_IN_DAY;
-    const HALF_PERIOD: u64 = TERM_IN_DAYS / 2;
-
     set_test_log_events(false);
 
-    let regular_product = ProductV2::new()
-        .with_id("regular_product".into())
-        .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: TERM_IN_MS,
-            apy: Apy::Constant(UDecimal::new(12000, 5)),
-        }));
-    let score_product = ProductV2::new()
-        .with_id("score_product".into())
-        .with_terms(Terms::ScoreBased(ScoreBasedProductTerms {
-            score_cap: 12_000,
-            base_apy: Apy::Constant(UDecimal::zero()),
-            lockup_term: TERM_IN_MS,
-        }));
+    let term_in_days: u64 = 365;
+    let term_in_ms: u64 = term_in_days * MS_IN_DAY;
+    let half_period: u64 = term_in_days / 2;
 
-    let regular_product_jar = JarV2::new().with_deposit(0, 100);
-    let score_product_jar = JarV2::new().with_deposit(0, 100);
+    let regular_product = ProductV2 {
+        id: "regular_product".to_string(),
+        cap: Cap { min: 0, max: 1_000_000 },
+        terms: Terms::Fixed(FixedProductTerms {
+            lockup_term: term_in_ms,
+            apy: Apy::Constant(UDecimal::new(12000, 5)),
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    };
+
+    let score_product = ProductV2 {
+        id: "score_product".to_string(),
+        cap: Cap { min: 0, max: 1_000_000 },
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            lockup_term: term_in_ms,
+            base_apy: Apy::Constant(UDecimal::zero()),
+            score_cap: 12_000,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    };
 
     let mut context = Context::new(admin())
         .with_products(&[regular_product.clone(), score_product.clone()])
         .with_jars(
             &alice(),
             &[
-                (regular_product.id.clone(), regular_product_jar),
-                (score_product.id.clone(), score_product_jar),
+                (regular_product.id.clone(), JarV2::new().with_deposit(0, 100)),
+                (score_product.id.clone(), JarV2::new().with_deposit(0, 100)),
             ],
         );
     context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(3));
@@ -71,28 +83,19 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         let score_interest = context.interest(&alice(), score_product_id);
         let diff = regular_interest.abs_diff(score_interest);
 
-        println!(
-            "@@ compare interests: regular = {}, score = {}, diff = {}",
-            regular_interest, score_interest, diff
-        );
-
         assert!(diff <= 1, "Diff is too big {diff}");
     }
 
     let mut total_claimed = 0;
 
-    for day in 0..TERM_IN_DAYS {
+    for day in 0..term_in_days {
         let now = day * MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
-
-        context.switch_account(admin());
-        context
-            .contract()
-            .record_score(vec![(alice(), vec![(20_000, UTC(day * MS_IN_DAY))])]);
+        context.record_score(&alice(), UTC(day * MS_IN_DAY), 20_000);
 
         compare_interest(&context, &regular_product.id, &score_product.id);
 
-        if day == HALF_PERIOD {
+        if day == half_period {
             let jar_interest = context.interest(&alice(), &regular_product.id);
             let score_interest = context.interest(&alice(), &score_product.id);
 
@@ -106,110 +109,146 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
     assert_eq!(
         context.jar(&alice(), &regular_product.id).cache.unwrap().updated_at,
-        HALF_PERIOD * MS_IN_DAY
+        half_period * MS_IN_DAY
     );
     assert_eq!(
         context.jar(&alice(), &score_product.id).cache.unwrap().updated_at,
-        (TERM_IN_DAYS - 1) * MS_IN_DAY
+        (term_in_days - 1) * MS_IN_DAY
     );
 
-    context.set_block_timestamp_in_ms(TERM_IN_MS);
+    context.set_block_timestamp_in_ms(term_in_ms);
     compare_interest(&context, &regular_product.id, &score_product.id);
 
     total_claimed += context.claim_total(&alice());
     assert_eq!(total_claimed, 24);
 }
 
-// #[test]
-// fn score_jar_claim_often_vs_claim_at_the_end() {
-//     const ALICE_JAR: JarId = 0;
-//     const BOB_JAR: JarId = 1;
-//
-//     set_test_log_events(false);
-//
-//     let mut ctx = TestBuilder::new()
-//         .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
-//         .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
-//         .jar(
-//             BOB_JAR,
-//             [JarField::Account(bob()), JarField::Timezone(Timezone::hour_shift(0))],
-//         )
-//         .build();
-//
-//     fn update_and_check(day: u64, ctx: &mut Context, total_claimed_bob: &mut u128) {
-//         let score: Score = (0..1000).fake();
-//
-//         ctx.switch_account(admin());
-//         ctx.record_score(UTC(day * MS_IN_DAY), score, alice());
-//         ctx.record_score(UTC(day * MS_IN_DAY), score, bob());
-//
-//         if day > 1 {
-//             ctx.switch_account(admin());
-//             ctx.record_score(UTC((day - 1) * MS_IN_DAY), score, alice());
-//             ctx.record_score(UTC((day - 1) * MS_IN_DAY), score, bob());
-//         }
-//
-//         *total_claimed_bob += ctx.claim_total(bob());
-//         assert_eq!(ctx.interest(ALICE_JAR), *total_claimed_bob, "{day}");
-//     }
-//
-//     let mut total_claimed_bob: u128 = 0;
-//
-//     // Update each hour for 10 days
-//     for hour in 0..(24 * 10) {
-//         ctx.set_block_timestamp_in_hours(hour);
-//         update_and_check(hour / 24, &mut ctx, &mut total_claimed_bob);
-//     }
-//
-//     // Update each day until 100 days has passed
-//     for day in 10..100 {
-//         ctx.set_block_timestamp_in_days(day);
-//         update_and_check(day, &mut ctx, &mut total_claimed_bob);
-//     }
-//
-//     total_claimed_bob += ctx.claim_total(bob());
-//
-//     assert_eq!(ctx.interest(ALICE_JAR), total_claimed_bob);
-//     assert_eq!(ctx.claim_total(alice()), total_claimed_bob);
-//
-//     assert_eq!(ctx.jar(ALICE_JAR).cache.unwrap().updated_at, MS_IN_DAY * 99);
-// }
-//
-// #[test]
-// fn interest_does_not_increase_with_no_steps() {
-//     const ALICE_JAR: JarId = 0;
-//
-//     set_test_log_events(false);
-//
-//     let mut ctx = TestBuilder::new()
-//         .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
-//         .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
-//         .build();
-//
-//     ctx.set_block_timestamp_in_days(5);
-//
-//     ctx.record_score(UTC(5 * MS_IN_DAY), 1000, alice());
-//
-//     assert_eq!(ctx.interest(ALICE_JAR), 0);
-//
-//     ctx.set_block_timestamp_in_days(6);
-//
-//     let interest_for_one_day = ctx.interest(ALICE_JAR);
-//     assert_ne!(interest_for_one_day, 0);
-//
-//     ctx.set_block_timestamp_in_days(7);
-//     assert_eq!(interest_for_one_day, ctx.interest(ALICE_JAR));
-//
-//     ctx.set_block_timestamp_in_days(50);
-//     assert_eq!(interest_for_one_day, ctx.interest(ALICE_JAR));
-//
-//     ctx.set_block_timestamp_in_days(100);
-//     assert_eq!(interest_for_one_day, ctx.interest(ALICE_JAR));
-// }
-//
+// TODO: it fails with bigger deposits
+#[test]
+fn score_jar_claim_often_vs_claim_at_the_end() {
+    set_test_log_events(false);
+
+    let term_in_days = 365;
+    let term_in_ms = term_in_days * MS_IN_DAY;
+
+    let product = ProductV2 {
+        id: "score_product".to_string(),
+        cap: Cap {
+            min: 0,
+            max: 1_000_000_000_000_000,
+        },
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            lockup_term: term_in_ms,
+            base_apy: Apy::Constant(UDecimal::zero()),
+            score_cap: 20_000,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    };
+
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))])
+        .with_jars(&bob(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))]);
+    context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
+    context.contract().get_account_mut(&bob()).score = AccountScore::new(Timezone::hour_shift(0));
+
+    fn update_and_check(day: u64, context: &mut Context, total_claimed_bob: &mut u128, product_id: &ProductId) {
+        let score: Score = (0..1000).fake();
+
+        context.switch_account(admin());
+        context.record_score(&alice(), UTC(day * MS_IN_DAY), score);
+        context.record_score(&bob(), UTC(day * MS_IN_DAY), score);
+
+        if day > 1 {
+            context.switch_account(admin());
+            context.record_score(&alice(), UTC((day - 1) * MS_IN_DAY), score);
+            context.record_score(&bob(), UTC((day - 1) * MS_IN_DAY), score);
+        }
+
+        *total_claimed_bob += context.claim_total(&bob());
+        assert_eq!(context.interest(&alice(), &product_id), *total_claimed_bob, "{day}");
+    }
+
+    let mut total_claimed_bob: u128 = 0;
+
+    // Update each hour for 10 days
+    for hour in 0..(24 * 10) {
+        context.set_block_timestamp_in_hours(hour);
+        update_and_check(hour / 24, &mut context, &mut total_claimed_bob, &product.id);
+    }
+
+    // Update each day until 100 days has passed
+    for day in 10..100 {
+        context.set_block_timestamp_in_days(day);
+        update_and_check(day, &mut context, &mut total_claimed_bob, &product.id);
+    }
+
+    total_claimed_bob += context.claim_total(&bob());
+
+    assert_eq!(context.interest(&alice(), &product.id), total_claimed_bob);
+    assert_eq!(context.claim_total(&alice()), total_claimed_bob);
+
+    assert_eq!(
+        context.jar(&alice(), &product.id).cache.unwrap().updated_at,
+        MS_IN_DAY * 99
+    );
+}
+
+#[test]
+fn interest_does_not_increase_with_no_steps() {
+    set_test_log_events(false);
+
+    let term_in_days = 365;
+    let term_in_ms = term_in_days * MS_IN_DAY;
+
+    let product = ProductV2 {
+        id: "score_product".to_string(),
+        cap: Cap {
+            min: 0,
+            max: 1_000_000_000_000_000,
+        },
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            lockup_term: term_in_ms,
+            base_apy: Apy::Constant(UDecimal::zero()),
+            score_cap: 20_000,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    };
+
+    let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
+        &alice(),
+        &[(product.id.clone(), JarV2::new().with_deposit(0, 100_000_000))],
+    );
+    context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
+
+    context.set_block_timestamp_in_days(5);
+
+    context.record_score(&alice(), UTC(5 * MS_IN_DAY), 1000);
+
+    assert_eq!(context.interest(&alice(), &product.id), 0);
+
+    context.set_block_timestamp_in_days(6);
+
+    let interest_for_one_day = context.interest(&alice(), &product.id);
+    assert_ne!(interest_for_one_day, 0);
+
+    context.set_block_timestamp_in_days(7);
+    assert_eq!(interest_for_one_day, context.interest(&alice(), &product.id));
+
+    context.set_block_timestamp_in_days(50);
+    assert_eq!(interest_for_one_day, context.interest(&alice(), &product.id));
+
+    context.set_block_timestamp_in_days(100);
+    assert_eq!(interest_for_one_day, context.interest(&alice(), &product.id));
+}
+
 // #[test]
 // fn withdraw_score_jar() {
-//     const ALICE_JAR: JarId = 0;
+//     const &alice(), &product.id: JarId = 0;
 //     const BOB_JAR: JarId = 1;
 //
 //     set_test_log_events(false);
@@ -334,5 +373,11 @@ impl Context {
         };
 
         claim_result.get_total().0
+    }
+
+    fn record_score(&mut self, account_id: &AccountId, time: UTC, score: Score) {
+        self.switch_account(admin());
+        self.contract()
+            .record_score(vec![(account_id.clone(), vec![(score, time)])]);
     }
 }

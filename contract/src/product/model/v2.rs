@@ -1,7 +1,7 @@
 use std::cmp;
 
 use near_sdk::{near, require};
-use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_YEAR};
+use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR};
 
 use crate::{
     common::{Duration, Timestamp},
@@ -196,7 +196,7 @@ pub(crate) trait InterestCalculator {
             .deposits
             .iter()
             .map(|deposit| {
-                let term = self.get_interest_calculation_term(now, since_date, deposit);
+                let term = self.get_interest_calculation_term(account, now, since_date, deposit);
                 let interest = if term > 0 {
                     get_interest(deposit.principal, apy, term)
                 } else {
@@ -218,8 +218,10 @@ pub(crate) trait InterestCalculator {
 
     fn get_apy(&self, account: &AccountV2) -> UDecimal;
 
+    // TODO: the whole account may be redundant
     fn get_interest_calculation_term(
         &self,
+        account: &AccountV2,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -237,14 +239,15 @@ impl InterestCalculator for Terms {
 
     fn get_interest_calculation_term(
         &self,
+        account: &AccountV2,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
     ) -> Duration {
         match self {
-            Terms::Fixed(terms) => terms.get_interest_calculation_term(now, last_cached_at, deposit),
-            Terms::Flexible(terms) => terms.get_interest_calculation_term(now, last_cached_at, deposit),
-            Terms::ScoreBased(terms) => terms.get_interest_calculation_term(now, last_cached_at, deposit),
+            Terms::Fixed(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
+            Terms::Flexible(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
+            Terms::ScoreBased(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
         }
     }
 }
@@ -256,6 +259,7 @@ impl InterestCalculator for FixedProductTerms {
 
     fn get_interest_calculation_term(
         &self,
+        account: &AccountV2,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -276,6 +280,7 @@ impl InterestCalculator for FlexibleProductTerms {
 
     fn get_interest_calculation_term(
         &self,
+        account: &AccountV2,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -298,6 +303,7 @@ impl InterestCalculator for ScoreBasedProductTerms {
 
     fn get_interest_calculation_term(
         &self,
+        account: &AccountV2,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -305,7 +311,10 @@ impl InterestCalculator for ScoreBasedProductTerms {
         let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
             cmp::max(cache_date, deposit.created_at)
         });
-        let until_date = cmp::min(now, deposit.created_at + self.lockup_term);
+        let until_date = cmp::min(
+            cmp::min(now, account.score.updated.0 + MS_IN_DAY),
+            deposit.created_at + self.lockup_term,
+        );
 
         until_date.checked_sub(since_date).unwrap_or(0)
     }
