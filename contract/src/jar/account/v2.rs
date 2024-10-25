@@ -174,7 +174,6 @@ impl JarV2 {
             updated_at: now,
             interest,
         });
-        // TODO: adjust remainder
-        self.claim_remainder += remainder;
+        self.claim_remainder = remainder;
     }
 }

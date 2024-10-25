@@ -1,9 +1,9 @@
 #![cfg(test)]
 
-use near_sdk::{test_utils::test_env::alice, AccountId, NearToken, PromiseOrValue};
+use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, ScoreApi},
-    ProductId, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR, UTC,
+    ProductId, Timezone, TokenAmount, UDecimal, MS_IN_DAY, UTC,
 };
 
 use crate::{
@@ -30,15 +30,16 @@ fn record_score_by_non_manager() {
 /// Also this method tests score cap
 #[test]
 fn same_interest_in_score_jar_as_in_const_jar() {
-    const DAYS: u64 = 400;
-    const HALF_PERIOD: u64 = DAYS / 2;
+    const TERM_IN_DAYS: u64 = 365;
+    const TERM_IN_MS: u64 = TERM_IN_DAYS * MS_IN_DAY;
+    const HALF_PERIOD: u64 = TERM_IN_DAYS / 2;
 
     set_test_log_events(false);
 
     let regular_product = ProductV2::new()
         .with_id("regular_product".into())
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: MS_IN_YEAR,
+            lockup_term: TERM_IN_MS,
             apy: Apy::Constant(UDecimal::new(12000, 5)),
         }));
     let score_product = ProductV2::new()
@@ -46,7 +47,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         .with_terms(Terms::ScoreBased(ScoreBasedProductTerms {
             score_cap: 12_000,
             base_apy: Apy::Constant(UDecimal::zero()),
-            lockup_term: MS_IN_YEAR,
+            lockup_term: TERM_IN_MS,
         }));
 
     let regular_product_jar = JarV2::new().with_deposit(0, 100);
@@ -66,16 +67,23 @@ fn same_interest_in_score_jar_as_in_const_jar() {
     // Difference of 1 is okay because the missing yoctosweat is stored in claim remainder
     // and will eventually be added to total claimed balance
     fn compare_interest(context: &Context, regular_product_id: &ProductId, score_product_id: &ProductId) {
-        let diff = context
-            .interest(&alice(), regular_product_id)
-            .abs_diff(context.interest(&alice(), score_product_id));
+        let regular_interest = context.interest(&alice(), regular_product_id);
+        let score_interest = context.interest(&alice(), score_product_id);
+        let diff = regular_interest.abs_diff(score_interest);
+
+        println!(
+            "@@ compare interests: regular = {}, score = {}, diff = {}",
+            regular_interest, score_interest, diff
+        );
+
         assert!(diff <= 1, "Diff is too big {diff}");
     }
 
     let mut total_claimed = 0;
 
-    for day in 0..DAYS {
-        context.set_block_timestamp_in_days(day);
+    for day in 0..TERM_IN_DAYS {
+        let now = day * MS_IN_DAY;
+        context.set_block_timestamp_in_ms(now);
 
         context.switch_account(admin());
         context
@@ -102,13 +110,14 @@ fn same_interest_in_score_jar_as_in_const_jar() {
     );
     assert_eq!(
         context.jar(&alice(), &score_product.id).cache.unwrap().updated_at,
-        (DAYS - 1) * MS_IN_DAY
+        (TERM_IN_DAYS - 1) * MS_IN_DAY
     );
 
+    context.set_block_timestamp_in_ms(TERM_IN_MS);
     compare_interest(&context, &regular_product.id, &score_product.id);
 
     total_claimed += context.claim_total(&alice());
-    assert_eq!(total_claimed, NearToken::from_near(24).as_yoctonear());
+    assert_eq!(total_claimed, 24);
 }
 
 // #[test]

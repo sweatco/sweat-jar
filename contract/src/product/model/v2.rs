@@ -185,6 +185,7 @@ impl ProductV2 {
     }
 }
 
+// TODO: add tests
 pub(crate) trait InterestCalculator {
     fn get_interest(&self, account: &AccountV2, jar: &JarV2, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
@@ -196,19 +197,21 @@ pub(crate) trait InterestCalculator {
             .iter()
             .map(|deposit| {
                 let term = self.get_interest_calculation_term(now, since_date, deposit);
-
-                if term > 0 {
+                let interest = if term > 0 {
                     get_interest(deposit.principal, apy, term)
                 } else {
                     (0, 0)
-                }
+                };
+
+                interest
             })
             .fold((0, 0), |acc, (interest, remainder)| {
                 (acc.0 + interest, acc.1 + remainder)
             });
 
-        let remainder: u64 = remainder % MS_IN_YEAR;
-        let extra_interest = (remainder / MS_IN_YEAR) as u128;
+        let total_remainder = jar.claim_remainder + remainder;
+        let remainder: u64 = total_remainder % MS_IN_YEAR;
+        let extra_interest = (total_remainder / MS_IN_YEAR) as u128;
 
         (cached_interest + interest + extra_interest, remainder)
     }
@@ -309,12 +312,11 @@ impl InterestCalculator for ScoreBasedProductTerms {
 }
 
 fn get_interest(principal: TokenAmount, apy: UDecimal, term: Duration) -> (TokenAmount, u64) {
+    // TODO: Fix calculation
+    let ms_in_year: u128 = MS_IN_YEAR.into();
     let term_in_milliseconds: u128 = term.into();
 
     let yearly_interest = apy * principal;
-
-    let ms_in_year: u128 = MS_IN_YEAR.into();
-
     let interest = term_in_milliseconds * yearly_interest;
 
     // This will never fail because `MS_IN_YEAR` is u64

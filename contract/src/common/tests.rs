@@ -51,7 +51,7 @@ impl Context {
     }
 
     pub(crate) fn now(&self) -> Timestamp {
-        self.builder.context.block_timestamp / 1_000
+        self.builder.context.block_timestamp / 1_000_000
     }
 
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {
