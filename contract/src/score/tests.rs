@@ -8,6 +8,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
+    withdraw::WithdrawView,
     ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, UTC,
 };
 
@@ -407,7 +408,7 @@ impl Context {
             .record_score(vec![(account_id.clone(), vec![(score, time)])]);
     }
 
-    fn withdraw(&mut self, account_id: &AccountId, product_id: &ProductId) -> TokenAmount {
+    pub(crate) fn withdraw(&mut self, account_id: &AccountId, product_id: &ProductId) -> WithdrawView {
         self.switch_account(account_id);
         let result = self.contract().withdraw(product_id.clone());
 
@@ -415,7 +416,7 @@ impl Context {
             PromiseOrValue::Promise(_) => {
                 panic!("Expected value");
             }
-            PromiseOrValue::Value(value) => value.withdrawn_amount.0,
+            PromiseOrValue::Value(value) => value,
         }
     }
 

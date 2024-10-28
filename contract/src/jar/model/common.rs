@@ -72,6 +72,7 @@ impl Contract {
     }
 
     #[mutants::skip]
+    #[deprecated]
     pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> Jar {
         if let Some(jars) = self.account_jars_v1.get(account) {
             return jars
