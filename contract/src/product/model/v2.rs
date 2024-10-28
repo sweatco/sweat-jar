@@ -321,7 +321,6 @@ impl InterestCalculator for ScoreBasedProductTerms {
 }
 
 fn get_interest(principal: TokenAmount, apy: UDecimal, term: Duration) -> (TokenAmount, u64) {
-    // TODO: Fix calculation
     let ms_in_year: u128 = MS_IN_YEAR.into();
     let term_in_milliseconds: u128 = term.into();
 

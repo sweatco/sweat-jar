@@ -19,7 +19,7 @@ impl Contract {
     ) {
         self.migrate_account_if_needed(account_id);
 
-        let account = self.get_account(account_id);
+        let account = self.try_get_account(account_id);
         let product = self.get_product(&ticket.product_id);
 
         if let Some(pk) = &product.public_key {
@@ -30,7 +30,8 @@ impl Contract {
             let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
             require!(is_time_valid, "Ticket is outdated");
 
-            let hash = Self::get_ticket_hash(account_id, amount, ticket, account.nonce);
+            let nonce = account.map_or(0, |account| account.nonce);
+            let hash = Self::get_ticket_hash(account_id, amount, ticket, nonce);
             let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
 
             require!(is_signature_valid, "Not matching signature");
