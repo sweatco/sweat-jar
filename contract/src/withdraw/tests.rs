@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+use itertools::Itertools;
 use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
@@ -363,10 +364,13 @@ fn withdraw_all() {
     assert_eq!(regular_principal, withdrawn.total_amount.0);
 
     let jars = context.contract().get_jars_for_account(alice());
-    assert_eq!(
-        jars.iter().map(|j| j.principal.0).collect::<Vec<_>>(),
-        vec![illegal_principal, long_term_principal]
-    );
+    let jars_principal: Vec<TokenAmount> = jars.into_iter().map(|j| j.principal.0).sorted().collect();
+    let target_principal: Vec<TokenAmount> = [illegal_principal, long_term_principal]
+        .iter()
+        .sorted()
+        .cloned()
+        .collect();
+    assert_eq!(jars_principal, target_principal);
 }
 
 #[test]
