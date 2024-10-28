@@ -259,7 +259,7 @@ impl InterestCalculator for FixedProductTerms {
 
     fn get_interest_calculation_term(
         &self,
-        account: &AccountV2,
+        _account: &AccountV2,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -280,7 +280,7 @@ impl InterestCalculator for FlexibleProductTerms {
 
     fn get_interest_calculation_term(
         &self,
-        account: &AccountV2,
+        _account: &AccountV2,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,

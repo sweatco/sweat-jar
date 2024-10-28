@@ -37,7 +37,7 @@ pub struct Deposit {
 }
 
 impl JarV2 {
-    pub(crate) fn get_liquid_balance(&self, terms: &Terms, now: Timestamp) -> (TokenAmount, usize) {
+    pub(crate) fn get_liquid_balance(&self, terms: &Terms) -> (TokenAmount, usize) {
         if terms.allows_early_withdrawal() {
             let sum = self.deposits.iter().map(|deposit| deposit.principal).sum();
             let partition_index = self.deposits.len();

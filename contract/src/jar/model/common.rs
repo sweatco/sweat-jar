@@ -1,11 +1,10 @@
 use near_sdk::{
-    env,
     json_types::{Base64VecU8, U128, U64},
     near, AccountId,
 };
-use sweat_jar_model::{jar::JarId, Timezone, TokenAmount};
+use sweat_jar_model::{Timezone, TokenAmount};
 
-use crate::{common::Timestamp, jar::model::Jar, product::model::v2::Terms, Contract, JarsStorage};
+use crate::{common::Timestamp, product::model::v2::Terms, Contract};
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
@@ -69,34 +68,5 @@ impl Contract {
 
         let account = self.get_or_create_account_mut(&account_id);
         account.deposit(product_id, amount);
-    }
-
-    #[mutants::skip]
-    #[deprecated]
-    pub(crate) fn get_jar_internal(&self, account: &AccountId, id: JarId) -> Jar {
-        if let Some(jars) = self.account_jars_v1.get(account) {
-            return jars
-                .jars
-                .iter()
-                .find(|jar| jar.id == id)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-                .clone()
-                .into();
-        }
-
-        if let Some(jars) = self.account_jars_non_versioned.get(account) {
-            return jars
-                .jars
-                .iter()
-                .find(|jar| jar.id == id)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-                .clone();
-        }
-
-        self.accounts
-            .get(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
-            .get_jar(id)
-            .clone()
     }
 }

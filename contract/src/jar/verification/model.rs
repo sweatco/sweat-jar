@@ -5,7 +5,7 @@ use near_sdk::{
     json_types::Base64VecU8,
     require, AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
+use sweat_jar_model::{ProductId, TokenAmount};
 
 use crate::{common::Timestamp, jar::model::JarTicket, Contract};
 

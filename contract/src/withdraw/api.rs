@@ -60,7 +60,7 @@ impl WithdrawApi for Contract {
 
         let jar = self.get_account(&account_id).get_jar(&product_id);
         let product = self.get_product(&product_id);
-        let (amount, partition_index) = jar.get_liquid_balance(&product.terms, env::block_timestamp_ms());
+        let (amount, partition_index) = jar.get_liquid_balance(&product.terms);
         let fee = product.calculate_fee(amount);
 
         let request = WithdrawalRequest {
@@ -79,7 +79,6 @@ impl WithdrawApi for Contract {
 
         self.update_account_cache(&account_id, None);
 
-        let now = env::block_timestamp_ms();
         let mut request = BulkWithdrawalRequest::default();
 
         for (product_id, jar) in &self.get_account(&account_id).jars {
@@ -88,7 +87,7 @@ impl WithdrawApi for Contract {
             }
 
             let product = self.get_product(product_id);
-            let (amount, partition_index) = jar.get_liquid_balance(&product.terms, now);
+            let (amount, partition_index) = jar.get_liquid_balance(&product.terms);
             let fee = product.calculate_fee(amount);
 
             request.requests.push(WithdrawalRequest {

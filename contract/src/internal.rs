@@ -5,10 +5,7 @@ use sweat_jar_model::jar::JarId;
 
 use crate::{
     env,
-    jar::{
-        account::versioned::Account,
-        model::{AccountJarsLegacy, Jar},
-    },
+    jar::{account::versioned::Account, model::Jar},
     AccountId, Contract,
 };
 
@@ -61,13 +58,6 @@ impl Contract {
         }
 
         self.accounts.get(account_id).cloned()
-    }
-
-    pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.migrate_account_if_needed(account_id);
-        let jars = self.accounts.entry(account_id.clone()).or_default();
-        jars.last_id = jar.id;
-        jars.push(jar);
     }
 }
 

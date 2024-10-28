@@ -66,7 +66,7 @@ impl Context {
         self
     }
 
-    pub(crate) fn with_jars(mut self, account_id: &AccountId, jars: &[(ProductId, JarV2)]) -> Self {
+    pub(crate) fn with_jars(self, account_id: &AccountId, jars: &[(ProductId, JarV2)]) -> Self {
         if jars.is_empty() {
             return self;
         }

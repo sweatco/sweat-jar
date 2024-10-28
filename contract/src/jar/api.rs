@@ -3,7 +3,7 @@ use std::{collections::HashMap, convert::Into, ops::Deref};
 use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
+    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
     ProductId, TokenAmount,
 };
 
@@ -22,12 +22,10 @@ impl Contract {
         require!(product.is_enabled, "The product is disabled");
 
         let account_id = env::predecessor_account_id();
-        let now = env::block_timestamp_ms();
-
         let account = self.get_account(&account_id);
         let jar = account.get_jar(&product.id);
 
-        let (amount, partition_index) = jar.get_liquid_balance(&product.terms, now);
+        let (amount, partition_index) = jar.get_liquid_balance(&product.terms);
 
         if amount == 0 {
             return None;

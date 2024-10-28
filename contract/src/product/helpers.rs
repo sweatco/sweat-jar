@@ -122,19 +122,8 @@ impl Context {
     }
 }
 
-/// Constant APY described as percent. Value of 10 means 10% or UDecimal::new(10, 2)
-impl Into<Apy> for u32 {
-    fn into(self) -> Apy {
-        Apy::Constant(UDecimal::new(self.into(), 2))
-    }
-}
-
 // TODO: move to tests
 impl Apy {
-    fn new_constant() -> Self {
-        Apy::Constant(UDecimal::new(10, 2))
-    }
-
     pub(crate) fn new_downgradable() -> Self {
         Apy::Downgradable(DowngradableApy {
             default: UDecimal::new(20, 2),

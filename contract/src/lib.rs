@@ -10,7 +10,7 @@ use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 use crate::{
     jar::{
         account::{v2::AccountV2, versioned::Account},
-        model::{AccountJarsLegacy, Jar},
+        model::AccountJarsLegacy,
     },
     migration::account_jars_non_versioned::AccountJarsNonVersioned,
     product::model::v2::ProductV2,
@@ -29,7 +29,6 @@ mod migration;
 mod penalty;
 mod product;
 mod score;
-mod test_builder;
 mod test_utils;
 mod tests;
 mod withdraw;
@@ -104,24 +103,5 @@ impl InitApi for Contract {
             products_cache: HashMap::default().into(),
             accounts_v2: LookupMap::new(StorageKey::AccountsV2),
         }
-    }
-}
-
-pub(crate) trait JarsStorage<J> {
-    fn get_jar(&self, id: JarId) -> &J;
-    fn get_jar_mut(&mut self, id: JarId) -> &mut J;
-}
-
-impl JarsStorage<Jar> for Vec<Jar> {
-    fn get_jar(&self, id: JarId) -> &Jar {
-        self.iter()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-    }
-
-    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar {
-        self.iter_mut()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 }
