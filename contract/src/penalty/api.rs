@@ -45,4 +45,8 @@ impl PenaltyApi for Contract {
             timestamp: env::block_timestamp_ms(),
         }));
     }
+
+    fn is_penalty_applied(&self, account_id: AccountId) -> bool {
+        self.get_account(&account_id).is_penalty_applied
+    }
 }

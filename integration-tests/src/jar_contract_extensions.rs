@@ -84,7 +84,7 @@ pub trait JarContractExtensions {
         product_id: &String,
         valid_until: u64,
         amount: u128,
-        last_jar_id: Option<String>,
+        nonce: u32,
     ) -> String;
 }
 
@@ -201,7 +201,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
         product_id: &String,
         valid_until: u64,
         amount: u128,
-        last_jar_id: Option<String>,
+        nonce: u32,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",
@@ -209,7 +209,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
             receiver_id.id(),
             product_id,
             amount,
-            last_jar_id.map_or_else(String::new, |value| value),
+            nonce,
             valid_until,
         )
     }

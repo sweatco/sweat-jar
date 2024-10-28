@@ -1,6 +1,8 @@
 #[cfg(not(feature = "integration-api"))]
 use near_sdk::{json_types::Base64VecU8, AccountId};
 #[cfg(feature = "integration-api")]
+use nitka::near_sdk::json_types::Base64VecU8;
+#[cfg(feature = "integration-api")]
 use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
 
@@ -135,6 +137,8 @@ pub trait PenaltyApi {
     ///
     /// This method will panic if the jar's associated product has a constant APY rather than a downgradable APY.
     fn batch_set_penalty(&mut self, account_ids: Vec<AccountId>, value: bool);
+
+    fn is_penalty_applied(&self, account_id: AccountId) -> bool;
 }
 
 /// The `ProductApi` trait defines methods for managing products within the smart contract.
