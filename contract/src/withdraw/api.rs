@@ -125,12 +125,12 @@ impl Contract {
         account.get_jar_mut(&request.product_id).unlock();
 
         if !is_promise_success {
-            return WithdrawView::new(0, None);
+            return WithdrawView::new(&request.product_id, 0, None);
         }
 
         self.clean_up(&account_id, &request);
 
-        let withdrawal_result = WithdrawView::new(request.amount, self.wrap_fee(request.fee));
+        let withdrawal_result = WithdrawView::new(&request.product_id, request.amount, self.wrap_fee(request.fee));
 
         emit(EventKind::Withdraw((
             request.product_id,
@@ -169,7 +169,11 @@ impl Contract {
                 .get_jar_mut(&request.product_id)
                 .unlock();
 
-            let deposit_withdrawal = WithdrawView::new(request.amount.clone(), self.wrap_fee(request.fee.clone()));
+            let deposit_withdrawal = WithdrawView::new(
+                &request.product_id,
+                request.amount.clone(),
+                self.wrap_fee(request.fee.clone()),
+            );
 
             event_data.push((
                 request.product_id.clone(),

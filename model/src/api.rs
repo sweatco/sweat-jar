@@ -86,6 +86,7 @@ pub trait JarApi {
     fn restake(&mut self, product_id: ProductId);
 
     /// Restakes all jars for user, or only specified list of jars if `jars` argument is `Some`
+    /// TODO: change TokenAmount to U128 in result
     fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) -> Vec<(ProductId, TokenAmount)>;
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);

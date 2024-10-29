@@ -6,6 +6,7 @@ use sweat_jar_model::{
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{
+    common::total_principal,
     context::{prepare_contract, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
@@ -42,7 +43,7 @@ async fn happy_flow() -> anyhow::Result<()> {
         .await?;
 
     let alice_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    let alice_principal: TokenAmount = alice_jars.iter().map(|jar| jar.principal.0).sum();
+    let alice_principal: TokenAmount = total_principal(&alice_jars);
     assert_eq!(1_000_000, alice_principal);
 
     let mut alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).await?;

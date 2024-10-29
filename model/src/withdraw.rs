@@ -1,11 +1,12 @@
 use near_sdk::{json_types::U128, near, AccountId};
 
-use crate::TokenAmount;
+use crate::{ProductId, TokenAmount};
 
 /// The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.
 #[derive(Debug, PartialEq)]
 #[near(serializers=[json])]
 pub struct WithdrawView {
+    pub product_id: ProductId,
     /// The amount of tokens that has been transferred to the user's account as part of the withdrawal.
     pub withdrawn_amount: U128,
 
@@ -23,10 +24,11 @@ pub struct BulkWithdrawView {
 
 impl WithdrawView {
     #[must_use]
-    pub fn new(amount: TokenAmount, fee: Option<Fee>) -> Self {
+    pub fn new(product_id: &ProductId, amount: TokenAmount, fee: Option<Fee>) -> Self {
         let (withdrawn_amount, fee) = fee.map_or((amount, 0), |fee| (amount - fee.amount, fee.amount));
 
         Self {
+            product_id: product_id.clone(),
             withdrawn_amount: U128(withdrawn_amount),
             fee: U128(fee),
         }
@@ -37,11 +39,15 @@ impl WithdrawView {
 mod test {
     use near_sdk::json_types::U128;
 
-    use crate::withdraw::{Fee, WithdrawView};
+    use crate::{
+        withdraw::{Fee, WithdrawView},
+        ProductId,
+    };
 
     #[test]
     fn withdrawal_view() {
         let fee = WithdrawView::new(
+            &ProductId::new(),
             1_000_000,
             Some(Fee {
                 beneficiary_id: "account_id".to_string().try_into().unwrap(),
@@ -52,6 +58,7 @@ mod test {
         assert_eq!(
             fee,
             WithdrawView {
+                product_id: ProductId::new(),
                 withdrawn_amount: U128(1_000_000 - 100),
                 fee: U128(100),
             }
