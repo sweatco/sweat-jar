@@ -1,6 +1,6 @@
 use anyhow::Result;
-use near_workspaces::Account;
-use nitka::{misc::ToNear, near_sdk::json_types::U128};
+use near_workspaces::{types::NearToken, Account};
+use nitka::{json, misc::ToNear, near_sdk::json_types::U128};
 use sweat_jar_model::{
     api::{
         InitApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, ProductApiIntegration,
@@ -17,12 +17,14 @@ pub type Context = nitka::context::Context<near_workspaces::network::Sandbox>;
 
 pub const FT_CONTRACT: &str = "sweat";
 pub const SWEAT_JAR: &str = "sweat_jar";
+pub const SWEAT_JAR_LEGACY: &str = "sweat_jar_legacy";
 
 pub trait IntegrationContext {
     async fn manager(&mut self) -> Result<Account>;
     async fn alice(&mut self) -> Result<Account>;
     async fn fee(&mut self) -> Result<Account>;
     fn sweat_jar(&self) -> SweatJarContract;
+    fn sweat_jar_legacy(&self) -> SweatJarContract;
     fn ft_contract(&self) -> SweatContract;
 }
 
@@ -45,18 +47,46 @@ impl IntegrationContext for Context {
         }
     }
 
+    fn sweat_jar_legacy(&self) -> SweatJarContract {
+        SweatJarContract {
+            contract: &self.contracts[SWEAT_JAR_LEGACY],
+        }
+    }
+
     fn ft_contract(&self) -> SweatContract {
         SweatContract {
             contract: &self.contracts[FT_CONTRACT],
         }
     }
 }
-
 pub(crate) async fn prepare_contract(
     custom_jar_contract: Option<Vec<u8>>,
     products: impl IntoIterator<Item = RegisterProductCommand>,
 ) -> Result<Context> {
-    let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
+    _prepare_contract(custom_jar_contract, products, false).await
+}
+
+/// Prepare testing context including a legacy version of Jars contract deployed to a separate account
+pub(crate) async fn prepare_contract_with_legacy(
+    custom_jar_contract: Option<Vec<u8>>,
+    products: impl IntoIterator<Item = RegisterProductCommand>,
+) -> Result<Context> {
+    _prepare_contract(custom_jar_contract, products, true).await
+}
+
+pub(crate) async fn _prepare_contract(
+    custom_jar_contract: Option<Vec<u8>>,
+    products: impl IntoIterator<Item = RegisterProductCommand>,
+    include_legacy_contract: bool,
+) -> Result<Context> {
+    const INITIAL_BALANCE: U128 = U128(100_000_000 * 10u128.pow(18));
+
+    let mut contracts = vec![FT_CONTRACT, SWEAT_JAR];
+    if include_legacy_contract {
+        contracts.push(SWEAT_JAR_LEGACY);
+    }
+
+    let mut context = Context::new(&contracts, true, "build-integration".into()).await?;
 
     if let Some(custom_jar) = custom_jar_contract {
         let contract = context
@@ -94,6 +124,30 @@ pub(crate) async fn prepare_contract(
         .tge_mint(&context.sweat_jar().contract.as_account().to_near(), U128(100_000_000))
         .await?;
 
+    if include_legacy_contract {
+        context
+            .sweat_jar_legacy()
+            .init(
+                context.ft_contract().contract.as_account().to_near(),
+                fee_account.to_near(),
+                manager.to_near(),
+            )
+            .await?;
+
+        context
+            .ft_contract()
+            .storage_deposit(context.sweat_jar_legacy().contract.as_account().to_near().into(), None)
+            .await?;
+
+        context
+            .ft_contract()
+            .tge_mint(
+                &context.sweat_jar_legacy().contract.as_account().to_near(),
+                U128(100_000_000),
+            )
+            .await?;
+    }
+
     context
         .ft_contract()
         .storage_deposit(fee_account.to_near().into(), None)
@@ -104,19 +158,16 @@ pub(crate) async fn prepare_contract(
         .await?;
     context
         .ft_contract()
-        .tge_mint(&alice.to_near(), U128(100_000_000))
+        .tge_mint(&alice.to_near(), INITIAL_BALANCE)
         .await?;
     context
         .ft_contract()
         .storage_deposit(bob.to_near().into(), None)
         .await?;
+    context.ft_contract().tge_mint(&bob.to_near(), INITIAL_BALANCE).await?;
     context
         .ft_contract()
-        .tge_mint(&bob.to_near(), U128(100_000_000))
-        .await?;
-    context
-        .ft_contract()
-        .tge_mint(&manager.to_near(), U128(100_000_000))
+        .tge_mint(&manager.to_near(), INITIAL_BALANCE)
         .await?;
 
     for product in products {
@@ -125,6 +176,18 @@ pub(crate) async fn prepare_contract(
             .register_product(product.get())
             .with_user(&manager)
             .await?;
+
+        if include_legacy_contract {
+            let _ = manager
+                .call(context.sweat_jar_legacy().contract.id(), "register_product")
+                .args_json(json!({
+                    "command": product.json_legacy(),
+                }))
+                .deposit(NearToken::from_yoctonear(1))
+                .max_gas()
+                .transact()
+                .await?;
+        }
     }
 
     Ok(context)

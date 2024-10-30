@@ -107,7 +107,7 @@ async fn claim_many_jars() -> Result<()> {
 #[tokio::test]
 #[mutants::skip]
 async fn restake_many_jars() -> Result<()> {
-    const DEPOSIT_PRINCIPAL: u128 = 50 * (10 ^ 18);
+    const DEPOSIT_PRINCIPAL: u128 = 50 * 10u128.pow(18);
     const DEPOSITS_COUNT: usize = 15_000;
 
     println!("👷🏽 Restake many jars test");
