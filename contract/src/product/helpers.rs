@@ -70,6 +70,11 @@ impl ProductV2 {
         self.terms = terms;
         self
     }
+
+    pub fn with_public_key(mut self, public_key: Option<Vec<u8>>) -> Self {
+        self.public_key = public_key;
+        self
+    }
 }
 
 impl ProductV2 {

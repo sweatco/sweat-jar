@@ -46,6 +46,15 @@ impl JarV2 {
         self
     }
 
+    pub(crate) fn with_deposits(mut self, deposits: Vec<(Timestamp, TokenAmount)>) -> Self {
+        self.deposits.extend(
+            deposits
+                .into_iter()
+                .map(|(created_at, deposit)| Deposit::new(created_at, deposit)),
+        );
+        self
+    }
+
     pub(crate) fn with_pending_withdraw(mut self) -> Self {
         self.is_pending_withdraw = true;
         self
