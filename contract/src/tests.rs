@@ -1,19 +1,22 @@
 #![cfg(test)]
 
 use common::tests::Context;
+use fake::Fake;
 use near_sdk::{
     json_types::U128,
+    serde_json::{from_str, to_string},
     test_utils::test_env::{alice, bob},
 };
 use sweat_jar_model::{
-    api::{ClaimApi, JarApi, PenaltyApi, ProductApi},
+    api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::AggregatedTokenAmountView,
     product::ApyView,
-    UDecimal, MS_IN_YEAR,
+    TokenAmount, UDecimal, MS_IN_YEAR, U32,
 };
 
 use super::*;
 use crate::{
+    common::test_data::set_test_log_events,
     jar::model::JarV2,
     product::{
         helpers::MessageSigner,
@@ -286,135 +289,138 @@ fn apply_penalty_in_batch() {
     assert!(context.contract().is_penalty_applied(bob));
 }
 
-// #[test]
-// fn get_interest_after_withdraw() {
-//     let alice = alice();
-//     let admin = admin();
-//
-//     let product = Product::new();
-//     let jar = Jar::new(0).principal(100_000_000);
-//
-//     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
-//
-//     context.set_block_timestamp_in_days(400);
-//
-//     context.switch_account(&alice);
-//     context.contract().withdraw(U32(jar.id), None);
-//
-//     let interest = context.contract().get_total_interest(alice.clone());
-//     assert_eq!(12_000_000, interest.amount.total.0);
-// }
-//
-// #[test]
-// #[should_panic(expected = "Can be performed only by admin")]
-// fn unlock_not_by_manager() {
-//     let alice = alice();
-//     let admin = admin();
-//
-//     let reference_product = Product::new();
-//
-//     let mut reference_jar = Jar::new(0).product_id(&reference_product.id).principal(100);
-//     reference_jar.is_pending_withdraw = true;
-//     let jars = &[reference_jar];
-//
-//     let mut context = Context::new(admin).with_products(&[reference_product]).with_jars(jars);
-//
-//     context.switch_account(&alice);
-//     context.contract().unlock_jars_for_account(alice);
-// }
-//
-// #[test]
-// fn unlock_by_manager() {
-//     let alice = alice();
-//     let admin = admin();
-//
-//     let reference_product = Product::new();
-//
-//     let reference_jar_id = 0;
-//     let mut reference_jar = Jar::new(0).product_id(&reference_product.id).principal(100);
-//     reference_jar.is_pending_withdraw = true;
-//     let jars = &[reference_jar];
-//
-//     let mut context = Context::new(admin.clone())
-//         .with_products(&[reference_product])
-//         .with_jars(jars);
-//
-//     assert!(
-//         context
-//             .contract()
-//             .get_jar(alice.clone(), reference_jar_id.into())
-//             .is_pending_withdraw
-//     );
-//
-//     context.switch_account(&admin);
-//     context.contract().unlock_jars_for_account(alice.clone());
-//
-//     assert!(
-//         !context
-//             .contract()
-//             .get_jar(alice.clone(), reference_jar_id.into())
-//             .is_pending_withdraw
-//     );
-// }
-//
-// #[test]
-// fn test_u32() {
-//     let n = U32(12345678);
-//
-//     assert_eq!(n, from_str(&to_string(&n).unwrap()).unwrap());
-//     assert_eq!(U32::from(12345678_u32), n);
-// }
-//
-// #[test]
-// fn claim_often_vs_claim_once() {
-//     fn test(mut product: Product, principal: TokenAmount, days: u64, n: usize) {
-//         set_test_log_events(false);
-//
-//         let alice: AccountId = format!("alice_{principal}_{days}_{n}").try_into().unwrap();
-//         let bob: AccountId = format!("bob_{principal}_{days}_{n}").try_into().unwrap();
-//         let admin: AccountId = format!("admin_{principal}_{days}_{n}").try_into().unwrap();
-//
-//         product.id = format!("product_{principal}_{days}_{n}");
-//
-//         let alice_jar = Jar::new(0)
-//             .product_id(&product.id)
-//             .account_id(&alice)
-//             .principal(principal);
-//
-//         let bob_jar = Jar::new(1)
-//             .product_id(&product.id)
-//             .account_id(&bob)
-//             .principal(principal);
-//
-//         let mut context = Context::new(admin)
-//             .with_products(&[product])
-//             .with_jars(&[alice_jar.clone(), bob_jar.clone()]);
-//
-//         let mut bobs_claimed = 0;
-//
-//         context.switch_account(&bob);
-//
-//         for day in 0..days {
-//             context.set_block_timestamp_in_days(day);
-//             let claimed = context.contract().claim_total(None).unwrap();
-//             bobs_claimed += claimed.get_total().0;
-//         }
-//
-//         let alice_interest = context.contract().get_total_interest(alice.clone()).amount.total.0;
-//
-//         assert_eq!(alice_interest, bobs_claimed);
-//     }
-//
-//     let product = Product::new();
-//
-//     test(product.clone(), 10_000_000_000_000_000_000_000_000_000, 365, 0);
-//
-//     for n in 1..10 {
-//         test(
-//             product.clone(),
-//             (1..10_000_000_000_000_000_000_000_000_000).fake(),
-//             (1..365).fake(),
-//             n,
-//         );
-//     }
-// }
+#[test]
+fn get_interest_after_withdraw() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR,
+        apy: Apy::Constant(UDecimal::new(12000, 5)),
+    }));
+    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+
+    context.set_block_timestamp_in_days(400);
+
+    context.switch_account(&alice);
+    context.contract().withdraw(product.id.clone());
+
+    let interest = context.contract().get_total_interest(alice.clone());
+    assert_eq!(12_000_000, interest.amount.total.0);
+}
+
+#[test]
+#[should_panic(expected = "Can be performed only by admin")]
+fn unlock_not_by_manager() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = ProductV2::new();
+    let jar = JarV2::new().with_deposit(0, 300_000_000);
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+    context
+        .contract()
+        .get_account_mut(&alice)
+        .get_jar_mut(&product.id)
+        .is_pending_withdraw = true;
+
+    context.switch_account(&alice);
+    context.contract().unlock_jars_for_account(alice);
+}
+
+#[test]
+fn unlock_by_manager() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = ProductV2::new();
+    let jar = JarV2::new().with_deposit(0, 300_000_000);
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+    context
+        .contract()
+        .get_account_mut(&alice)
+        .get_jar_mut(&product.id)
+        .is_pending_withdraw = true;
+
+    assert!(
+        context
+            .contract()
+            .get_account(&alice)
+            .get_jar(&product.id)
+            .is_pending_withdraw
+    );
+
+    context.switch_account(&admin);
+    context.contract().unlock_jars_for_account(alice.clone());
+
+    assert!(
+        !context
+            .contract()
+            .get_account(&alice)
+            .get_jar(&product.id)
+            .is_pending_withdraw
+    );
+}
+
+#[test]
+fn test_u32() {
+    let n = U32(12345678);
+
+    assert_eq!(n, from_str(&to_string(&n).unwrap()).unwrap());
+    assert_eq!(U32::from(12345678_u32), n);
+}
+
+#[test]
+fn claim_often_vs_claim_once() {
+    fn test(mut product: ProductV2, principal: TokenAmount, days: u64, n: usize) {
+        set_test_log_events(false);
+
+        let alice: AccountId = format!("alice_{principal}_{days}_{n}").try_into().unwrap();
+        let bob: AccountId = format!("bob_{principal}_{days}_{n}").try_into().unwrap();
+        let admin: AccountId = format!("admin_{principal}_{days}_{n}").try_into().unwrap();
+
+        product.id = format!("product_{principal}_{days}_{n}");
+
+        let alice_jar = JarV2::new().with_deposit(0, principal);
+        let bob_jar = JarV2::new().with_deposit(0, principal);
+
+        let mut context = Context::new(admin)
+            .with_products(&[product.clone()])
+            .with_jars(&alice, &[(product.id.clone(), alice_jar)])
+            .with_jars(&bob, &[(product.id.clone(), bob_jar)]);
+
+        let mut bobs_claimed = 0;
+
+        context.switch_account(&bob);
+
+        for day in 0..days {
+            context.set_block_timestamp_in_days(day);
+            let claimed = context.contract().claim_total(None).unwrap();
+            bobs_claimed += claimed.get_total().0;
+        }
+
+        let alice_interest = context.contract().get_total_interest(alice.clone()).amount.total.0;
+
+        assert_eq!(alice_interest, bobs_claimed);
+    }
+
+    let product = ProductV2::new();
+
+    test(product.clone(), 10_000_000_000_000_000_000_000_000_000, 365, 0);
+
+    for n in 1..10 {
+        test(
+            product.clone(),
+            (1..10_000_000_000_000_000_000_000_000_000).fake(),
+            (1..365).fake(),
+            n,
+        );
+    }
+}
