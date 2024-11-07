@@ -1,7 +1,11 @@
+use near_sdk::PromiseOrValue;
 #[cfg(not(feature = "integration-api"))]
-use near_sdk::{json_types::Base64VecU8, AccountId};
+use near_sdk::{
+    json_types::{Base64VecU8, U128},
+    AccountId,
+};
 #[cfg(feature = "integration-api")]
-use nitka::near_sdk::json_types::Base64VecU8;
+use nitka::near_sdk::json_types::{Base64VecU8, U128};
 #[cfg(feature = "integration-api")]
 use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
@@ -11,7 +15,7 @@ use crate::{
     jar::{AggregatedInterestView, JarView},
     product::{ProductDto, ProductView},
     withdraw::{BulkWithdrawView, WithdrawView},
-    ProductId, Score, TokenAmount, UTC,
+    ProductId, Score, UTC,
 };
 
 #[cfg(feature = "integration-test")]
@@ -85,11 +89,15 @@ pub trait JarApi {
     /// - If the original jar is not yet mature.
     fn restake(&mut self, product_id: ProductId);
 
-    /// Restakes all jars for user, or only specified list of jars if `jars` argument is `Some`
-    /// TODO: change TokenAmount to U128 in result
-    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) -> Vec<(ProductId, TokenAmount)>;
-
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
+}
+
+#[make_integration_version]
+pub trait RestakeApi {
+    /// Restakes all jars for user into a Product with corresponding `product_id`.
+    /// If `amount` is some, only this amount will be restaked. The rest of mature principal
+    /// will be withdrawn.
+    fn restake_all(&mut self, product_id: ProductId, amount: Option<U128>) -> PromiseOrValue<()>;
 }
 
 #[make_integration_version]

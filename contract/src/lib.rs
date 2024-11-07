@@ -28,6 +28,7 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
+mod restake;
 mod score;
 mod test_utils;
 mod tests;

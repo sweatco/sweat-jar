@@ -15,7 +15,6 @@ use crate::{
 #[derive(Default, Debug, PartialEq)]
 pub struct AccountV2 {
     /// Is used as nonce in `get_ticket_hash` method.
-    /// TODO: check logic behind it
     /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, JarV2>,

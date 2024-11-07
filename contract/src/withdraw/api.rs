@@ -15,7 +15,7 @@ use crate::internal::{assert_gas, is_promise_success};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(crate = "near_sdk::serde")]
-pub struct WithdrawalRequest {
+pub(super) struct WithdrawalRequest {
     pub product_id: ProductId,
     pub amount: TokenAmount,
     pub fee: TokenAmount,
@@ -24,7 +24,7 @@ pub struct WithdrawalRequest {
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(crate = "near_sdk::serde")]
-pub struct BulkWithdrawalRequest {
+pub(super) struct BulkWithdrawalRequest {
     pub requests: Vec<WithdrawalRequest>,
     pub total_amount: TokenAmount,
     pub total_fee: TokenAmount,
@@ -36,7 +36,7 @@ use crate::{
     common,
     common::gas_data::{GAS_FOR_BULK_AFTER_WITHDRAW, GAS_FOR_FT_TRANSFER},
     env,
-    event::{emit, EventKind},
+    event::{emit, EventKind, WithdrawData},
     AccountId, Contract, ContractExt,
 };
 
@@ -115,7 +115,7 @@ impl WithdrawApi for Contract {
 }
 
 impl Contract {
-    pub(crate) fn after_withdraw_internal(
+    pub(super) fn after_withdraw_internal(
         &mut self,
         account_id: AccountId,
         request: WithdrawalRequest,
@@ -141,28 +141,42 @@ impl Contract {
         withdrawal_result
     }
 
-    pub(crate) fn after_bulk_withdraw_internal(
+    pub(super) fn after_bulk_withdraw_internal(
         &mut self,
         account_id: AccountId,
         request: BulkWithdrawalRequest,
         is_promise_success: bool,
     ) -> BulkWithdrawView {
-        let mut withdrawal_result = BulkWithdrawView {
-            total_amount: 0.into(),
-            withdrawals: vec![],
-        };
-
         if !is_promise_success {
-            let account = self.get_account_mut(&account_id);
-            for request in request.requests {
-                let jar = account.get_jar_mut(&request.product_id);
-                jar.unlock();
-            }
-
-            return withdrawal_result;
+            return self.process_bulk_withdrawal_error(&account_id, request);
         }
 
-        let mut event_data = vec![];
+        let result = self.process_bulk_withdrawal_success(&account_id, request);
+        emit(collect_bulk_withdrawal_event_data(&result));
+
+        result
+    }
+
+    fn process_bulk_withdrawal_error(
+        &mut self,
+        account_id: &AccountId,
+        request: BulkWithdrawalRequest,
+    ) -> BulkWithdrawView {
+        let account = self.get_account_mut(account_id);
+        for request in request.requests {
+            let jar = account.get_jar_mut(&request.product_id);
+            jar.unlock();
+        }
+
+        BulkWithdrawView::default()
+    }
+
+    fn process_bulk_withdrawal_success(
+        &mut self,
+        account_id: &AccountId,
+        request: BulkWithdrawalRequest,
+    ) -> BulkWithdrawView {
+        let mut result = BulkWithdrawView::default();
 
         for request in &request.requests {
             self.get_account_mut(&account_id)
@@ -175,26 +189,18 @@ impl Contract {
                 self.wrap_fee(request.fee.clone()),
             );
 
-            event_data.push((
-                request.product_id.clone(),
-                deposit_withdrawal.fee,
-                deposit_withdrawal.withdrawn_amount,
-            ));
-
-            withdrawal_result.total_amount.0 += deposit_withdrawal.withdrawn_amount.0;
-            withdrawal_result.withdrawals.push(deposit_withdrawal);
+            result.total_amount.0 += deposit_withdrawal.withdrawn_amount.0;
+            result.withdrawals.push(deposit_withdrawal);
         }
 
         for request in &request.requests {
             self.clean_up(&account_id, request);
         }
 
-        emit(EventKind::WithdrawAll(event_data));
-
-        withdrawal_result
+        result
     }
 
-    fn wrap_fee(&self, amount: TokenAmount) -> Option<Fee> {
+    pub(crate) fn wrap_fee(&self, amount: TokenAmount) -> Option<Fee> {
         if amount == 0 {
             None
         } else {
@@ -204,6 +210,22 @@ impl Contract {
             })
         }
     }
+}
+
+fn collect_bulk_withdrawal_event_data(withdrawal_result: &BulkWithdrawView) -> EventKind {
+    let event_data: Vec<WithdrawData> = withdrawal_result
+        .withdrawals
+        .iter()
+        .map(|withdrawal| {
+            (
+                withdrawal.product_id.clone(),
+                withdrawal.fee,
+                withdrawal.withdrawn_amount,
+            )
+        })
+        .collect();
+
+    EventKind::WithdrawAll(event_data)
 }
 
 impl Contract {

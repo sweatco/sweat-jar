@@ -1,16 +1,25 @@
 use std::{collections::HashMap, convert::Into, ops::Deref};
 
-use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
+use near_contract_standards::non_fungible_token::Token;
+use near_sdk::{
+    env,
+    json_types::U128,
+    near_bindgen, require,
+    serde::{Deserialize, Serialize},
+    AccountId,
+};
 use sweat_jar_model::{
-    api::JarApi,
+    api::{JarApi, WithdrawApi},
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
+    withdraw::{BulkWithdrawView, WithdrawView},
     ProductId, TokenAmount,
 };
 
 use crate::{
+    event::emit,
     jar::{
         account::{v1::AccountV1, v2::AccountV2},
-        model::Deposit,
+        model::{Deposit, JarV2},
         view::DetailedJarV2,
     },
     product::model::v2::{InterestCalculator, ProductV2},
@@ -18,12 +27,10 @@ use crate::{
 };
 
 impl Contract {
-    fn restake_internal(&mut self, product: &ProductV2) -> Option<TokenAmount> {
+    fn restake_internal(&mut self, account_id: &AccountId, product: &ProductV2) -> Option<TokenAmount> {
         require!(product.is_enabled, "The product is disabled");
 
-        let account_id = env::predecessor_account_id();
-        let account = self.get_account(&account_id);
-        let jar = account.get_jar(&product.id);
+        let jar = self.get_account(account_id).get_jar(&product.id);
 
         let (amount, partition_index) = jar.get_liquid_balance(&product.terms);
 
@@ -31,7 +38,7 @@ impl Contract {
             return None;
         }
 
-        self.update_jar_cache(&account_id, &product.id);
+        self.update_jar_cache(account_id, &product.id);
 
         let account = self.get_account_mut(&account_id);
         let jar = account.get_jar_mut(&product.id);
@@ -100,40 +107,10 @@ impl JarApi for Contract {
     fn restake(&mut self, product_id: ProductId) {
         self.migrate_account_if_needed(&env::predecessor_account_id());
 
-        let result = self.restake_internal(&self.get_product(&product_id));
+        let result = self.restake_internal(&env::predecessor_account_id(), &self.get_product(&product_id));
         require!(result.is_some(), "Nothing to restake");
 
         // TODO: add event logging
-    }
-
-    fn restake_all(&mut self, product_ids: Option<Vec<ProductId>>) -> Vec<(ProductId, TokenAmount)> {
-        let account_id = env::predecessor_account_id();
-
-        self.migrate_account_if_needed(&account_id);
-
-        let products: Vec<ProductV2> = product_ids
-            .unwrap_or_else(|| {
-                self.get_account(&account_id)
-                    .jars
-                    .keys()
-                    .cloned()
-                    .collect::<Vec<ProductId>>()
-            })
-            .iter()
-            .map(|product_id| self.get_product(product_id))
-            .filter(|product| product.is_enabled)
-            .collect();
-
-        let mut result: Vec<(ProductId, TokenAmount)> = vec![];
-        for product in products.iter() {
-            if let Some(amount) = self.restake_internal(product) {
-                result.push((product.id.clone(), amount));
-            }
-        }
-
-        // TODO: add event logging
-
-        result
     }
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
