@@ -121,7 +121,7 @@ impl AccountV2 {
         }
     }
 
-    fn update_jar_cache(&mut self, product: &ProductV2, now: Timestamp) {
+    pub(crate) fn update_jar_cache(&mut self, product: &ProductV2, now: Timestamp) {
         let jar = self.get_jar(&product.id);
         let (interest, remainder) = product.terms.get_interest(self, jar, now);
         self.get_jar_mut(&product.id).update_cache(interest, remainder, now);
@@ -168,7 +168,7 @@ impl Contract {
 }
 
 impl JarV2 {
-    fn update_cache(&mut self, interest: TokenAmount, remainder: u64, now: Timestamp) {
+    pub(crate) fn update_cache(&mut self, interest: TokenAmount, remainder: u64, now: Timestamp) {
         self.cache = Some(JarCache {
             updated_at: now,
             interest,

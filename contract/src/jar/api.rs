@@ -16,6 +16,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
+    assert::{assert_not_locked, assert_not_locked_legacy},
     event::emit,
     jar::{
         account::{v1::AccountV1, v2::AccountV2},
@@ -134,16 +135,17 @@ impl From<&AccountV1> for AccountV2 {
         };
 
         for jar in value.jars.iter() {
+            assert_not_locked_legacy(jar);
+
             let deposit = Deposit::new(jar.created_at, jar.principal);
             account.push(&jar.product_id, deposit);
+
+            account.get_jar_mut(&jar.product_id).claimed_balance += jar.claimed_balance;
 
             if !account.is_penalty_applied {
                 account.is_penalty_applied = jar.is_penalty_applied;
             }
         }
-
-        // TODO: update and migrate cache
-        // TODO: migrate remainders
 
         account
     }

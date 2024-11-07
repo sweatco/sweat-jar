@@ -197,13 +197,12 @@ pub(crate) trait InterestCalculator {
             .iter()
             .map(|deposit| {
                 let term = self.get_interest_calculation_term(account, now, since_date, deposit);
-                let interest = if term > 0 {
+
+                if term > 0 {
                     get_interest(deposit.principal, apy, term)
                 } else {
                     (0, 0)
-                };
-
-                interest
+                }
             })
             .fold((0, 0), |acc, (interest, remainder)| {
                 (acc.0 + interest, acc.1 + remainder)

@@ -1,9 +1,15 @@
-use near_sdk::{json_types::U128, require};
-use sweat_jar_model::{jar::CeFiJar, TokenAmount};
+use std::ops::Deref;
+
+use near_sdk::{env, env::panic_str, json_types::U128, require, AccountId};
+use sweat_jar_model::{api::JarApi, jar::CeFiJar, ProductId, TokenAmount};
 
 use crate::{
     event::{emit, EventKind, MigrationEventItem},
-    jar::model::JarLastVersion,
+    jar::{
+        account::v2::AccountV2,
+        model::{JarCache, JarLastVersion},
+    },
+    product::model::v2::InterestCalculator,
     Contract,
 };
 
@@ -83,5 +89,38 @@ impl Contract {
         );
 
         emit(EventKind::Migration(event_data));
+    }
+
+    pub fn migrate_account(&mut self, account_id: AccountId) {
+        let Some(account) = self.get_account_legacy(&account_id) else {
+            panic_str("No legacy account");
+        };
+
+        require!(!self.accounts_v2.contains_key(&account_id), "Account already exists");
+
+        let now = env::block_timestamp_ms();
+        let mut account = AccountV2::from(account.deref());
+
+        let interest: Vec<(ProductId, TokenAmount, u64)> = account
+            .jars
+            .iter()
+            .map(|(product_id, jar)| {
+                let product = self.get_product(product_id);
+                let (interest, remainder) = product.terms.get_interest(&account, jar, now);
+
+                (product_id.clone(), interest - jar.claimed_balance, remainder)
+            })
+            .collect();
+
+        for (product_id, interest, remainder) in interest {
+            let jar = account.get_jar_mut(&product_id);
+            jar.cache = Some(JarCache {
+                updated_at: now,
+                interest,
+            });
+            jar.claim_remainder = remainder;
+        }
+
+        self.accounts_v2.insert(account_id.clone(), account);
     }
 }
