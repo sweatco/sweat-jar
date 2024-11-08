@@ -93,6 +93,7 @@ impl JarApi for Contract {
         vec![]
     }
 
+    // TODO: check that claimed balance is subtracted from cached interest for legacy accounts
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
         if let Some(account) = self.try_get_account(&account_id) {
             return self.get_total_interest_for_account(account);

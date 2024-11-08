@@ -7,6 +7,6 @@ mod versioned;
 pub use common::{JarCache, JarTicket};
 pub use legacy::*;
 pub use v2::*;
-pub use versioned::Jar;
+pub use versioned::{Jar, JarVersioned};
 
 pub type JarLastVersion = v1::JarV1;
