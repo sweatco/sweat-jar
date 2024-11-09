@@ -160,4 +160,29 @@ fn restake_all_to_disabled_product() {
     context.contract().restake_all(product.id, None);
 }
 
-// TODO: add tests for partial restake
+#[test]
+fn restake_all_with_withdrawal() {
+    let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR,
+        apy: Apy::Constant(UDecimal::new(10_000, 5)),
+    }));
+    let jar = JarV2::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 4, 800_000)]);
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), jar)]);
+
+    let test_time = MS_IN_YEAR * 2;
+    context.set_block_timestamp_in_ms(test_time);
+
+    context.switch_account(alice());
+    context.contract().restake_all(product.id.clone(), Some(100_000.into()));
+
+    let contract = context.contract();
+    let account = contract.get_account(&alice());
+    let jar = account.get_jar(&product.id);
+    assert_eq!(1, jar.deposits.len());
+    assert_eq!(test_time, jar.deposits.last().unwrap().created_at);
+    assert_eq!(100_000, jar.deposits.last().unwrap().principal);
+    assert_eq!(test_time, jar.cache.unwrap().updated_at);
+    assert_eq!(100_000, jar.cache.unwrap().interest);
+}
