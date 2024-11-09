@@ -1,6 +1,6 @@
 use near_sdk::test_utils::test_env::{alice, bob, carol};
 use sweat_jar_model::{
-    api::{JarApi, RestakeApi},
+    api::{JarApi, ProductApi, RestakeApi},
     MS_IN_DAY, MS_IN_YEAR,
 };
 
@@ -38,68 +38,62 @@ fn restake_by_not_owner() {
     });
 }
 
-// TODO: fix test
-// #[test]
-// #[should_panic(expected = "Nothing to restake")]
-// fn restake_before_maturity() {
-//     let alice = alice();
-//     let admin = admin();
-//
-//     let product = ProductV2::new();
-//     let alice_jar = JarV2::new();
-//     let mut context = Context::new(admin)
-//         .with_products(&[product.clone()])
-//         .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
-//
-//     context.switch_account(&alice);
-//     assert!(context.contract().restake_all(None).is_empty());
-//     context.contract().restake(product.id);
-// }
+#[test]
+#[should_panic(expected = "Nothing to restake")]
+fn restake_before_maturity() {
+    let alice = alice();
+    let admin = admin();
 
-// TODO: fix test
-// #[test]
-// #[should_panic(expected = "The product is disabled")]
-// fn restake_with_disabled_product() {
-//     let alice = alice();
-//     let admin = admin();
-//
-//     let product = ProductV2::new();
-//     let alice_jar = JarV2::new();
-//     let mut context = Context::new(admin.clone())
-//         .with_products(&[product.clone()])
-//         .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
-//
-//     context.switch_account(&admin);
-//     context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id.clone(), false));
-//
-//     context.contract().products_cache.borrow_mut().clear();
-//
-//     context.set_block_timestamp_in_days(366);
-//
-//     context.switch_account(&alice);
-//     assert!(context.contract().restake_all(None).is_empty());
-//     context.contract().restake(product.id);
-// }
+    let product = ProductV2::new();
+    let alice_jar = JarV2::new();
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
-// TODO: fix test
-// #[test]
-// #[should_panic(expected = "Nothing to restake")]
-// fn restake_empty_jar() {
-//     let alice = alice();
-//     let admin = admin();
-//
-//     let product = ProductV2::new();
-//     let alice_jar = JarV2::new();
-//     let mut context = Context::new(admin.clone())
-//         .with_products(&[product.clone()])
-//         .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
-//
-//     context.set_block_timestamp_in_days(366);
-//
-//     context.switch_account(&alice);
-//     assert!(context.contract().restake_all(None).is_empty());
-//     context.contract().restake(product.id);
-// }
+    context.switch_account(&alice);
+    context.contract().restake(product.id);
+}
+
+#[test]
+#[should_panic(expected = "The product is disabled")]
+fn restake_with_disabled_product() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = ProductV2::new();
+    let alice_jar = JarV2::new();
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+
+    context.switch_account(&admin);
+    context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id.clone(), false));
+
+    context.contract().products_cache.borrow_mut().clear();
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+    context.contract().restake(product.id);
+}
+
+#[test]
+#[should_panic(expected = "Nothing to restake")]
+fn restake_empty_jar() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = ProductV2::new();
+    let alice_jar = JarV2::new();
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+    context.contract().restake(product.id);
+}
 
 #[test]
 fn restake_after_maturity() {
