@@ -10,10 +10,7 @@ use sweat_jar_model::{
 use crate::{
     common::{test_data::set_test_future_success, tests::Context},
     jar::model::JarV2,
-    product::model::{
-        v2::{Apy, FixedProductTerms, InterestCalculator, Terms},
-        ProductV2,
-    },
+    product::model::{Apy, FixedProductTerms, InterestCalculator, ProductV2, Terms},
     test_utils::{admin, UnwrapPromise},
 };
 

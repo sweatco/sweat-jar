@@ -11,10 +11,7 @@ use sweat_jar_model::{ProductId, TokenAmount, UDecimal, MS_IN_YEAR};
 use crate::{
     common::tests::Context,
     jar::model::JarTicket,
-    product::model::{
-        v2::{Apy, Cap, DowngradableApy, FixedProductTerms, Terms, WithdrawalFee},
-        ProductV2,
-    },
+    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, ProductV2, Terms, WithdrawalFee},
     test_utils::PRODUCT,
     Contract,
 };

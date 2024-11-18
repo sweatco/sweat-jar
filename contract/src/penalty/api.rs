@@ -15,7 +15,7 @@ impl PenaltyApi for Contract {
     fn set_penalty(&mut self, account_id: AccountId, value: bool) {
         self.assert_manager();
 
-        self.migrate_account_if_needed(&account_id);
+        self.assert_migrated(&account_id);
         self.update_account_cache(&account_id, None);
 
         let account = self.get_account_mut(&account_id);
@@ -32,7 +32,7 @@ impl PenaltyApi for Contract {
         self.assert_manager();
 
         for account_id in account_ids.iter() {
-            self.migrate_account_if_needed(&account_id);
+            self.assert_migrated(&account_id);
             self.update_account_cache(&account_id, None);
 
             let account = self.get_account_mut(account_id);

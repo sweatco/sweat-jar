@@ -40,7 +40,7 @@ impl RestakeApi for Contract {
 
         let account_id = env::predecessor_account_id();
 
-        self.migrate_account_if_needed(&account_id);
+        self.assert_migrated(&account_id);
 
         // TODO: add event logging
 

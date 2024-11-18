@@ -53,7 +53,7 @@ impl WithdrawApi for Contract {
     // TODO: doc change
     fn withdraw(&mut self, product_id: ProductId) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_if_needed(&account_id);
+        self.assert_migrated(&account_id);
 
         self.get_account_mut(&account_id).get_jar_mut(&product_id).try_lock();
         self.update_jar_cache(&account_id, &product_id);
@@ -75,7 +75,7 @@ impl WithdrawApi for Contract {
 
     fn withdraw_all(&mut self) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_if_needed(&account_id);
+        self.assert_migrated(&account_id);
 
         self.update_account_cache(&account_id, None);
 

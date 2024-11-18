@@ -16,7 +16,7 @@ impl ScoreApi for Contract {
         let mut event = vec![];
 
         for (account_id, _) in batch.iter() {
-            self.migrate_account_if_needed(account_id);
+            self.assert_migrated(account_id);
         }
 
         for (account_id, new_score) in batch {

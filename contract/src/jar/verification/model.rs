@@ -17,7 +17,7 @@ impl Contract {
         ticket: &JarTicket,
         signature: &Option<Base64VecU8>,
     ) {
-        self.migrate_account_if_needed(account_id);
+        self.assert_migrated(account_id);
 
         let account = self.try_get_account(account_id);
         let product = self.get_product(&ticket.product_id);

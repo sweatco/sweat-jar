@@ -4,11 +4,8 @@ use sweat_jar_model::{
 };
 
 use crate::product::model::{
-    v2::{
-        Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms,
-        WithdrawalFee,
-    },
-    ProductV2,
+    Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, ProductV2, ScoreBasedProductTerms, Terms,
+    WithdrawalFee,
 };
 
 impl From<ProductDto> for ProductV2 {

@@ -17,10 +17,7 @@ use crate::{
     common::tests::Context,
     product::{
         helpers::MessageSigner,
-        model::{
-            v2::{Apy, DowngradableApy, Terms, WithdrawalFee},
-            ProductV2,
-        },
+        model::{Apy, DowngradableApy, ProductV2, Terms, WithdrawalFee},
     },
     test_utils::admin,
 };

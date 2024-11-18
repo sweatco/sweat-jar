@@ -59,6 +59,13 @@ impl Contract {
 
         self.accounts.get(account_id).cloned()
     }
+
+    pub(crate) fn assert_migrated(&self, account_id: &AccountId) {
+        require!(
+            self.get_account_legacy(account_id).is_none(),
+            "Must migrate account first"
+        );
+    }
 }
 
 pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce() -> Message) {

@@ -1,6 +1,5 @@
 use std::{collections::HashMap, convert::Into, ops::Deref};
 
-use near_contract_standards::non_fungible_token::Token;
 use near_sdk::{
     env,
     json_types::U128,
@@ -107,7 +106,7 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, product_id: ProductId) {
-        self.migrate_account_if_needed(&env::predecessor_account_id());
+        self.assert_migrated(&env::predecessor_account_id());
 
         let result = self.restake_internal(&env::predecessor_account_id(), &self.get_product(&product_id));
         require!(result.is_some(), "Nothing to restake");
@@ -117,7 +116,7 @@ impl JarApi for Contract {
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_manager();
-        self.migrate_account_if_needed(&account_id);
+        self.assert_migrated(&account_id);
 
         let account = self.get_account_mut(&account_id);
         for (_, jar) in account.jars.iter_mut() {

@@ -18,10 +18,7 @@ use crate::{
         tests::Context,
     },
     jar::model::JarV2,
-    product::model::{
-        v2::{Apy, Cap, FixedProductTerms, InterestCalculator, ScoreBasedProductTerms, Terms},
-        ProductV2,
-    },
+    product::model::{Apy, Cap, FixedProductTerms, InterestCalculator, ProductV2, ScoreBasedProductTerms, Terms},
     score::AccountScore,
     test_utils::admin,
     StorageKey,

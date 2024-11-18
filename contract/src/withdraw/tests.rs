@@ -11,10 +11,7 @@ use sweat_jar_model::{
 use crate::{
     common::{test_data::set_test_future_success, tests::Context, Timestamp},
     jar::model::{Deposit, JarV2},
-    product::model::{
-        v2::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, Terms, WithdrawalFee},
-        ProductV2,
-    },
+    product::model::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, ProductV2, Terms, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise},
     withdraw::api::{BulkWithdrawalRequest, WithdrawalRequest},
 };
