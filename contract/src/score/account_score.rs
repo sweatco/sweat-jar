@@ -77,10 +77,10 @@ impl AccountScore {
             self.scores[1] = 0;
 
             // If scores were updated yesterday we shift history by 1 day
-            // If older that yeterday then we wipe it
+            // If older that yesterday then we wipe it
             if update_day == Local(today.0 - 1) {
-                self.scores[1] = self.scores[0];
-                self.scores[0] = 0;
+                self.scores_history[1] = self.scores_history[0];
+                self.scores_history[0] = 0;
             } else {
                 self.scores_history = [0; DAYS_STORED];
             }
@@ -242,9 +242,15 @@ mod test {
         assert_eq!(score.updated, (MS_IN_DAY * 10).into());
         assert_eq!(score.scores(), (1006, 2005));
         assert_eq!(score.claim_score(), vec![2005]);
+        assert_eq!(score.active_score(), 2005);
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
         assert_eq!(score.claim_score(), vec![1006, 0]);
+        assert_eq!(score.active_score(), 1006);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 12);
+        assert_eq!(score.claim_score(), vec![0, 0]);
+        assert_eq!(score.active_score(), 0);
     }
 
     #[test]
