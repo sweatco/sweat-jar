@@ -1,4 +1,4 @@
-use sweat_jar_model::{Score, MS_IN_DAY};
+use sweat_jar_model::{Score, MS_IN_DAY, MS_IN_MINUTE};
 
 use crate::product::model::Product;
 
@@ -14,6 +14,8 @@ pub(crate) enum ProductField {
     APY(u32),
     ScoreCap(Score),
     TermDays(u64),
+    #[allow(dead_code)]
+    TermMinutes(u64),
 }
 
 impl ProductBuilder for ProductField {
@@ -22,6 +24,7 @@ impl ProductBuilder for ProductField {
             ProductField::APY(apy) => product.apy(apy),
             ProductField::ScoreCap(cap) => product.score_cap(cap),
             ProductField::TermDays(days) => product.lockup_term(days * MS_IN_DAY),
+            ProductField::TermMinutes(days) => product.lockup_term(days * MS_IN_MINUTE),
         }
     }
 }
