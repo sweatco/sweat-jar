@@ -9,7 +9,7 @@ use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::{
     jar::{
-        account::v1::AccountV1,
+        account::versioned::AccountVersioned,
         model::{AccountLegacyV1, AccountLegacyV2, Jar},
     },
     product::model::v2::ProductV2,
@@ -56,7 +56,7 @@ pub struct Contract {
     pub last_jar_id: JarId,
 
     /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub accounts: LookupMap<AccountId, AccountV1>,
+    pub accounts: LookupMap<AccountId, AccountVersioned>,
 
     /// Cache to make access to products faster
     /// Is not stored in contract state so it should be always skipped by borsh
@@ -102,7 +102,7 @@ impl InitApi for Contract {
 }
 
 #[near]
-struct Archive {
+pub(crate) struct Archive {
     pub accounts_v1: LookupMap<AccountId, AccountLegacyV1>,
     pub accounts_v2: LookupMap<AccountId, AccountLegacyV2>,
 }

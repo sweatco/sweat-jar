@@ -3,11 +3,7 @@ use std::fmt::Display;
 use near_sdk::require;
 use sweat_jar_model::jar::JarId;
 
-use crate::{
-    env,
-    jar::{account::versioned::Account, model::Jar},
-    AccountId, Contract,
-};
+use crate::{env, jar::model::Jar, AccountId, Contract};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {

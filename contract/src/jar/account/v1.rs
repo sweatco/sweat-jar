@@ -1,11 +1,17 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    ops::{Deref, DerefMut},
+};
 
 use near_sdk::{env, env::panic_str, near, AccountId};
 use sweat_jar_model::{ProductId, Timezone, TokenAmount};
 
 use crate::{
     common::Timestamp,
-    jar::model::{Deposit, JarCache, JarV2, JarV2Companion},
+    jar::{
+        account::{versioned::AccountVersioned, Account},
+        model::{Deposit, JarCache, JarV2, JarV2Companion},
+    },
     product::model::v2::{InterestCalculator, ProductV2},
     score::AccountScore,
     Contract,
@@ -32,25 +38,25 @@ pub struct AccountV1Companion {
 }
 
 impl Contract {
-    pub(crate) fn try_get_account(&self, account_id: &AccountId) -> Option<&AccountV1> {
-        self.accounts.get(account_id)
+    pub(crate) fn try_get_account(&self, account_id: &AccountId) -> Option<&Account> {
+        self.accounts.get(account_id).map(|account| account.deref())
     }
 
-    pub(crate) fn get_account(&self, account_id: &AccountId) -> &AccountV1 {
-        self.accounts
-            .get(account_id)
-            .unwrap_or_else(|| env::panic_str(format!("Account {account_id} is not found").as_str()))
+    pub(crate) fn get_account(&self, account_id: &AccountId) -> &Account {
+        self.try_get_account(account_id)
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
     }
 
-    pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut AccountV1 {
+    pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
         self.accounts
             .get_mut(account_id)
-            .unwrap_or_else(|| env::panic_str(format!("Account {account_id} is not found").as_str()))
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
+            .deref_mut()
     }
 
-    pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut AccountV1 {
+    pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
         if !self.accounts.contains_key(account_id) {
-            self.accounts.insert(account_id.clone(), AccountV1::default());
+            self.accounts.insert(account_id.clone(), AccountVersioned::default());
         }
 
         self.accounts.get_mut(account_id).expect("Account is not presented")
@@ -61,13 +67,13 @@ impl AccountV1 {
     pub(crate) fn get_jar(&self, product_id: &ProductId) -> &JarV2 {
         self.jars
             .get(product_id)
-            .unwrap_or_else(|| env::panic_str(format!("Jar for product {product_id} is not found").as_str()))
+            .unwrap_or_else(|| panic_str(format!("Jar for product {product_id} is not found").as_str()))
     }
 
     pub(crate) fn get_jar_mut(&mut self, product_id: &ProductId) -> &mut JarV2 {
         self.jars
             .get_mut(product_id)
-            .unwrap_or_else(|| env::panic_str(format!("Jar for product {product_id} is not found").as_str()))
+            .unwrap_or_else(|| panic_str(format!("Jar for product {product_id} is not found").as_str()))
     }
 
     pub(crate) fn deposit(&mut self, product_id: &ProductId, principal: TokenAmount) {

@@ -43,7 +43,7 @@ impl Contract {
         account_id: AccountId,
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        let account = self.accounts.get_mut(&account_id).expect("Account is not found");
+        let account = self.get_account(&account_id);
         let mut accumulator = ClaimedAmountView::new(detailed);
         let now = env::block_timestamp_ms();
 
@@ -57,7 +57,7 @@ impl Contract {
 
             rollback_jars.insert(product_id.clone(), jar.to_rollback());
 
-            let product = self.products.get(product_id).expect("Product is not found");
+            let product = self.get_product(product_id);
             let (interest, remainder) = product.terms.get_interest(account, jar, now);
 
             if interest == 0 {
@@ -68,14 +68,17 @@ impl Contract {
             accumulator.add(product_id, interest);
         }
 
+        let account = self.get_account_mut(&account_id);
         for (product_id, (interest, remainder)) in interest_per_jar {
             let jar = account.get_jar_mut(&product_id);
             jar.claim(interest, remainder, now).lock();
         }
 
-        let mut account_rollback = AccountV1Companion::default();
-        account_rollback.score = Some(account.score);
-        account_rollback.jars = Some(rollback_jars);
+        let account_rollback = AccountV1Companion {
+            score: Some(account.score),
+            jars: Some(rollback_jars),
+            ..AccountV1Companion::default()
+        };
 
         account.score.try_claim_score();
 

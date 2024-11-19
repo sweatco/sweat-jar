@@ -6,7 +6,7 @@ use sweat_jar_model::{api::JarApi, ProductId, TokenAmount};
 use crate::{
     event::{emit, EventKind, MigrationEventItem},
     jar::{
-        account::v1::AccountV1,
+        account::{v1::AccountV1, versioned::AccountVersioned},
         model::{JarCache, JarLastVersion},
     },
     product::model::v2::InterestCalculator,
@@ -47,7 +47,7 @@ impl Contract {
             jar.claim_remainder = remainder;
         }
 
-        self.accounts.insert(account_id.clone(), account);
+        self.accounts.insert(account_id.clone(), AccountVersioned::new(account));
     }
 }
 

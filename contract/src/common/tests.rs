@@ -12,7 +12,10 @@ use sweat_jar_model::{api::InitApi, ProductId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINU
 
 use crate::{
     common::Timestamp,
-    jar::{account::v1::AccountV1, model::JarV2},
+    jar::{
+        account::{v1::AccountV1, versioned::AccountVersioned},
+        model::JarV2,
+    },
     product::model::ProductV2,
     test_utils::AfterCatchUnwind,
     Contract,
@@ -75,7 +78,9 @@ impl Context {
         for (product_id, jar) in jars.iter() {
             account.jars.insert(product_id.clone(), jar.clone());
         }
-        self.contract().accounts.insert(account_id.clone(), account);
+        self.contract()
+            .accounts
+            .insert(account_id.clone(), AccountVersioned::new(account));
 
         self
     }
@@ -121,7 +126,7 @@ impl Context {
     }
 
     pub(crate) fn switch_account_to_ft_contract_account(&mut self) {
-        self.switch_account(&self.ft_contract_id.clone());
+        self.switch_account(self.ft_contract_id.clone());
     }
 
     pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
