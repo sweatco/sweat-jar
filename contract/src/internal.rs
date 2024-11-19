@@ -33,38 +33,8 @@ impl Contract {
         self.last_jar_id
     }
 
-    pub(crate) fn get_legacy_account_jars(&self, account_id: &AccountId) -> Option<Vec<Jar>> {
-        // TODO: Remove after complete migration and return '&[Jar]`
-        if let Some(record) = self.account_jars_v1.get(account_id) {
-            return Some(record.jars.iter().map(|j| j.clone().into()).collect());
-        }
-
-        if let Some(record) = self.account_jars_non_versioned.get(account_id) {
-            return Some(record.jars.clone());
-        }
-
-        self.accounts.get(account_id).map(|record| record.jars.clone())
-    }
-
-    pub(crate) fn get_account_legacy(&self, account_id: &AccountId) -> Option<Account> {
-        if let Some(record) = self.account_jars_v1.get(account_id) {
-            let account: Account = record.clone().into();
-            return Some(account);
-        }
-
-        if let Some(record) = self.account_jars_non_versioned.get(account_id) {
-            let account: Account = record.clone().into();
-            return Some(account);
-        }
-
-        self.accounts.get(account_id).cloned()
-    }
-
     pub(crate) fn assert_migrated(&self, account_id: &AccountId) {
-        require!(
-            self.get_account_legacy(account_id).is_none(),
-            "Must migrate account first"
-        );
+        require!(!self.archive.contains_account(account_id), "Must migrate account first");
     }
 }
 

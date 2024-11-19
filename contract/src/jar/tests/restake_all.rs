@@ -7,10 +7,7 @@ use sweat_jar_model::{
 use crate::{
     common::tests::Context,
     jar::model::JarV2,
-    product::model::{
-        v2::{Apy, FixedProductTerms, Terms},
-        ProductV2,
-    },
+    product::model::{Apy, FixedProductTerms, ProductV2, Terms},
     test_utils::admin,
 };
 

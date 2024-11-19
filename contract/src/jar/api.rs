@@ -1,28 +1,23 @@
-use std::{collections::HashMap, convert::Into, ops::Deref};
+use std::{collections::HashMap, convert::Into};
 
-use near_sdk::{
-    env,
-    json_types::U128,
-    near_bindgen, require,
-    serde::{Deserialize, Serialize},
-    AccountId,
-};
+use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
-    api::{JarApi, WithdrawApi},
+    api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
-    withdraw::{BulkWithdrawView, WithdrawView},
+    withdraw::WithdrawView,
     ProductId, TokenAmount,
 };
 
 use crate::{
-    assert::{assert_not_locked, assert_not_locked_legacy},
+    assert::assert_not_locked_legacy,
     event::emit,
     jar::{
-        account::{v1::AccountV1, v2::AccountV2},
-        model::{Deposit, JarV2},
+        account::v1::AccountV1,
+        model::{AccountLegacyV2, Deposit, JarV2},
         view::DetailedJarV2,
     },
     product::model::v2::{InterestCalculator, ProductV2},
+    score::AccountScore,
     Contract, ContractExt,
 };
 
@@ -48,7 +43,7 @@ impl Contract {
         Some(amount)
     }
 
-    fn get_total_interest_for_account(&self, account: &AccountV2) -> AggregatedInterestView {
+    fn get_total_interest_for_account(&self, account: &AccountV1) -> AggregatedInterestView {
         let mut detailed_amounts = HashMap::<ProductId, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
@@ -85,7 +80,7 @@ impl JarApi for Contract {
                 .collect();
         }
 
-        if let Some(jars) = self.get_legacy_account_jars(&account_id) {
+        if let Some(jars) = self.archive.get_jars(&account_id) {
             return jars.iter().map(Into::into).collect();
         }
 
@@ -98,8 +93,8 @@ impl JarApi for Contract {
             return self.get_total_interest_for_account(account);
         }
 
-        if let Some(account) = self.get_account_legacy(&account_id) {
-            return self.get_total_interest_for_account(&AccountV2::from(account.deref()));
+        if let Some(account) = self.archive.get_account(&account_id) {
+            return self.get_total_interest_for_account(&AccountV1::from(&account));
         }
 
         AggregatedInterestView::default()
@@ -125,12 +120,12 @@ impl JarApi for Contract {
     }
 }
 
-impl From<&AccountV1> for AccountV2 {
-    fn from(value: &AccountV1) -> Self {
-        let mut account = AccountV2 {
+impl From<&AccountLegacyV2> for AccountV1 {
+    fn from(value: &AccountLegacyV2) -> Self {
+        let mut account = AccountV1 {
             nonce: value.last_id,
             jars: Default::default(),
-            score: value.score,
+            score: AccountScore::default(),
             is_penalty_applied: false,
         };
 

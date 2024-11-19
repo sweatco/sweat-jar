@@ -4,7 +4,6 @@ use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 use crate::{
     common::Timestamp,
     jar::model::{Jar, JarCache, JarLastVersion},
-    migration::account_jars_non_versioned::AccountJarsNonVersioned,
 };
 
 #[near(serializers=[borsh, json])]
@@ -43,15 +42,22 @@ impl From<JarLegacy> for Jar {
 
 #[near]
 #[derive(Default, Debug, Clone)]
-pub struct AccountJarsLegacy {
+pub struct AccountLegacyV1 {
     pub last_id: JarId,
     pub jars: Vec<JarLegacy>,
 }
 
-impl From<AccountJarsLegacy> for AccountJarsNonVersioned {
+#[near]
+#[derive(Default, Clone)]
+pub struct AccountLegacyV2 {
+    pub last_id: JarId,
+    pub jars: Vec<Jar>,
+}
+
+impl From<AccountLegacyV1> for AccountLegacyV2 {
     #[mutants::skip]
-    fn from(value: AccountJarsLegacy) -> Self {
-        AccountJarsNonVersioned {
+    fn from(value: AccountLegacyV1) -> Self {
+        AccountLegacyV2 {
             last_id: value.last_id,
             jars: value.jars.into_iter().map(Into::into).collect(),
         }

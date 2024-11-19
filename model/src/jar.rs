@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use near_sdk::{
     json_types::{U128, U64},
-    near, AccountId, Timestamp,
+    near, Timestamp,
 };
 
 use crate::ProductId;
@@ -41,13 +41,4 @@ impl Default for AggregatedTokenAmountView {
 pub struct AggregatedInterestView {
     pub amount: AggregatedTokenAmountView,
     pub timestamp: Timestamp,
-}
-
-#[near(serializers=[json])]
-pub struct CeFiJar {
-    pub id: String,
-    pub account_id: AccountId,
-    pub product_id: ProductId,
-    pub principal: U128,
-    pub created_at: U64,
 }

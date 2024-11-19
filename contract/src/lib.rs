@@ -9,10 +9,9 @@ use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
 
 use crate::{
     jar::{
-        account::{v2::AccountV2, versioned::Account},
-        model::AccountJarsLegacy,
+        account::v1::AccountV1,
+        model::{AccountLegacyV1, AccountLegacyV2, Jar},
     },
-    migration::account_jars_non_versioned::AccountJarsNonVersioned,
     product::model::v2::ProductV2,
 };
 
@@ -56,35 +55,29 @@ pub struct Contract {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_jar_id: JarId,
 
-    pub accounts_v2: LookupMap<AccountId, AccountV2>,
-
     /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub accounts: LookupMap<AccountId, Account>,
-
-    pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
-    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+    pub accounts: LookupMap<AccountId, AccountV1>,
 
     /// Cache to make access to products faster
     /// Is not stored in contract state so it should be always skipped by borsh
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, ProductV2>>,
+
+    pub archive: Archive,
 }
 
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
     ProductsLegacy,
-    AccountJarsLegacy,
+    AccountsLegacyV1,
     /// Jars with claim remainder
-    AccountJarsV1,
+    AccountsLegacyV2,
     /// Products migrated to near_sdk 5
     ProductsV1,
     /// Products migrated to step jars
     ProductsV2,
-    /// Previous implementation of Score storage used on testnet. Is not used anymore.
-    AccountScore,
-    AccountsVersioned,
-    AccountsV2,
+    Accounts,
 }
 
 #[near_bindgen]
@@ -97,12 +90,41 @@ impl InitApi for Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::ProductsV1),
-            account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
-            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
             last_jar_id: 0,
-            accounts: LookupMap::new(StorageKey::AccountsVersioned),
             products_cache: HashMap::default().into(),
-            accounts_v2: LookupMap::new(StorageKey::AccountsV2),
+            accounts: LookupMap::new(StorageKey::Accounts),
+            archive: Archive {
+                accounts_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
+                accounts_v2: LookupMap::new(StorageKey::AccountsLegacyV2),
+            },
         }
+    }
+}
+
+#[near]
+struct Archive {
+    pub accounts_v1: LookupMap<AccountId, AccountLegacyV1>,
+    pub accounts_v2: LookupMap<AccountId, AccountLegacyV2>,
+}
+
+impl Archive {
+    fn contains_account(&self, account_id: &AccountId) -> bool {
+        self.accounts_v1.contains_key(account_id) || self.accounts_v2.contains_key(account_id)
+    }
+
+    fn get_account(&self, account_id: &AccountId) -> Option<AccountLegacyV2> {
+        if let Some(account) = self.accounts_v2.get(account_id) {
+            return Some(account.clone());
+        }
+
+        if let Some(account) = self.accounts_v1.get(account_id) {
+            return Some(account.clone().into());
+        }
+
+        None
+    }
+
+    fn get_jars(&self, account_id: &AccountId) -> Option<Vec<Jar>> {
+        self.get_account(account_id).map(|account| account.jars)
     }
 }

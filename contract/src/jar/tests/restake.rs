@@ -25,16 +25,16 @@ fn restake_by_not_owner() {
     });
 
     expect_panic(&context, "Account bob.near is not found", || {
-        context.contract().restake_all("some_product".to_string(), None);
+        context.contract().restake_all(product.id.clone(), None);
     });
 
     context.switch_account(carol());
     expect_panic(&context, "Account carol.near is not found", || {
-        context.contract().restake(product.id);
+        context.contract().restake(product.id.clone());
     });
 
     expect_panic(&context, "Account carol.near is not found", || {
-        context.contract().restake_all("some_product".to_string(), None);
+        context.contract().restake_all(product.id, None);
     });
 }
 

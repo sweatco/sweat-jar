@@ -4,7 +4,7 @@ use near_sdk::{env, near_bindgen, AccountId, Timestamp};
 use sweat_jar_model::{api::IntegrationTestMethods, ProductId, TokenAmount};
 
 use crate::{
-    jar::{account::v2::AccountV2, model::Deposit},
+    jar::{account::v1::AccountV1, model::Deposit},
     Contract, ContractExt,
 };
 
@@ -26,7 +26,7 @@ impl IntegrationTestMethods for Contract {
     }
 }
 
-impl AccountV2 {
+impl AccountV1 {
     fn deposit_for_test(&mut self, product_id: &ProductId, timestamp: Timestamp, principal: TokenAmount) {
         let deposit = Deposit::new(timestamp, principal);
         self.push(product_id, deposit);

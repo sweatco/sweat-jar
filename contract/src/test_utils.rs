@@ -10,10 +10,7 @@ use crate::{
     jar::model::{Deposit, JarV2},
     product::{
         helpers::MessageSigner,
-        model::{
-            v2::{Apy, DowngradableApy, FixedProductTerms, Terms},
-            ProductV2,
-        },
+        model::{Apy, DowngradableApy, FixedProductTerms, ProductV2, Terms},
     },
 };
 

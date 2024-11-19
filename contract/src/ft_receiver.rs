@@ -1,6 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::jar::CeFiJar;
+use near_sdk::{json_types::U128, near, serde_json, AccountId, PromiseOrValue};
 
 use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
 
@@ -11,9 +10,6 @@ use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, Contract
 pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
-
-    /// Represents a request to create `DeFi` Jars from provided `CeFi` Jars.
-    Migrate(Vec<CeFiJar>),
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.
@@ -41,17 +37,13 @@ impl FungibleTokenReceiver for Contract {
                 let receiver_id = message.receiver_id.unwrap_or(sender_id);
                 self.deposit(receiver_id, message.ticket, amount, &message.signature);
             }
-            FtMessage::Migrate(jars) => {
-                require!(sender_id == self.manager, "Migration can be performed only by admin");
-
-                self.migrate_jars(jars, amount);
-            }
         }
 
         PromiseOrValue::Value(0.into())
     }
 }
-//
+
+// TODO: restore tests
 // #[cfg(test)]
 // mod tests {
 //     use std::panic::catch_unwind;

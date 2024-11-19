@@ -4,10 +4,9 @@ use near_sdk::{collections::UnorderedMap, env, near, near_bindgen, store::Lookup
 use sweat_jar_model::{jar::JarId, ProductId};
 
 use crate::{
-    jar::model::AccountJarsLegacy,
-    migration::account_jars_non_versioned::AccountJarsNonVersioned,
+    jar::model::{AccountLegacyV1, AccountLegacyV2},
     product::model::{v1::Product as ProductLegacy, ProductV2},
-    Contract, ContractExt, StorageKey,
+    Archive, Contract, ContractExt, StorageKey,
 };
 
 #[near]
@@ -18,8 +17,8 @@ pub struct ContractLegacy {
     pub manager: AccountId,
     pub products: UnorderedMap<ProductId, ProductLegacy>,
     pub last_jar_id: JarId,
-    pub account_jars: LookupMap<AccountId, AccountJarsNonVersioned>,
-    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+    pub account_jars_v2: LookupMap<AccountId, AccountLegacyV2>,
+    pub account_jars_v1: LookupMap<AccountId, AccountLegacyV1>,
 }
 
 #[near_bindgen]
@@ -44,11 +43,12 @@ impl Contract {
             manager: old_state.manager,
             products,
             last_jar_id: old_state.last_jar_id,
-            accounts: LookupMap::new(StorageKey::AccountsVersioned),
-            account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
-            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
-            accounts_v2: LookupMap::new(StorageKey::AccountsV2),
+            accounts: LookupMap::new(StorageKey::Accounts),
             products_cache: HashMap::default().into(),
+            archive: Archive {
+                accounts_v1: old_state.account_jars_v1,
+                accounts_v2: old_state.account_jars_v2,
+            },
         }
     }
 }

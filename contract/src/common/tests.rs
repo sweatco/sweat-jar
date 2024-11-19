@@ -12,7 +12,7 @@ use sweat_jar_model::{api::InitApi, ProductId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINU
 
 use crate::{
     common::Timestamp,
-    jar::{account::v2::AccountV2, model::JarV2},
+    jar::{account::v1::AccountV1, model::JarV2},
     product::model::ProductV2,
     test_utils::AfterCatchUnwind,
     Contract,
@@ -71,11 +71,11 @@ impl Context {
             return self;
         }
 
-        let mut account = AccountV2::default();
+        let mut account = AccountV1::default();
         for (product_id, jar) in jars.iter() {
             account.jars.insert(product_id.clone(), jar.clone());
         }
-        self.contract().accounts_v2.insert(account_id.clone(), account);
+        self.contract().accounts.insert(account_id.clone(), account);
 
         self
     }

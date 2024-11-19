@@ -9,7 +9,7 @@ use crate::{
     event::{emit, EventKind},
     internal::is_promise_success,
     jar::{
-        account::v2::AccountV2Companion,
+        account::v1::AccountV1Companion,
         model::{JarV2, JarV2Companion},
     },
     product::model::v2::InterestCalculator,
@@ -23,7 +23,7 @@ pub trait ClaimCallbacks {
         &mut self,
         account_id: AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV2Companion,
+        account_rollback: AccountV1Companion,
         event: EventKind,
     ) -> ClaimedAmountView;
 }
@@ -43,7 +43,7 @@ impl Contract {
         account_id: AccountId,
         detailed: Option<bool>,
     ) -> PromiseOrValue<ClaimedAmountView> {
-        let account = self.accounts_v2.get_mut(&account_id).expect("Account is not found");
+        let account = self.accounts.get_mut(&account_id).expect("Account is not found");
         let mut accumulator = ClaimedAmountView::new(detailed);
         let now = env::block_timestamp_ms();
 
@@ -73,7 +73,7 @@ impl Contract {
             jar.claim(interest, remainder, now).lock();
         }
 
-        let mut account_rollback = AccountV2Companion::default();
+        let mut account_rollback = AccountV1Companion::default();
         account_rollback.score = Some(account.score);
         account_rollback.jars = Some(rollback_jars);
 
@@ -99,7 +99,7 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV2Companion,
+        account_rollback: AccountV1Companion,
         event: EventKind,
     ) -> PromiseOrValue<ClaimedAmountView> {
         PromiseOrValue::Value(self.after_claim_internal(
@@ -117,7 +117,7 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV2Companion,
+        account_rollback: AccountV1Companion,
         event: EventKind,
     ) -> PromiseOrValue<ClaimedAmountView> {
         use crate::{
@@ -145,12 +145,12 @@ impl Contract {
         &mut self,
         account_id: AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV2Companion,
+        account_rollback: AccountV1Companion,
         event: EventKind,
         is_promise_success: bool,
     ) -> ClaimedAmountView {
         if is_promise_success {
-            let account = self.accounts_v2.get_mut(&account_id).expect("Account is not found");
+            let account = self.accounts.get_mut(&account_id).expect("Account is not found");
             let jars = account_rollback.jars.expect("Jars are required in rollback account");
 
             for (product_id, _) in jars {
@@ -185,7 +185,7 @@ impl ClaimCallbacks for Contract {
         &mut self,
         account_id: AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV2Companion,
+        account_rollback: AccountV1Companion,
         event: EventKind,
     ) -> ClaimedAmountView {
         self.after_claim_internal(
@@ -203,7 +203,7 @@ impl ClaimCallbacks for Contract {
 fn after_claim_call(
     account_id: AccountId,
     claimed_amount: ClaimedAmountView,
-    account_rollback: AccountV2Companion,
+    account_rollback: AccountV1Companion,
     event: EventKind,
 ) -> near_sdk::Promise {
     ext_self::ext(env::current_account_id())

@@ -352,8 +352,8 @@ fn revert_scores_on_failed_claim() {
 
         // Clear accounts cache to test deserialization
         if day == 3 {
-            context.contract().accounts_v2.flush();
-            context.contract().accounts_v2 = LookupMap::new(StorageKey::AccountsV2);
+            context.contract().accounts.flush();
+            context.contract().accounts = LookupMap::new(StorageKey::Accounts);
         }
 
         // Normal claim. Score should change:

@@ -20,7 +20,7 @@ use crate::{
     jar::model::JarV2,
     product::{
         helpers::MessageSigner,
-        model::v2::{Apy, DowngradableApy, FixedProductTerms, Terms},
+        model::{Apy, DowngradableApy, FixedProductTerms, Terms},
         tests::get_product_dto,
     },
     test_utils::{admin, UnwrapPromise},
