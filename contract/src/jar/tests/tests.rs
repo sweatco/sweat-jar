@@ -13,7 +13,7 @@ use crate::{
         account::v1::AccountV1,
         model::{JarTicket, JarV2},
     },
-    product::model::{Apy, FixedProductTerms, InterestCalculator, ProductV2, Terms},
+    product::model::{Apy, FixedProductTerms, InterestCalculator, Product, Terms},
     test_utils::admin,
 };
 // TODO: move interest calculation tests to product module
@@ -68,7 +68,7 @@ fn create_jar_for_disabled_product() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new().enabled(false);
+    let product = Product::new().enabled(false);
     let context = Context::new(admin).with_products(&[product.clone()]);
 
     let ticket = JarTicket {
@@ -90,7 +90,7 @@ mod signature_tests {
     use crate::{
         common::tests::Context,
         jar::model::JarTicket,
-        product::{helpers::MessageSigner, model::ProductV2},
+        product::{helpers::MessageSigner, model::Product},
         test_utils::{admin, generate_premium_product},
     };
 
@@ -248,7 +248,7 @@ mod signature_tests {
     fn verify_ticket_without_signature_when_not_required() {
         let admin = admin();
 
-        let product = ProductV2::new();
+        let product = Product::new();
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;

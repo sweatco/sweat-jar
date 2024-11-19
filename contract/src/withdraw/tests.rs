@@ -11,15 +11,15 @@ use sweat_jar_model::{
 use crate::{
     common::{test_data::set_test_future_success, tests::Context, Timestamp},
     jar::model::{Deposit, JarV2},
-    product::model::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, ProductV2, Terms, WithdrawalFee},
+    product::model::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise},
     withdraw::api::{BulkWithdrawalRequest, WithdrawalRequest},
 };
 
-fn testing_product_fixed(term_in_days: u64) -> ProductV2 {
+fn testing_product_fixed(term_in_days: u64) -> Product {
     let term_in_ms = term_in_days * MS_IN_DAY;
 
-    ProductV2 {
+    Product {
         id: "regular_product".to_string(),
         cap: Cap {
             min: 0,
@@ -35,8 +35,8 @@ fn testing_product_fixed(term_in_days: u64) -> ProductV2 {
     }
 }
 
-fn testing_product_flexible() -> ProductV2 {
-    ProductV2 {
+fn testing_product_flexible() -> Product {
+    Product {
         id: "flexible_product".to_string(),
         cap: Cap {
             min: 0,
@@ -51,12 +51,12 @@ fn testing_product_flexible() -> ProductV2 {
     }
 }
 
-fn prepare_jar(product: &ProductV2) -> (AccountId, JarV2, Context) {
+fn prepare_jar(product: &Product) -> (AccountId, JarV2, Context) {
     prepare_jar_with_deposit(product, None, None)
 }
 
 fn prepare_jar_with_deposit(
-    product: &ProductV2,
+    product: &Product,
     created_at: Option<Timestamp>,
     principal: Option<TokenAmount>,
 ) -> (AccountId, JarV2, Context) {

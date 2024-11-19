@@ -12,7 +12,7 @@ use crate::{
         account::{versioned::AccountVersioned, Account},
         model::{Deposit, JarCache, JarV2, JarV2Companion},
     },
-    product::model::v2::{InterestCalculator, ProductV2},
+    product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
     Contract,
 };
@@ -127,7 +127,7 @@ impl AccountV1 {
         }
     }
 
-    pub(crate) fn update_jar_cache(&mut self, product: &ProductV2, now: Timestamp) {
+    pub(crate) fn update_jar_cache(&mut self, product: &Product, now: Timestamp) {
         let jar = self.get_jar(&product.id);
         let (interest, remainder) = product.terms.get_interest(self, jar, now);
         self.get_jar_mut(&product.id).update_cache(interest, remainder, now);
@@ -138,7 +138,7 @@ impl Contract {
     pub(crate) fn update_account_cache(
         &mut self,
         account_id: &AccountId,
-        filter: Option<Box<dyn FnMut(&ProductV2) -> bool>>,
+        filter: Option<Box<dyn FnMut(&Product) -> bool>>,
     ) {
         let now = env::block_timestamp_ms();
         let products = self.get_products(account_id, filter);
@@ -155,15 +155,15 @@ impl Contract {
         account.update_jar_cache(product, env::block_timestamp_ms());
     }
 
-    fn get_products<P>(&self, account_id: &AccountId, filter: Option<P>) -> Vec<ProductV2>
+    fn get_products<P>(&self, account_id: &AccountId, filter: Option<P>) -> Vec<Product>
     where
-        P: FnMut(&ProductV2) -> bool,
+        P: FnMut(&Product) -> bool,
     {
         let products = self
-            .get_account(&account_id)
+            .get_account(account_id)
             .jars
-            .iter()
-            .map(|(product_id, _)| self.get_product(product_id));
+            .keys()
+            .map(|product_id| self.get_product(product_id));
 
         if let Some(filter) = filter {
             products.filter(filter).collect()

@@ -3,7 +3,7 @@ use sweat_jar_model::{api::ScoreApi, Score, Timezone, U32, UTC};
 
 use crate::{
     event::{emit, EventKind, ScoreData},
-    product::model::{v2::Terms, ProductV2},
+    product::model::{v1::Terms, Product},
     score::Chain,
     Contract, ContractExt,
 };
@@ -22,7 +22,7 @@ impl ScoreApi for Contract {
         for (account_id, new_score) in batch {
             self.update_account_cache(
                 &account_id,
-                Some(Box::new(|product: &ProductV2| {
+                Some(Box::new(|product: &Product| {
                     matches!(product.terms, Terms::ScoreBased(_))
                 })),
             );

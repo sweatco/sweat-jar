@@ -8,7 +8,7 @@ use crate::{
     common::Timestamp,
     env,
     jar::model::{Jar, JarCache},
-    product::model::ProductV2,
+    product::model::Product,
     PACKAGE_NAME, VERSION,
 };
 
@@ -16,7 +16,7 @@ use crate::{
 #[near(serializers=[json])]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
-    RegisterProduct(ProductV2),
+    RegisterProduct(Product),
     CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),

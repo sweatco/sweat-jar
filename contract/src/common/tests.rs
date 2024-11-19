@@ -16,7 +16,7 @@ use crate::{
         account::{v1::AccountV1, versioned::AccountVersioned},
         model::JarV2,
     },
-    product::model::ProductV2,
+    product::model::Product,
     test_utils::AfterCatchUnwind,
     Contract,
 };
@@ -61,7 +61,7 @@ impl Context {
         self.contract.try_lock().expect("Contract is already locked")
     }
 
-    pub(crate) fn with_products(self, products: &[ProductV2]) -> Self {
+    pub(crate) fn with_products(self, products: &[Product]) -> Self {
         for product in products {
             self.contract().products.insert(&product.id, product);
         }

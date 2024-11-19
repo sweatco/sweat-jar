@@ -11,7 +11,7 @@ use sweat_jar_model::{ProductId, TokenAmount, UDecimal, MS_IN_YEAR};
 use crate::{
     common::tests::Context,
     jar::model::JarTicket,
-    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, ProductV2, Terms, WithdrawalFee},
+    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee},
     test_utils::PRODUCT,
     Contract,
 };
@@ -43,7 +43,7 @@ impl MessageSigner {
     }
 }
 
-impl ProductV2 {
+impl Product {
     pub fn new() -> Self {
         Self {
             id: PRODUCT.to_string(),
@@ -74,7 +74,7 @@ impl ProductV2 {
     }
 }
 
-impl ProductV2 {
+impl Product {
     pub(crate) fn id(mut self, id: &str) -> Self {
         self.id = id.to_string();
         self

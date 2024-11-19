@@ -12,7 +12,7 @@ use crate::{
         account::versioned::AccountVersioned,
         model::{AccountLegacyV1, AccountLegacyV2, Jar},
     },
-    product::model::v2::ProductV2,
+    product::model::v1::Product,
 };
 
 mod assert;
@@ -50,7 +50,7 @@ pub struct Contract {
     pub manager: AccountId,
 
     /// A collection of products, each representing terms for specific deposit jars.
-    pub products: UnorderedMap<ProductId, ProductV2>,
+    pub products: UnorderedMap<ProductId, Product>,
 
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_jar_id: JarId,
@@ -61,7 +61,7 @@ pub struct Contract {
     /// Cache to make access to products faster
     /// Is not stored in contract state so it should be always skipped by borsh
     #[borsh(skip)]
-    pub products_cache: RefCell<HashMap<ProductId, ProductV2>>,
+    pub products_cache: RefCell<HashMap<ProductId, Product>>,
 
     pub archive: Archive,
 }

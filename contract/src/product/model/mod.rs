@@ -1,6 +1,6 @@
 mod common;
+pub(crate) mod legacy;
 pub(crate) mod v1;
-pub(crate) mod v2;
 
 pub use common::*;
-pub use v2::*;
+pub use v1::*;

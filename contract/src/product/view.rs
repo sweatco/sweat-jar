@@ -4,10 +4,10 @@ use sweat_jar_model::product::{
     ScoreBasedProductTermsView, TermsView, WithdrawalFeeView,
 };
 
-use crate::product::model::{Apy, Cap, DowngradableApy, ProductV2, Terms, WithdrawalFee};
+use crate::product::model::{Apy, Cap, DowngradableApy, Product, Terms, WithdrawalFee};
 
-impl From<ProductV2> for ProductView {
-    fn from(value: ProductV2) -> Self {
+impl From<Product> for ProductView {
+    fn from(value: Product) -> Self {
         Self {
             id: value.id,
             cap: value.cap.into(),

@@ -17,7 +17,7 @@ use crate::{
     common::tests::Context,
     product::{
         helpers::MessageSigner,
-        model::{Apy, DowngradableApy, ProductV2, Terms, WithdrawalFee},
+        model::{Apy, DowngradableApy, Product, Terms, WithdrawalFee},
     },
     test_utils::admin,
 };
@@ -32,7 +32,7 @@ pub(crate) fn get_product_dto() -> ProductDto {
 #[test]
 fn disable_product_when_enabled() {
     let admin = admin();
-    let product = &ProductV2::new();
+    let product = &Product::new();
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
@@ -54,7 +54,7 @@ fn disable_product_when_enabled() {
 #[should_panic(expected = "Status matches")]
 fn enable_product_when_enabled() {
     let admin = admin();
-    let product = &ProductV2::new();
+    let product = &Product::new();
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
@@ -268,11 +268,11 @@ fn assert_cap_more_than_max() {
     generate_product().assert_cap(500_000_000_000);
 }
 
-fn generate_product() -> ProductV2 {
-    ProductV2::new().cap(100, 100_000_000_000)
+fn generate_product() -> Product {
+    Product::new().cap(100, 100_000_000_000)
 }
 
-fn register_product(command: ProductDto) -> (ProductV2, ProductView) {
+fn register_product(command: ProductDto) -> (Product, ProductView) {
     let admin = admin();
 
     let mut context = Context::new(admin.clone());
@@ -286,7 +286,7 @@ fn register_product(command: ProductDto) -> (ProductV2, ProductView) {
     (product, view)
 }
 
-impl ProductV2 {
+impl Product {
     fn get_base_apy(&self) -> &Apy {
         match &self.terms {
             Terms::Fixed(value) => &value.apy,

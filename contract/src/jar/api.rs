@@ -16,13 +16,13 @@ use crate::{
         model::{AccountLegacyV2, Deposit, JarV2},
         view::DetailedJarV2,
     },
-    product::model::v2::{InterestCalculator, ProductV2},
+    product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
     Contract, ContractExt,
 };
 
 impl Contract {
-    fn restake_internal(&mut self, account_id: &AccountId, product: &ProductV2) -> Option<TokenAmount> {
+    fn restake_internal(&mut self, account_id: &AccountId, product: &Product) -> Option<TokenAmount> {
         require!(product.is_enabled, "The product is disabled");
 
         let jar = self.get_account(account_id).get_jar(&product.id);

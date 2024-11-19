@@ -4,7 +4,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{Timezone, TokenAmount};
 
-use crate::{common::Timestamp, product::model::v2::Terms, Contract};
+use crate::{common::Timestamp, product::model::v1::Terms, Contract};
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///

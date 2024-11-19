@@ -5,7 +5,7 @@ use sweat_jar_model::{jar::JarId, ProductId};
 
 use crate::{
     jar::model::{AccountLegacyV1, AccountLegacyV2},
-    product::model::{v1::Product as ProductLegacy, ProductV2},
+    product::model::{legacy::ProductLegacy, Product},
     Archive, Contract, ContractExt, StorageKey,
 };
 
@@ -29,7 +29,7 @@ impl Contract {
     pub fn migrate() -> Self {
         let mut old_state: ContractLegacy = env::state_read().expect("Failed to extract old contract state.");
 
-        let mut products: UnorderedMap<ProductId, ProductV2> = UnorderedMap::new(StorageKey::ProductsV2);
+        let mut products: UnorderedMap<ProductId, Product> = UnorderedMap::new(StorageKey::ProductsV2);
 
         for (product_id, product) in &old_state.products {
             products.insert(&product_id, &product.into());

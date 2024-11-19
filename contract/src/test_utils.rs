@@ -10,7 +10,7 @@ use crate::{
     jar::model::{Deposit, JarV2},
     product::{
         helpers::MessageSigner,
-        model::{Apy, DowngradableApy, FixedProductTerms, ProductV2, Terms},
+        model::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
     },
 };
 
@@ -58,8 +58,8 @@ impl JarV2 {
     }
 }
 
-pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> ProductV2 {
-    ProductV2::new()
+pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {
+    Product::new()
         .id(id)
         .public_key(signer.public_key())
         .cap(0, 100_000_000_000)

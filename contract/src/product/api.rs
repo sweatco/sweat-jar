@@ -7,7 +7,7 @@ use sweat_jar_model::{
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    product::model::v2::ProductV2,
+    product::model::v1::Product,
     Base64VecU8, Contract, ContractExt,
 };
 
@@ -20,7 +20,7 @@ impl ProductApi for Contract {
 
         assert!(self.products.get(&command.id).is_none(), "Product already exists");
 
-        let product: ProductV2 = command.into();
+        let product: Product = command.into();
 
         product.assert_fee_amount();
 

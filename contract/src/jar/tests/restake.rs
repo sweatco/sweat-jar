@@ -7,13 +7,13 @@ use sweat_jar_model::{
 use crate::{
     common::tests::Context,
     jar::model::JarV2,
-    product::model::ProductV2,
+    product::model::Product,
     test_utils::{admin, expect_panic},
 };
 
 #[test]
 fn restake_by_not_owner() {
-    let product = ProductV2::new();
+    let product = Product::new();
     let alice_jar = JarV2::new();
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
@@ -44,7 +44,7 @@ fn restake_before_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new();
+    let product = Product::new();
     let alice_jar = JarV2::new();
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
@@ -60,7 +60,7 @@ fn restake_with_disabled_product() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new();
+    let product = Product::new();
     let alice_jar = JarV2::new();
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
@@ -83,7 +83,7 @@ fn restake_empty_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new();
+    let product = Product::new();
     let alice_jar = JarV2::new();
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
@@ -100,7 +100,7 @@ fn restake_after_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new();
+    let product = Product::new();
     let principal = 1_000_000;
     let alice_jar = JarV2::new().with_deposit(0, principal);
     let mut context = Context::new(admin.clone())

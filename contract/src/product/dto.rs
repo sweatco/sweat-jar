@@ -4,11 +4,11 @@ use sweat_jar_model::{
 };
 
 use crate::product::model::{
-    Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, ProductV2, ScoreBasedProductTerms, Terms,
+    Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ScoreBasedProductTerms, Terms,
     WithdrawalFee,
 };
 
-impl From<ProductDto> for ProductV2 {
+impl From<ProductDto> for Product {
     fn from(value: ProductDto) -> Self {
         Self {
             id: value.id,

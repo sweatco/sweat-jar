@@ -12,7 +12,7 @@ use crate::{
         account::v1::AccountV1Companion,
         model::{JarV2, JarV2Companion},
     },
-    product::model::v2::InterestCalculator,
+    product::model::v1::InterestCalculator,
     Contract, ContractExt,
 };
 

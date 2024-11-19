@@ -5,7 +5,7 @@ use crate::{
     assert::assert_not_locked,
     common::{Duration, Timestamp},
     jar::model::JarCache,
-    product::model::v2::Terms,
+    product::model::v1::Terms,
 };
 
 /// The `Jar` struct represents a deposit jar within the smart contract.

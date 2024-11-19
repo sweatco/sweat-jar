@@ -66,7 +66,7 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
@@ -91,7 +91,7 @@ fn get_total_interest_with_single_jar_on_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
@@ -118,7 +118,7 @@ fn get_total_interest_with_single_jar_after_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
@@ -138,7 +138,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
@@ -167,7 +167,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let product = ProductV2::new()
+    let product = Product::new()
         .with_terms(Terms::Fixed(FixedProductTerms {
             lockup_term: MS_IN_YEAR,
             apy: Apy::Downgradable(DowngradableApy {
@@ -201,7 +201,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let product = ProductV2::new()
+    let product = Product::new()
         .with_terms(Terms::Fixed(FixedProductTerms {
             lockup_term: 3_600_000,
             apy: Apy::Downgradable(DowngradableApy {
@@ -245,7 +245,7 @@ fn apply_penalty_in_batch() {
     let bob = bob();
 
     let signer = MessageSigner::new();
-    let product = ProductV2::new()
+    let product = Product::new()
         .with_terms(Terms::Fixed(FixedProductTerms {
             lockup_term: MS_IN_YEAR,
             apy: Apy::Downgradable(DowngradableApy {
@@ -294,7 +294,7 @@ fn get_interest_after_withdraw() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
@@ -318,7 +318,7 @@ fn unlock_not_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new();
+    let product = Product::new();
     let jar = JarV2::new().with_deposit(0, 300_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
@@ -338,7 +338,7 @@ fn unlock_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let product = ProductV2::new();
+    let product = Product::new();
     let jar = JarV2::new().with_deposit(0, 300_000_000);
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
@@ -379,7 +379,7 @@ fn test_u32() {
 
 #[test]
 fn claim_often_vs_claim_once() {
-    fn test(mut product: ProductV2, principal: TokenAmount, days: u64, n: usize) {
+    fn test(mut product: Product, principal: TokenAmount, days: u64, n: usize) {
         set_test_log_events(false);
 
         let alice: AccountId = format!("alice_{principal}_{days}_{n}").try_into().unwrap();
@@ -411,7 +411,7 @@ fn claim_often_vs_claim_once() {
         assert_eq!(alice_interest, bobs_claimed);
     }
 
-    let product = ProductV2::new();
+    let product = Product::new();
 
     test(product.clone(), 10_000_000_000_000_000_000_000_000_000, 365, 0);
 

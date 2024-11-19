@@ -18,7 +18,7 @@ use crate::{
         tests::Context,
     },
     jar::model::JarV2,
-    product::model::{Apy, Cap, FixedProductTerms, InterestCalculator, ProductV2, ScoreBasedProductTerms, Terms},
+    product::model::{Apy, Cap, FixedProductTerms, InterestCalculator, Product, ScoreBasedProductTerms, Terms},
     score::AccountScore,
     test_utils::admin,
     StorageKey,
@@ -43,7 +43,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
     let term_in_ms: u64 = term_in_days * MS_IN_DAY;
     let half_period: u64 = term_in_days / 2;
 
-    let regular_product = ProductV2 {
+    let regular_product = Product {
         id: "regular_product".to_string(),
         cap: Cap { min: 0, max: 1_000_000 },
         terms: Terms::Fixed(FixedProductTerms {
@@ -55,7 +55,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         is_enabled: true,
     };
 
-    let score_product = ProductV2 {
+    let score_product = Product {
         id: "score_product".to_string(),
         cap: Cap { min: 0, max: 1_000_000 },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
@@ -134,7 +134,7 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
     let term_in_days = 365;
     let term_in_ms = term_in_days * MS_IN_DAY;
 
-    let product = ProductV2 {
+    let product = Product {
         id: "score_product".to_string(),
         cap: Cap {
             min: 0,
@@ -206,7 +206,7 @@ fn interest_does_not_increase_with_no_steps() {
     let term_in_days = 365;
     let term_in_ms = term_in_days * MS_IN_DAY;
 
-    let product = ProductV2 {
+    let product = Product {
         id: "score_product".to_string(),
         cap: Cap {
             min: 0,
@@ -256,7 +256,7 @@ fn withdraw_score_jar() {
     let term_in_days = 7;
     let term_in_ms = term_in_days * MS_IN_DAY;
 
-    let product = ProductV2 {
+    let product = Product {
         id: "score_product".to_string(),
         cap: Cap {
             min: 0,
@@ -320,7 +320,7 @@ fn revert_scores_on_failed_claim() {
     let term_in_days = 10;
     let term_in_ms = term_in_days * MS_IN_DAY;
 
-    let product = ProductV2 {
+    let product = Product {
         id: "score_product".to_string(),
         cap: Cap {
             min: 0,

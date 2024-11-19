@@ -9,7 +9,7 @@ use crate::{
         account::{v1::AccountV1, versioned::AccountVersioned},
         model::{JarCache, JarLastVersion},
     },
-    product::model::v2::InterestCalculator,
+    product::model::InterestCalculator,
     Contract, ContractExt,
 };
 
@@ -59,13 +59,13 @@ mod tests {
     use crate::{
         common::tests::Context,
         jar::model::{Jar, JarCache, JarLastVersion, JarVersioned},
-        product::model::{Apy, FixedProductTerms, ProductV2, Terms},
+        product::model::{Apy, FixedProductTerms, Product, Terms},
         test_utils::admin,
     };
 
     #[test]
     fn migrate_legacy_account() {
-        let product = ProductV2::new().with_terms(Terms::Fixed(FixedProductTerms {
+        let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
             lockup_term: MS_IN_YEAR,
             apy: Apy::Constant(UDecimal::new(10_000, 5)),
         }));
