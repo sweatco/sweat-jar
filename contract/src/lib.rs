@@ -5,7 +5,7 @@ use near_sdk::{
     BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
-use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
+use sweat_jar_model::{api::InitApi, ProductId};
 
 use crate::{
     jar::{
@@ -52,9 +52,6 @@ pub struct Contract {
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
 
-    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
-    pub last_jar_id: JarId,
-
     /// A lookup map that associates account IDs with sets of jars owned by each account.
     pub accounts: LookupMap<AccountId, AccountVersioned>,
 
@@ -90,7 +87,6 @@ impl InitApi for Contract {
             fee_account_id,
             manager,
             products: UnorderedMap::new(StorageKey::ProductsV1),
-            last_jar_id: 0,
             products_cache: HashMap::default().into(),
             accounts: LookupMap::new(StorageKey::Accounts),
             archive: Archive {
@@ -102,7 +98,7 @@ impl InitApi for Contract {
 }
 
 #[near]
-pub(crate) struct Archive {
+pub struct Archive {
     pub accounts_v1: LookupMap<AccountId, AccountLegacyV1>,
     pub accounts_v2: LookupMap<AccountId, AccountLegacyV2>,
 }

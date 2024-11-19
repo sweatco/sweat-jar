@@ -24,11 +24,6 @@ impl Contract {
         self.assert_manager();
     }
 
-    pub(crate) fn increment_and_get_last_jar_id(&mut self) -> JarId {
-        self.last_jar_id += 1;
-        self.last_jar_id
-    }
-
     pub(crate) fn assert_migrated(&self, account_id: &AccountId) {
         require!(!self.archive.contains_account(account_id), "Must migrate account first");
     }

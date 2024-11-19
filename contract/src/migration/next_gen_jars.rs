@@ -42,7 +42,6 @@ impl Contract {
             fee_account_id: old_state.fee_account_id,
             manager: old_state.manager,
             products,
-            last_jar_id: old_state.last_jar_id,
             accounts: LookupMap::new(StorageKey::Accounts),
             products_cache: HashMap::default().into(),
             archive: Archive {
