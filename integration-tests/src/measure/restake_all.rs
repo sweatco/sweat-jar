@@ -1,6 +1,6 @@
 use anyhow::Result;
 use nitka::{measure::utils::pretty_gas_string, set_integration_logs_enabled};
-use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration};
+use sweat_jar_model::api::{ClaimApiIntegration, RestakeApiIntegration};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -28,7 +28,7 @@ async fn measure_restake_all() -> Result<()> {
 
     let gas = context
         .sweat_jar()
-        .restake_all(None)
+        .restake_all(product.get().id, None)
         .with_user(&alice)
         .result()
         .await?

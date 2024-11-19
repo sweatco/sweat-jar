@@ -3,11 +3,11 @@
 use std::{
     borrow::Borrow,
     sync::{Arc, Mutex, MutexGuard},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 use near_contract_standards::fungible_token::Balance;
-use near_sdk::{env::block_timestamp_ms, test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
+use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
 use sweat_jar_model::{api::InitApi, ProductId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
 use crate::{
@@ -83,17 +83,6 @@ impl Context {
             .insert(account_id.clone(), AccountVersioned::new(account));
 
         self
-    }
-
-    pub(crate) fn set_block_timestamp_today(&mut self) {
-        let start = SystemTime::now();
-        let today = start.duration_since(UNIX_EPOCH).expect("Time went backwards");
-        self.set_block_timestamp(today);
-    }
-
-    pub(crate) fn advance_block_timestamp_days(&mut self, days: u64) {
-        let now = block_timestamp_ms();
-        self.set_block_timestamp_in_ms(now + days * MS_IN_DAY);
     }
 
     pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {
