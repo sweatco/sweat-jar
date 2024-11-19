@@ -11,7 +11,9 @@ use sweat_jar_model::{
     ProductId, TokenAmount,
 };
 
-use crate::internal::{assert_gas, is_promise_success};
+#[cfg(not(test))]
+use crate::internal::assert_gas;
+use crate::internal::is_promise_success;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(crate = "near_sdk::serde")]
@@ -31,18 +33,18 @@ pub(super) struct BulkWithdrawalRequest {
 }
 
 #[cfg(not(test))]
+use crate::common::gas_data::{GAS_FOR_BULK_AFTER_WITHDRAW, GAS_FOR_FT_TRANSFER};
+#[cfg(not(test))]
 use crate::ft_interface::FungibleTokenInterface;
 use crate::{
-    common,
-    common::gas_data::{GAS_FOR_BULK_AFTER_WITHDRAW, GAS_FOR_FT_TRANSFER},
-    env,
+    common, env,
     event::{emit, EventKind, WithdrawData},
     AccountId, Contract, ContractExt,
 };
 
 #[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
-pub trait WithdrawCallbacks {
+pub(super) trait WithdrawCallbacks {
     fn after_withdraw(&mut self, account_id: AccountId, request: WithdrawalRequest) -> WithdrawView;
 
     fn after_bulk_withdraw(&mut self, account_id: AccountId, request: BulkWithdrawalRequest) -> BulkWithdrawView;
@@ -179,22 +181,18 @@ impl Contract {
         let mut result = BulkWithdrawView::default();
 
         for request in &request.requests {
-            self.get_account_mut(&account_id)
+            self.get_account_mut(account_id)
                 .get_jar_mut(&request.product_id)
                 .unlock();
 
-            let deposit_withdrawal = WithdrawView::new(
-                &request.product_id,
-                request.amount.clone(),
-                self.wrap_fee(request.fee.clone()),
-            );
+            let deposit_withdrawal = WithdrawView::new(&request.product_id, request.amount, self.wrap_fee(request.fee));
 
             result.total_amount.0 += deposit_withdrawal.withdrawn_amount.0;
             result.withdrawals.push(deposit_withdrawal);
         }
 
         for request in &request.requests {
-            self.clean_up(&account_id, request);
+            self.clean_up(account_id, request);
         }
 
         result

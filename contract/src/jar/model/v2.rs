@@ -109,7 +109,7 @@ impl JarV2 {
         }
 
         if let Some(deposits) = &companion.deposits {
-            self.deposits = deposits.iter().cloned().collect();
+            self.deposits = deposits.to_vec();
         }
 
         if let Some(is_pending_withdraw) = companion.is_pending_withdraw {

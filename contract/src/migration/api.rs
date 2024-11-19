@@ -1,13 +1,10 @@
-use std::ops::Deref;
-
-use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, AccountId};
-use sweat_jar_model::{api::JarApi, ProductId, TokenAmount};
+use near_sdk::{env, env::panic_str, near_bindgen, require};
+use sweat_jar_model::{ProductId, TokenAmount};
 
 use crate::{
-    event::{emit, EventKind, MigrationEventItem},
     jar::{
         account::{v1::AccountV1, versioned::AccountVersioned},
-        model::{JarCache, JarLastVersion},
+        model::JarCache,
     },
     product::model::InterestCalculator,
     Contract, ContractExt,
@@ -58,7 +55,7 @@ mod tests {
 
     use crate::{
         common::tests::Context,
-        jar::model::{Jar, JarCache, JarLastVersion, JarVersioned},
+        jar::model::{AccountLegacyV2, Jar, JarCache, JarLastVersion},
         product::model::{Apy, FixedProductTerms, Product, Terms},
         test_utils::admin,
     };
@@ -80,7 +77,7 @@ mod tests {
          * --> target interest at (YEAR / 2) is 300
          */
         let jars: Vec<Jar> = vec![
-            JarVersioned::V1(JarLastVersion {
+            Jar::V1(JarLastVersion {
                 id: 0,
                 account_id: alice(),
                 product_id: product.id.clone(),
@@ -95,7 +92,7 @@ mod tests {
                 is_penalty_applied: false,
                 claim_remainder: 0,
             }),
-            JarVersioned::V1(JarLastVersion {
+            Jar::V1(JarLastVersion {
                 id: 1,
                 account_id: alice(),
                 product_id: product.id.clone(),
@@ -109,26 +106,21 @@ mod tests {
             }),
         ];
 
-        // TODO: restore tests
-        // let account = Account::V1(AccountV1 {
-        //     last_id: 1,
-        //     score: Default::default(),
-        //     jars,
-        // });
-        // context.contract().accounts.insert(alice(), account);
-        //
-        // let migration_time = MS_IN_YEAR / 2;
-        // context.set_block_timestamp_in_ms(migration_time);
-        // context.switch_account(&alice());
-        // context.contract().migrate_account();
-        //
-        // let contract = context.contract();
-        // let account = contract.get_account(&alice());
-        // assert_eq!(1, account.jars.len());
-        //
-        // let jar = account.get_jar(&product.id);
-        // assert_eq!(2, jar.deposits.len());
-        // assert_eq!(migration_time, jar.cache.unwrap().updated_at);
-        // assert_eq!(12_800, jar.cache.unwrap().interest);
+        let account = AccountLegacyV2 { last_id: 1, jars };
+        context.contract().archive.accounts_v2.insert(alice(), account);
+
+        let migration_time = MS_IN_YEAR / 2;
+        context.set_block_timestamp_in_ms(migration_time);
+        context.switch_account(alice());
+        context.contract().migrate_account();
+
+        let contract = context.contract();
+        let account = contract.get_account(&alice());
+        assert_eq!(1, account.jars.len());
+
+        let jar = account.get_jar(&product.id);
+        assert_eq!(2, jar.deposits.len());
+        assert_eq!(migration_time, jar.cache.unwrap().updated_at);
+        assert_eq!(12_800, jar.cache.unwrap().interest);
     }
 }

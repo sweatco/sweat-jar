@@ -14,8 +14,6 @@ use crate::{
     },
 };
 
-pub const PRINCIPAL: u128 = 1_000_000;
-
 /// Default product name. If product name wasn't specified it will have this name.
 pub(crate) const PRODUCT: &str = "product";
 
@@ -81,11 +79,11 @@ impl AfterCatchUnwind for () {
 }
 
 pub fn expect_panic(ctx: &impl AfterCatchUnwind, msg: &str, action: impl FnOnce() + UnwindSafe) {
-    let res = catch_unwind(move || action());
+    let res = catch_unwind(action);
 
-    let panic_msg = res.err().expect(&format!(
-        "Contract didn't panic when expected to.\nExpected message: {msg}"
-    ));
+    let panic_msg = res
+        .err()
+        .unwrap_or_else(|| panic!("Contract didn't panic when expected to.\nExpected message: {msg}"));
 
     if msg.is_empty() {
         ctx.after_catch_unwind();

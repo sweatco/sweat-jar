@@ -66,12 +66,12 @@ pub struct Contract {
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
-    ProductsLegacyV1,
+    _ProductsLegacyV1,
     AccountsLegacyV1,
     /// Jars with claim remainder
     AccountsLegacyV2,
     /// Products migrated to near_sdk 5
-    ProductsLegacyV2,
+    _ProductsLegacyV2,
     /// Score supporting products
     Products,
     Accounts,

@@ -22,7 +22,7 @@ fn restake_all_for_single_product() {
     let test_time = MS_IN_YEAR * 6 / 4;
     context.set_block_timestamp_in_ms(test_time);
 
-    context.switch_account(&alice());
+    context.switch_account(alice());
     context.contract().restake_all(product.id.clone(), None);
 
     let contract = context.contract();

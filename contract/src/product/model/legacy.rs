@@ -9,7 +9,7 @@ use crate::{
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug)]
-pub struct ProductLegacy {
+pub(crate) struct ProductLegacy {
     /// The unique identifier of the product.
     pub id: ProductId,
 
@@ -36,7 +36,7 @@ pub struct ProductLegacy {
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
-pub(super) enum Terms {
+pub(crate) enum Terms {
     /// Describes additional terms for Fixed products.
     Fixed(FixedProductTerms),
 
@@ -47,7 +47,7 @@ pub(super) enum Terms {
 /// The `FixedProductTerms` struct contains terms specific to Fixed products.
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
-pub(super) struct FixedProductTerms {
+pub(crate) struct FixedProductTerms {
     /// The maturity term of the jar, during which it yields interest. After this period, the user can withdraw principal
     /// or potentially restake the jar.
     pub lockup_term: Duration,

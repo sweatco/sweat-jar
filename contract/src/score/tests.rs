@@ -171,7 +171,7 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
         }
 
         *total_claimed_bob += context.claim_total(&bob());
-        assert_eq!(context.interest(&alice(), &product_id), *total_claimed_bob, "{day}");
+        assert_eq!(context.interest(&alice(), product_id), *total_claimed_bob, "{day}");
     }
 
     let mut total_claimed_bob: u128 = 0;

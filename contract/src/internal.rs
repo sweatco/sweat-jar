@@ -1,9 +1,8 @@
 use std::fmt::Display;
 
 use near_sdk::require;
-use sweat_jar_model::jar::JarId;
 
-use crate::{env, jar::model::Jar, AccountId, Contract};
+use crate::{env, AccountId, Contract};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -42,6 +41,17 @@ pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce()
             gas_needed - gas_left
         ));
     }
+}
+
+#[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
+pub fn is_promise_success() -> bool {
+    near_sdk::is_promise_success()
+}
+
+#[cfg(test)]
+pub fn is_promise_success() -> bool {
+    crate::common::test_data::get_test_future_success()
 }
 
 #[cfg(test)]
@@ -90,15 +100,4 @@ mod test {
         let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
         assert_gas(gas_left - GAS_FOR_ASSERT_CALL - 1, || "Error message");
     }
-}
-
-#[cfg(not(test))]
-#[mutants::skip] // Covered by integration tests
-pub fn is_promise_success() -> bool {
-    near_sdk::is_promise_success()
-}
-
-#[cfg(test)]
-pub fn is_promise_success() -> bool {
-    crate::common::test_data::get_test_future_success()
 }

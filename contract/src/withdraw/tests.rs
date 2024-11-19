@@ -84,7 +84,7 @@ fn withdraw_locked_jar_before_maturity_by_not_owner() {
 #[test]
 fn withdraw_locked_jar_before_maturity_by_owner() {
     let product = testing_product_fixed(200);
-    let (alice, jar, mut context) = prepare_jar_with_deposit(&product, Some(100), None);
+    let (alice, _, mut context) = prepare_jar_with_deposit(&product, Some(100), None);
 
     context.set_block_timestamp_in_ms(120);
 
@@ -124,7 +124,7 @@ fn withdraw_locked_jar_after_maturity_by_owner() {
 #[should_panic(expected = "Account owner is not found")]
 fn withdraw_flexible_jar_by_not_owner() {
     let product = testing_product_flexible();
-    let (_, jar, mut context) = prepare_jar(&product);
+    let (_, _, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_days(1);
     context.contract().withdraw(product.id);
@@ -134,7 +134,7 @@ fn withdraw_flexible_jar_by_not_owner() {
 fn withdraw_flexible_jar_by_owner_full() {
     let product = testing_product_flexible();
     let principal = 1_000_000;
-    let (alice, reference_jar, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
+    let (alice, _, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
 
     context.set_block_timestamp_in_days(1);
 
@@ -200,7 +200,7 @@ fn product_with_percent_fee() {
             lockup_term: term_in_days * MS_IN_DAY,
             apy: Apy::Constant(UDecimal::new(20000, 5)),
         }))
-        .with_withdrawal_fee(WithdrawalFee::Percent(fee.clone()));
+        .with_withdrawal_fee(WithdrawalFee::Percent(fee));
     let (alice, _, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
 
     context.set_block_timestamp_in_ms(term_in_days * MS_IN_DAY + 1);
@@ -216,7 +216,7 @@ fn test_failed_withdraw_promise() {
 
     let term_id_days = 90;
     let product = testing_product_fixed(term_id_days);
-    let (alice, jar, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(1_000_000));
+    let (alice, _, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(1_000_000));
 
     context.set_block_timestamp_in_ms(term_id_days * MS_IN_DAY + 1);
     context.switch_account(&alice);
@@ -243,7 +243,7 @@ fn test_failed_withdraw_internal() {
     let term_id_days = 30;
     let principal = 3_000_000;
     let product = testing_product_fixed(term_id_days);
-    let (alice, jar, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
+    let (alice, jar, context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
 
     let request = WithdrawalRequest {
         product_id: product.id.clone(),
@@ -271,7 +271,7 @@ fn test_failed_bulk_withdraw_internal() {
     let term_id_days = 100;
     let principal = 400_000;
     let product = testing_product_fixed(term_id_days);
-    let (alice, jar, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
+    let (alice, jar, context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
 
     let request = BulkWithdrawalRequest {
         requests: vec![WithdrawalRequest {
@@ -304,7 +304,7 @@ fn withdraw_from_locked_jar() {
     let term_id_days = 10;
     let principal = 500_000;
     let product = testing_product_fixed(term_id_days);
-    let (alice, jar, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
+    let (alice, _, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
 
     context
         .contract()
@@ -354,7 +354,7 @@ fn withdraw_all() {
 
     context.set_block_timestamp_in_days(test_duration_id_days + 1);
 
-    context.switch_account(&alice());
+    context.switch_account(alice());
     context.contract().claim_total(None);
 
     let withdrawn = context.withdraw_all(&alice());
@@ -389,7 +389,7 @@ fn batch_withdraw_all() {
     // One day after last deposit unlock
     context.set_block_timestamp_in_ms(term_in_days * MS_IN_DAY + deposits.last().unwrap().0 + MS_IN_DAY);
 
-    context.switch_account(&alice());
+    context.switch_account(alice());
     context.contract().claim_total(None);
     let withdrawn = context.withdraw_all(&alice());
 

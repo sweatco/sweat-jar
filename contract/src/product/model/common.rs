@@ -50,7 +50,7 @@ pub struct DowngradableApy {
 impl Apy {
     pub(crate) fn get_effective(&self, is_penalty_applied: bool) -> UDecimal {
         match self {
-            Apy::Constant(apy) => apy.clone(),
+            Apy::Constant(apy) => *apy,
             Apy::Downgradable(apy) => {
                 if is_penalty_applied {
                     apy.fallback

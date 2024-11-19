@@ -43,6 +43,12 @@ impl MessageSigner {
     }
 }
 
+impl Default for Product {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Product {
     pub fn new() -> Self {
         Self {

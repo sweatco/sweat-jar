@@ -4,7 +4,7 @@ use near_sdk::{env, PromiseOrValue};
 
 use crate::{
     ft_interface::FungibleTokenInterface,
-    restake::api::api::{ext_self, RemainderTransfer, RemainderTransferCallback, Request},
+    restake::api::api::{ext_self, RemainderTransfer, Request},
     Contract,
 };
 

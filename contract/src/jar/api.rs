@@ -4,16 +4,14 @@ use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
-    withdraw::WithdrawView,
     ProductId, TokenAmount,
 };
 
 use crate::{
     assert::assert_not_locked_legacy,
-    event::emit,
     jar::{
         account::v1::AccountV1,
-        model::{AccountLegacyV2, Deposit, JarV2},
+        model::{AccountLegacyV2, Deposit},
         view::DetailedJarV2,
     },
     product::model::v1::{InterestCalculator, Product},
@@ -35,7 +33,7 @@ impl Contract {
 
         self.update_jar_cache(account_id, &product.id);
 
-        let account = self.get_account_mut(&account_id);
+        let account = self.get_account_mut(account_id);
         let jar = account.get_jar_mut(&product.id);
         jar.clean_up_deposits(partition_index);
         account.deposit(&product.id, amount);
@@ -49,7 +47,7 @@ impl Contract {
 
         for (product_id, jar) in account.jars.iter() {
             let product = self.get_product(product_id);
-            let interest = product.terms.get_interest(account, &jar, env::block_timestamp_ms()).0;
+            let interest = product.terms.get_interest(account, jar, env::block_timestamp_ms()).0;
 
             detailed_amounts.insert(product_id.clone(), interest.into());
             total_amount += interest;

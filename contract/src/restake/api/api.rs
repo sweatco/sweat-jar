@@ -3,7 +3,7 @@ use near_sdk::{
     json_types::U128,
     near_bindgen, require,
     serde::{Deserialize, Serialize},
-    AccountId, Promise, PromiseOrValue,
+    AccountId, PromiseOrValue,
     PromiseOrValue::Value,
 };
 use sweat_jar_model::{api::RestakeApi, ProductId, TokenAmount};

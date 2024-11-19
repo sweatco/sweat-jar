@@ -83,9 +83,9 @@ fn thread_name_test() {
 
 #[test]
 fn test_data_storage() {
-    assert_eq!(is_promise_success(), true);
+    assert!(is_promise_success());
     set_test_future_success(false);
-    assert_eq!(is_promise_success(), false);
+    assert!(!is_promise_success());
     set_test_future_success(true);
-    assert_eq!(is_promise_success(), true)
+    assert!(is_promise_success())
 }

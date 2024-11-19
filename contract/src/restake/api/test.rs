@@ -9,6 +9,6 @@ use crate::{
 
 impl RemainderTransfer for Contract {
     fn transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()> {
-        self.after_transfer_remainder(request).into()
+        self.after_transfer_remainder(request)
     }
 }
