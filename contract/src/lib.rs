@@ -66,14 +66,14 @@ pub struct Contract {
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
-    ProductsLegacy,
+    ProductsLegacyV1,
     AccountsLegacyV1,
     /// Jars with claim remainder
     AccountsLegacyV2,
     /// Products migrated to near_sdk 5
-    ProductsV1,
-    /// Products migrated to step jars
-    ProductsV2,
+    ProductsLegacyV2,
+    /// Score supporting products
+    Products,
     Accounts,
 }
 
@@ -86,7 +86,7 @@ impl InitApi for Contract {
             token_account_id,
             fee_account_id,
             manager,
-            products: UnorderedMap::new(StorageKey::ProductsV1),
+            products: UnorderedMap::new(StorageKey::Products),
             products_cache: HashMap::default().into(),
             accounts: LookupMap::new(StorageKey::Accounts),
             archive: Archive {

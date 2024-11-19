@@ -191,7 +191,7 @@ impl Default for AccountScore {
 //
 //     #[test]
 //     #[should_panic(expected = "Walk data from future")]
-//     fn steps_from_future() {
+//     fn score_from_future() {
 //         let mut ctx = TestBuilder::new().build();
 //         ctx.set_block_timestamp_today();
 //

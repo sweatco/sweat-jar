@@ -76,7 +76,7 @@
 //
 // async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -> Result<()> {
 //     jar.register_product(ProductDto {
-//         id: "5_days_20000_steps".to_string(),
+//         id: "5_days_20000_score".to_string(),
 //         apy_default: (0.into(), 0),
 //         apy_fallback: None,
 //         cap_min: 1_000_000.into(),

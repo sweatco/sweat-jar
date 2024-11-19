@@ -29,7 +29,7 @@ impl Contract {
     pub fn migrate() -> Self {
         let mut old_state: ContractLegacy = env::state_read().expect("Failed to extract old contract state.");
 
-        let mut products: UnorderedMap<ProductId, Product> = UnorderedMap::new(StorageKey::ProductsV2);
+        let mut products: UnorderedMap<ProductId, Product> = UnorderedMap::new(StorageKey::Products);
 
         for (product_id, product) in &old_state.products {
             products.insert(&product_id, &product.into());

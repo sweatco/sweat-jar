@@ -200,7 +200,7 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
 }
 
 #[test]
-fn interest_does_not_increase_with_no_steps() {
+fn interest_does_not_increase_with_no_score() {
     set_test_log_events(false);
 
     let term_in_days = 365;
