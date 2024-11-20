@@ -413,3 +413,24 @@ fn test_steps_history() {
 
     check_score_interest(&ctx, 0);
 }
+
+#[test]
+fn record_max_score() {
+    const ALICE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(4)))
+        .build();
+
+    ctx.record_score(UTC(0), 25000, alice());
+    ctx.record_score(UTC(0), 25000, alice());
+    ctx.record_score(UTC(0), 25000, alice());
+    ctx.record_score(UTC(0), 25000, alice());
+
+    ctx.set_block_timestamp_in_days(1);
+
+    assert_eq!(ctx.contract().get_score_interest(alice()).unwrap().0, 65535);
+}

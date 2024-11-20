@@ -109,7 +109,7 @@ impl AccountScore {
     fn update_today(&mut self, chain: Chain) -> Vec<Score> {
         for (score, day) in chain {
             let day_index: usize = day.0.try_into().unwrap();
-            self.scores[day_index] += score;
+            self.scores[day_index] = self.scores[day_index].checked_add(score).unwrap_or(u16::MAX);
             self.scores_history[day_index] = self.scores_history[day_index].checked_add(score).unwrap_or(u16::MAX);
         }
         vec![]
