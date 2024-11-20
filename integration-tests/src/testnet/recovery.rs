@@ -165,7 +165,7 @@
 //
 //     sleep(Duration::from_secs(5)).await;
 //
-//     let withdrawn = ctx.jar_contract().withdraw_all(None).with_user(&ctx.user).await?;
+//     let withdrawn = ctx.jar_contract().withdraw_all().with_user(&ctx.user).await?;
 //
 //     assert!(withdrawn.jars.into_iter().any(|j| j.withdrawn_amount.0 == PRINCIPAL));
 //

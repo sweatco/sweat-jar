@@ -31,7 +31,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
         .await?;
 
     let mut alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_000_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_000_000, alice_balance.0);
 
     context.fast_forward_hours(1).await?;
 
@@ -43,7 +43,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     assert_eq!(1_000, fee_amount.0);
 
     alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_999_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_999_000, alice_balance.0);
 
     let fee_balance_after = context.ft_contract().ft_balance_of(fee_account.to_near()).await?.0;
     assert_eq!(1_000, fee_balance_after - fee_balance_before);
@@ -73,7 +73,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
         .await?;
 
     let mut alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_000_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_000_000, alice_balance.0);
 
     context.fast_forward_hours(1).await?;
 
@@ -85,7 +85,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
     assert_eq!(10_000, fee_amount.0);
 
     alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_990_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_990_000, alice_balance.0);
 
     let fee_balance_after = context.ft_contract().ft_balance_of(fee_account.to_near()).await?.0;
     assert_eq!(10_000, fee_balance_after - fee_balance_before);

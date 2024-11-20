@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration},
+    api::{ClaimApiIntegration, JarApiIntegration, RestakeApiIntegration},
     TokenAmount,
 };
 
@@ -114,9 +114,11 @@ async fn restake_all() -> Result<()> {
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
     // Restaking in batches
-    let restaked = context.sweat_jar().restake_all(None).with_user(&alice).await?;
-    assert_eq!(restaked.len(), 1);
-    assert_eq!(product_5_min_total, restaked.first().unwrap().1);
+    context
+        .sweat_jar()
+        .restake_all(product_5_min.id(), None)
+        .with_user(&alice)
+        .await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     let principals_set: HashSet<TokenAmount> = HashSet::from_iter(jars.iter().map(|j| j.principal.0));

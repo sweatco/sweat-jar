@@ -33,22 +33,15 @@ impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
         self.assert_migrated(&account_id);
-        self.claim_jars_internal(account_id, detailed)
-    }
-}
 
-impl Contract {
-    fn claim_jars_internal(
-        &mut self,
-        account_id: AccountId,
-        detailed: Option<bool>,
-    ) -> PromiseOrValue<ClaimedAmountView> {
         let account = self.get_account(&account_id);
         let mut accumulator = ClaimedAmountView::new(detailed);
         let now = env::block_timestamp_ms();
 
         let mut rollback_jars = HashMap::new();
         let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
+
+        env::log_str(format!("Account {:?} has {} jars", account_id.clone(), account.jars.len()).as_str());
 
         for (product_id, jar) in account.jars.iter() {
             if jar.is_pending_withdraw {
@@ -59,6 +52,8 @@ impl Contract {
 
             let product = self.get_product(product_id);
             let (interest, remainder) = product.terms.get_interest(account, jar, now);
+
+            env::log_str(format!("For jar {} claim {}", product_id.clone(), interest).as_str());
 
             if interest == 0 {
                 continue;
@@ -216,12 +211,12 @@ fn after_claim_call(
 
 impl JarV2 {
     fn to_rollback(&self) -> JarV2Companion {
-        let mut companion = JarV2Companion::default();
-        companion.is_pending_withdraw = Some(false);
-        companion.claimed_balance = Some(self.claimed_balance);
-        companion.claim_remainder = Some(self.claim_remainder);
-        companion.cache = Some(self.cache);
-
-        companion
+        JarV2Companion {
+            is_pending_withdraw: Some(false),
+            claimed_balance: Some(self.claimed_balance),
+            claim_remainder: Some(self.claim_remainder),
+            cache: Some(self.cache),
+            ..JarV2Companion::default()
+        }
     }
 }

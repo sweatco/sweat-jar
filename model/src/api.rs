@@ -1,4 +1,3 @@
-use near_sdk::PromiseOrValue;
 #[cfg(not(feature = "integration-api"))]
 use near_sdk::{
     json_types::{Base64VecU8, U128},
@@ -97,7 +96,7 @@ pub trait RestakeApi {
     /// Restakes all jars for user into a Product with corresponding `product_id`.
     /// If `amount` is some, only this amount will be restaked. The rest of mature principal
     /// will be withdrawn.
-    fn restake_all(&mut self, product_id: ProductId, amount: Option<U128>) -> PromiseOrValue<()>;
+    fn restake_all(&mut self, product_id: ProductId, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<()>;
 }
 
 #[make_integration_version]

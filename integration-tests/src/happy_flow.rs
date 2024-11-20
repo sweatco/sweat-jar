@@ -64,7 +64,7 @@ async fn happy_flow() -> anyhow::Result<()> {
     assert!(15 < claimed_amount && claimed_amount < 20);
 
     let alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?.0;
-    assert_eq!(99_000_000 + claimed_amount, alice_balance);
+    assert_eq!(99_999_999_999_999_999_999_000_000 + claimed_amount, alice_balance);
 
     Ok(())
 }
