@@ -15,7 +15,8 @@ use crate::{
 };
 
 /// Default product name. If product name wasn't specified it will have this name.
-pub(crate) const PRODUCT: &str = "product";
+pub(crate) const DEFAULT_PRODUCT_NAME: &str = "product";
+pub(crate) const DEFAULT_SCORE_PRODUCT_NAME: &str = "score_product";
 
 pub fn admin() -> AccountId {
     "admin".parse().unwrap()

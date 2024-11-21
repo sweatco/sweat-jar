@@ -374,7 +374,7 @@ fn revert_scores_on_failed_claim() {
 }
 
 impl Context {
-    fn interest(&self, account_id: &AccountId, product_id: &ProductId) -> TokenAmount {
+    pub(crate) fn interest(&self, account_id: &AccountId, product_id: &ProductId) -> TokenAmount {
         let contract = self.contract();
         let product = &contract.get_product(product_id);
         let account = contract.get_account(account_id);
@@ -390,7 +390,7 @@ impl Context {
         account.get_jar(product_id).clone()
     }
 
-    fn claim_total(&mut self, account_id: &AccountId) -> TokenAmount {
+    pub(crate) fn claim_total(&mut self, account_id: &AccountId) -> TokenAmount {
         self.switch_account(account_id);
         let PromiseOrValue::Value(claim_result) = self.contract().claim_total(None) else {
             panic!("Expected value");
@@ -399,7 +399,7 @@ impl Context {
         claim_result.get_total().0
     }
 
-    fn record_score(&mut self, account_id: &AccountId, time: UTC, score: Score) {
+    pub(crate) fn record_score(&mut self, account_id: &AccountId, time: UTC, score: Score) {
         self.switch_account(admin());
         self.contract()
             .record_score(vec![(account_id.clone(), vec![(score, time)])]);
@@ -417,7 +417,7 @@ impl Context {
         }
     }
 
-    fn score(&self, account_id: &AccountId) -> AccountScore {
+    pub(crate) fn score(&self, account_id: &AccountId) -> AccountScore {
         self.contract().get_account(account_id).score
     }
 }

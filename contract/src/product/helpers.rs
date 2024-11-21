@@ -12,7 +12,7 @@ use crate::{
     common::tests::Context,
     jar::model::JarTicket,
     product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee},
-    test_utils::PRODUCT,
+    test_utils::DEFAULT_PRODUCT_NAME,
     Contract,
 };
 
@@ -52,7 +52,7 @@ impl Default for Product {
 impl Product {
     pub fn new() -> Self {
         Self {
-            id: PRODUCT.to_string(),
+            id: DEFAULT_PRODUCT_NAME.to_string(),
             cap: Cap { min: 0, max: 1_000_000 },
             terms: Terms::Fixed(FixedProductTerms {
                 lockup_term: MS_IN_YEAR,
