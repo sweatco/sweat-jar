@@ -226,3 +226,24 @@ withdraw:
     "total": "146 144 368 215 506"
   }
 }
+restake: 
+{
+  "Locked10Minutes6Percents": {
+    "cost": [
+      "  6 061 326 681 827 - number of jars: 1  ",
+      "  6 092 675 487 281 - number of jars: 11  ",
+      "  6 123 713 450 288 - number of jars: 21  ",
+      "  6 154 751 413 295 - number of jars: 31  ",
+      "  6 185 421 763 691 - number of jars: 41  ",
+      "  6 216 148 884 251 - number of jars: 51  "
+    ],
+    "diff": [
+      "  31 348 805 454 - jar cost: 3 134 880 545  ",
+      "  31 037 963 007 - jar cost: 3 103 796 300  ",
+      "  31 037 963 007 - jar cost: 3 103 796 300  ",
+      "  30 670 350 396 - jar cost: 3 067 035 039  ",
+      "  30 727 120 560 - jar cost: 3 072 712 056  "
+    ],
+    "total": "36 834 037 680 633"
+  }
+}
