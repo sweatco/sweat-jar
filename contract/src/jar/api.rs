@@ -9,11 +9,7 @@ use sweat_jar_model::{
 
 use crate::{
     assert::assert_not_locked_legacy,
-    jar::{
-        account::v1::AccountV1,
-        model::{AccountLegacyV2, Deposit},
-        view::DetailedJarV2,
-    },
+    jar::{account::v1::AccountV1, model::AccountLegacyV2, view::DetailedJarV2},
     product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
     Contract, ContractExt,
@@ -36,7 +32,7 @@ impl Contract {
         let account = self.get_account_mut(account_id);
         let jar = account.get_jar_mut(&product.id);
         jar.clean_up_deposits(partition_index);
-        account.deposit(&product.id, amount);
+        account.deposit(&product.id, amount, None);
 
         Some(amount)
     }
@@ -85,7 +81,6 @@ impl JarApi for Contract {
         vec![]
     }
 
-    // TODO: check that claimed balance is subtracted from cached interest for legacy accounts
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
         if let Some(account) = self.try_get_account(&account_id) {
             return self.get_total_interest_for_account(account);
@@ -130,9 +125,7 @@ impl From<&AccountLegacyV2> for AccountV1 {
         for jar in value.jars.iter() {
             assert_not_locked_legacy(jar);
 
-            let deposit = Deposit::new(jar.created_at, jar.principal);
-            account.push(&jar.product_id, deposit);
-
+            account.deposit(&jar.product_id, jar.principal, jar.created_at.into());
             account.get_jar_mut(&jar.product_id).claimed_balance += jar.claimed_balance;
 
             if !account.is_penalty_applied {

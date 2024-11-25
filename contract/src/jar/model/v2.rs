@@ -14,6 +14,7 @@ use crate::{
 pub struct JarV2 {
     pub deposits: Vec<Deposit>,
     pub cache: Option<JarCache>,
+    // TODO: get rid of it
     pub claimed_balance: TokenAmount,
     pub is_pending_withdraw: bool,
     pub claim_remainder: u64,

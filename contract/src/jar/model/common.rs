@@ -67,6 +67,6 @@ impl Contract {
         }
 
         let account = self.get_or_create_account_mut(&account_id);
-        account.deposit(product_id, amount);
+        account.deposit(product_id, amount, None);
     }
 }

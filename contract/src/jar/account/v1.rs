@@ -20,7 +20,6 @@ use crate::{
 #[near]
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct AccountV1 {
-    /// Is used as nonce in `get_ticket_hash` method.
     /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, JarV2>,
@@ -76,13 +75,9 @@ impl AccountV1 {
             .unwrap_or_else(|| panic_str(format!("Jar for product {product_id} is not found").as_str()))
     }
 
-    pub(crate) fn deposit(&mut self, product_id: &ProductId, principal: TokenAmount) {
-        let deposit = Deposit::new(env::block_timestamp_ms(), principal);
-        self.push(product_id, deposit);
-    }
+    pub(crate) fn deposit(&mut self, product_id: &ProductId, principal: TokenAmount, time: Option<Timestamp>) {
+        let deposit = Deposit::new(time.unwrap_or_else(env::block_timestamp_ms), principal);
 
-    // TODO: refactor, move to some container
-    pub(crate) fn push(&mut self, product_id: &ProductId, deposit: Deposit) {
         if let Some(jar) = self.jars.get_mut(product_id) {
             jar.deposits.push(deposit);
         } else {

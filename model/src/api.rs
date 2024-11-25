@@ -1,10 +1,10 @@
 #[cfg(not(feature = "integration-api"))]
 use near_sdk::{
-    json_types::{Base64VecU8, U128},
+    json_types::{Base64VecU8, I64, U128},
     AccountId,
 };
 #[cfg(feature = "integration-api")]
-use nitka::near_sdk::json_types::{Base64VecU8, U128};
+use nitka::near_sdk::json_types::{Base64VecU8, I64, U128};
 #[cfg(feature = "integration-api")]
 use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
@@ -96,6 +96,8 @@ pub trait RestakeApi {
     /// Restakes all jars for user into a Product with corresponding `product_id`.
     /// If `amount` is some, only this amount will be restaked. The rest of mature principal
     /// will be withdrawn.
+    ///
+    /// TODO: make with ft_transfer_call to support extra deposit
     fn restake_all(&mut self, product_id: ProductId, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<()>;
 }
 
@@ -249,6 +251,12 @@ pub trait ScoreApi {
     /// - This function will panic if an account does not have score jars.
     /// - This function will panic if a product associated with a jar does not exist.
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
+
+    /// Return users timezone if user has any score based jars
+    fn get_timezone(&self, account_id: AccountId) -> Option<I64>;
+
+    /// Returns current active score if user has any score based jars
+    fn get_score(&self, account_id: AccountId) -> Option<U128>;
 }
 
 #[cfg(feature = "integration-methods")]

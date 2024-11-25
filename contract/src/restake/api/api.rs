@@ -133,6 +133,6 @@ impl Contract {
         }
 
         self.get_account_mut(&request.account_id)
-            .deposit(&request.deposit.product_id, request.deposit.amount);
+            .deposit(&request.deposit.product_id, request.deposit.amount, None);
     }
 }

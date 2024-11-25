@@ -1,6 +1,6 @@
 [package]
 name = "sweat-jar-model"
-version = "3.3.6"
+version = "3.3.10"
 publish = false
 edition = "2021"
 

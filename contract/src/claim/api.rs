@@ -75,7 +75,7 @@ impl ClaimApi for Contract {
             ..AccountV1Companion::default()
         };
 
-        account.score.try_claim_score();
+        account.score.try_reset_score();
 
         if accumulator.get_total().0 > 0 {
             self.claim_interest(
@@ -155,7 +155,6 @@ impl Contract {
                 let jar = account.get_jar_mut(&product_id);
                 jar.unlock();
 
-                // TODO: check if should delete jar
                 if jar.should_close() {
                     account.jars.remove(&product_id);
                 }

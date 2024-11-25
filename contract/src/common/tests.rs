@@ -8,7 +8,7 @@ use std::{
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, ProductId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use sweat_jar_model::{api::InitApi, ProductId, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
 use crate::{
     common::Timestamp,
@@ -135,5 +135,15 @@ impl Context {
 impl AfterCatchUnwind for Context {
     fn after_catch_unwind(&self) {
         self.contract.clear_poison();
+    }
+}
+
+pub trait TokenUtils {
+    fn to_otto(&self) -> TokenAmount;
+}
+
+impl TokenUtils for u128 {
+    fn to_otto(&self) -> TokenAmount {
+        self * 10u128.pow(18)
     }
 }

@@ -136,7 +136,6 @@ impl Default for ProductDto {
     }
 }
 
-// TODO: move to tests
 impl Default for FixedProductTermsDto {
     fn default() -> Self {
         Self {
@@ -174,7 +173,6 @@ pub enum WithdrawalFeeDto {
     Percent(U128, u32),
 }
 
-// TODO: move to tests
 impl ProductView {
     pub fn get_base_apy(&self) -> &ApyView {
         match &self.terms {

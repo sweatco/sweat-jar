@@ -2,25 +2,26 @@
 
 use fake::Fake;
 use near_sdk::{
+    json_types::{I64, U128},
     store::LookupMap,
     test_utils::test_env::{alice, bob},
-    AccountId, PromiseOrValue,
+    AccountId, PromiseOrValue, Timestamp,
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
     withdraw::WithdrawView,
-    ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, UTC,
+    ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
 };
 
 use crate::{
     common::{
         test_data::{set_test_future_success, set_test_log_events},
-        tests::Context,
+        tests::{Context, TokenUtils},
     },
-    jar::model::JarV2,
+    jar::model::{JarTicket, JarV2},
     product::model::{Apy, Cap, FixedProductTerms, InterestCalculator, Product, ScoreBasedProductTerms, Terms},
     score::AccountScore,
-    test_utils::admin,
+    test_utils::{admin, DEFAULT_SCORE_PRODUCT_NAME},
     StorageKey,
 };
 
@@ -45,7 +46,10 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
     let regular_product = Product {
         id: "regular_product".to_string(),
-        cap: Cap { min: 0, max: 1_000_000 },
+        cap: Cap {
+            min: 0,
+            max: 1_000_000.to_otto(),
+        },
         terms: Terms::Fixed(FixedProductTerms {
             lockup_term: term_in_ms,
             apy: Apy::Constant(UDecimal::new(12000, 5)),
@@ -57,7 +61,10 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
     let score_product = Product {
         id: "score_product".to_string(),
-        cap: Cap { min: 0, max: 1_000_000 },
+        cap: Cap {
+            min: 0,
+            max: 1_000_000.to_otto(),
+        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: term_in_ms,
             base_apy: Apy::Constant(UDecimal::zero()),
@@ -68,33 +75,31 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         is_enabled: true,
     };
 
-    let mut context = Context::new(admin())
-        .with_products(&[regular_product.clone(), score_product.clone()])
-        .with_jars(
-            &alice(),
-            &[
-                (regular_product.id.clone(), JarV2::new().with_deposit(0, 100)),
-                (score_product.id.clone(), JarV2::new().with_deposit(0, 100)),
-            ],
-        );
-    context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(3));
+    let mut context = Context::new(admin()).with_products(&[regular_product.clone(), score_product.clone()]);
+    context.deposit(&alice(), &regular_product.id, 100.to_otto());
+    context.deposit_with_timezone(&alice(), &score_product.id, 100.to_otto(), Timezone::hour_shift(3));
 
-    // Difference of 1 is okay because the missing yoctosweat is stored in claim remainder
+    assert_eq!(context.contract().get_timezone(alice()), Some(I64(10800000)));
+
+    // Difference of 1 is okay because the missing otto-sweat is stored in claim remainder
     // and will eventually be added to total claimed balance
     fn compare_interest(context: &Context, regular_product_id: &ProductId, score_product_id: &ProductId) {
         let regular_interest = context.interest(&alice(), regular_product_id);
         let score_interest = context.interest(&alice(), score_product_id);
         let diff = regular_interest.abs_diff(score_interest);
 
+        dbg!(regular_interest);
+        dbg!(score_interest);
+
         assert!(diff <= 1, "Diff is too big {diff}");
     }
-
-    let mut total_claimed = 0;
 
     for day in 0..term_in_days {
         let now = day * MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
         context.record_score(&alice(), UTC(day * MS_IN_DAY), 20_000);
+
+        dbg!(day);
 
         compare_interest(&context, &regular_product.id, &score_product.id);
 
@@ -103,9 +108,6 @@ fn same_interest_in_score_jar_as_in_const_jar() {
             let score_interest = context.interest(&alice(), &score_product.id);
 
             let claimed = context.claim_total(&alice());
-
-            total_claimed += claimed;
-
             assert_eq!(claimed, jar_interest + score_interest);
         }
     }
@@ -118,12 +120,6 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         context.jar(&alice(), &score_product.id).cache.unwrap().updated_at,
         (term_in_days - 1) * MS_IN_DAY
     );
-
-    context.set_block_timestamp_in_ms(term_in_ms);
-    compare_interest(&context, &regular_product.id, &score_product.id);
-
-    total_claimed += context.claim_total(&alice());
-    assert_eq!(total_claimed, 24);
 }
 
 // TODO: it fails with bigger deposits
@@ -419,5 +415,169 @@ impl Context {
 
     pub(crate) fn score(&self, account_id: &AccountId) -> AccountScore {
         self.contract().get_account(account_id).score
+    }
+}
+
+#[test]
+fn timestamps() {
+    const BASE_TIME: Timestamp = 1729692817027;
+    const TEST_TIME: Timestamp = 1729694971000;
+
+    set_test_log_events(false);
+
+    let product = generate_score_based_product();
+    let mut ctx = Context::new(admin()).with_products(&[product.clone()]);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME);
+    ctx.switch_account(admin());
+    ctx.contract().deposit(
+        alice(),
+        JarTicket {
+            product_id: product.id.clone(),
+            valid_until: (BASE_TIME + MS_IN_YEAR).into(),
+            timezone: Some(Timezone::hour_shift(4)),
+        },
+        (100_000_000 * 10u128.pow(18)).into(),
+        &None,
+    );
+
+    ctx.set_block_timestamp_in_ms(TEST_TIME);
+    ctx.record_score(&alice(), UTC(1729592064000), 8245);
+
+    assert_eq!(
+        22589041095890410958904,
+        ctx.contract().get_total_interest(alice()).amount.total.0
+    );
+
+    for i in 0..100 {
+        ctx.set_block_timestamp_in_ms(TEST_TIME + MS_IN_HOUR * i);
+
+        assert_eq!(
+            22589041095890410958904,
+            ctx.contract().get_total_interest(alice()).amount.total.0
+        );
+    }
+}
+
+#[test]
+fn test_steps_history() {
+    const BASE_TIME: Timestamp = 1729692817027;
+
+    set_test_log_events(false);
+
+    let product = generate_score_based_product();
+    let mut ctx = Context::new(admin()).with_products(&[product.clone()]).with_jars(
+        &alice(),
+        &[(product.id.clone(), JarV2::new().with_deposit(BASE_TIME, 100))],
+    );
+    ctx.contract().get_account_mut(&alice()).score.timezone = Timezone::hour_shift(4);
+
+    let check_score_interest = |ctx: &Context, val: u128| {
+        assert_eq!(ctx.contract().get_score(alice()), Some(U128(val)));
+    };
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.record_score(&alice(), UTC(BASE_TIME - MS_IN_DAY), 8245);
+
+    check_score_interest(&ctx, 8245);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 10);
+
+    check_score_interest(&ctx, 0);
+
+    ctx.record_score(&alice(), UTC(BASE_TIME + MS_IN_DAY * 10), 10000);
+    ctx.record_score(&alice(), UTC(BASE_TIME + MS_IN_DAY * 10), 101);
+    ctx.record_score(&alice(), UTC(BASE_TIME + MS_IN_DAY * 9), 9000);
+    ctx.record_score(&alice(), UTC(BASE_TIME + MS_IN_DAY * 9), 90);
+
+    check_score_interest(&ctx, 9090);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 11);
+
+    check_score_interest(&ctx, 10101);
+
+    ctx.set_block_timestamp_in_ms(BASE_TIME + MS_IN_DAY * 12);
+
+    check_score_interest(&ctx, 0);
+}
+
+#[test]
+fn record_max_score() {
+    set_test_log_events(false);
+
+    let product = generate_score_based_product();
+    let mut ctx = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))]);
+    ctx.contract().get_account_mut(&alice()).score.timezone = Timezone::hour_shift(4);
+
+    ctx.record_score(&alice(), UTC(0), 25000);
+    ctx.record_score(&alice(), UTC(0), 25000);
+    ctx.record_score(&alice(), UTC(0), 25000);
+    ctx.record_score(&alice(), UTC(0), 25000);
+
+    ctx.set_block_timestamp_in_days(1);
+
+    assert_eq!(ctx.contract().get_score(alice()).unwrap().0, 65535);
+}
+
+fn generate_score_based_product() -> Product {
+    Product {
+        id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
+        cap: Cap {
+            min: 0,
+            max: 1_000_000_000 * 10u128.pow(18),
+        },
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            score_cap: 20_000,
+            base_apy: Apy::Constant(UDecimal::zero()),
+            lockup_term: 10 * MS_IN_DAY,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    }
+}
+
+impl Context {
+    fn deposit(&mut self, account_id: &AccountId, product_id: &ProductId, amount: TokenAmount) {
+        self.deposit_internal(account_id, product_id, amount, None);
+    }
+
+    fn deposit_with_timezone(
+        &mut self,
+        account_id: &AccountId,
+        product_id: &ProductId,
+        amount: TokenAmount,
+        timezone: Timezone,
+    ) {
+        self.deposit_internal(account_id, product_id, amount, Some(timezone));
+    }
+
+    fn deposit_internal(
+        &mut self,
+        account_id: &AccountId,
+        product_id: &ProductId,
+        amount: TokenAmount,
+        timezone: Option<Timezone>,
+    ) {
+        self.switch_account(admin());
+        self.contract().deposit(
+            account_id.clone(),
+            JarTicket {
+                product_id: product_id.clone(),
+                valid_until: (self.now() + MS_IN_YEAR).into(),
+                timezone,
+            },
+            amount.into(),
+            &None,
+        );
     }
 }

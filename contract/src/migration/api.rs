@@ -3,7 +3,7 @@ use sweat_jar_model::{ProductId, TokenAmount};
 
 use crate::{
     jar::{
-        account::{v1::AccountV1, versioned::AccountVersioned},
+        account::{versioned::AccountVersioned, Account},
         model::JarCache,
     },
     product::model::InterestCalculator,
@@ -22,7 +22,7 @@ impl Contract {
         require!(!self.accounts.contains_key(&account_id), "Account already exists");
 
         let now = env::block_timestamp_ms();
-        let mut account = AccountV1::from(&account);
+        let mut account = Account::from(&account);
 
         let interest: Vec<(ProductId, TokenAmount, u64)> = account
             .jars

@@ -17,7 +17,10 @@ pub(crate) type Chain = Vec<(Score, Local)>;
 pub struct AccountScore {
     pub updated: UTC,
     pub timezone: Timezone,
+    /// Scores buffer used for interest calculation. Can be invalidated on claim.
     scores: [Score; DAYS_STORED],
+    /// Score history values used for displaying it in application. Will not be invalidated during claim.
+    scores_history: [Score; DAYS_STORED],
 }
 
 impl AccountScore {
@@ -30,6 +33,7 @@ impl AccountScore {
             updated: block_timestamp_ms().into(),
             timezone,
             scores: [0; DAYS_STORED],
+            scores_history: [0; DAYS_STORED],
         }
     }
 
@@ -45,20 +49,33 @@ impl AccountScore {
         }
     }
 
-    pub fn try_claim_score(&mut self) -> Option<Vec<Score>> {
+    pub fn active_score(&self) -> Score {
+        let update_day = self.update_day();
+        let today = self.timezone.today();
+
+        if update_day == today {
+            self.scores_history[1]
+        } else if update_day == Local(today.0 - 1) {
+            self.scores_history[0]
+        } else {
+            0
+        }
+    }
+
+    pub fn try_reset_score(&mut self) -> Option<Vec<Score>> {
         if self.is_valid() {
-            Some(self.claim_score())
+            Some(self.reset_score())
         } else {
             None
         }
     }
 
     /// On claim we need to clear active scores so they aren't claimed twice or more.
-    // TODO: at least rename
-    pub fn claim_score(&mut self) -> Vec<Score> {
+    pub fn reset_score(&mut self) -> Vec<Score> {
         let today = self.timezone.today();
+        let update_day = self.update_day();
 
-        let result = if today == self.update_day() {
+        let result = if today == update_day {
             let score = self.scores[1];
             self.scores[1] = 0;
             vec![score]
@@ -66,6 +83,16 @@ impl AccountScore {
             let score = vec![self.scores[0], self.scores[1]];
             self.scores[0] = 0;
             self.scores[1] = 0;
+
+            // If scores were updated yesterday we shift history by 1 day
+            // If older that yesterday then we wipe it
+            if update_day == Local(today.0 - 1) {
+                self.scores_history[1] = self.scores_history[0];
+                self.scores_history[0] = 0;
+            } else {
+                self.scores_history = [0; DAYS_STORED];
+            }
+
             score
         };
 
@@ -81,6 +108,7 @@ impl AccountScore {
 
         assert_eq!((today - self.update_day()).0, 0, "Updating scores before claiming them");
 
+        dbg!(chain.clone());
         self.update_today(chain);
 
         self.updated = block_timestamp_ms().into();
@@ -90,7 +118,8 @@ impl AccountScore {
     fn update_today(&mut self, chain: Chain) -> Vec<Score> {
         for (score, day) in chain {
             let day_index: usize = day.0.try_into().unwrap();
-            self.scores[day_index] += score;
+            self.scores[day_index] = self.scores[day_index].checked_add(score).unwrap_or(u16::MAX);
+            self.scores_history[day_index] = self.scores_history[day_index].checked_add(score).unwrap_or(u16::MAX);
         }
         vec![]
     }
@@ -133,91 +162,151 @@ impl Default for AccountScore {
             updated: block_timestamp_ms().into(),
             timezone: Timezone::invalid(),
             scores: [0, 0],
+            scores_history: [0, 0],
         }
     }
 }
 
-// #[cfg(test)]
-// mod test {
-//     use near_sdk::env::block_timestamp_ms;
-//     use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC};
-//
-//     use crate::score::{account_score::Chain, AccountScore};
-//
-//     const TIMEZONE: Timezone = Timezone::hour_shift(3);
-//     const TODAY: u64 = 1722234632000;
-//
-//     fn generate_chain() -> Chain {
-//         let today: Day = TODAY.into();
-//
-//         vec![
-//             (1_000, today),
-//             (1_000, today - (MS_IN_HOUR * 3).into()),
-//             (1_000, today - (MS_IN_HOUR * 12).into()),
-//             (1_000, today - (MS_IN_HOUR * 25).into()),
-//             (1_000, today - (MS_IN_HOUR * 28).into()),
-//             (1_000, today - (MS_IN_HOUR * 40).into()),
-//             (1_000, today - (MS_IN_HOUR * 45).into()),
-//             (1_000, today - (MS_IN_HOUR * 48).into()),
-//             (1_000, today - (MS_IN_HOUR * 55).into()),
-//             (1_000, today - (MS_IN_HOUR * 550).into()),
-//         ]
-//     }
-//
-//     #[test]
-//     fn test_account_score() {
-//         let mut ctx = TestBuilder::new().build();
-//
-//         ctx.set_block_timestamp_in_ms(TODAY);
-//
-//         let product = Product::new().score_cap(20_000);
-//
-//         let mut account_score = AccountScore::new(TIMEZONE);
-//
-//         account_score.update(generate_chain());
-//
-//         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.03);
-//
-//         ctx.advance_block_timestamp_days(1);
-//         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
-//
-//         ctx.advance_block_timestamp_days(1);
-//         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.05);
-//
-//         assert_eq!(account_score.claim_score(), vec![2000, 3000]);
-//
-//         assert_eq!(product.apy_for_score(&account_score.claimable_score()).to_f32(), 0.00);
-//     }
-//
-//     #[test]
-//     #[should_panic(expected = "Walk data from future")]
-//     fn score_from_future() {
-//         let mut ctx = TestBuilder::new().build();
-//         ctx.set_block_timestamp_today();
-//
-//         let mut account_score = AccountScore::new(TIMEZONE);
-//         account_score.update(vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())]);
-//     }
-//
-//     #[test]
-//     fn updated_on_different_days() {
-//         let mut score = AccountScore {
-//             updated: UTC(MS_IN_DAY * 10),
-//             timezone: Timezone::hour_shift(0),
-//             scores: [1000, 2000],
-//         };
-//
-//         let mut ctx = TestBuilder::new().build();
-//
-//         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
-//
-//         score.update(vec![(6, (MS_IN_DAY * 10).into()), (5, (MS_IN_DAY * 9).into())]);
-//
-//         assert_eq!(score.updated, (MS_IN_DAY * 10).into());
-//         assert_eq!(score.scores(), (1006, 2005));
-//         assert_eq!(score.claim_score(), vec![2005]);
-//
-//         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
-//         assert_eq!(score.claim_score(), vec![1006, 0]);
-//     }
-// }
+#[cfg(test)]
+mod test {
+    use near_sdk::env::block_timestamp_ms;
+    use sweat_jar_model::{Day, Timezone, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC};
+
+    use crate::{
+        common::tests::Context,
+        jar::account::Account,
+        product::model::{Apy, Cap, InterestCalculator, Product, ScoreBasedProductTerms, Terms},
+        score::{account_score::Chain, AccountScore},
+        test_utils::{admin, DEFAULT_SCORE_PRODUCT_NAME},
+    };
+
+    const TIMEZONE: Timezone = Timezone::hour_shift(3);
+    const TODAY: u64 = 1722234632000;
+
+    fn generate_chain() -> Chain {
+        let today: Day = TODAY.into();
+
+        vec![
+            (1_000, today),
+            (1_000, today - (MS_IN_HOUR * 3).into()),
+            (1_000, today - (MS_IN_HOUR * 12).into()),
+            (1_000, today - (MS_IN_HOUR * 25).into()),
+            (1_000, today - (MS_IN_HOUR * 28).into()),
+            (1_000, today - (MS_IN_HOUR * 40).into()),
+            (1_000, today - (MS_IN_HOUR * 45).into()),
+            (1_000, today - (MS_IN_HOUR * 48).into()),
+            (1_000, today - (MS_IN_HOUR * 55).into()),
+            (1_000, today - (MS_IN_HOUR * 550).into()),
+        ]
+    }
+
+    #[test]
+    fn test_account_score() {
+        let mut ctx = Context::new(admin());
+        let product = generate_score_based_product();
+
+        let mut now = TODAY;
+        ctx.set_block_timestamp_in_ms(now);
+
+        let mut score = AccountScore::new(TIMEZONE);
+        score.update(generate_chain());
+        let mut account = Account {
+            score,
+            ..Account::default()
+        };
+
+        assert_eq!(0.03, product.terms.get_apy(&account).to_f32());
+
+        now += MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(now);
+        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
+
+        now += MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(now);
+        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
+
+        assert_eq!(vec![2000, 3000], account.score.reset_score());
+        assert_eq!(0.00, product.terms.get_apy(&account).to_f32());
+    }
+
+    #[test]
+    #[should_panic(expected = "Walk data from future")]
+    fn steps_from_future() {
+        let mut ctx = Context::new(admin());
+        ctx.set_block_timestamp_in_ms(TODAY);
+
+        let mut account_score = AccountScore::new(TIMEZONE);
+        account_score.update(vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())]);
+    }
+
+    #[test]
+    fn updated_on_different_days() {
+        let mut score = AccountScore {
+            updated: UTC(MS_IN_DAY * 10),
+            timezone: Timezone::hour_shift(0),
+            scores: [1000, 2000],
+            scores_history: [1000, 2000],
+        };
+
+        let mut ctx = Context::new(admin());
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
+
+        score.update(vec![(6, (MS_IN_DAY * 10).into()), (5, (MS_IN_DAY * 9).into())]);
+
+        assert_eq!(score.updated, (MS_IN_DAY * 10).into());
+        assert_eq!(score.scores(), (1006, 2005));
+        assert_eq!(score.reset_score(), vec![2005]);
+        assert_eq!(score.active_score(), 2005);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
+        assert_eq!(score.reset_score(), vec![1006, 0]);
+        assert_eq!(score.active_score(), 1006);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 12);
+        assert_eq!(score.reset_score(), vec![0, 0]);
+        assert_eq!(score.active_score(), 0);
+    }
+
+    #[test]
+    fn active_score() {
+        let score = AccountScore {
+            updated: UTC(MS_IN_DAY * 10),
+            timezone: Timezone::hour_shift(0),
+            scores: [1000, 2000],
+            scores_history: [1000, 2000],
+        };
+
+        let mut ctx = Context::new(admin());
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
+
+        assert_eq!(score.active_score(), 2000);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
+
+        assert_eq!(score.active_score(), 1000);
+
+        ctx.set_block_timestamp_in_ms(MS_IN_DAY * 12);
+
+        assert_eq!(score.active_score(), 0);
+    }
+
+    fn generate_score_based_product() -> Product {
+        Product {
+            id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
+            cap: Cap {
+                min: 0,
+                max: 100_000_000 * 10u128.pow(18),
+            },
+            terms: Terms::ScoreBased(ScoreBasedProductTerms {
+                score_cap: 20_000,
+                base_apy: Apy::Constant(UDecimal::zero()),
+                lockup_term: MS_IN_YEAR,
+            }),
+            withdrawal_fee: None,
+            public_key: None,
+            is_enabled: true,
+        }
+    }
+}

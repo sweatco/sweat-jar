@@ -73,7 +73,7 @@ struct SweatJarEvent {
 }
 
 /// `JarId` and interest to claim
-pub type ClaimEventItem = (JarId, U128);
+pub type ClaimEventItem = (ProductId, U128);
 
 /// (id, fee, amount)
 pub type WithdrawData = (ProductId, U128, U128);
@@ -188,7 +188,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.3.6");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-3.3.10");
     }
 
     #[test]
@@ -201,7 +201,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.6",
+  "version": "3.3.10",
   "event": "top_up",
   "data": {
     "id": 10,
@@ -229,7 +229,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.6",
+  "version": "3.3.10",
   "event": "create_jar",
   "data": {
     "id": 555,
@@ -246,18 +246,22 @@ mod test {
         );
 
         assert_eq!(
-            SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
+            SweatJarEvent::from(EventKind::Claim(vec![
+                ("product_id".to_string(), 1.into()),
+                ("another_product_id".to_string(), 2.into())
+            ]))
+            .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.6",
+  "version": "3.3.10",
   "event": "claim",
   "data": [
     [
-      1,
+      "product_id",
       "1"
     ],
     [
-      2,
+      "another_product_id",
       "2"
     ]
   ]
@@ -278,7 +282,7 @@ mod test {
             .to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.6",
+  "version": "3.3.10",
   "event": "record_score",
   "data": [
     {
@@ -307,7 +311,7 @@ mod test {
             SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string(),
             r#"EVENT_JSON:{
   "standard": "sweat_jar",
-  "version": "3.3.6",
+  "version": "3.3.10",
   "event": "old_score_warning",
   "data": [
     111,

@@ -1,66 +1,11 @@
 #![cfg(test)]
 
-use fake::Fake;
 use near_sdk::{
     json_types::{U128, U64},
     test_utils::test_env::alice,
 };
-use sweat_jar_model::{UDecimal, MS_IN_YEAR};
 
-use crate::{
-    common::{tests::Context, Timestamp},
-    jar::{
-        account::v1::AccountV1,
-        model::{JarTicket, JarV2},
-    },
-    product::model::{Apy, FixedProductTerms, InterestCalculator, Product, Terms},
-    test_utils::admin,
-};
-// TODO: move interest calculation tests to product module
-
-#[test]
-fn get_interest_before_maturity() {
-    let terms = Terms::Fixed(FixedProductTerms {
-        apy: Apy::Constant(UDecimal::new(12, 2)),
-        lockup_term: 2 * MS_IN_YEAR,
-    });
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
-    let account = AccountV1::default();
-
-    let (interest, _) = terms.get_interest(&account, &jar, MS_IN_YEAR);
-    assert_eq!(12_000_000, interest);
-}
-
-#[test]
-fn get_interest_after_maturity() {
-    let terms = Terms::Fixed(FixedProductTerms {
-        apy: Apy::Constant(UDecimal::new(12, 2)),
-        lockup_term: MS_IN_YEAR,
-    });
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
-    let account = AccountV1::default();
-
-    let (interest, _) = terms.get_interest(&account, &jar, 400 * 24 * 60 * 60 * 1000);
-    assert_eq!(12_000_000, interest);
-}
-
-#[test]
-fn interest_precision() {
-    let terms = Terms::Fixed(FixedProductTerms {
-        apy: Apy::Constant(UDecimal::new(1, 0)),
-        lockup_term: MS_IN_YEAR,
-    });
-    let jar = JarV2::new().with_deposit(0, u128::from(MS_IN_YEAR));
-    let account = AccountV1::default();
-
-    assert_eq!(terms.get_interest(&account, &jar, 10000000000).0, 10000000000);
-    assert_eq!(terms.get_interest(&account, &jar, 10000000001).0, 10000000001);
-
-    for _ in 0..100 {
-        let time: Timestamp = (10..MS_IN_YEAR).fake();
-        assert_eq!(terms.get_interest(&account, &jar, time).0, time as u128);
-    }
-}
+use crate::{common::tests::Context, jar::model::JarTicket, product::model::Product, test_utils::admin};
 
 #[test]
 #[should_panic(expected = "It's not possible to create new jars for this product")]

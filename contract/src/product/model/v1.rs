@@ -108,7 +108,6 @@ impl Product {
         0
     }
 
-    // TODO: should it test total principal?
     pub(crate) fn assert_cap(&self, amount: TokenAmount) {
         if self.cap.min > amount || amount > self.cap.max {
             env::panic_str(&format!(
@@ -153,6 +152,10 @@ pub(crate) trait InterestCalculator {
             .map(|deposit| {
                 let term = self.get_interest_calculation_term(account, now, since_date, deposit);
 
+                dbg!(term);
+                dbg!(deposit.principal);
+                dbg!(apy);
+
                 if term > 0 {
                     get_interest(deposit.principal, apy, term)
                 } else {
@@ -172,7 +175,6 @@ pub(crate) trait InterestCalculator {
 
     fn get_apy(&self, account: &AccountV1) -> UDecimal;
 
-    // TODO: the whole account may be redundant
     fn get_interest_calculation_term(
         &self,
         account: &AccountV1,
@@ -252,25 +254,23 @@ impl InterestCalculator for ScoreBasedProductTerms {
         let score = account.score.claimable_score();
 
         let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
+
         self.base_apy.get_effective(account.is_penalty_applied) + total_score.to_apy()
     }
 
     fn get_interest_calculation_term(
         &self,
-        account: &AccountV1,
+        _account: &AccountV1,
         now: Timestamp,
-        last_cached_at: Option<Timestamp>,
+        _last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
     ) -> Timestamp {
-        let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
-            cmp::max(cache_date, deposit.created_at)
-        });
-        let until_date = cmp::min(
-            cmp::min(now, account.score.updated.0 + MS_IN_DAY),
-            deposit.created_at + self.lockup_term,
-        );
+        let term_end = cmp::max(now, deposit.created_at + self.lockup_term);
+        if now >= term_end {
+            return 0;
+        }
 
-        until_date.saturating_sub(since_date)
+        MS_IN_DAY
     }
 }
 

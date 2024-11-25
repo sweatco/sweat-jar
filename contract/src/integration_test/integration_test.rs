@@ -4,7 +4,7 @@ use near_sdk::{env, near_bindgen, AccountId, Timestamp};
 use sweat_jar_model::{api::IntegrationTestMethods, ProductId, TokenAmount};
 
 use crate::{
-    jar::{account::v1::AccountV1, model::Deposit},
+    jar::account::v1::AccountV1,
     Contract, ContractExt,
 };
 
@@ -21,14 +21,13 @@ impl IntegrationTestMethods for Contract {
 
         let account = self.get_or_create_account_mut(&account_id);
         for i in 0..number_of_jars {
-            account.deposit_for_test(&product_id, now + i as u64, principal);
+            account.deposit(&product_id, principal, (now + i as u64).into());
         }
     }
 }
 
 impl AccountV1 {
     fn deposit_for_test(&mut self, product_id: &ProductId, timestamp: Timestamp, principal: TokenAmount) {
-        let deposit = Deposit::new(timestamp, principal);
-        self.push(product_id, deposit);
+        self.deposit(product_id, principal, timestamp);
     }
 }

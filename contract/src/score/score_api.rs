@@ -1,4 +1,7 @@
-use near_sdk::{near_bindgen, AccountId};
+use near_sdk::{
+    json_types::{I64, U128},
+    near_bindgen, AccountId,
+};
 use sweat_jar_model::{api::ScoreApi, Score, Timezone, U32, UTC};
 
 use crate::{
@@ -13,11 +16,11 @@ impl ScoreApi for Contract {
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
         self.assert_manager();
 
-        let mut event = vec![];
-
         for (account_id, _) in batch.iter() {
             self.assert_migrated(account_id);
         }
+
+        let mut event = vec![];
 
         for (account_id, new_score) in batch {
             self.update_account_cache(
@@ -28,7 +31,7 @@ impl ScoreApi for Contract {
             );
 
             let account = self.get_account_mut(&account_id);
-            account.score.try_claim_score();
+            account.score.try_reset_score();
             account.score.update(new_score.adjust(&account.score.timezone));
 
             event.push(ScoreData {
@@ -38,6 +41,18 @@ impl ScoreApi for Contract {
         }
 
         emit(EventKind::RecordScore(event));
+    }
+
+    fn get_timezone(&self, account_id: AccountId) -> Option<I64> {
+        self.accounts
+            .get(&account_id)
+            .map(|account| I64(*account.score.timezone))
+    }
+
+    fn get_score(&self, account_id: AccountId) -> Option<U128> {
+        let account = self.get_account(&account_id);
+
+        Some((account.score.active_score() as u128).into())
     }
 }
 
