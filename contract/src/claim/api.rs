@@ -43,7 +43,7 @@ impl ClaimApi for Contract {
 
         env::log_str(format!("Account {:?} has {} jars", account_id.clone(), account.jars.len()).as_str());
 
-        for (product_id, jar) in account.jars.iter() {
+        for (product_id, jar) in &account.jars {
             if jar.is_pending_withdraw {
                 continue;
             }

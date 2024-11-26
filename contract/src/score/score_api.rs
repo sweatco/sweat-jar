@@ -16,7 +16,7 @@ impl ScoreApi for Contract {
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
         self.assert_manager();
 
-        for (account_id, _) in batch.iter() {
+        for (account_id, _) in &batch {
             self.assert_migrated(account_id);
         }
 
@@ -32,7 +32,7 @@ impl ScoreApi for Contract {
 
             let account = self.get_account_mut(&account_id);
             account.score.try_reset_score();
-            account.score.update(new_score.adjust(&account.score.timezone));
+            account.score.update(new_score.adjust(account.score.timezone));
 
             event.push(ScoreData {
                 account_id,
@@ -58,12 +58,12 @@ impl ScoreApi for Contract {
 
 trait ScoreConverter {
     /// Convert Score to a User's timezone
-    fn adjust(&self, timezone: &Timezone) -> Chain;
+    fn adjust(&self, timezone: Timezone) -> Chain;
     fn to_event(&self) -> Vec<(U32, UTC)>;
 }
 
 impl ScoreConverter for Vec<(Score, UTC)> {
-    fn adjust(&self, timezone: &Timezone) -> Chain {
+    fn adjust(&self, timezone: Timezone) -> Chain {
         self.iter().map(|score| (score.0, timezone.adjust(score.1))).collect()
     }
 

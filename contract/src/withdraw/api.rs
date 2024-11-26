@@ -66,10 +66,10 @@ impl WithdrawApi for Contract {
         let fee = product.calculate_fee(amount);
 
         let request = WithdrawalRequest {
-            amount,
-            partition_index,
             product_id,
+            amount,
             fee,
+            partition_index,
         };
 
         self.transfer_withdraw(&account_id, request)
@@ -102,7 +102,7 @@ impl WithdrawApi for Contract {
             request.total_fee += fee;
         }
 
-        for request in request.requests.iter() {
+        for request in &request.requests {
             self.get_account_mut(&account_id)
                 .get_jar_mut(&request.product_id)
                 .lock();

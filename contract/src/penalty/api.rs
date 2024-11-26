@@ -31,7 +31,7 @@ impl PenaltyApi for Contract {
     fn batch_set_penalty(&mut self, account_ids: Vec<AccountId>, value: bool) {
         self.assert_manager();
 
-        for account_id in account_ids.iter() {
+        for account_id in &account_ids {
             self.assert_migrated(account_id);
             self.update_account_cache(account_id, None);
 

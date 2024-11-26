@@ -14,5 +14,6 @@ cargo clippy -p sweat_jar \
     -A clippy::needless-pass-by-value \
     -A clippy::must-use-candidate \
     -A clippy::missing_panics_doc \
+    -A clippy::explicit_deref_methods \
     \
     -D warnings

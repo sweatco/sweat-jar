@@ -20,6 +20,7 @@ pub struct JarV2 {
     pub claim_remainder: u64,
 }
 
+#[allow(clippy::option_option)]
 #[near(serializers=[json])]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
 pub struct JarV2Companion {
@@ -110,7 +111,7 @@ impl JarV2 {
         }
 
         if let Some(deposits) = &companion.deposits {
-            self.deposits = deposits.to_vec();
+            self.deposits.clone_from(deposits);
         }
 
         if let Some(is_pending_withdraw) = companion.is_pending_withdraw {

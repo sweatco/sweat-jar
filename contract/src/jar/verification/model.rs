@@ -60,10 +60,7 @@ impl Contract {
         valid_until: Timestamp,
         nonce: u32,
     ) -> String {
-        format!(
-            "{},{},{},{},{},{}",
-            contract_account_id, receiver_account_id, product_id, amount, nonce, valid_until,
-        )
+        format!("{contract_account_id},{receiver_account_id},{product_id},{amount},{nonce},{valid_until}")
     }
 
     fn verify_signature(signature: &[u8], product_public_key: &[u8], ticket_hash: &[u8]) -> bool {

@@ -48,7 +48,7 @@ impl RestakeApi for Contract {
         let mut total_mature_balance = 0;
         let mut total_fee = 0;
 
-        for (product_id, jar) in self.get_account(&account_id).jars.iter() {
+        for (product_id, jar) in &self.get_account(&account_id).jars {
             if jar.is_pending_withdraw {
                 continue;
             }
@@ -63,7 +63,7 @@ impl RestakeApi for Contract {
             }
         }
 
-        for (product_id, _) in partition_indices.iter() {
+        for (product_id, _) in &partition_indices {
             self.update_jar_cache(&account_id, product_id);
         }
 
@@ -101,6 +101,7 @@ pub(super) trait RemainderTransfer {
     fn transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
 }
 
+#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub(super) trait RemainderTransferCallback {
     fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
@@ -110,7 +111,7 @@ pub(super) trait RemainderTransferCallback {
 impl RemainderTransferCallback for Contract {
     #[private]
     fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()> {
-        for (product_id, _) in request.partitions.iter() {
+        for (product_id, _) in &request.partitions {
             self.get_account_mut(&request.account_id)
                 .get_jar_mut(product_id)
                 .unlock();
@@ -128,7 +129,7 @@ impl Contract {
     pub(super) fn clean_up_and_deposit(&mut self, request: Request) {
         let account = self.get_account_mut(&request.account_id);
 
-        for (product_id, partition_index) in request.partitions.iter() {
+        for (product_id, partition_index) in &request.partitions {
             account.get_jar_mut(product_id).clean_up_deposits(*partition_index);
         }
 

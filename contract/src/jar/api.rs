@@ -41,7 +41,7 @@ impl Contract {
         let mut detailed_amounts = HashMap::<ProductId, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
-        for (product_id, jar) in account.jars.iter() {
+        for (product_id, jar) in &account.jars {
             let product = self.get_product(product_id);
             let interest = product.terms.get_interest(account, jar, env::block_timestamp_ms()).0;
 
@@ -107,7 +107,7 @@ impl JarApi for Contract {
         self.assert_migrated(&account_id);
 
         let account = self.get_account_mut(&account_id);
-        for (_, jar) in account.jars.iter_mut() {
+        for jar in account.jars.values_mut() {
             jar.is_pending_withdraw = false;
         }
     }
@@ -117,12 +117,12 @@ impl From<&AccountLegacyV2> for AccountV1 {
     fn from(value: &AccountLegacyV2) -> Self {
         let mut account = AccountV1 {
             nonce: value.last_id,
-            jars: Default::default(),
+            jars: HashMap::default(),
             score: AccountScore::default(),
             is_penalty_applied: false,
         };
 
-        for jar in value.jars.iter() {
+        for jar in &value.jars {
             assert_not_locked_legacy(jar);
 
             account.deposit(&jar.product_id, jar.principal, jar.created_at.into());

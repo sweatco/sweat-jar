@@ -38,7 +38,7 @@ pub struct AccountV1Companion {
 
 impl Contract {
     pub(crate) fn try_get_account(&self, account_id: &AccountId) -> Option<&Account> {
-        self.accounts.get(account_id).map(|account| account.deref())
+        self.accounts.get(account_id).map(Deref::deref)
     }
 
     pub(crate) fn get_account(&self, account_id: &AccountId) -> &Account {
@@ -129,12 +129,10 @@ impl AccountV1 {
     }
 }
 
+type ProductFilter = dyn FnMut(&Product) -> bool;
+
 impl Contract {
-    pub(crate) fn update_account_cache(
-        &mut self,
-        account_id: &AccountId,
-        filter: Option<Box<dyn FnMut(&Product) -> bool>>,
-    ) {
+    pub(crate) fn update_account_cache(&mut self, account_id: &AccountId, filter: Option<Box<ProductFilter>>) {
         let now = env::block_timestamp_ms();
         let products = self.get_products(account_id, filter);
         let account = self.get_account_mut(account_id);
@@ -150,10 +148,7 @@ impl Contract {
         account.update_jar_cache(product, env::block_timestamp_ms());
     }
 
-    fn get_products<P>(&self, account_id: &AccountId, filter: Option<P>) -> Vec<Product>
-    where
-        P: FnMut(&Product) -> bool,
-    {
+    fn get_products(&self, account_id: &AccountId, filter: Option<Box<ProductFilter>>) -> Vec<Product> {
         let products = self
             .get_account(account_id)
             .jars
