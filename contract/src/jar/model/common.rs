@@ -1,10 +1,15 @@
 use near_sdk::{
-    json_types::{Base64VecU8, U128, U64},
+    json_types::{Base64VecU8, U64},
     near, AccountId,
 };
 use sweat_jar_model::{Timezone, TokenAmount};
 
-use crate::{common::Timestamp, product::model::v1::Terms, Contract};
+use crate::{
+    common::Timestamp,
+    event::{emit, EventKind::Deposit},
+    product::model::v1::Terms,
+    Contract,
+};
 
 /// The `JarTicket` struct represents a request to create a deposit jar for a corresponding product.
 ///
@@ -45,10 +50,9 @@ impl Contract {
         &mut self,
         account_id: AccountId,
         ticket: JarTicket,
-        amount: U128,
+        amount: TokenAmount,
         signature: &Option<Base64VecU8>,
     ) {
-        let amount = amount.0;
         let product_id = &ticket.product_id;
         let product = self.get_product(product_id);
 
@@ -68,5 +72,7 @@ impl Contract {
 
         let account = self.get_or_create_account_mut(&account_id);
         account.deposit(product_id, amount, None);
+
+        emit(Deposit((product_id.clone(), amount.into())));
     }
 }

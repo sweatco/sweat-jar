@@ -437,7 +437,7 @@ fn timestamps() {
             valid_until: (BASE_TIME + MS_IN_YEAR).into(),
             timezone: Some(Timezone::hour_shift(4)),
         },
-        (100_000_000 * 10u128.pow(18)).into(),
+        100_000_000.to_otto(),
         &None,
     );
 
@@ -576,7 +576,7 @@ impl Context {
                 valid_until: (self.now() + MS_IN_YEAR).into(),
                 timezone,
             },
-            amount.into(),
+            amount,
             &None,
         );
     }

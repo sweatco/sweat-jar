@@ -9,6 +9,7 @@ use sweat_jar_model::{
 
 use crate::{
     assert::assert_not_locked_legacy,
+    event::{emit, EventKind, RestakeData},
     jar::{account::v1::AccountV1, model::AccountLegacyV2, view::DetailedJarV2},
     product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
@@ -97,9 +98,12 @@ impl JarApi for Contract {
         self.assert_migrated(&env::predecessor_account_id());
 
         let result = self.restake_internal(&env::predecessor_account_id(), &self.get_product(&product_id));
-        require!(result.is_some(), "Nothing to restake");
 
-        // TODO: add event logging
+        if let Some(amount) = result {
+            emit(EventKind::Restake(RestakeData::new(product_id, amount)));
+        } else {
+            require!(result.is_some(), "Nothing to restake");
+        }
     }
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {

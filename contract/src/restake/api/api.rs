@@ -8,7 +8,11 @@ use near_sdk::{
 };
 use sweat_jar_model::{api::RestakeApi, ProductId, TokenAmount};
 
-use crate::{internal::is_promise_success, Contract, ContractExt};
+use crate::{
+    event::{emit, EventKind, EventKind::RestakeAll, RestakeAllData},
+    internal::is_promise_success,
+    Contract, ContractExt,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -42,7 +46,7 @@ impl RestakeApi for Contract {
 
         self.assert_migrated(&account_id);
 
-        // TODO: add event logging
+        let mut event_data = RestakeAllData::new(env::block_timestamp_ms(), vec![], product_id.clone(), 0, 0);
 
         let mut partition_indices: Vec<(ProductId, usize)> = vec![];
         let mut total_mature_balance = 0;
@@ -60,6 +64,7 @@ impl RestakeApi for Contract {
                 total_mature_balance += balance;
                 total_fee += product.calculate_fee(balance);
                 partition_indices.push((product_id.clone(), partition_index));
+                event_data.from.push(product_id.clone());
             }
         }
 
@@ -80,17 +85,23 @@ impl RestakeApi for Contract {
             partitions: partition_indices,
         };
 
-        if target_amount < total_mature_balance {
-            let withdrawal_amount = total_mature_balance - target_amount;
+        let withdrawal_amount = total_mature_balance - target_amount;
+
+        event_data.restaked = target_amount.into();
+        event_data.withdrawn = withdrawal_amount.into();
+        let event = RestakeAll(event_data);
+
+        if withdrawal_amount > 0 {
             let withdrawal_fee = total_fee * withdrawal_amount / total_mature_balance;
             request.withdrawal = WithdrawalDto {
                 amount: withdrawal_amount,
                 fee: withdrawal_fee,
             };
 
-            self.transfer_remainder(request)
+            self.transfer_remainder(request, event)
         } else {
             self.clean_up_and_deposit(request);
+            emit(event);
 
             Value(())
         }
@@ -98,19 +109,19 @@ impl RestakeApi for Contract {
 }
 
 pub(super) trait RemainderTransfer {
-    fn transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
+    fn transfer_remainder(&mut self, request: Request, event: EventKind) -> PromiseOrValue<()>;
 }
 
 #[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub(super) trait RemainderTransferCallback {
-    fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
+    fn after_transfer_remainder(&mut self, request: Request, event: EventKind) -> PromiseOrValue<()>;
 }
 
 #[near_bindgen]
 impl RemainderTransferCallback for Contract {
     #[private]
-    fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()> {
+    fn after_transfer_remainder(&mut self, request: Request, event: EventKind) -> PromiseOrValue<()> {
         for (product_id, _) in &request.partitions {
             self.get_account_mut(&request.account_id)
                 .get_jar_mut(product_id)
@@ -119,6 +130,7 @@ impl RemainderTransferCallback for Contract {
 
         if is_promise_success() {
             self.clean_up_and_deposit(request);
+            emit(event);
         }
 
         Value(())

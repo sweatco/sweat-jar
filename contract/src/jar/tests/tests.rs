@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use near_sdk::{
-    json_types::{U128, U64},
+    json_types::U64,
     test_utils::test_env::alice,
 };
 
@@ -22,7 +22,7 @@ fn create_jar_for_disabled_product() {
         timezone: None,
     };
 
-    context.contract().deposit(alice, ticket, U128(1_000_000), &None);
+    context.contract().deposit(alice, ticket, 1_000_000, &None);
 }
 
 #[cfg(test)]

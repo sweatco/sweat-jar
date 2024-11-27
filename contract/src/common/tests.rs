@@ -147,3 +147,20 @@ impl TokenUtils for u128 {
         self * 10u128.pow(18)
     }
 }
+
+pub trait WhitespaceTrimmer {
+    fn trim_whitespaces(&self) -> String;
+}
+
+impl WhitespaceTrimmer for &str {
+    fn trim_whitespaces(&self) -> String {
+        let words: Vec<_> = self.split_whitespace().collect();
+        words.join(" ")
+    }
+}
+
+impl WhitespaceTrimmer for String {
+    fn trim_whitespaces(&self) -> String {
+        self.as_str().trim_whitespaces()
+    }
+}
