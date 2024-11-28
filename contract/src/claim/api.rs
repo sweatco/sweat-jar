@@ -41,8 +41,6 @@ impl ClaimApi for Contract {
         let mut rollback_jars = HashMap::new();
         let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
 
-        env::log_str(format!("Account {:?} has {} jars", account_id.clone(), account.jars.len()).as_str());
-
         for (product_id, jar) in &account.jars {
             if jar.is_pending_withdraw {
                 continue;
@@ -52,8 +50,6 @@ impl ClaimApi for Contract {
 
             let product = self.get_product(product_id);
             let (interest, remainder) = product.terms.get_interest(account, jar, now);
-
-            env::log_str(format!("For jar {} claim {}", product_id.clone(), interest).as_str());
 
             if interest == 0 {
                 continue;

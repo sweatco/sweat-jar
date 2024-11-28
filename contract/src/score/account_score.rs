@@ -108,9 +108,7 @@ impl AccountScore {
 
         assert_eq!((today - self.update_day()).0, 0, "Updating scores before claiming them");
 
-        dbg!(chain.clone());
         self.update_today(chain);
-
         self.updated = block_timestamp_ms().into();
     }
 

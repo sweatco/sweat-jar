@@ -48,5 +48,5 @@ impl From<&DetailedJarV2> for Vec<JarView> {
 }
 
 pub fn create_synthetic_jar_id(product_id: ProductId, created_at: Timestamp) -> String {
-    format!("{}_{}", product_id.clone(), created_at)
+    format!("{product_id}_{created_at}")
 }
