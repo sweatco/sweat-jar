@@ -6,7 +6,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    event::{emit, EventKind},
+    event::{emit, ClaimData, EventKind},
     internal::is_promise_success,
     jar::{
         account::v1::AccountV1Companion,
@@ -40,6 +40,10 @@ impl ClaimApi for Contract {
 
         let mut rollback_jars = HashMap::new();
         let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
+        let mut event_data = ClaimData {
+            timestamp: now,
+            ..ClaimData::default()
+        };
 
         for (product_id, jar) in &account.jars {
             if jar.is_pending_withdraw {
@@ -63,6 +67,8 @@ impl ClaimApi for Contract {
         for (product_id, (interest, remainder)) in interest_per_jar {
             let jar = account.get_jar_mut(&product_id);
             jar.claim(interest, remainder, now).lock();
+
+            event_data.items.push((product_id.clone(), interest.into()));
         }
 
         let account_rollback = AccountV1Companion {
@@ -74,13 +80,7 @@ impl ClaimApi for Contract {
         account.score.try_reset_score();
 
         if accumulator.get_total().0 > 0 {
-            self.claim_interest(
-                &account_id,
-                accumulator,
-                account_rollback,
-                // TODO: add events
-                EventKind::Claim(vec![]),
-            )
+            self.claim_interest(&account_id, accumulator, account_rollback, EventKind::Claim(event_data))
         } else {
             PromiseOrValue::Value(accumulator)
         }

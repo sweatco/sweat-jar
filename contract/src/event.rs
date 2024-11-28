@@ -12,7 +12,7 @@ use crate::{common::Timestamp, env, product::model::Product, PACKAGE_NAME, VERSI
 pub enum EventKind {
     RegisterProduct(Product),
     Deposit((ProductId, U128)),
-    Claim(Vec<ClaimEventItem>),
+    Claim(ClaimData),
     Withdraw(WithdrawData),
     WithdrawAll(Vec<WithdrawData>),
     Restake(RestakeData),
@@ -36,6 +36,13 @@ struct SweatJarEvent {
 
 /// `JarId` and interest to claim
 pub type ClaimEventItem = (ProductId, U128);
+
+#[derive(Default, Debug)]
+#[near(serializers=[json])]
+pub struct ClaimData {
+    pub timestamp: Timestamp,
+    pub items: Vec<ClaimEventItem>,
+}
 
 /// (id, fee, amount)
 pub type WithdrawData = (ProductId, U128, U128);
@@ -166,7 +173,7 @@ mod test {
 
     use crate::{
         common::tests::{Context, WhitespaceTrimmer},
-        event::{EventKind, SweatJarEvent},
+        event::{ClaimData, EventKind, SweatJarEvent},
         test_utils::admin,
     };
 
@@ -179,16 +186,22 @@ mod test {
 
     #[test]
     fn event_to_string() {
-        let event = SweatJarEvent::from(EventKind::Claim(vec![
-            ("product_0".to_string(), U128(50)),
-            ("product_1".to_string(), U128(200)),
-        ]))
+        let event = SweatJarEvent::from(EventKind::Claim(ClaimData {
+            timestamp: 1234567,
+            items: vec![
+                ("product_0".to_string(), U128(50)),
+                ("product_1".to_string(), U128(200)),
+            ],
+        }))
         .to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
           "version": "3.3.10",
           "event": "claim",
-          "data": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
+          "data": {
+            "timestamp": 1234567,
+            "items": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
+          }
         }"#;
 
         assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());
