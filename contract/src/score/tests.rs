@@ -87,9 +87,6 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         let score_interest = context.interest(&alice(), score_product_id);
         let diff = regular_interest.abs_diff(score_interest);
 
-        dbg!(regular_interest);
-        dbg!(score_interest);
-
         assert!(diff <= 1, "Diff is too big {diff}");
     }
 
@@ -97,8 +94,6 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         let now = day * MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
         context.record_score(&alice(), UTC(day * MS_IN_DAY), 20_000);
-
-        dbg!(day);
 
         compare_interest(&context, &regular_product.id, &score_product.id);
 
@@ -121,7 +116,6 @@ fn same_interest_in_score_jar_as_in_const_jar() {
     );
 }
 
-// TODO: it fails with bigger deposits
 #[test]
 fn score_jar_claim_often_vs_claim_at_the_end() {
     set_test_log_events(false);
@@ -133,7 +127,7 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
         id: "score_product".to_string(),
         cap: Cap {
             min: 0,
-            max: 1_000_000_000_000_000,
+            max: 1_000_000.to_otto(),
         },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: term_in_ms,
@@ -146,8 +140,14 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
 
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
-        .with_jars(&alice(), &[(product.id.clone(), Jar::new().with_deposit(0, 100))])
-        .with_jars(&bob(), &[(product.id.clone(), Jar::new().with_deposit(0, 100))]);
+        .with_jars(
+            &alice(),
+            &[(product.id.clone(), Jar::new().with_deposit(0, 100.to_otto()))],
+        )
+        .with_jars(
+            &bob(),
+            &[(product.id.clone(), Jar::new().with_deposit(0, 100.to_otto()))],
+        );
     context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
     context.contract().get_account_mut(&bob()).score = AccountScore::new(Timezone::hour_shift(0));
 
