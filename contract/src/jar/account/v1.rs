@@ -10,7 +10,7 @@ use crate::{
     common::Timestamp,
     jar::{
         account::Account,
-        model::{Deposit, Jar, JarCache, JarCompanion},
+        model::{Deposit, Jar, JarCompanion},
     },
     product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
@@ -36,29 +36,7 @@ pub struct AccountV1Companion {
     pub is_penalty_applied: Option<bool>,
 }
 
-impl Contract {
-    pub(crate) fn try_get_account(&self, account_id: &AccountId) -> Option<&Account> {
-        self.accounts.get(account_id).map(Deref::deref)
-    }
-
-    pub(crate) fn get_account(&self, account_id: &AccountId) -> &Account {
-        self.try_get_account(account_id)
-            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
-    }
-
-    pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
-        self.accounts
-            .get_mut(account_id)
-            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
-            .deref_mut()
-    }
-
-    pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
-        self.accounts.entry(account_id.clone()).or_default()
-    }
-}
-
-impl AccountV1 {
+impl Account {
     pub(crate) fn get_jar(&self, product_id: &ProductId) -> &Jar {
         self.jars
             .get(product_id)
@@ -119,6 +97,26 @@ impl AccountV1 {
 }
 
 impl Contract {
+    pub(crate) fn try_get_account(&self, account_id: &AccountId) -> Option<&Account> {
+        self.accounts.get(account_id).map(Deref::deref)
+    }
+
+    pub(crate) fn get_account(&self, account_id: &AccountId) -> &Account {
+        self.try_get_account(account_id)
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
+    }
+
+    pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
+        self.accounts
+            .get_mut(account_id)
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
+            .deref_mut()
+    }
+
+    pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
+        self.accounts.entry(account_id.clone()).or_default()
+    }
+
     pub(crate) fn update_account_cache(&mut self, account_id: &AccountId, filter: Option<fn(&Product) -> bool>) {
         let now = env::block_timestamp_ms();
         let products = self.get_products(account_id, filter);
@@ -147,15 +145,5 @@ impl Contract {
         } else {
             products.collect()
         }
-    }
-}
-
-impl Jar {
-    pub(crate) fn update_cache(&mut self, interest: TokenAmount, remainder: u64, now: Timestamp) {
-        self.cache = Some(JarCache {
-            updated_at: now,
-            interest,
-        });
-        self.claim_remainder = remainder;
     }
 }

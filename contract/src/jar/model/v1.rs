@@ -99,6 +99,14 @@ impl Jar {
         self
     }
 
+    pub(crate) fn update_cache(&mut self, interest: TokenAmount, remainder: u64, now: Timestamp) {
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest,
+        });
+        self.claim_remainder = remainder;
+    }
+
     pub(crate) fn clean_up_deposits(&mut self, partition_index: usize) {
         if partition_index == self.deposits.len() {
             self.deposits.clear();
