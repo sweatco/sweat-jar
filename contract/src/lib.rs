@@ -10,7 +10,7 @@ use sweat_jar_model::{api::InitApi, ProductId};
 use crate::{
     jar::{
         account::versioned::AccountVersioned,
-        model::{AccountLegacyV1, AccountLegacyV2, Jar},
+        model::{AccountLegacyV1, AccountLegacyV2, JarVersionedLegacy},
     },
     product::model::v1::Product,
 };
@@ -120,7 +120,7 @@ impl Archive {
         None
     }
 
-    fn get_jars(&self, account_id: &AccountId) -> Option<Vec<Jar>> {
+    fn get_jars(&self, account_id: &AccountId) -> Option<Vec<JarVersionedLegacy>> {
         self.get_account(account_id).map(|account| account.jars)
     }
 }

@@ -3,11 +3,11 @@ use sweat_jar_model::{jar::JarView, ProductId};
 
 use crate::{
     common::Timestamp,
-    jar::model::{Jar, JarV2},
+    jar::model::{JarV2, JarVersionedLegacy},
 };
 
-impl From<Jar> for JarView {
-    fn from(value: Jar) -> Self {
+impl From<JarVersionedLegacy> for JarView {
+    fn from(value: JarVersionedLegacy) -> Self {
         Self {
             id: value.id.to_string(),
             product_id: value.product_id.clone(),
@@ -17,8 +17,8 @@ impl From<Jar> for JarView {
     }
 }
 
-impl From<&Jar> for JarView {
-    fn from(value: &Jar) -> Self {
+impl From<&JarVersionedLegacy> for JarView {
+    fn from(value: &JarVersionedLegacy) -> Self {
         Self {
             id: value.id.to_string(),
             product_id: value.product_id.clone(),

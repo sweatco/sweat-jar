@@ -10,23 +10,21 @@ use near_sdk::{
 
 use crate::jar::model::{v1::JarV1, JarLastVersion};
 
-pub type Jar = JarVersioned;
-
 #[derive(Clone, Debug, Serialize, Deserialize, BorshSerialize, PartialEq)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 #[borsh(crate = "near_sdk::borsh")]
-pub enum JarVersioned {
+pub enum JarVersionedLegacy {
     V1(JarV1),
 }
 
 /// Custom `BorshDeserialize` implementation is needed to automatically
 /// convert old versions to latest version
-impl BorshDeserialize for JarVersioned {
+impl BorshDeserialize for JarVersionedLegacy {
     fn deserialize_reader<R: Read>(reader: &mut R) -> Result<Self, Error> {
         let tag: u8 = BorshDeserialize::deserialize_reader(reader)?;
 
         let result = match tag {
-            0 => JarVersioned::V1(BorshDeserialize::deserialize_reader(reader)?),
+            0 => JarVersionedLegacy::V1(BorshDeserialize::deserialize_reader(reader)?),
             // Add new versions here:
             _ => return Err(Error::new(InvalidData, format!("Unexpected variant tag: {tag:?}"))),
         };
@@ -35,7 +33,7 @@ impl BorshDeserialize for JarVersioned {
     }
 }
 
-impl Deref for JarVersioned {
+impl Deref for JarVersionedLegacy {
     type Target = JarLastVersion;
     fn deref(&self) -> &Self::Target {
         match self {
@@ -46,7 +44,7 @@ impl Deref for JarVersioned {
     }
 }
 
-impl DerefMut for JarVersioned {
+impl DerefMut for JarVersionedLegacy {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
             Self::V1(jar) => jar,
@@ -56,7 +54,7 @@ impl DerefMut for JarVersioned {
     }
 }
 
-impl From<JarV1> for JarVersioned {
+impl From<JarV1> for JarVersionedLegacy {
     fn from(value: JarV1) -> Self {
         Self::V1(value)
     }
