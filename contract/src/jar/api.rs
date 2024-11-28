@@ -10,7 +10,7 @@ use sweat_jar_model::{
 use crate::{
     assert::assert_not_locked_legacy,
     event::{emit, EventKind, RestakeData},
-    jar::{account::v1::AccountV1, model::AccountLegacyV2, view::DetailedJarV2},
+    jar::{account::Account, model::AccountLegacyV2, view::DetailedJarV2},
     product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
     Contract, ContractExt,
@@ -38,7 +38,7 @@ impl Contract {
         Some(amount)
     }
 
-    fn get_total_interest_for_account(&self, account: &AccountV1) -> AggregatedInterestView {
+    fn get_total_interest_for_account(&self, account: &Account) -> AggregatedInterestView {
         let mut detailed_amounts = HashMap::<ProductId, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
@@ -88,7 +88,7 @@ impl JarApi for Contract {
         }
 
         if let Some(account) = self.archive.get_account(&account_id) {
-            return self.get_total_interest_for_account(&AccountV1::from(&account));
+            return self.get_total_interest_for_account(&Account::from(&account));
         }
 
         AggregatedInterestView::default()
@@ -117,9 +117,9 @@ impl JarApi for Contract {
     }
 }
 
-impl From<&AccountLegacyV2> for AccountV1 {
+impl From<&AccountLegacyV2> for Account {
     fn from(value: &AccountLegacyV2) -> Self {
-        let mut account = AccountV1 {
+        let mut account = Account {
             nonce: value.last_id,
             jars: HashMap::default(),
             score: AccountScore::default(),

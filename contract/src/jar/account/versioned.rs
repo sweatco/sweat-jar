@@ -37,7 +37,7 @@ impl BorshDeserialize for AccountVersioned {
 
 impl Default for AccountVersioned {
     fn default() -> Self {
-        Self::V1(AccountV1::default())
+        Self::V1(Account::default())
     }
 }
 

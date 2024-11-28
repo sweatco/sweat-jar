@@ -1,9 +1,9 @@
 #![cfg(feature = "integration-test")]
 
 use near_sdk::{env, near_bindgen, AccountId, Timestamp};
-use sweat_jar_model::{api::IntegrationTestMethods, ProductId, TokenAmount};
+use sweat_jar_model::{api::IntegrationTestMethods, ProductId};
 
-use crate::{jar::account::v1::AccountV1, Contract, ContractExt};
+use crate::{Contract, ContractExt};
 
 #[mutants::skip]
 #[near_bindgen]
@@ -20,11 +20,5 @@ impl IntegrationTestMethods for Contract {
         for i in 0..number_of_jars {
             account.deposit(&product_id, principal, (now + i as u64).into());
         }
-    }
-}
-
-impl AccountV1 {
-    fn deposit_for_test(&mut self, product_id: &ProductId, timestamp: Timestamp, principal: TokenAmount) {
-        self.deposit(product_id, principal, timestamp);
     }
 }

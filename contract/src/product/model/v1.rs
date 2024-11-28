@@ -7,7 +7,7 @@ use crate::{
     common::{Duration, Timestamp},
     env,
     jar::{
-        account::v1::AccountV1,
+        account::Account,
         model::{Deposit, Jar},
     },
     product::model::{
@@ -141,7 +141,7 @@ impl Product {
 
 // TODO: add tests
 pub(crate) trait InterestCalculator {
-    fn get_interest(&self, account: &AccountV1, jar: &Jar, now: Timestamp) -> (TokenAmount, u64) {
+    fn get_interest(&self, account: &Account, jar: &Jar, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
         let apy = self.get_apy(account);
         let cached_interest = jar.cache.map_or(0, |cache| cache.interest);
@@ -169,11 +169,11 @@ pub(crate) trait InterestCalculator {
         (cached_interest + interest + extra_interest, remainder)
     }
 
-    fn get_apy(&self, account: &AccountV1) -> UDecimal;
+    fn get_apy(&self, account: &Account) -> UDecimal;
 
     fn get_interest_calculation_term(
         &self,
-        account: &AccountV1,
+        account: &Account,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -181,7 +181,7 @@ pub(crate) trait InterestCalculator {
 }
 
 impl InterestCalculator for Terms {
-    fn get_apy(&self, account: &AccountV1) -> UDecimal {
+    fn get_apy(&self, account: &Account) -> UDecimal {
         match self {
             Terms::Fixed(terms) => terms.get_apy(account),
             Terms::Flexible(terms) => terms.get_apy(account),
@@ -191,7 +191,7 @@ impl InterestCalculator for Terms {
 
     fn get_interest_calculation_term(
         &self,
-        account: &AccountV1,
+        account: &Account,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -205,13 +205,13 @@ impl InterestCalculator for Terms {
 }
 
 impl InterestCalculator for FixedProductTerms {
-    fn get_apy(&self, account: &AccountV1) -> UDecimal {
+    fn get_apy(&self, account: &Account) -> UDecimal {
         self.apy.get_effective(account.is_penalty_applied)
     }
 
     fn get_interest_calculation_term(
         &self,
-        _account: &AccountV1,
+        _account: &Account,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -226,13 +226,13 @@ impl InterestCalculator for FixedProductTerms {
 }
 
 impl InterestCalculator for FlexibleProductTerms {
-    fn get_apy(&self, account: &AccountV1) -> UDecimal {
+    fn get_apy(&self, account: &Account) -> UDecimal {
         self.apy.get_effective(account.is_penalty_applied)
     }
 
     fn get_interest_calculation_term(
         &self,
-        _account: &AccountV1,
+        _account: &Account,
         now: Timestamp,
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
@@ -246,7 +246,7 @@ impl InterestCalculator for FlexibleProductTerms {
 }
 
 impl InterestCalculator for ScoreBasedProductTerms {
-    fn get_apy(&self, account: &AccountV1) -> UDecimal {
+    fn get_apy(&self, account: &Account) -> UDecimal {
         let score = account.score.claimable_score();
 
         let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
@@ -256,7 +256,7 @@ impl InterestCalculator for ScoreBasedProductTerms {
 
     fn get_interest_calculation_term(
         &self,
-        _account: &AccountV1,
+        _account: &Account,
         now: Timestamp,
         _last_cached_at: Option<Timestamp>,
         deposit: &Deposit,

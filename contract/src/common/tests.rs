@@ -13,7 +13,7 @@ use sweat_jar_model::{api::InitApi, ProductId, TokenAmount, MS_IN_DAY, MS_IN_HOU
 use crate::{
     common::Timestamp,
     jar::{
-        account::{v1::AccountV1, versioned::AccountVersioned},
+        account::{versioned::AccountVersioned, Account},
         model::Jar,
     },
     product::model::Product,
@@ -74,7 +74,7 @@ impl Context {
             return self;
         }
 
-        let mut account = AccountV1::default();
+        let mut account = Account::default();
         for (product_id, jar) in jars.iter() {
             account.jars.insert(product_id.clone(), jar.clone());
         }
