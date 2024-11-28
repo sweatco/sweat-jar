@@ -66,8 +66,8 @@ impl ClaimApi for Contract {
         }
 
         let account_rollback = AccountV1Companion {
-            score: Some(account.score),
-            jars: Some(rollback_jars),
+            score: account.score.into(),
+            jars: rollback_jars.into(),
             ..AccountV1Companion::default()
         };
 

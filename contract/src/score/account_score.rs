@@ -62,11 +62,9 @@ impl AccountScore {
         }
     }
 
-    pub fn try_reset_score(&mut self) -> Option<Vec<Score>> {
+    pub fn try_reset_score(&mut self) {
         if self.is_valid() {
-            Some(self.reset_score())
-        } else {
-            None
+            self.reset_score();
         }
     }
 

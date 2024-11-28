@@ -10,7 +10,11 @@ use sweat_jar_model::{
 use crate::{
     assert::assert_not_locked_legacy,
     event::{emit, EventKind, RestakeData},
-    jar::{account::Account, model::AccountLegacyV2, view::DetailedJarV2},
+    jar::{
+        account::{v1::AccountV1, Account},
+        model::AccountLegacyV2,
+        view::DetailedJarV2,
+    },
     product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
     Contract, ContractExt,
@@ -121,9 +125,7 @@ impl From<&AccountLegacyV2> for Account {
     fn from(value: &AccountLegacyV2) -> Self {
         let mut account = Account {
             nonce: value.last_id,
-            jars: HashMap::default(),
-            score: AccountScore::default(),
-            is_penalty_applied: false,
+            ..Account::default()
         };
 
         for jar in &value.jars {
