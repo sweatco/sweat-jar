@@ -1,43 +1,133 @@
-use near_sdk::{near, AccountId};
-use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
+use near_sdk::near;
+use sweat_jar_model::TokenAmount;
 
-use crate::{common::Timestamp, jar::model::JarCache};
+use crate::{
+    assert::assert_not_locked,
+    common::{Duration, Timestamp},
+    jar::model::JarCache,
+    product::model::Terms,
+};
 
 /// The `Jar` struct represents a deposit jar within the smart contract.
 #[near(serializers=[borsh, json])]
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub struct JarV1 {
-    /// The unique identifier for the jar.
-    pub id: JarId,
-
-    /// The account ID of the owner of the jar.
-    pub account_id: AccountId,
-
-    /// The product ID that describes the terms of the deposit associated with the jar.
-    pub product_id: ProductId,
-
-    /// The timestamp of when the jar was created, measured in milliseconds since Unix epoch.
-    pub created_at: Timestamp,
-
-    /// The principal amount of the deposit stored in the jar.
-    pub principal: TokenAmount,
-
-    /// A cached value that stores calculated interest based on the current state of the jar.
-    /// This cache is updated whenever properties that impact interest calculation change,
-    /// allowing for efficient interest calculations between state changes.
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
+pub struct Jar {
+    pub deposits: Vec<Deposit>,
     pub cache: Option<JarCache>,
-
-    /// The amount of tokens that have been claimed from the jar up to the present moment.
+    // TODO: get rid of it
     pub claimed_balance: TokenAmount,
-
-    /// Indicates whether an operation involving cross-contract calls is in progress for this jar.
     pub is_pending_withdraw: bool,
-
-    /// Indicates whether a penalty has been applied to the jar's owner due to violating product terms.
-    pub is_penalty_applied: bool,
-
-    /// Remainder of claim operation.
-    /// Needed to negate rounding error when user claims very often.
-    /// See `Jar::get_interest` method for implementation of this logic.
     pub claim_remainder: u64,
+}
+
+#[allow(clippy::option_option)]
+#[near(serializers=[json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
+pub struct JarCompanion {
+    pub deposits: Option<Vec<Deposit>>,
+    pub cache: Option<Option<JarCache>>,
+    pub claimed_balance: Option<TokenAmount>,
+    pub is_pending_withdraw: Option<bool>,
+    pub claim_remainder: Option<u64>,
+}
+
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct Deposit {
+    pub created_at: Timestamp,
+    pub principal: TokenAmount,
+}
+
+impl Deposit {
+    pub(crate) fn new(created_at: Timestamp, principal: TokenAmount) -> Self {
+        Self { created_at, principal }
+    }
+
+    pub(crate) fn is_liquid(&self, now: Timestamp, term: Duration) -> bool {
+        now - self.created_at > term
+    }
+}
+
+impl Jar {
+    pub(crate) fn get_liquid_balance(&self, terms: &Terms) -> (TokenAmount, usize) {
+        if terms.allows_early_withdrawal() {
+            let sum = self.deposits.iter().map(|deposit| deposit.principal).sum();
+            let partition_index = self.deposits.len();
+
+            (sum, partition_index)
+        } else {
+            let partition_index = self.deposits.partition_point(|deposit| terms.is_liquid(deposit));
+
+            let sum = self.deposits[..partition_index]
+                .iter()
+                .map(|deposit| deposit.principal)
+                .sum();
+
+            (sum, partition_index)
+        }
+    }
+
+    pub(crate) fn should_close(&self) -> bool {
+        self.deposits.is_empty() && self.cache.map_or(true, |cache| cache.interest == 0)
+    }
+
+    pub(crate) fn lock(&mut self) -> &mut Self {
+        self.is_pending_withdraw = true;
+
+        self
+    }
+
+    pub(crate) fn try_lock(&mut self) -> &mut Self {
+        assert_not_locked(self);
+        self.lock()
+    }
+
+    pub(crate) fn unlock(&mut self) -> &mut Self {
+        self.is_pending_withdraw = false;
+
+        self
+    }
+
+    pub(crate) fn claim(&mut self, claimed_amount: TokenAmount, remainder: u64, now: Timestamp) -> &mut Self {
+        self.claimed_balance += claimed_amount;
+        self.claim_remainder = remainder;
+        self.cache = Some(JarCache {
+            updated_at: now,
+            interest: 0,
+        });
+
+        self
+    }
+
+    pub(crate) fn clean_up_deposits(&mut self, partition_index: usize) {
+        if partition_index == self.deposits.len() {
+            self.deposits.clear();
+        } else {
+            self.deposits.drain(..partition_index);
+        }
+    }
+
+    pub(crate) fn apply(&mut self, companion: &JarCompanion) -> &mut Self {
+        if let Some(claim_remainder) = companion.claim_remainder {
+            self.claim_remainder = claim_remainder;
+        }
+
+        if let Some(claimed_balance) = companion.claimed_balance {
+            self.claimed_balance = claimed_balance;
+        }
+
+        if let Some(cache) = companion.cache {
+            self.cache = cache;
+        }
+
+        if let Some(deposits) = &companion.deposits {
+            self.deposits.clone_from(deposits);
+        }
+
+        if let Some(is_pending_withdraw) = companion.is_pending_withdraw {
+            self.is_pending_withdraw = is_pending_withdraw;
+        }
+
+        self
+    }
 }

@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap};
 
+use jar::model::JarVersionedLegacy;
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -10,7 +11,7 @@ use sweat_jar_model::{api::InitApi, ProductId};
 use crate::{
     jar::{
         account::versioned::AccountVersioned,
-        model::{AccountLegacyV1, AccountLegacyV2, JarVersionedLegacy},
+        model::{AccountLegacyV1, AccountLegacyV2},
     },
     product::model::v1::Product,
 };

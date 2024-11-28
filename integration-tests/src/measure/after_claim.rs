@@ -48,8 +48,6 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
         })
         .collect();
 
-    dbg!(&map);
-
     Ok(())
 }
 

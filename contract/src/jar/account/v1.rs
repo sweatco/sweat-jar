@@ -10,7 +10,7 @@ use crate::{
     common::Timestamp,
     jar::{
         account::{versioned::AccountVersioned, Account},
-        model::{Deposit, JarCache, JarV2, JarV2Companion},
+        model::{Deposit, Jar, JarCache, JarCompanion},
     },
     product::model::v1::{InterestCalculator, Product},
     score::AccountScore,
@@ -22,7 +22,7 @@ use crate::{
 pub struct AccountV1 {
     /// TODO: doc change for BE migration
     pub nonce: u32,
-    pub jars: HashMap<ProductId, JarV2>,
+    pub jars: HashMap<ProductId, Jar>,
     pub score: AccountScore,
     pub is_penalty_applied: bool,
 }
@@ -31,7 +31,7 @@ pub struct AccountV1 {
 #[derive(Default, Debug, PartialEq)]
 pub struct AccountV1Companion {
     pub nonce: Option<u32>,
-    pub jars: Option<HashMap<ProductId, JarV2Companion>>,
+    pub jars: Option<HashMap<ProductId, JarCompanion>>,
     pub score: Option<AccountScore>,
     pub is_penalty_applied: Option<bool>,
 }
@@ -63,13 +63,13 @@ impl Contract {
 }
 
 impl AccountV1 {
-    pub(crate) fn get_jar(&self, product_id: &ProductId) -> &JarV2 {
+    pub(crate) fn get_jar(&self, product_id: &ProductId) -> &Jar {
         self.jars
             .get(product_id)
             .unwrap_or_else(|| panic_str(format!("Jar for product {product_id} is not found").as_str()))
     }
 
-    pub(crate) fn get_jar_mut(&mut self, product_id: &ProductId) -> &mut JarV2 {
+    pub(crate) fn get_jar_mut(&mut self, product_id: &ProductId) -> &mut Jar {
         self.jars
             .get_mut(product_id)
             .unwrap_or_else(|| panic_str(format!("Jar for product {product_id} is not found").as_str()))
@@ -81,7 +81,7 @@ impl AccountV1 {
         if let Some(jar) = self.jars.get_mut(product_id) {
             jar.deposits.push(deposit);
         } else {
-            let mut jar = JarV2::default();
+            let mut jar = Jar::default();
             jar.deposits.push(deposit);
 
             self.jars.insert(product_id.clone(), jar);
@@ -161,7 +161,7 @@ impl Contract {
     }
 }
 
-impl JarV2 {
+impl Jar {
     pub(crate) fn update_cache(&mut self, interest: TokenAmount, remainder: u64, now: Timestamp) {
         self.cache = Some(JarCache {
             updated_at: now,

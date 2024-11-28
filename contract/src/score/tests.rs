@@ -18,7 +18,7 @@ use crate::{
         test_data::{set_test_future_success, set_test_log_events},
         tests::{Context, TokenUtils},
     },
-    jar::model::{JarTicket, JarV2},
+    jar::model::{Jar, JarTicket},
     product::model::{Apy, Cap, FixedProductTerms, InterestCalculator, Product, ScoreBasedProductTerms, Terms},
     score::AccountScore,
     test_utils::{admin, DEFAULT_SCORE_PRODUCT_NAME},
@@ -148,8 +148,8 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
 
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
-        .with_jars(&alice(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))])
-        .with_jars(&bob(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))]);
+        .with_jars(&alice(), &[(product.id.clone(), Jar::new().with_deposit(0, 100))])
+        .with_jars(&bob(), &[(product.id.clone(), Jar::new().with_deposit(0, 100))]);
     context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
     context.contract().get_account_mut(&bob()).score = AccountScore::new(Timezone::hour_shift(0));
 
@@ -220,7 +220,7 @@ fn interest_does_not_increase_with_no_score() {
 
     let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
         &alice(),
-        &[(product.id.clone(), JarV2::new().with_deposit(0, 100_000_000))],
+        &[(product.id.clone(), Jar::new().with_deposit(0, 100_000_000))],
     );
     context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
 
@@ -270,8 +270,8 @@ fn withdraw_score_jar() {
 
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
-        .with_jars(&alice(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))])
-        .with_jars(&bob(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))]);
+        .with_jars(&alice(), &[(product.id.clone(), Jar::new().with_deposit(0, 100))])
+        .with_jars(&bob(), &[(product.id.clone(), Jar::new().with_deposit(0, 100))]);
     context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
     context.contract().get_account_mut(&bob()).score = AccountScore::new(Timezone::hour_shift(0));
 
@@ -334,7 +334,7 @@ fn revert_scores_on_failed_claim() {
 
     let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
         &alice(),
-        &[(product.id.clone(), JarV2::new().with_deposit(0, 100_000_000))],
+        &[(product.id.clone(), Jar::new().with_deposit(0, 100_000_000))],
     );
     context.contract().get_account_mut(&alice()).score = AccountScore::new(Timezone::hour_shift(0));
 
@@ -379,7 +379,7 @@ impl Context {
         product.terms.get_interest(account, jar, self.now()).0
     }
 
-    fn jar(&self, account_id: &AccountId, product_id: &ProductId) -> JarV2 {
+    fn jar(&self, account_id: &AccountId, product_id: &ProductId) -> Jar {
         let contract = self.contract();
         let account = contract.get_account(account_id);
 
@@ -468,7 +468,7 @@ fn test_steps_history() {
     let product = generate_score_based_product();
     let mut ctx = Context::new(admin()).with_products(&[product.clone()]).with_jars(
         &alice(),
-        &[(product.id.clone(), JarV2::new().with_deposit(BASE_TIME, 100))],
+        &[(product.id.clone(), Jar::new().with_deposit(BASE_TIME, 100))],
     );
     ctx.contract().get_account_mut(&alice()).score.timezone = Timezone::hour_shift(4);
 
@@ -515,7 +515,7 @@ fn record_max_score() {
     let product = generate_score_based_product();
     let mut ctx = Context::new(admin())
         .with_products(&[product.clone()])
-        .with_jars(&alice(), &[(product.id.clone(), JarV2::new().with_deposit(0, 100))]);
+        .with_jars(&alice(), &[(product.id.clone(), Jar::new().with_deposit(0, 100))]);
     ctx.contract().get_account_mut(&alice()).score.timezone = Timezone::hour_shift(4);
 
     ctx.record_score(&alice(), UTC(0), 25000);

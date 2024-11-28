@@ -3,10 +3,7 @@
 use near_sdk::{env, near_bindgen, AccountId, Timestamp};
 use sweat_jar_model::{api::IntegrationTestMethods, ProductId, TokenAmount};
 
-use crate::{
-    jar::account::v1::AccountV1,
-    Contract, ContractExt,
-};
+use crate::{jar::account::v1::AccountV1, Contract, ContractExt};
 
 #[mutants::skip]
 #[near_bindgen]

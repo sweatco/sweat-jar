@@ -10,7 +10,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::{test_data::set_test_future_success, tests::Context, Timestamp},
-    jar::model::{Deposit, JarV2},
+    jar::model::{Deposit, Jar},
     product::model::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise},
     withdraw::api::{BulkWithdrawalRequest, WithdrawalRequest},
@@ -51,7 +51,7 @@ fn testing_product_flexible() -> Product {
     }
 }
 
-fn prepare_jar(product: &Product) -> (AccountId, JarV2, Context) {
+fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
     prepare_jar_with_deposit(product, None, None)
 }
 
@@ -59,8 +59,8 @@ fn prepare_jar_with_deposit(
     product: &Product,
     created_at: Option<Timestamp>,
     principal: Option<TokenAmount>,
-) -> (AccountId, JarV2, Context) {
-    let jar = JarV2::new().with_deposit(created_at.unwrap_or_default(), principal.unwrap_or_default());
+) -> (AccountId, Jar, Context) {
+    let jar = Jar::new().with_deposit(created_at.unwrap_or_default(), principal.unwrap_or_default());
 
     let context = Context::new(admin())
         .with_products(&[product.clone()])
@@ -343,11 +343,11 @@ fn withdraw_all() {
         .with_jars(
             &alice(),
             &[
-                (regular_product.id, JarV2::new().with_deposit(0, regular_principal)),
-                (long_term_product.id, JarV2::new().with_deposit(0, long_term_principal)),
+                (regular_product.id, Jar::new().with_deposit(0, regular_principal)),
+                (long_term_product.id, Jar::new().with_deposit(0, long_term_principal)),
                 (
                     illegal_product.id,
-                    JarV2::new().with_deposit(0, illegal_principal).lock().clone(),
+                    Jar::new().with_deposit(0, illegal_principal).lock().clone(),
                 ),
             ],
         );
@@ -375,12 +375,12 @@ fn batch_withdraw_all() {
     let term_in_days = 180;
     let product = testing_product_fixed(term_in_days);
     let deposits = [(0, 7_000_000), (MS_IN_DAY, 300_000), (2 * MS_IN_DAY, 20_000)];
-    let jar = JarV2 {
+    let jar = Jar {
         deposits: deposits
             .into_iter()
             .map(|(created_at, principal)| Deposit::new(created_at, principal))
             .collect(),
-        ..JarV2::new()
+        ..Jar::new()
     };
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])

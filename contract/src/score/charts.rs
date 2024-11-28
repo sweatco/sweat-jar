@@ -9,7 +9,7 @@ use visu::{render_chart, Graph};
 
 use crate::{
     common::{test_data::set_test_log_events, tests::Context},
-    jar::model::JarV2,
+    jar::model::Jar,
     product::model::{Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
     test_utils::{admin, DEFAULT_PRODUCT_NAME, DEFAULT_SCORE_PRODUCT_NAME},
 };
@@ -48,11 +48,11 @@ fn generate_year_data() -> (Vec<u128>, Vec<u128>) {
             &vec![
                 (
                     regular_product.id.clone(),
-                    JarV2::new().with_deposit(0, 100 * 10u128.pow(18)),
+                    Jar::new().with_deposit(0, 100 * 10u128.pow(18)),
                 ),
                 (
                     score_based_product.id.clone(),
-                    JarV2::new().with_deposit(0, 100 * 10u128.pow(18)),
+                    Jar::new().with_deposit(0, 100 * 10u128.pow(18)),
                 ),
             ],
         );
@@ -107,11 +107,11 @@ fn generate_first_week_data() -> WeekData {
         .with_products(&vec![product.clone()])
         .with_jars(
             &alice(),
-            &[(product.id.clone(), JarV2::new().with_deposit(0, 100 * 10u128.pow(18)))],
+            &[(product.id.clone(), Jar::new().with_deposit(0, 100 * 10u128.pow(18)))],
         )
         .with_jars(
             &bob(),
-            &[(product.id.clone(), JarV2::new().with_deposit(0, 100 * 10u128.pow(18)))],
+            &[(product.id.clone(), Jar::new().with_deposit(0, 100 * 10u128.pow(18)))],
         );
 
     ctx.contract().get_account_mut(&alice()).score.timezone = Timezone::hour_shift(0);

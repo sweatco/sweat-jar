@@ -8,7 +8,7 @@ use crate::{
     env,
     jar::{
         account::v1::AccountV1,
-        model::{Deposit, JarV2},
+        model::{Deposit, Jar},
     },
     product::model::{
         common::{Apy, Cap, WithdrawalFee},
@@ -141,7 +141,7 @@ impl Product {
 
 // TODO: add tests
 pub(crate) trait InterestCalculator {
-    fn get_interest(&self, account: &AccountV1, jar: &JarV2, now: Timestamp) -> (TokenAmount, u64) {
+    fn get_interest(&self, account: &AccountV1, jar: &Jar, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
         let apy = self.get_apy(account);
         let cached_interest = jar.cache.map_or(0, |cache| cache.interest);
@@ -151,10 +151,6 @@ pub(crate) trait InterestCalculator {
             .iter()
             .map(|deposit| {
                 let term = self.get_interest_calculation_term(account, now, since_date, deposit);
-
-                dbg!(term);
-                dbg!(deposit.principal);
-                dbg!(apy);
 
                 if term > 0 {
                     get_interest(deposit.principal, apy, term)

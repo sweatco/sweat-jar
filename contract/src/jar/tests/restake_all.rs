@@ -6,7 +6,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::tests::Context,
-    jar::model::JarV2,
+    jar::model::Jar,
     product::model::{Apy, FixedProductTerms, Product, Terms},
     test_utils::admin,
 };
@@ -14,7 +14,7 @@ use crate::{
 #[test]
 fn restake_all_for_single_product() {
     let product = Product::new();
-    let jar = JarV2::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 4, 100_000), (MS_IN_YEAR / 2, 100_000)]);
+    let jar = Jar::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 4, 100_000), (MS_IN_YEAR / 2, 100_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
         .with_jars(&alice(), &[(product.id.clone(), jar)]);
@@ -47,8 +47,8 @@ fn restake_all_for_different_products() {
             lockup_term: MS_IN_YEAR,
             apy: Apy::Constant(UDecimal::new(20_000, 5)),
         }));
-    let jar = JarV2::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 2, 100_000)]);
-    let another_jar = JarV2::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 2, 200_000)]);
+    let jar = Jar::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 2, 100_000)]);
+    let another_jar = Jar::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 2, 200_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone(), another_product.clone()])
         .with_jars(
@@ -90,7 +90,7 @@ fn restake_all_to_new_product() {
             lockup_term: MS_IN_YEAR,
             apy: Apy::Constant(UDecimal::new(20_000, 5)),
         }));
-    let jar = JarV2::new().with_deposits(vec![(0, 50_000), (MS_IN_YEAR / 4, 20_000)]);
+    let jar = Jar::new().with_deposits(vec![(0, 50_000), (MS_IN_YEAR / 4, 20_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone(), another_product.clone()])
         .with_jars(&alice(), &[(product.id.clone(), jar)]);
@@ -123,7 +123,7 @@ fn restake_all_to_not_existing_product() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(10_000, 5)),
     }));
-    let jar = JarV2::new().with_deposits(vec![(0, 500_000), (MS_IN_YEAR / 5, 700_000)]);
+    let jar = Jar::new().with_deposits(vec![(0, 500_000), (MS_IN_YEAR / 5, 700_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
         .with_jars(&alice(), &[(product.id.clone(), jar)]);
@@ -142,7 +142,7 @@ fn restake_all_to_disabled_product() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(7_000, 5)),
     }));
-    let jar = JarV2::new().with_deposits(vec![(0, 150_000), (MS_IN_YEAR / 3, 770_000)]);
+    let jar = Jar::new().with_deposits(vec![(0, 150_000), (MS_IN_YEAR / 3, 770_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
         .with_jars(&alice(), &[(product.id.clone(), jar)]);
@@ -163,7 +163,7 @@ fn restake_all_with_withdrawal() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(10_000, 5)),
     }));
-    let jar = JarV2::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 4, 800_000)]);
+    let jar = Jar::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 4, 800_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
         .with_jars(&alice(), &[(product.id.clone(), jar)]);

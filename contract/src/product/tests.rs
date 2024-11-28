@@ -16,7 +16,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::{tests::Context, Timestamp},
-    jar::{account::v1::AccountV1, model::JarV2},
+    jar::{account::v1::AccountV1, model::Jar},
     product::{
         helpers::MessageSigner,
         model::{Apy, DowngradableApy, FixedProductTerms, InterestCalculator, Product, Terms, WithdrawalFee},
@@ -276,7 +276,7 @@ fn get_interest_before_maturity() {
         apy: Apy::Constant(UDecimal::new(12, 2)),
         lockup_term: 2 * MS_IN_YEAR,
     });
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let account = AccountV1::default();
 
     let (interest, _) = terms.get_interest(&account, &jar, MS_IN_YEAR);
@@ -289,7 +289,7 @@ fn get_interest_after_maturity() {
         apy: Apy::Constant(UDecimal::new(12, 2)),
         lockup_term: MS_IN_YEAR,
     });
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let account = AccountV1::default();
 
     let (interest, _) = terms.get_interest(&account, &jar, 400 * 24 * 60 * 60 * 1000);
@@ -302,7 +302,7 @@ fn interest_precision() {
         apy: Apy::Constant(UDecimal::new(1, 0)),
         lockup_term: MS_IN_YEAR,
     });
-    let jar = JarV2::new().with_deposit(0, u128::from(MS_IN_YEAR));
+    let jar = Jar::new().with_deposit(0, u128::from(MS_IN_YEAR));
     let account = AccountV1::default();
 
     assert_eq!(terms.get_interest(&account, &jar, 10000000000).0, 10000000000);

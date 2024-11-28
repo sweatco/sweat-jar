@@ -55,7 +55,7 @@ mod tests {
 
     use crate::{
         common::tests::Context,
-        jar::model::{AccountLegacyV2, JarCache, JarLastVersion, JarVersionedLegacy},
+        jar::model::{AccountLegacyV2, JarCache, JarLegacyV1, JarVersionedLegacy},
         product::model::{Apy, FixedProductTerms, Product, Terms},
         test_utils::admin,
     };
@@ -77,7 +77,7 @@ mod tests {
          * --> target interest at (YEAR / 2) is 300
          */
         let jars: Vec<JarVersionedLegacy> = vec![
-            JarVersionedLegacy::V1(JarLastVersion {
+            JarVersionedLegacy::V1(JarLegacyV1 {
                 id: 0,
                 account_id: alice(),
                 product_id: product.id.clone(),
@@ -92,7 +92,7 @@ mod tests {
                 is_penalty_applied: false,
                 claim_remainder: 0,
             }),
-            JarVersionedLegacy::V1(JarLastVersion {
+            JarVersionedLegacy::V1(JarLegacyV1 {
                 id: 1,
                 account_id: alice(),
                 product_id: product.id.clone(),

@@ -1,9 +1,6 @@
 #![cfg(test)]
 
-use near_sdk::{
-    json_types::U64,
-    test_utils::test_env::alice,
-};
+use near_sdk::{json_types::U64, test_utils::test_env::alice};
 
 use crate::{common::tests::Context, jar::model::JarTicket, product::model::Product, test_utils::admin};
 

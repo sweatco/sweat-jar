@@ -3,7 +3,7 @@ use sweat_jar_model::{jar::JarView, ProductId};
 
 use crate::{
     common::Timestamp,
-    jar::model::{JarV2, JarVersionedLegacy},
+    jar::model::{Jar, JarVersionedLegacy},
 };
 
 impl From<JarVersionedLegacy> for JarView {
@@ -28,7 +28,7 @@ impl From<&JarVersionedLegacy> for JarView {
     }
 }
 
-pub(crate) struct DetailedJarV2(pub(crate) ProductId, pub(crate) JarV2);
+pub(crate) struct DetailedJarV2(pub(crate) ProductId, pub(crate) Jar);
 
 impl From<&DetailedJarV2> for Vec<JarView> {
     fn from(value: &DetailedJarV2) -> Self {

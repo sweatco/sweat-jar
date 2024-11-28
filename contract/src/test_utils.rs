@@ -7,7 +7,7 @@ use sweat_jar_model::{TokenAmount, UDecimal, MS_IN_YEAR};
 
 use crate::{
     common::Timestamp,
-    jar::model::{Deposit, JarV2},
+    jar::model::{Deposit, Jar},
     product::{
         helpers::MessageSigner,
         model::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
@@ -22,9 +22,9 @@ pub fn admin() -> AccountId {
     "admin".parse().unwrap()
 }
 
-impl JarV2 {
+impl Jar {
     pub(crate) fn new() -> Self {
-        JarV2 {
+        Jar {
             deposits: vec![],
             cache: None,
             claimed_balance: 0,

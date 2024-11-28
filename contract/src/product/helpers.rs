@@ -6,9 +6,7 @@ use ed25519_dalek::{Signer, SigningKey};
 use general_purpose::STANDARD;
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
-use sweat_jar_model::{
-    ProductId, TokenAmount, UDecimal, MS_IN_YEAR,
-};
+use sweat_jar_model::{ProductId, TokenAmount, UDecimal, MS_IN_YEAR};
 
 use crate::{
     common::tests::Context,

@@ -17,7 +17,7 @@ use sweat_jar_model::{
 use super::*;
 use crate::{
     common::test_data::set_test_log_events,
-    jar::model::JarV2,
+    jar::model::Jar,
     product::{
         helpers::MessageSigner,
         model::{Apy, DowngradableApy, FixedProductTerms, Terms},
@@ -70,7 +70,7 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -95,7 +95,7 @@ fn get_total_interest_with_single_jar_on_maturity() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -122,7 +122,7 @@ fn get_total_interest_with_single_jar_after_maturity() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -142,7 +142,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -176,7 +176,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
             }),
         }))
         .with_public_key(Some(signer.public_key()));
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -210,7 +210,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
             }),
         }))
         .with_public_key(Some(signer.public_key()));
-    let jar = JarV2::new().with_deposit(0, 100_000_000_000_000_000_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000_000_000_000_000_000);
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -255,8 +255,8 @@ fn apply_penalty_in_batch() {
         }))
         .with_public_key(Some(signer.public_key()));
 
-    let alice_jar = JarV2::new().with_deposit(0, 10_000_000_000);
-    let bob_jar = JarV2::new().with_deposit(0, 5_000_000_000);
+    let alice_jar = Jar::new().with_deposit(0, 10_000_000_000);
+    let bob_jar = Jar::new().with_deposit(0, 5_000_000_000);
 
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
@@ -298,7 +298,7 @@ fn get_interest_after_withdraw() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -319,7 +319,7 @@ fn unlock_not_by_manager() {
     let admin = admin();
 
     let product = Product::new();
-    let jar = JarV2::new().with_deposit(0, 300_000_000);
+    let jar = Jar::new().with_deposit(0, 300_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -339,7 +339,7 @@ fn unlock_by_manager() {
     let admin = admin();
 
     let product = Product::new();
-    let jar = JarV2::new().with_deposit(0, 300_000_000);
+    let jar = Jar::new().with_deposit(0, 300_000_000);
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -388,8 +388,8 @@ fn claim_often_vs_claim_once() {
 
         product.id = format!("product_{principal}_{days}_{n}");
 
-        let alice_jar = JarV2::new().with_deposit(0, principal);
-        let bob_jar = JarV2::new().with_deposit(0, principal);
+        let alice_jar = Jar::new().with_deposit(0, principal);
+        let bob_jar = Jar::new().with_deposit(0, principal);
 
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])

@@ -9,7 +9,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::{test_data::set_test_future_success, tests::Context},
-    jar::model::JarV2,
+    jar::model::Jar,
     product::model::{Apy, FixedProductTerms, InterestCalculator, Product, Terms},
     test_utils::{admin, UnwrapPromise},
 };
@@ -20,7 +20,7 @@ fn claim_total_when_nothing_to_claim() {
     let admin = admin();
 
     let product = Product::new();
-    let jar = JarV2::new().with_deposit(0, 100_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar)]);
@@ -37,7 +37,7 @@ fn claim_total_detailed_when_having_tokens() {
     let admin = admin();
 
     let product = Product::new();
-    let jar = JarV2::new().with_deposit(0, 100_000_000).with_deposit(1, 200_000_000);
+    let jar = Jar::new().with_deposit(0, 100_000_000).with_deposit(1, 200_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -69,7 +69,7 @@ fn claim_pending_withdraw_jar() {
     let admin = admin();
 
     let product = Product::new();
-    let jar = JarV2::new()
+    let jar = Jar::new()
         .with_deposit(0, 100_000_000)
         .with_deposit(1, 200_000_000)
         .with_pending_withdraw();
@@ -100,7 +100,7 @@ fn dont_delete_jar_on_all_interest_claim() {
         lockup_term: MS_IN_YEAR,
         apy: Apy::Constant(UDecimal::new(2, 1)),
     }));
-    let jar = JarV2::new().with_deposit(0, 800_000).with_deposit(MS_IN_DAY, 200_000);
+    let jar = Jar::new().with_deposit(0, 800_000).with_deposit(MS_IN_DAY, 200_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -130,7 +130,7 @@ fn claim_all_withdraw_all_and_delete_jar() {
         lockup_term,
         apy: Apy::Constant(UDecimal::new(2, 1)),
     }));
-    let jar = JarV2::new().with_deposit(0, 500_000);
+    let jar = Jar::new().with_deposit(0, 500_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -171,7 +171,7 @@ fn withdraw_all_claim_all_and_delete_jar() {
             lockup_term,
             apy: Apy::Constant(UDecimal::new(1, 1)),
         }));
-    let jar = JarV2::new().with_deposit(0, 1_500_000);
+    let jar = Jar::new().with_deposit(0, 1_500_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
@@ -208,7 +208,7 @@ fn failed_future_claim() {
             lockup_term,
             apy: Apy::Constant(UDecimal::new(2, 1)),
         }));
-    let jar = JarV2::new().with_deposit(0, 700_000);
+    let jar = Jar::new().with_deposit(0, 700_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);

@@ -10,7 +10,7 @@ use crate::{
     internal::is_promise_success,
     jar::{
         account::v1::AccountV1Companion,
-        model::{JarV2, JarV2Companion},
+        model::{Jar, JarCompanion},
     },
     product::model::v1::InterestCalculator,
     Contract, ContractExt,
@@ -208,14 +208,14 @@ fn after_claim_call(
         .after_claim(account_id, claimed_amount, account_rollback, event)
 }
 
-impl JarV2 {
-    fn to_rollback(&self) -> JarV2Companion {
-        JarV2Companion {
+impl Jar {
+    fn to_rollback(&self) -> JarCompanion {
+        JarCompanion {
             is_pending_withdraw: Some(false),
             claimed_balance: Some(self.claimed_balance),
             claim_remainder: Some(self.claim_remainder),
             cache: Some(self.cache),
-            ..JarV2Companion::default()
+            ..JarCompanion::default()
         }
     }
 }

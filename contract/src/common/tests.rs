@@ -14,7 +14,7 @@ use crate::{
     common::Timestamp,
     jar::{
         account::{v1::AccountV1, versioned::AccountVersioned},
-        model::JarV2,
+        model::Jar,
     },
     product::model::Product,
     test_utils::AfterCatchUnwind,
@@ -69,7 +69,7 @@ impl Context {
         self
     }
 
-    pub(crate) fn with_jars(self, account_id: &AccountId, jars: &[(ProductId, JarV2)]) -> Self {
+    pub(crate) fn with_jars(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
         if jars.is_empty() {
             return self;
         }
