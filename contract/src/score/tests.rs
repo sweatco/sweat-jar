@@ -67,7 +67,6 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: term_in_ms,
-            base_apy: Apy::Constant(UDecimal::zero()),
             score_cap: 12_000,
         }),
         withdrawal_fee: None,
@@ -138,7 +137,6 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
         },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: term_in_ms,
-            base_apy: Apy::Constant(UDecimal::zero()),
             score_cap: 20_000,
         }),
         withdrawal_fee: None,
@@ -210,7 +208,6 @@ fn interest_does_not_increase_with_no_score() {
         },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: term_in_ms,
-            base_apy: Apy::Constant(UDecimal::zero()),
             score_cap: 20_000,
         }),
         withdrawal_fee: None,
@@ -260,7 +257,6 @@ fn withdraw_score_jar() {
         },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: term_in_ms,
-            base_apy: Apy::Constant(UDecimal::zero()),
             score_cap: 20_000,
         }),
         withdrawal_fee: None,
@@ -324,7 +320,6 @@ fn revert_scores_on_failed_claim() {
         },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: term_in_ms,
-            base_apy: Apy::Constant(UDecimal::zero()),
             score_cap: 20_000,
         }),
         withdrawal_fee: None,
@@ -537,7 +532,6 @@ fn generate_score_based_product() -> Product {
         },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             score_cap: 20_000,
-            base_apy: Apy::Constant(UDecimal::zero()),
             lockup_term: 10 * MS_IN_DAY,
         }),
         withdrawal_fee: None,

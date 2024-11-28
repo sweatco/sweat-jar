@@ -34,7 +34,6 @@ impl From<TermsDto> for Terms {
             TermsDto::Flexible(value) => Terms::Flexible(FlexibleProductTerms { apy: value.apy.into() }),
             TermsDto::ScoreBased(value) => Terms::ScoreBased(ScoreBasedProductTerms {
                 score_cap: value.score_cap,
-                base_apy: value.base_apy.into(),
                 lockup_term: value.lockup_term.0,
             }),
         }

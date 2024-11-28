@@ -77,7 +77,6 @@ pub struct FlexibleProductTerms {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScoreBasedProductTerms {
     pub score_cap: Score,
-    pub base_apy: Apy,
     pub lockup_term: Duration,
 }
 
@@ -248,10 +247,9 @@ impl InterestCalculator for FlexibleProductTerms {
 impl InterestCalculator for ScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
         let score = account.score.claimable_score();
-
         let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
 
-        self.base_apy.get_effective(account.is_penalty_applied) + total_score.to_apy()
+        total_score.to_apy()
     }
 
     fn get_interest_calculation_term(

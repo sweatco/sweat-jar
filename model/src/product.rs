@@ -61,7 +61,6 @@ pub struct FlexibleProductTermsView {
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers=[json])]
 pub struct ScoreBasedProductTermsView {
-    pub base_apy: ApyView,
     pub lockup_term: U64,
     pub score_cap: Score,
 }
@@ -118,7 +117,6 @@ pub struct FlexibleProductTermsDto {
 #[near(serializers=[borsh, json])]
 #[derive(PartialEq, Clone, Debug)]
 pub struct ScoreBasedProductTermsDto {
-    pub base_apy: ApyDto,
     pub lockup_term: U64,
     pub score_cap: Score,
 }
@@ -178,7 +176,7 @@ impl ProductView {
         match &self.terms {
             TermsView::Fixed(value) => &value.apy,
             TermsView::Flexible(value) => &value.apy,
-            TermsView::ScoreBased(value) => &value.base_apy,
+            TermsView::ScoreBased(_) => panic!("No APY for a score based product"),
         }
     }
 }

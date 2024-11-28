@@ -337,7 +337,7 @@ impl Product {
         match &self.terms {
             Terms::Fixed(value) => &value.apy,
             Terms::Flexible(value) => &value.apy,
-            Terms::ScoreBased(value) => &value.base_apy,
+            Terms::ScoreBased(_) => panic!("No APY for a score based product"),
         }
     }
 }

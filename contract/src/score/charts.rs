@@ -29,7 +29,6 @@ fn generate_score_based_product() -> Product {
         id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: MS_IN_YEAR,
-            base_apy: Apy::Constant(UDecimal::zero()),
             score_cap: 20_000,
         }),
         ..Product::new()

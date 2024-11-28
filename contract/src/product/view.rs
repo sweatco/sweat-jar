@@ -27,7 +27,6 @@ impl From<Terms> for TermsView {
             }),
             Terms::Flexible(value) => TermsView::Flexible(FlexibleProductTermsView { apy: value.apy.into() }),
             Terms::ScoreBased(value) => TermsView::ScoreBased(ScoreBasedProductTermsView {
-                base_apy: value.base_apy.into(),
                 lockup_term: value.lockup_term.into(),
                 score_cap: value.score_cap,
             }),
