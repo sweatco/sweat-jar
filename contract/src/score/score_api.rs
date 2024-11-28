@@ -25,9 +25,7 @@ impl ScoreApi for Contract {
         for (account_id, new_score) in batch {
             self.update_account_cache(
                 &account_id,
-                Some(Box::new(|product: &Product| {
-                    matches!(product.terms, Terms::ScoreBased(_))
-                })),
+                Some(|product: &Product| matches!(product.terms, Terms::ScoreBased(_))),
             );
 
             let account = self.get_account_mut(&account_id);
