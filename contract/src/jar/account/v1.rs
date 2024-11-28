@@ -9,7 +9,7 @@ use sweat_jar_model::{ProductId, Timezone, TokenAmount};
 use crate::{
     common::Timestamp,
     jar::{
-        account::{versioned::AccountVersioned, Account},
+        account::Account,
         model::{Deposit, Jar, JarCache, JarCompanion},
     },
     product::model::v1::{InterestCalculator, Product},
@@ -54,11 +54,7 @@ impl Contract {
     }
 
     pub(crate) fn get_or_create_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
-        if !self.accounts.contains_key(account_id) {
-            self.accounts.insert(account_id.clone(), AccountVersioned::default());
-        }
-
-        self.accounts.get_mut(account_id).expect("Account is not presented")
+        self.accounts.entry(account_id.clone()).or_default()
     }
 }
 
@@ -77,15 +73,8 @@ impl AccountV1 {
 
     pub(crate) fn deposit(&mut self, product_id: &ProductId, principal: TokenAmount, time: Option<Timestamp>) {
         let deposit = Deposit::new(time.unwrap_or_else(env::block_timestamp_ms), principal);
-
-        if let Some(jar) = self.jars.get_mut(product_id) {
-            jar.deposits.push(deposit);
-        } else {
-            let mut jar = Jar::default();
-            jar.deposits.push(deposit);
-
-            self.jars.insert(product_id.clone(), jar);
-        }
+        let jar = self.jars.entry(product_id.clone()).or_default();
+        jar.deposits.push(deposit);
     }
 
     pub(crate) fn try_set_timezone(&mut self, timezone: Option<Timezone>) {
