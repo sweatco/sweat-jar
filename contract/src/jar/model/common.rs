@@ -9,7 +9,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     jar::{JarId, JarView},
-    ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
+    ProductId, ScoreRecord, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
@@ -60,7 +60,7 @@ impl JarLastVersion {
             "Applying penalty is not supported for score based jars"
         );
 
-        let (interest, remainder) = self.get_interest(&[], product, now);
+        let (interest, remainder) = self.get_interest(&ScoreRecord::default(), product, now);
 
         self.claim_remainder = remainder;
 
@@ -77,7 +77,7 @@ impl JarLastVersion {
             "Top up is not supported for score based jars"
         );
 
-        let current_interest = self.get_interest(&[], product, now).0;
+        let current_interest = self.get_interest(&ScoreRecord::default(), product, now).0;
 
         self.principal += amount;
         self.cache = Some(JarCache {
@@ -97,7 +97,7 @@ impl JarLastVersion {
         self
     }
 
-    pub(crate) fn should_be_closed(&self, score: &[Score], product: &Product, now: Timestamp) -> bool {
+    pub(crate) fn should_be_closed(&self, score: &ScoreRecord, product: &Product, now: Timestamp) -> bool {
         !product.is_flexible() && self.principal == 0 && self.get_interest(score, product, now).0 == 0
     }
 
@@ -156,8 +156,13 @@ impl JarLastVersion {
         self.get_interest_for_term(cache_interest, apy, effective_term)
     }
 
-    fn get_score_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
+    fn get_score_interest(&self, score: &ScoreRecord, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
         let cache = self.cache.map(|c| c.interest).unwrap_or_default();
+
+        // The score was updated before jars creation
+        if score.updated.0 < self.created_at {
+            return (cache, 0);
+        }
 
         if let Terms::Fixed(end_term) = &product.terms {
             let end_term = cmp::max(now, self.created_at + end_term.lockup_term);
@@ -166,11 +171,11 @@ impl JarLastVersion {
             }
         }
 
-        let apy = product.apy_for_score(score);
+        let apy = product.apy_for_score(&score.score);
         self.get_interest_for_term(cache, apy, MS_IN_DAY)
     }
 
-    pub(crate) fn get_interest(&self, score: &[Score], product: &Product, now: Timestamp) -> (TokenAmount, u64) {
+    pub(crate) fn get_interest(&self, score: &ScoreRecord, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
         if product.is_score_product() {
             self.get_score_interest(score, product, now)
         } else {

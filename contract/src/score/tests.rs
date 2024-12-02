@@ -336,11 +336,11 @@ fn timestamps() {
         .jars
         .first_mut()
         .unwrap()
-        .created_at = 1729692817027;
+        .created_at = 1729692817027; // Wed Oct 23 2024 14:13:37
 
-    ctx.set_block_timestamp_in_ms(1729694971000);
+    ctx.set_block_timestamp_in_ms(1729694971000); // Wed Oct 23 2024 14:49:31
 
-    ctx.record_score(UTC(1729592064000), 8245, alice());
+    ctx.record_score(UTC(1729592064000), 8245, alice()); // Tue Oct 22 2024 10:14:24
 
     assert_eq!(
         ctx.contract().get_total_interest(alice()).amount.total.0,
@@ -433,4 +433,30 @@ fn record_max_score() {
     ctx.set_block_timestamp_in_days(1);
 
     assert_eq!(ctx.contract().get_score_interest(alice()).unwrap().0, 65535);
+}
+
+#[test]
+fn claim_when_there_were_no_walkchains_for_some_time() {
+    const ALICE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(7), ScoreCap(18_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .build();
+
+    let mut binding = ctx.contract();
+    let account = binding.accounts.get_mut(&alice()).unwrap();
+
+    account.score.updated = 1732653318018.into(); // Tue Nov 26 2024 20:35:18
+    account.score.scores = [15100, 0];
+
+    account.jars.first_mut().unwrap().created_at = 1733139450015; // Mon Dec 02 2024 11:37:30
+
+    drop(binding);
+
+    ctx.set_block_timestamp_in_ms(1733140384365); // Mon Dec 02 2024 11:53:04
+
+    assert_eq!(ctx.contract().get_total_interest(alice()).amount.total.0, 0);
 }

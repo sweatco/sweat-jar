@@ -1,4 +1,4 @@
-use crate::UDecimal;
+use crate::{UDecimal, UTC};
 
 pub type Score = u16;
 
@@ -11,4 +11,10 @@ impl ToAPY for Score {
     fn to_apy(self) -> UDecimal {
         UDecimal::new(self.into(), 5)
     }
+}
+
+#[derive(Default)]
+pub struct ScoreRecord {
+    pub score: Vec<Score>,
+    pub updated: UTC,
 }

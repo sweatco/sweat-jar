@@ -1,6 +1,6 @@
 use std::ops::{Deref, Sub};
 
-use near_sdk::{near, Timestamp};
+use near_sdk::{env::block_timestamp_ms, near, Timestamp};
 
 use crate::MS_IN_DAY;
 
@@ -11,6 +11,12 @@ pub type Day = Local;
 #[near(serializers=[json, borsh])]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct UTC(pub Timestamp);
+
+impl Default for UTC {
+    fn default() -> Self {
+        block_timestamp_ms().into()
+    }
+}
 
 impl Deref for UTC {
     type Target = Timestamp;
