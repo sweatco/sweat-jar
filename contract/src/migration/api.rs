@@ -2,6 +2,7 @@ use near_sdk::{env, env::panic_str, near_bindgen, require};
 use sweat_jar_model::{ProductId, TokenAmount};
 
 use crate::{
+    event::{emit, EventKind},
     jar::{
         account::{versioned::AccountVersioned, Account},
         api::MigratingAccount,
@@ -24,6 +25,8 @@ impl Contract {
 
         let account = self.map_legacy_account(&account);
         self.accounts.insert(account_id.clone(), AccountVersioned::new(account));
+
+        emit(EventKind::JarsMerge(account_id));
     }
 }
 

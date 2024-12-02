@@ -23,6 +23,7 @@ pub enum EventKind {
     ChangeProductPublicKey(ChangeProductPublicKeyData),
     RecordScore(Vec<ScoreData>),
     OldScoreWarning((Score, Local)),
+    JarsMerge(AccountId),
 }
 
 #[derive(Debug)]
