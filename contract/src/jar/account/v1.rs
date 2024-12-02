@@ -63,7 +63,7 @@ impl Account {
                 self.score = AccountScore::new(timezone);
             }
             (None, false) => {
-                panic_str("Trying to create score based jar for without providing time zone");
+                panic_str("Trying to create score based jar without providing time zone");
             }
         }
     }
