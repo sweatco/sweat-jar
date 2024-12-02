@@ -41,6 +41,7 @@ pub(super) struct DepositDto {
 impl RestakeApi for Contract {
     fn restake_all(&mut self, product_id: ProductId, amount: Option<U128>) -> PromiseOrValue<()> {
         self.get_product(&product_id).assert_enabled();
+        self.get_product(&product_id).assert_restakable();
 
         let account_id = env::predecessor_account_id();
 

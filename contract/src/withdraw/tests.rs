@@ -32,6 +32,7 @@ fn testing_product_fixed(term_in_days: u64) -> Product {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     }
 }
 
@@ -48,6 +49,7 @@ fn testing_product_flexible() -> Product {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: false,
     }
 }
 

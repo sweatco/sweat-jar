@@ -38,6 +38,8 @@ pub struct Product {
 
     /// Indicates whether it's possible to create a new jar for this product.
     pub is_enabled: bool,
+
+    pub is_restakable: bool,
 }
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
@@ -117,7 +119,14 @@ impl Product {
     }
 
     pub(crate) fn assert_enabled(&self) {
-        require!(self.is_enabled, "It's not possible to create new jars for this product");
+        require!(
+            self.is_enabled,
+            "It's not possible to create new jars for this product: the product is disabled."
+        );
+    }
+
+    pub(crate) fn assert_restakable(&self) {
+        require!(self.is_enabled, "The product is not restakable.");
     }
 
     /// Check if fee in new product is not too high
@@ -310,12 +319,15 @@ impl Contract {
 
 impl From<LegacyProduct> for Product {
     fn from(value: LegacyProduct) -> Self {
-        let terms: Terms = match value.terms {
-            LegacyTerms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
-                lockup_term: terms.lockup_term,
-                apy: value.apy,
-            }),
-            LegacyTerms::Flexible => Terms::Flexible(FlexibleProductTerms { apy: value.apy }),
+        let (terms, is_restakable): (Terms, bool) = match value.terms {
+            LegacyTerms::Fixed(terms) => (
+                Terms::Fixed(FixedProductTerms {
+                    lockup_term: terms.lockup_term,
+                    apy: value.apy,
+                }),
+                terms.allows_restaking,
+            ),
+            LegacyTerms::Flexible => (Terms::Flexible(FlexibleProductTerms { apy: value.apy }), true),
         };
 
         Self {
@@ -328,6 +340,7 @@ impl From<LegacyProduct> for Product {
             withdrawal_fee: value.withdrawal_fee,
             public_key: value.public_key,
             is_enabled: value.is_enabled,
+            is_restakable,
         }
     }
 }

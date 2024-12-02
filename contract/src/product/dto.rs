@@ -20,6 +20,7 @@ impl From<ProductDto> for Product {
             withdrawal_fee: value.withdrawal_fee.map(Into::into),
             public_key: value.public_key.map(|key| key.0),
             is_enabled: value.is_enabled,
+            is_restakable: value.is_restakable,
         }
     }
 }

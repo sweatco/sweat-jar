@@ -57,6 +57,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     };
 
     let score_product = Product {
@@ -72,6 +73,7 @@ fn same_interest_in_score_jar_as_in_const_jar() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     };
 
     let mut context = Context::new(admin()).with_products(&[regular_product.clone(), score_product.clone()]);
@@ -136,6 +138,7 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     };
 
     let mut context = Context::new(admin())
@@ -213,6 +216,7 @@ fn interest_does_not_increase_with_no_score() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     };
 
     let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
@@ -262,6 +266,7 @@ fn withdraw_score_jar() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     };
 
     let mut context = Context::new(admin())
@@ -325,6 +330,7 @@ fn revert_scores_on_failed_claim() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     };
 
     let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
@@ -537,6 +543,7 @@ fn generate_score_based_product() -> Product {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     }
 }
 

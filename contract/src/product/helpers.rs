@@ -61,6 +61,7 @@ impl Product {
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
+            is_restakable: true,
         }
     }
 

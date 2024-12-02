@@ -55,7 +55,7 @@ fn restake_before_maturity() {
 }
 
 #[test]
-#[should_panic(expected = "The product is disabled")]
+#[should_panic(expected = "It's not possible to create new jars for this product: the product is disabled.")]
 fn restake_with_disabled_product() {
     let alice = alice();
     let admin = admin();

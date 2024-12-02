@@ -13,6 +13,7 @@ pub struct ProductView {
     pub terms: TermsView,
     pub withdrawal_fee: Option<WithdrawalFeeView>,
     pub is_enabled: bool,
+    pub is_restakable: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -83,6 +84,7 @@ pub struct ProductDto {
     pub withdrawal_fee: Option<WithdrawalFeeDto>,
     pub public_key: Option<Base64VecU8>,
     pub is_enabled: bool,
+    pub is_restakable: bool,
 }
 
 #[near(serializers=[borsh, json])]
@@ -130,6 +132,7 @@ impl Default for ProductDto {
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
+            is_restakable: true,
         }
     }
 }

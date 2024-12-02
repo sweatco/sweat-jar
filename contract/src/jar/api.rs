@@ -17,7 +17,8 @@ use crate::{
 
 impl Contract {
     fn restake_internal(&mut self, account_id: &AccountId, product: &Product) -> Option<TokenAmount> {
-        require!(product.is_enabled, "The product is disabled");
+        product.assert_enabled();
+        product.assert_restakable();
 
         let jar = self.get_account(account_id).get_jar(&product.id);
 
