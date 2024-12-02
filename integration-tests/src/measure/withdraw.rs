@@ -8,7 +8,6 @@ use crate::{
     context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
-        random_element::RandomElement,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
     product::RegisterProductCommand,

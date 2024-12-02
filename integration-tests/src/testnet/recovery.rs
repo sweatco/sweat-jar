@@ -67,6 +67,7 @@ fn _get_products() -> Vec<ProductDto> {
             withdrawal_fee,
             public_key: Some(pk.into()),
             is_enabled,
+            is_restakable: true,
         })
     }
 
@@ -79,15 +80,12 @@ async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) ->
         cap: (1_000_000.into(), 500_000_000_000_000_000_000_000.into()),
         terms: TermsDto::ScoreBased(ScoreBasedProductTermsDto {
             lockup_term: (MS_IN_DAY * 5).into(),
-            base_apy: ApyDto {
-                default: (0.into(), 0),
-                fallback: None,
-            },
             score_cap: 20_000,
         }),
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
+        is_restakable: true,
     })
     .with_user(manager)
     .await?;

@@ -7,7 +7,7 @@ use nitka::{
     },
     ContractCall,
 };
-use sweat_jar_model::{api::SweatJarContract, jar::JarId, Timezone};
+use sweat_jar_model::{api::SweatJarContract, Timezone};
 use sweat_model::{FungibleTokenCoreIntegration, SweatContract};
 
 trait Internal {
@@ -67,14 +67,6 @@ pub trait JarContractExtensions {
         amount: u128,
         signature: String,
         valid_until: u64,
-        ft_contract: &SweatContract<'_>,
-    ) -> ContractCall<U128>;
-
-    fn top_up(
-        &self,
-        account: &Account,
-        jar_id: JarId,
-        amount: U128,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
 
@@ -173,26 +165,6 @@ impl JarContractExtensions for SweatJarContract<'_> {
         });
 
         self.create_jar_internal(user, msg, amount, ft_contract)
-    }
-
-    fn top_up(
-        &self,
-        account: &Account,
-        jar_id: JarId,
-        amount: U128,
-        ft_contract: &SweatContract<'_>,
-    ) -> ContractCall<U128> {
-        let msg = json!({
-            "type": "top_up",
-            "data": jar_id,
-        });
-
-        println!("▶️ Top up with msg: {:?}", msg,);
-
-        ft_contract
-            .ft_transfer_call(self.contract.as_account().to_near(), amount, None, msg.to_string())
-            .deposit(NearToken::from_yoctonear(1))
-            .with_user(account)
     }
 
     fn get_signature_material(

@@ -62,6 +62,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked6Months6Percents => json!({
                 "id": "locked_6_months_6_percents",
@@ -76,6 +77,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Flexible6Months6Percents => json!({
                 "id": "flexible_6_months_6_percents",
@@ -92,7 +94,7 @@ impl RegisterProductCommand {
                     },
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
 
             RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee => json!({
@@ -112,7 +114,7 @@ impl RegisterProductCommand {
                     "data": "1000",
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked10Minutes6Percents => json!({
                 "id": "locked_10_minutes_6_percents",
@@ -127,7 +129,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked5Minutes60000Percents => json!({
                 "id": "flexible_5_minutes_60000_percents",
@@ -142,7 +144,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked10Minutes60000Percents => json!({
                 "id": "flexible_10_minutes_60000_percents",
@@ -157,7 +159,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsTopUp => json!({
                 "id": "locked_10_minutes_6_percents_top_up",
@@ -172,7 +174,7 @@ impl RegisterProductCommand {
                     }
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_fixed_withdraw_fee",
@@ -191,7 +193,7 @@ impl RegisterProductCommand {
                     "data": "1000",
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee => json!({
                 "id": "locked_10_minutes_6_percents_with_percent_withdraw_fee",
@@ -210,7 +212,7 @@ impl RegisterProductCommand {
                     "data": ["1", 2],
                 },
                 "is_enabled": true,
-                "score_cap": 0,
+                "is_restakable": true,
             }),
             RegisterProductCommand::Locked10Minutes20000ScoreCap => json!({
                 "id": "locked_10_minutes_20000_score_cap",
@@ -219,13 +221,11 @@ impl RegisterProductCommand {
                     "type": "score_based",
                     "data": {
                         "lockup_term": "600000",
-                        "base_apy": {
-                            "default": ["0", 0],
-                        },
                         "score_cap": 20000,
                     }
                 },
                 "is_enabled": true,
+                "is_restakable": true,
             }),
         }
     }
