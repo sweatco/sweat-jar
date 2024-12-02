@@ -14,8 +14,6 @@ use crate::{
 pub struct Jar {
     pub deposits: Vec<Deposit>,
     pub cache: Option<JarCache>,
-    // TODO: get rid of it
-    pub claimed_balance: TokenAmount,
     pub is_pending_withdraw: bool,
     pub claim_remainder: u64,
 }
@@ -26,7 +24,6 @@ pub struct Jar {
 pub struct JarCompanion {
     pub deposits: Option<Vec<Deposit>>,
     pub cache: Option<Option<JarCache>>,
-    pub claimed_balance: Option<TokenAmount>,
     pub is_pending_withdraw: Option<bool>,
     pub claim_remainder: Option<u64>,
 }
@@ -88,8 +85,7 @@ impl Jar {
         self
     }
 
-    pub(crate) fn claim(&mut self, claimed_amount: TokenAmount, remainder: u64, now: Timestamp) -> &mut Self {
-        self.claimed_balance += claimed_amount;
+    pub(crate) fn claim(&mut self, remainder: u64, now: Timestamp) -> &mut Self {
         self.claim_remainder = remainder;
         self.cache = Some(JarCache {
             updated_at: now,
@@ -118,10 +114,6 @@ impl Jar {
     pub(crate) fn apply(&mut self, companion: &JarCompanion) -> &mut Self {
         if let Some(claim_remainder) = companion.claim_remainder {
             self.claim_remainder = claim_remainder;
-        }
-
-        if let Some(claimed_balance) = companion.claimed_balance {
-            self.claimed_balance = claimed_balance;
         }
 
         if let Some(cache) = companion.cache {

@@ -111,8 +111,6 @@ fn dont_delete_jar_on_all_interest_claim() {
     context.contract().claim_total(None);
 
     let jar = context.contract().get_account(&alice).get_jar(&product.id).clone();
-    assert_eq!(200_000, jar.claimed_balance);
-
     let Some(ref cache) = jar.cache else { panic!() };
 
     assert_eq!(cache.interest, 0);
@@ -143,8 +141,6 @@ fn claim_all_withdraw_all_and_delete_jar() {
     assert_eq!(300_000, claimed.get_total().0);
 
     let jar = context.contract().get_account(&alice).get_jar(&product.id).clone();
-    assert_eq!(300_000, jar.claimed_balance);
-
     let Some(ref cache) = jar.cache else { panic!() };
 
     assert_eq!(cache.interest, 0);

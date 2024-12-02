@@ -66,7 +66,7 @@ impl ClaimApi for Contract {
         let account = self.get_account_mut(&account_id);
         for (product_id, (interest, remainder)) in interest_per_jar {
             let jar = account.get_jar_mut(&product_id);
-            jar.claim(interest, remainder, now).lock();
+            jar.claim(remainder, now).lock();
 
             event_data.items.push((product_id.clone(), interest.into()));
         }
@@ -208,7 +208,6 @@ impl Jar {
     fn to_rollback(&self) -> JarCompanion {
         JarCompanion {
             is_pending_withdraw: Some(false),
-            claimed_balance: Some(self.claimed_balance),
             claim_remainder: Some(self.claim_remainder),
             cache: Some(self.cache),
             ..JarCompanion::default()

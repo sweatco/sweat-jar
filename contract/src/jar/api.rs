@@ -88,7 +88,8 @@ impl JarApi for Contract {
         }
 
         if let Some(account) = self.archive.get_account(&account_id) {
-            return self.get_total_interest_for_account(&Account::from(&account));
+            let account = self.map_legacy_account(&account);
+            return self.get_total_interest_for_account(&account);
         }
 
         AggregatedInterestView::default()
@@ -117,24 +118,29 @@ impl JarApi for Contract {
     }
 }
 
-impl From<&AccountLegacyV2> for Account {
+pub(crate) type MigratingAccount = (Account, HashMap<ProductId, TokenAmount>);
+
+impl From<&AccountLegacyV2> for MigratingAccount {
     fn from(value: &AccountLegacyV2) -> Self {
         let mut account = Account {
             nonce: value.last_id,
             ..Account::default()
         };
 
+        let mut claimed_balances = HashMap::<ProductId, TokenAmount>::new();
+
         for jar in &value.jars {
             assert_not_locked_legacy(jar);
 
             account.deposit(&jar.product_id, jar.principal, jar.created_at.into());
-            account.get_jar_mut(&jar.product_id).claimed_balance += jar.claimed_balance;
+
+            *claimed_balances.entry(jar.product_id.clone()).or_insert(0) += jar.claimed_balance;
 
             if !account.is_penalty_applied {
                 account.is_penalty_applied = jar.is_penalty_applied;
             }
         }
 
-        account
+        (account, claimed_balances)
     }
 }

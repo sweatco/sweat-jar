@@ -27,7 +27,6 @@ impl Jar {
         Jar {
             deposits: vec![],
             cache: None,
-            claimed_balance: 0,
             is_pending_withdraw: false,
             claim_remainder: 0,
         }

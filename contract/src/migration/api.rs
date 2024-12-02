@@ -4,7 +4,8 @@ use sweat_jar_model::{ProductId, TokenAmount};
 use crate::{
     jar::{
         account::{versioned::AccountVersioned, Account},
-        model::JarCache,
+        api::MigratingAccount,
+        model::{AccountLegacyV2, JarCache},
     },
     product::model::InterestCalculator,
     Contract, ContractExt,
@@ -21,8 +22,15 @@ impl Contract {
 
         require!(!self.accounts.contains_key(&account_id), "Account already exists");
 
+        let account = self.map_legacy_account(&account);
+        self.accounts.insert(account_id.clone(), AccountVersioned::new(account));
+    }
+}
+
+impl Contract {
+    pub(crate) fn map_legacy_account(&self, legacy_account: &AccountLegacyV2) -> Account {
         let now = env::block_timestamp_ms();
-        let mut account = Account::from(&account);
+        let (mut account, claimed_balances) = MigratingAccount::from(legacy_account);
 
         let interest: Vec<(ProductId, TokenAmount, u64)> = account
             .jars
@@ -30,8 +38,9 @@ impl Contract {
             .map(|(product_id, jar)| {
                 let product = self.get_product(product_id);
                 let (interest, remainder) = product.terms.get_interest(&account, jar, now);
+                let claimed_balance = claimed_balances.get(product_id).copied().unwrap_or_default();
 
-                (product_id.clone(), interest - jar.claimed_balance, remainder)
+                (product_id.clone(), interest - claimed_balance, remainder)
             })
             .collect();
 
@@ -44,7 +53,7 @@ impl Contract {
             jar.claim_remainder = remainder;
         }
 
-        self.accounts.insert(account_id.clone(), AccountVersioned::new(account));
+        account
     }
 }
 
