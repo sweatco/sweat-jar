@@ -4,7 +4,7 @@ use near_sdk::{json_types::U128, test_utils::test_env::alice, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, WithdrawApi},
     claimed_amount_view::ClaimedAmountView,
-    UDecimal, U32,
+    ScoreRecord, UDecimal, U32,
 };
 
 use crate::{
@@ -44,8 +44,8 @@ fn claim_total_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&[], &product, test_duration).0;
-    let jar_1_expected_interest = jar_1.get_interest(&[], &product, test_duration).0;
+    let jar_0_expected_interest = jar_0.get_interest(&ScoreRecord::default(), &product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&ScoreRecord::default(), &product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -78,7 +78,7 @@ fn claim_pending_withdraw_jar() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&[], &product, test_duration);
+    let jar_0_expected_interest = jar_0.get_interest(&ScoreRecord::default(), &product, test_duration);
 
     context.set_block_timestamp_in_ms(test_duration);
 
