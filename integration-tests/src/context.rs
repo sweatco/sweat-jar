@@ -22,6 +22,7 @@ pub const SWEAT_JAR_LEGACY: &str = "sweat_jar_legacy";
 pub trait IntegrationContext {
     async fn manager(&mut self) -> Result<Account>;
     async fn alice(&mut self) -> Result<Account>;
+    async fn bob(&mut self) -> Result<Account>;
     async fn fee(&mut self) -> Result<Account>;
     fn sweat_jar(&self) -> SweatJarContract;
     fn sweat_jar_legacy(&self) -> SweatJarContract;
@@ -30,15 +31,19 @@ pub trait IntegrationContext {
 
 impl IntegrationContext for Context {
     async fn manager(&mut self) -> Result<Account> {
-        self.account("manager").await
+        self.account("manager_longer_name_to_be_closer_to_real").await
     }
 
     async fn alice(&mut self) -> Result<Account> {
-        self.account("alice").await
+        self.account("alice_longer_name_to_be_closer_to_real").await
+    }
+
+    async fn bob(&mut self) -> Result<Account> {
+        self.account("bob_longer_name_to_be_closer_to_real").await
     }
 
     async fn fee(&mut self) -> Result<Account> {
-        self.account("fee").await
+        self.account("fee_longer_name_to_be_closer_to_real").await
     }
 
     fn sweat_jar(&self) -> SweatJarContract {
@@ -100,7 +105,7 @@ pub(crate) async fn _prepare_contract(
     }
 
     let alice = context.alice().await?;
-    let bob = context.account("bob").await?;
+    let bob = context.bob().await?;
     let manager = context.manager().await?;
     let fee_account = context.fee().await?;
 
