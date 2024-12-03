@@ -5525,7 +5525,7 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "sweat-jar-model"
-version = "3.3.10"
+version = "3.3.14"
 dependencies = [
  "fake",
  "near-sdk 5.5.0",
@@ -5549,7 +5549,7 @@ dependencies = [
 
 [[package]]
 name = "sweat_jar"
-version = "3.3.10"
+version = "3.3.14"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

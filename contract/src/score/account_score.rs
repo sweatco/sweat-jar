@@ -4,7 +4,7 @@ use near_sdk::{
     env::{block_timestamp_ms, panic_str},
     near,
 };
-use sweat_jar_model::{Day, Local, Score, TimeHelper, Timezone, UTC};
+use sweat_jar_model::{Day, Local, Score, ScoreRecord, TimeHelper, Timezone, UTC};
 
 use crate::event::{emit, EventKind};
 
@@ -18,9 +18,9 @@ pub struct AccountScore {
     pub updated: UTC,
     pub timezone: Timezone,
     /// Scores buffer used for interest calculation. Can be invalidated on claim.
-    scores: [Score; DAYS_STORED],
+    pub scores: [Score; DAYS_STORED],
     /// Score history values used for displaying it in application. Will not be invalidated during claim.
-    scores_history: [Score; DAYS_STORED],
+    pub scores_history: [Score; DAYS_STORED],
 }
 
 impl AccountScore {
@@ -41,11 +41,16 @@ impl AccountScore {
         (self.scores[0], self.scores[1])
     }
 
-    pub fn claimable_score(&self) -> Vec<Score> {
-        if self.update_day() == self.timezone.today() {
+    pub fn claimable_score(&self) -> ScoreRecord {
+        let score = if self.update_day() == self.timezone.today() {
             vec![self.scores[1]]
         } else {
             vec![self.scores[0], self.scores[1]]
+        };
+
+        ScoreRecord {
+            score,
+            updated: self.updated,
         }
     }
 
@@ -69,11 +74,11 @@ impl AccountScore {
     }
 
     /// On claim we need to clear active scores so they aren't claimed twice or more.
-    pub fn reset_score(&mut self) -> Vec<Score> {
+    pub fn reset_score(&mut self) -> ScoreRecord {
         let today = self.timezone.today();
         let update_day = self.update_day();
 
-        let result = if today == update_day {
+        let score = if today == update_day {
             let score = self.scores[1];
             self.scores[1] = 0;
             vec![score]
@@ -94,9 +99,11 @@ impl AccountScore {
             score
         };
 
+        let updated = self.updated;
+
         self.updated = block_timestamp_ms().into();
 
-        result
+        ScoreRecord { score, updated }
     }
 
     pub fn update(&mut self, chain: Chain) {
@@ -221,7 +228,7 @@ mod test {
         ctx.set_block_timestamp_in_ms(now);
         assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
 
-        assert_eq!(vec![2000, 3000], account.score.reset_score());
+        assert_eq!(vec![2000, 3000], account.score.reset_score().score);
         assert_eq!(0.00, product.terms.get_apy(&account).to_f32());
     }
 
@@ -252,15 +259,15 @@ mod test {
 
         assert_eq!(score.updated, (MS_IN_DAY * 10).into());
         assert_eq!(score.scores(), (1006, 2005));
-        assert_eq!(score.reset_score(), vec![2005]);
+        assert_eq!(score.reset_score().score, vec![2005]);
         assert_eq!(score.active_score(), 2005);
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
-        assert_eq!(score.reset_score(), vec![1006, 0]);
+        assert_eq!(score.reset_score().score, vec![1006, 0]);
         assert_eq!(score.active_score(), 1006);
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 12);
-        assert_eq!(score.reset_score(), vec![0, 0]);
+        assert_eq!(score.reset_score().score, vec![0, 0]);
         assert_eq!(score.active_score(), 0);
     }
 

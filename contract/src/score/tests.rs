@@ -440,7 +440,7 @@ fn timestamps() {
         },
         100_000_000.to_otto(),
         &None,
-    );
+    ); // Wed Oct 23 2024 14:13:37
 
     ctx.set_block_timestamp_in_ms(TEST_TIME);
     ctx.record_score(&alice(), UTC(1729592064000), 8245);
@@ -581,4 +581,80 @@ impl Context {
             &None,
         );
     }
+}
+
+#[test]
+fn claim_when_there_were_no_walkchains_for_some_time() {
+    set_test_log_events(false);
+
+    let product = Product {
+        id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
+        cap: Cap {
+            min: 0,
+            max: 1_000_000_000 * 10u128.pow(18),
+        },
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            score_cap: 18_000,
+            lockup_term: 7 * MS_IN_DAY,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+        is_restakable: true,
+    };
+
+    let mut ctx = Context::new(admin()).with_products(&[product.clone()]);
+    // ctx.switch_account(admin());
+    // ctx.contract().deposit(
+    //     alice(),
+    //     JarTicket {
+    //         product_id: product.id.clone(),
+    //         valid_until: MS_IN_YEAR.into(),
+    //         timezone: Some(Timezone::hour_shift(0)),
+    //     },
+    //     100_000_000.to_otto(),
+    //     &None,
+    // );
+
+    // let mut binding = ctx.contract();
+    ctx.switch_account(admin());
+
+    ctx.set_block_timestamp_in_ms(1732653318018 - MS_IN_DAY);
+    ctx.contract().deposit(
+        alice(),
+        JarTicket {
+            product_id: product.id.clone(),
+            valid_until: (1733139450015 + MS_IN_YEAR).into(),
+            timezone: Some(Timezone::hour_shift(0)),
+        },
+        0,
+        &None,
+    );
+
+    ctx.set_block_timestamp_in_ms(1732653318018);
+    ctx.contract()
+        .record_score(vec![(alice(), vec![(15100, 1732653318018.into())])]);
+
+    // let account = binding.get_account_mut(&alice());
+    //
+    // account.score.updated = 1732653318018.into(); // Tue Nov 26 2024 20:35:18
+    // account.score.scores = [15100, 0];
+
+    ctx.set_block_timestamp_in_ms(1733139450015);
+    ctx.contract().deposit(
+        alice(),
+        JarTicket {
+            product_id: product.id.clone(),
+            valid_until: (1733139450015 + MS_IN_YEAR).into(),
+            timezone: None,
+        },
+        100_000_000.to_otto(),
+        &None,
+    );
+
+    // drop(binding);
+
+    ctx.set_block_timestamp_in_ms(1733140384365); // Mon Dec 02 2024 11:53:04
+
+    assert_eq!(0, ctx.contract().get_total_interest(alice()).amount.total.0);
 }

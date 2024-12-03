@@ -182,7 +182,7 @@ mod test {
     fn test_contract_version() {
         let admin = admin();
         let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.3.10");
+        assert_eq!(context.contract().contract_version(), "sweat_jar-3.3.14");
     }
 
     #[test]
@@ -197,7 +197,7 @@ mod test {
         .to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
-          "version": "3.3.10",
+          "version": "3.3.14",
           "event": "claim",
           "data": {
             "timestamp": 1234567,
@@ -210,7 +210,7 @@ mod test {
         let event = SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
-          "version": "3.3.10",
+          "version": "3.3.14",
           "event": "old_score_warning",
           "data": [ 111, 5 ]
         }"#;

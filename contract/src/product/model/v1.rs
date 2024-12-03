@@ -255,7 +255,7 @@ impl InterestCalculator for FlexibleProductTerms {
 
 impl InterestCalculator for ScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        let score = account.score.claimable_score();
+        let score = account.score.claimable_score().score;
         let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
 
         total_score.to_apy()
@@ -263,11 +263,15 @@ impl InterestCalculator for ScoreBasedProductTerms {
 
     fn get_interest_calculation_term(
         &self,
-        _account: &Account,
+        account: &Account,
         now: Timestamp,
         _last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
     ) -> Timestamp {
+        if account.score.updated.0 < deposit.created_at {
+            return 0;
+        }
+
         let term_end = cmp::max(now, deposit.created_at + self.lockup_term);
         if now >= term_end {
             return 0;
