@@ -27,7 +27,9 @@ pub trait InitApi {
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
 #[make_integration_version]
 pub trait ClaimApi {
-    /// Claims all available interest from all deposit jars belonging to the calling account.
+    /// Claims available interest from up to 100 jars with the most interest for the calling account.
+    /// If the calling account has more than 100 jars, the user will need to call this method multiple times
+    /// to claim interest from all jars.
     ///
     /// * `detailed` – An optional boolean value specifying if the method must return only total amount of claimed tokens
     ///                or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
