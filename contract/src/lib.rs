@@ -11,7 +11,7 @@ use sweat_jar_model::{api::InitApi, ProductId};
 use crate::{
     jar::{
         account::versioned::AccountVersioned,
-        model::{AccountLegacyV1, AccountLegacyV2},
+        model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3Wrapper},
     },
     product::model::v1::Product,
 };
@@ -74,6 +74,8 @@ pub(crate) enum StorageKey {
     /// Products migrated to near_sdk 5
     _ProductsLegacyV2,
     /// Score supporting products
+    ProductsLegacyV2,
+    AccountsLegacyV3,
     Products,
     Accounts,
 }
@@ -93,6 +95,7 @@ impl InitApi for Contract {
             archive: Archive {
                 accounts_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
                 accounts_v2: LookupMap::new(StorageKey::AccountsLegacyV2),
+                accounts_v3: LookupMap::new(StorageKey::AccountsLegacyV3),
             },
         }
     }
@@ -102,6 +105,7 @@ impl InitApi for Contract {
 pub struct Archive {
     pub accounts_v1: LookupMap<AccountId, AccountLegacyV1>,
     pub accounts_v2: LookupMap<AccountId, AccountLegacyV2>,
+    pub accounts_v3: LookupMap<AccountId, AccountLegacyV3Wrapper>,
 }
 
 impl Archive {

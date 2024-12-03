@@ -1,5 +1,5 @@
 use near_sdk::near;
-use sweat_jar_model::ProductId;
+use sweat_jar_model::{ProductId, Score};
 
 use crate::{
     common::Duration,
@@ -30,6 +30,9 @@ pub(crate) struct ProductLegacy {
 
     /// Indicates whether it's possible to create a new jar for this product.
     pub is_enabled: bool,
+
+    /// TODO: document 0 - non step jar
+    pub score_cap: Score,
 }
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.

@@ -4,21 +4,22 @@ use near_sdk::{collections::UnorderedMap, env, near, near_bindgen, store::Lookup
 use sweat_jar_model::{jar::JarId, ProductId};
 
 use crate::{
-    jar::model::{AccountLegacyV1, AccountLegacyV2},
+    jar::model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3Wrapper},
     product::model::{legacy::ProductLegacy, Product},
     Archive, Contract, ContractExt, StorageKey,
 };
 
 #[near]
 #[derive(PanicOnDefault)]
-pub struct ContractLegacy {
+pub struct ContractBeforeMigration {
     pub token_account_id: AccountId,
     pub fee_account_id: AccountId,
     pub manager: AccountId,
     pub products: UnorderedMap<ProductId, ProductLegacy>,
     pub last_jar_id: JarId,
-    pub account_jars_v2: LookupMap<AccountId, AccountLegacyV2>,
-    pub account_jars_v1: LookupMap<AccountId, AccountLegacyV1>,
+    pub accounts_v3: LookupMap<AccountId, AccountLegacyV3Wrapper>,
+    pub accounts_v2: LookupMap<AccountId, AccountLegacyV2>,
+    pub accounts_v1: LookupMap<AccountId, AccountLegacyV1>,
 }
 
 #[near_bindgen]
@@ -27,7 +28,7 @@ impl Contract {
     #[private]
     #[mutants::skip]
     pub fn migrate() -> Self {
-        let mut old_state: ContractLegacy = env::state_read().expect("Failed to extract old contract state.");
+        let mut old_state: ContractBeforeMigration = env::state_read().expect("Failed to extract old contract state.");
 
         let mut products: UnorderedMap<ProductId, Product> = UnorderedMap::new(StorageKey::Products);
 
@@ -45,8 +46,9 @@ impl Contract {
             accounts: LookupMap::new(StorageKey::Accounts),
             products_cache: HashMap::default().into(),
             archive: Archive {
-                accounts_v1: old_state.account_jars_v1,
-                accounts_v2: old_state.account_jars_v2,
+                accounts_v1: old_state.accounts_v1,
+                accounts_v2: old_state.accounts_v2,
+                accounts_v3: old_state.accounts_v3,
             },
         }
     }

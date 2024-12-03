@@ -12,7 +12,7 @@ use crate::{
     },
     product::model::{
         common::{Apy, Cap, WithdrawalFee},
-        legacy::{ProductLegacy as LegacyProduct, Terms as LegacyTerms},
+        legacy::{ProductLegacy, Terms as TermsLegacy},
     },
     Contract,
 };
@@ -321,17 +321,24 @@ impl Contract {
     }
 }
 
-impl From<LegacyProduct> for Product {
-    fn from(value: LegacyProduct) -> Self {
+impl From<ProductLegacy> for Product {
+    fn from(value: ProductLegacy) -> Self {
         let (terms, is_restakable): (Terms, bool) = match value.terms {
-            LegacyTerms::Fixed(terms) => (
-                Terms::Fixed(FixedProductTerms {
-                    lockup_term: terms.lockup_term,
-                    apy: value.apy,
-                }),
+            TermsLegacy::Fixed(terms) => (
+                if value.score_cap > 0 {
+                    Terms::ScoreBased(ScoreBasedProductTerms {
+                        lockup_term: terms.lockup_term,
+                        score_cap: value.score_cap,
+                    })
+                } else {
+                    Terms::Fixed(FixedProductTerms {
+                        lockup_term: terms.lockup_term,
+                        apy: value.apy,
+                    })
+                },
                 terms.allows_restaking,
             ),
-            LegacyTerms::Flexible => (Terms::Flexible(FlexibleProductTerms { apy: value.apy }), true),
+            TermsLegacy::Flexible => (Terms::Flexible(FlexibleProductTerms { apy: value.apy }), true),
         };
 
         Self {

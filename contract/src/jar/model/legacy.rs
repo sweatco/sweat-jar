@@ -11,7 +11,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
 
-use crate::{common::Timestamp, jar::model::JarCache};
+use crate::{common::Timestamp, jar::model::JarCache, score::AccountScore};
 
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -59,6 +59,58 @@ pub struct AccountLegacyV1 {
 pub struct AccountLegacyV2 {
     pub last_id: JarId,
     pub jars: Vec<JarVersionedLegacy>,
+}
+
+#[near]
+#[derive(Default, Debug, PartialEq)]
+pub struct AccountLegacyV3 {
+    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
+    pub last_id: JarId,
+    pub jars: Vec<JarVersionedLegacy>,
+    pub score: AccountScore,
+}
+
+#[derive(BorshSerialize, Debug, PartialEq)]
+#[borsh(crate = "near_sdk::borsh")]
+pub enum AccountLegacyV3Wrapper {
+    V1(AccountLegacyV3),
+}
+
+impl BorshDeserialize for AccountLegacyV3Wrapper {
+    fn deserialize_reader<R: Read>(reader: &mut R) -> Result<Self, Error> {
+        let tag: u8 = BorshDeserialize::deserialize_reader(reader)?;
+
+        let result = match tag {
+            0 => AccountLegacyV3Wrapper::V1(BorshDeserialize::deserialize_reader(reader)?),
+            // Add new versions here:
+            _ => return Err(Error::new(InvalidData, format!("Unexpected variant tag: {tag:?}"))),
+        };
+
+        Ok(result)
+    }
+}
+
+impl Default for AccountLegacyV3Wrapper {
+    fn default() -> Self {
+        Self::V1(AccountLegacyV3::default())
+    }
+}
+
+impl Deref for AccountLegacyV3Wrapper {
+    type Target = AccountLegacyV3;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::V1(account) => account,
+        }
+    }
+}
+
+impl DerefMut for AccountLegacyV3Wrapper {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            Self::V1(account) => account,
+        }
+    }
 }
 
 impl From<AccountLegacyV1> for AccountLegacyV2 {
