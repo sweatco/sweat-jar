@@ -1,23 +1,18 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{
-    json_types::U128,
-    require,
-    serde::{Deserialize, Serialize},
-    serde_json, AccountId, PromiseOrValue,
-};
+use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
 use sweat_jar_model::jar::{CeFiJar, JarId};
 
 use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde", tag = "type", content = "data", rename_all = "snake_case")]
+#[near(serializers=[json])]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
 
-    /// Represents a request to create DeFi Jars from provided CeFi Jars.
+    /// Represents a request to create `DeFi` Jars from provided `CeFi` Jars.
     Migrate(Vec<CeFiJar>),
 
     /// Represents a request to refill (top up) an existing jar using its `JarId`.
@@ -25,8 +20,7 @@ pub enum FtMessage {
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.
-#[derive(Serialize, Deserialize)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[json])]
 pub struct StakeMessage {
     /// Data of the `JarTicket` required for validating the request and specifying the product.
     ticket: JarTicket,
@@ -35,7 +29,7 @@ pub struct StakeMessage {
     signature: Option<Base64VecU8>,
 
     /// An optional account ID representing the intended owner of the created jar.
-    receiver_id: Option<crate::AccountId>,
+    receiver_id: Option<AccountId>,
 }
 
 #[near_bindgen]
@@ -74,10 +68,10 @@ mod tests {
         serde_json::json,
         test_utils::test_env::{alice, bob},
     };
-    use sweat_jar_model::{api::JarApi, U32};
+    use sweat_jar_model::{api::JarApi, UDecimal, U32};
 
     use crate::{
-        common::{tests::Context, udecimal::UDecimal},
+        common::tests::Context,
         jar::model::Jar,
         product::{
             helpers::MessageSigner,
@@ -92,14 +86,14 @@ mod tests {
         let alice = alice();
         let admin = admin();
 
-        let reference_product = Product::generate("test_product").enabled(true);
-        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
+        let product = Product::new();
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
 
         let msg = json!({
             "type": "stake",
             "data": {
                 "ticket": {
-                    "product_id": reference_product.id,
+                    "product_id": product.id,
                     "valid_until": "0",
                 }
             }
@@ -119,9 +113,9 @@ mod tests {
         let alice = alice();
         let admin = admin();
 
-        let (signer, reference_product) = generate_premium_product_context();
+        let (signer, product) = generate_premium_product_context();
 
-        let mut context = Context::new(admin).with_products(&[reference_product.clone()]);
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
 
         let ticket_amount = 1_000_000u128;
         let ticket_valid_until = 100_000_000u64;
@@ -129,7 +123,7 @@ mod tests {
             Contract::get_signature_material(
                 &context.owner,
                 &alice,
-                &reference_product.id,
+                &product.id,
                 ticket_amount,
                 ticket_valid_until,
                 None,
@@ -141,7 +135,7 @@ mod tests {
             "type": "stake",
             "data": {
                 "ticket": {
-                    "product_id": reference_product.id,
+                    "product_id": product.id,
                     "valid_until": ticket_valid_until.to_string(),
                 },
                 "signature": signature,
@@ -169,16 +163,13 @@ mod tests {
         let alice = alice();
         let admin = admin();
 
-        let reference_product = Product::generate("refillable_product")
-            .enabled(true)
-            .with_allows_top_up(true)
-            .cap(0, 1_000_000);
+        let product = Product::new().with_allows_top_up(true);
 
         let initial_jar_principal = 100;
-        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
+        let reference_jar = Jar::new(0).principal(initial_jar_principal);
 
         let mut context = Context::new(admin)
-            .with_products(&[reference_product])
+            .with_products(&[product])
             .with_jars(&[reference_jar.clone()]);
 
         let msg = json!({
@@ -202,15 +193,12 @@ mod tests {
         let alice = alice();
         let admin = admin();
 
-        let reference_product = Product::generate("not_refillable_product")
-            .enabled(true)
-            .with_allows_top_up(false)
-            .cap(0, 1_000_000);
+        let product = Product::new().with_allows_top_up(false);
 
-        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(500);
+        let reference_jar = Jar::new(0).principal(500);
 
         let mut context = Context::new(admin)
-            .with_products(&[reference_product])
+            .with_products(&[product])
             .with_jars(&[reference_jar.clone()]);
 
         let msg = json!({
@@ -227,16 +215,13 @@ mod tests {
         let alice = alice();
         let admin = admin();
 
-        let reference_product = Product::generate("flexible_product")
-            .enabled(true)
-            .flexible()
-            .cap(0, 1_000_000);
+        let product = Product::new().flexible();
 
         let initial_jar_principal = 100_000;
-        let reference_jar = Jar::generate(0, &alice, &reference_product.id).principal(initial_jar_principal);
+        let reference_jar = Jar::new(0).principal(initial_jar_principal);
 
         let mut context = Context::new(admin)
-            .with_products(&[reference_product])
+            .with_products(&[product])
             .with_jars(&[reference_jar.clone()]);
 
         let msg = json!({
@@ -261,11 +246,11 @@ mod tests {
         let bob = bob();
         let admin = admin();
 
-        let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
-        let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
+        let product = Product::new();
+        let reference_restakable_product = Product::new().id("restakable_product");
 
-        let mut context = Context::new(admin.clone())
-            .with_products(&[reference_product.clone(), reference_restakable_product.clone()]);
+        let mut context =
+            Context::new(admin.clone()).with_products(&[product.clone(), reference_restakable_product.clone()]);
 
         let amount_alice = 100;
         let amount_bob = 200;
@@ -275,7 +260,7 @@ mod tests {
                 {
                     "id": "cefi_product_1",
                     "account_id": alice,
-                    "product_id": reference_product.id,
+                    "product_id": product.id,
                     "principal": amount_alice.to_string(),
                     "created_at": "0",
                 },
@@ -309,10 +294,10 @@ mod tests {
         let alice = alice();
         let admin = admin();
 
-        let reference_product = Product::generate("product").enabled(true).cap(0, 1_000_000);
-        let reference_restakable_product = Product::generate("restakable_product").enabled(true).cap(0, 1_000_000);
+        let product = Product::new();
+        let reference_restakable_product = Product::new().id("restakable_product");
 
-        let mut context = Context::new(admin).with_products(&[reference_product.clone(), reference_restakable_product]);
+        let mut context = Context::new(admin).with_products(&[product.clone(), reference_restakable_product]);
 
         let amount_alice = 1_000;
         let msg = json!({
@@ -321,7 +306,7 @@ mod tests {
                 {
                     "id": "cefi_product_3",
                     "account_id": alice,
-                    "product_id": reference_product.id,
+                    "product_id": product.id,
                     "principal": amount_alice.to_string(),
                     "created_at": "0",
                 },
@@ -364,14 +349,13 @@ mod tests {
 
     fn generate_premium_product_context() -> (MessageSigner, Product) {
         let signer = MessageSigner::new();
-        let reference_product = Product::generate("premium")
+        let product = Product::new()
             .public_key(signer.public_key())
-            .lockup_term(365 * 24 * 60 * 60 * 1000)
             .apy(Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(20, 2),
                 fallback: UDecimal::new(10, 2),
             }));
 
-        (signer, reference_product)
+        (signer, product)
     }
 }

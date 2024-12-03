@@ -4,11 +4,11 @@ use near_sdk::{json_types::U128, test_utils::test_env::alice, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, WithdrawApi},
     claimed_amount_view::ClaimedAmountView,
-    MS_IN_YEAR, U32,
+    ScoreRecord, UDecimal, U32,
 };
 
 use crate::{
-    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal},
+    common::{test_data::set_test_future_success, tests::Context},
     jar::model::Jar,
     product::model::{Apy, Product},
     test_utils::{admin, UnwrapPromise},
@@ -19,8 +19,8 @@ fn claim_total_when_nothing_to_claim() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product();
-    let jar = Jar::generate(0, &alice, &product.id).principal(100_000_000);
+    let product = Product::new();
+    let jar = Jar::new(0).principal(100_000_000);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar]);
 
     context.switch_account(alice);
@@ -34,9 +34,9 @@ fn claim_total_detailed_when_having_tokens() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product();
-    let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
-    let jar_1 = Jar::generate(1, &alice, &product.id).principal(200_000_000);
+    let product = Product::new();
+    let jar_0 = Jar::new(0).principal(100_000_000);
+    let jar_1 = Jar::new(1).principal(200_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&[jar_0.clone(), jar_1.clone()]);
@@ -44,8 +44,8 @@ fn claim_total_detailed_when_having_tokens() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration).0;
-    let jar_1_expected_interest = jar_1.get_interest(&product, test_duration).0;
+    let jar_0_expected_interest = jar_0.get_interest(&ScoreRecord::default(), &product, test_duration).0;
+    let jar_1_expected_interest = jar_1.get_interest(&ScoreRecord::default(), &product, test_duration).0;
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -67,11 +67,9 @@ fn claim_pending_withdraw_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product();
-    let jar_0 = Jar::generate(0, &alice, &product.id).principal(100_000_000);
-    let jar_1 = Jar::generate(1, &alice, &product.id)
-        .principal(200_000_000)
-        .pending_withdraw();
+    let product = Product::new();
+    let jar_0 = Jar::new(0).principal(100_000_000);
+    let jar_1 = Jar::new(1).principal(200_000_000).pending_withdraw();
 
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
@@ -80,7 +78,7 @@ fn claim_pending_withdraw_jar() {
     let product_term = product.get_lockup_term().unwrap();
     let test_duration = product_term + 100;
 
-    let jar_0_expected_interest = jar_0.get_interest(&product, test_duration);
+    let jar_0_expected_interest = jar_0.get_interest(&ScoreRecord::default(), &product, test_duration);
 
     context.set_block_timestamp_in_ms(test_duration);
 
@@ -102,8 +100,8 @@ fn dont_delete_jar_on_all_interest_claim() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().apy(Apy::Constant(UDecimal::new(2, 1)));
+    let jar = Jar::new(0);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.set_block_timestamp_in_days(365);
@@ -126,8 +124,8 @@ fn claim_all_withdraw_all_and_delete_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().apy(Apy::Constant(UDecimal::new(2, 1)));
+    let jar = Jar::new(0);
 
     let jar_id = jar.id;
 
@@ -164,8 +162,8 @@ fn withdraw_all_claim_all_and_delete_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().apy(Apy::Constant(UDecimal::new(2, 1)));
+    let jar = Jar::new(0);
 
     let jar_id = jar.id;
 
@@ -200,8 +198,8 @@ fn failed_future_claim() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product().apy(Apy::Constant(UDecimal::new(2, 1)));
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let product = Product::new().apy(Apy::Constant(UDecimal::new(2, 1)));
+    let jar = Jar::new(0);
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
 
     context.set_block_timestamp_in_days(365);
@@ -217,11 +215,4 @@ fn failed_future_claim() {
     let jar_after_claim = context.contract().get_jar_internal(&alice, jar.id);
 
     assert_eq!(jar_before_claim, jar_after_claim);
-}
-
-fn generate_product() -> Product {
-    Product::generate("product")
-        .enabled(true)
-        .lockup_term(MS_IN_YEAR)
-        .apy(Apy::Constant(UDecimal::new(12, 2)))
 }

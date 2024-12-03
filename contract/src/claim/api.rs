@@ -1,4 +1,4 @@
-use near_sdk::{env, ext_contract, is_promise_success, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
+use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, TokenAmount, JAR_BATCH_SIZE,
 };
@@ -6,16 +6,20 @@ use sweat_jar_model::{
 use crate::{
     common::Timestamp,
     event::{emit, ClaimEventItem, EventKind},
+    internal::is_promise_success,
     jar::model::Jar,
+    score::AccountScore,
     Contract, ContractExt, JarsStorage,
 };
 
+#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub trait ClaimCallbacks {
     fn after_claim(
         &mut self,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> ClaimedAmountView;
@@ -25,7 +29,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_if_needed(&account_id);
         self.claim_jars_internal(account_id, detailed)
     }
 }
@@ -41,12 +45,18 @@ impl Contract {
 
         let account_jars = self.account_jars(&account_id);
 
+        let account_score = self.get_score_mut(&account_id);
+
+        let account_score_before_transfer = account_score.as_ref().map(|s| **s);
+
+        let score = account_score.map(AccountScore::claim_score).unwrap_or_default();
+
         let mut unlocked_jars: Vec<((TokenAmount, u64), &Jar)> = account_jars
             .iter()
             .filter(|jar| !jar.is_pending_withdraw)
             .map(|jar| {
                 let product = self.get_product(&jar.product_id);
-                (jar.get_interest(&product, now), jar)
+                (jar.get_interest(&score, &product, now), jar)
             })
             .collect();
 
@@ -62,7 +72,7 @@ impl Contract {
 
                 jar.claim_remainder = *remainder;
 
-                jar.claim(*available_interest, *available_interest, now).lock();
+                jar.claim(*available_interest, now).lock();
 
                 accumulator.add(jar.id, *available_interest);
 
@@ -75,6 +85,7 @@ impl Contract {
                 &account_id,
                 accumulator,
                 jars_to_claim.into_iter().map(|a| a.1).cloned().collect(),
+                account_score_before_transfer,
                 EventKind::Claim(event_data),
                 now,
             )
@@ -91,15 +102,17 @@ impl Contract {
         _account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
         PromiseOrValue::Value(self.after_claim_internal(
             claimed_amount,
             jars_before_transfer,
+            score_before_transfer,
             event,
             now,
-            crate::common::test_data::get_test_future_success(),
+            is_promise_success(),
         ))
     }
 
@@ -110,6 +123,7 @@ impl Contract {
         account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> PromiseOrValue<ClaimedAmountView> {
@@ -125,7 +139,13 @@ impl Contract {
 
         self.ft_contract()
             .ft_transfer(account_id, claimed_amount.get_total().0, "claim", &None)
-            .then(after_claim_call(claimed_amount, jars_before_transfer, event, now))
+            .then(after_claim_call(
+                claimed_amount,
+                jars_before_transfer,
+                score_before_transfer,
+                event,
+                now,
+            ))
             .into()
     }
 
@@ -133,6 +153,7 @@ impl Contract {
         &mut self,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
         is_promise_success: bool,
@@ -143,8 +164,13 @@ impl Contract {
                     env::panic_str(&format!("Product '{}' doesn't exist", jar_before_transfer.product_id))
                 });
 
+                let score = self
+                    .get_score(&jar_before_transfer.account_id)
+                    .map(AccountScore::claimable_score)
+                    .unwrap_or_default();
+
                 let jar = self
-                    .account_jars
+                    .accounts
                     .get_mut(&jar_before_transfer.account_id)
                     .unwrap_or_else(|| {
                         env::panic_str(&format!("Account '{}' doesn't exist", jar_before_transfer.account_id))
@@ -153,7 +179,7 @@ impl Contract {
 
                 jar.unlock();
 
-                if jar.should_be_closed(&product, now) {
+                if jar.should_be_closed(&score, &product, now) {
                     self.delete_jar(&jar_before_transfer.account_id, jar_before_transfer.id);
                 }
             }
@@ -162,11 +188,22 @@ impl Contract {
 
             claimed_amount
         } else {
-            for jar_before_transfer in jars_before_transfer {
-                let account_id = jar_before_transfer.account_id.clone();
-                let jar_id = jar_before_transfer.id;
+            let account_id = jars_before_transfer
+                .first()
+                .expect("After claim without jars")
+                .account_id
+                .clone();
 
+            for jar_before_transfer in jars_before_transfer {
+                let jar_id = jar_before_transfer.id;
                 *self.get_jar_mut_internal(&account_id, jar_id) = jar_before_transfer.unlocked();
+            }
+
+            if let Some(score) = score_before_transfer {
+                self.accounts
+                    .get_mut(&account_id)
+                    .unwrap_or_else(|| panic!("Account: {account_id} does not exist"))
+                    .score = score;
             }
 
             match claimed_amount {
@@ -184,10 +221,18 @@ impl ClaimCallbacks for Contract {
         &mut self,
         claimed_amount: ClaimedAmountView,
         jars_before_transfer: Vec<Jar>,
+        score_before_transfer: Option<AccountScore>,
         event: EventKind,
         now: Timestamp,
     ) -> ClaimedAmountView {
-        self.after_claim_internal(claimed_amount, jars_before_transfer, event, now, is_promise_success())
+        self.after_claim_internal(
+            claimed_amount,
+            jars_before_transfer,
+            score_before_transfer,
+            event,
+            now,
+            is_promise_success(),
+        )
     }
 }
 
@@ -196,10 +241,11 @@ impl ClaimCallbacks for Contract {
 fn after_claim_call(
     claimed_amount: ClaimedAmountView,
     jars_before_transfer: Vec<Jar>,
+    score_before_transfer: Option<AccountScore>,
     event: EventKind,
     now: Timestamp,
 ) -> near_sdk::Promise {
     ext_self::ext(env::current_account_id())
         .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_CLAIM)
-        .after_claim(claimed_amount, jars_before_transfer, event, now)
+        .after_claim(claimed_amount, jars_before_transfer, score_before_transfer, event, now)
 }

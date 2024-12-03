@@ -38,7 +38,11 @@ impl Contract {
             return record.jars.iter().map(|j| j.clone().into()).collect();
         }
 
-        self.account_jars
+        if let Some(record) = self.account_jars_non_versioned.get(account_id) {
+            return record.jars.clone();
+        }
+
+        self.accounts
             .get(account_id)
             .map_or(vec![], |record| record.jars.clone())
     }
@@ -61,8 +65,8 @@ impl Contract {
     }
 
     pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.migrate_account_jars_if_needed(account_id.clone());
-        let jars = self.account_jars.entry(account_id.clone()).or_default();
+        self.migrate_account_if_needed(account_id);
+        let jars = self.accounts.entry(account_id.clone()).or_default();
         jars.last_id = jar.id;
         jars.push(jar);
     }
@@ -143,4 +147,15 @@ mod test {
         let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
         assert_gas(gas_left - GAS_FOR_ASSERT_CALL - 1, || "Error message");
     }
+}
+
+#[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
+pub fn is_promise_success() -> bool {
+    near_sdk::is_promise_success()
+}
+
+#[cfg(test)]
+pub fn is_promise_success() -> bool {
+    crate::common::test_data::get_test_future_success()
 }

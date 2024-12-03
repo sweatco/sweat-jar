@@ -1,9 +1,7 @@
 use nitka::near_sdk::Timestamp;
+use sweat_jar_model::api::IntegrationTestMethodsIntegration;
 
-use crate::{
-    context::{prepare_contract, IntegrationContext},
-    jar_contract_extensions::JarContractExtensions,
-};
+use crate::context::{prepare_contract, IntegrationContext};
 
 #[tokio::test]
 #[mutants::skip]

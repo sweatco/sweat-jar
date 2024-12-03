@@ -10,11 +10,11 @@ use sweat_jar_model::{
         ApyView, DowngradableApyView, FixedProductTermsDto, ProductView, RegisterProductCommand, TermsDto, TermsView,
         WithdrawalFeeDto, WithdrawalFeeView,
     },
-    MS_IN_YEAR,
+    UDecimal, MS_IN_YEAR,
 };
 
 use crate::{
-    common::{tests::Context, udecimal::UDecimal},
+    common::tests::Context,
     product::{
         helpers::MessageSigner,
         model::{Apy, DowngradableApy, Product, Terms, WithdrawalFee},
@@ -32,21 +32,21 @@ pub(crate) fn get_register_product_command() -> RegisterProductCommand {
 #[test]
 fn disable_product_when_enabled() {
     let admin = admin();
-    let reference_product = &Product::generate("product").enabled(true);
+    let product = &Product::new();
 
-    let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
-    let mut product = context.contract().get_product(&reference_product.id);
+    let mut product = context.contract().get_product(&product.id);
     assert!(product.is_enabled);
 
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| {
-        context.contract().set_enabled(reference_product.id.to_string(), false)
+        context.contract().set_enabled(product.id.to_string(), false)
     });
 
     context.contract().products_cache.borrow_mut().clear();
 
-    product = context.contract().get_product(&reference_product.id);
+    product = context.contract().get_product(&product.id);
     assert!(!product.is_enabled);
 }
 
@@ -54,16 +54,16 @@ fn disable_product_when_enabled() {
 #[should_panic(expected = "Status matches")]
 fn enable_product_when_enabled() {
     let admin = admin();
-    let reference_product = &Product::generate("product").enabled(true);
+    let product = &Product::new();
 
-    let mut context = Context::new(admin.clone()).with_products(&[reference_product.clone()]);
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
-    let product = context.contract().get_product(&reference_product.id);
+    let product = context.contract().get_product(&product.id);
     assert!(product.is_enabled);
 
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| {
-        context.contract().set_enabled(reference_product.id.to_string(), true)
+        context.contract().set_enabled(product.id.to_string(), true)
     });
 }
 
@@ -278,11 +278,5 @@ fn assert_cap_more_than_max() {
 }
 
 fn generate_product() -> Product {
-    Product::generate("product")
-        .enabled(true)
-        .lockup_term(MS_IN_YEAR)
-        .apy(Apy::Constant(UDecimal::new(12, 2)))
-        .cap(100, 100_000_000_000)
-        .with_allows_top_up(false)
-        .with_allows_restaking(false)
+    Product::new().cap(100, 100_000_000_000)
 }

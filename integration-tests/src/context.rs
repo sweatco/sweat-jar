@@ -194,7 +194,9 @@ impl ContextHelpers for Context {
         self.sweat_jar()
             .bulk_create_jars(account.to_near(), product_id.clone(), principal, number_of_jars)
             .with_user(&manager)
-            .await
+            .await?;
+
+        Ok(())
     }
 
     async fn account_balance(&self, account: &Account) -> Result<u128> {

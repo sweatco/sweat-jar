@@ -1,15 +1,13 @@
-use anyhow::Result;
 use near_workspaces::{types::NearToken, Account};
 use nitka::{
     misc::ToNear,
     near_sdk::{
         json_types::U128,
         serde_json::{json, Value},
-        Timestamp,
     },
     ContractCall,
 };
-use sweat_jar_model::{api::SweatJarContract, jar::JarId};
+use sweat_jar_model::{api::SweatJarContract, jar::JarId, Timezone};
 use sweat_model::{FungibleTokenCoreIntegration, SweatContract};
 
 trait Internal {
@@ -53,6 +51,15 @@ pub trait JarContractExtensions {
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
 
+    fn create_step_jar(
+        &self,
+        user: &Account,
+        product_id: String,
+        amount: u128,
+        timezone: Timezone,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
+
     fn create_premium_jar(
         &self,
         user: &Account,
@@ -70,8 +77,6 @@ pub trait JarContractExtensions {
         amount: U128,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
-
-    async fn block_timestamp_ms(&self) -> Result<Timestamp>;
 
     fn get_signature_material(
         &self,
@@ -104,6 +109,35 @@ impl JarContractExtensions for SweatJarContract<'_> {
                 "ticket": {
                     "product_id": product_id,
                     "valid_until": "0",
+                }
+            }
+        });
+
+        self.create_jar_internal(user, msg, amount, ft_contract)
+    }
+
+    fn create_step_jar(
+        &self,
+        user: &Account,
+        product_id: String,
+        amount: u128,
+        timezone: Timezone,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
+        println!(
+            "▶️ Create jar(product = {:?}) for user {:?} with {:?} tokens",
+            product_id,
+            user.id(),
+            amount
+        );
+
+        let msg = json!({
+            "type": "stake",
+            "data": {
+                "ticket": {
+                    "product_id": product_id,
+                    "valid_until": "0",
+                    "timezone": timezone,
                 }
             }
         });
@@ -159,13 +193,6 @@ impl JarContractExtensions for SweatJarContract<'_> {
             .ft_transfer_call(self.contract.as_account().to_near(), amount, None, msg.to_string())
             .deposit(NearToken::from_yoctonear(1))
             .with_user(account)
-    }
-
-    async fn block_timestamp_ms(&self) -> anyhow::Result<Timestamp> {
-        println!("▶️ block_timestamp_ms");
-        let result = self.contract.view("block_timestamp_ms").await?.json()?;
-        println!("   ✅ {:?}", result);
-        Ok(result)
     }
 
     fn get_signature_material(

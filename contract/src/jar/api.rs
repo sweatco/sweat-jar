@@ -10,6 +10,7 @@ use sweat_jar_model::{
 use crate::{
     event::{emit, EventKind},
     jar::model::Jar,
+    score::AccountScore,
     Contract, ContractExt, JarsStorage,
 };
 
@@ -46,8 +47,13 @@ impl Contract {
             now,
         );
 
-        let withdraw_jar = jar.withdrawn(&product, principal, now);
-        let should_be_closed = withdraw_jar.should_be_closed(&product, now);
+        let score = self
+            .get_score(&account_id)
+            .map(AccountScore::claimable_score)
+            .unwrap_or_default();
+
+        let withdraw_jar = jar.withdrawn(&score, &product, principal, now);
+        let should_be_closed = withdraw_jar.should_be_closed(&score, &product, now);
 
         if should_be_closed {
             self.delete_jar(&withdraw_jar.account_id, withdraw_jar.id);
@@ -78,7 +84,19 @@ impl JarApi for Contract {
 
             return jar.into();
         }
-        self.account_jars
+
+        if let Some(record) = self.account_jars_non_versioned.get(&account_id) {
+            let jar: Jar = record
+                .jars
+                .iter()
+                .find(|jar| jar.id == jar_id.0)
+                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
+                .clone();
+
+            return jar.into();
+        }
+
+        self.accounts
             .get(&account_id)
             .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")))
             .get_jar(jar_id.0)
@@ -127,10 +145,15 @@ impl JarApi for Contract {
         let mut detailed_amounts = HashMap::<JarIdView, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
+        let score = self
+            .get_score(&account_id)
+            .map(AccountScore::claimable_score)
+            .unwrap_or_default();
+
         for jar in self.account_jars_with_ids(&account_id, &jar_ids) {
             let product = self.get_product(&jar.product_id);
 
-            let interest = jar.get_interest(&product, now).0;
+            let interest = jar.get_interest(&score, &product, now).0;
 
             detailed_amounts.insert(U32(jar.id), U128(interest));
             total_amount += interest;
@@ -146,7 +169,7 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
-        self.migrate_account_jars_if_needed(env::predecessor_account_id());
+        self.migrate_account_if_needed(&env::predecessor_account_id());
         let (old_id, jar) = self.restake_internal(jar_id);
 
         emit(EventKind::Restake((old_id, jar.id.0)));
@@ -157,14 +180,14 @@ impl JarApi for Contract {
     fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView> {
         let account_id = env::predecessor_account_id();
 
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_if_needed(&account_id);
 
         let now = env::block_timestamp_ms();
 
         let jars_filter: Option<Vec<JarId>> = jars.map(|jars| jars.into_iter().map(|j| j.0).collect());
 
         let mut jars: Vec<Jar> = self
-            .account_jars
+            .accounts
             .get(&account_id)
             .unwrap_or_else(|| {
                 panic_str(&format!("Jars for account {account_id} don't exist"));
@@ -197,11 +220,9 @@ impl JarApi for Contract {
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_manager();
+        self.migrate_account_if_needed(&account_id);
 
-        let jars = self
-            .account_jars
-            .get_mut(&account_id)
-            .expect("Account doesn't have jars");
+        let jars = self.accounts.get_mut(&account_id).expect("Account doesn't have jars");
 
         for jar in &mut jars.jars {
             jar.is_pending_withdraw = false;

@@ -1,5 +1,5 @@
 use near_sdk::{
-    json_types::{Base64VecU8, U128},
+    json_types::{Base64VecU8, I64, U128},
     AccountId,
 };
 #[cfg(feature = "integration-api")]
@@ -11,7 +11,7 @@ use crate::{
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
     product::{ProductView, RegisterProductCommand},
     withdraw::{BulkWithdrawView, WithdrawView},
-    ProductId,
+    ProductId, Score, UTC,
 };
 
 #[cfg(feature = "integration-test")]
@@ -137,6 +137,7 @@ pub trait JarApi {
     /// - If the original jar is not yet mature.
     fn restake(&mut self, jar_id: JarIdView) -> JarView;
 
+    /// Restakes all jars for user, or only specified list of jars if `jars` argument is `Some`
     fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView>;
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
@@ -150,6 +151,11 @@ pub trait MigrationToClaimRemainder {
 #[make_integration_version]
 pub trait MigratonToNearSdk5 {
     fn migrate_state_to_near_sdk_5() -> Self;
+}
+
+#[make_integration_version]
+pub trait MigrationToStepJars {
+    fn migrate_state_to_step_jars() -> Self;
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
@@ -263,7 +269,34 @@ pub trait WithdrawApi {
     /// - If attempting to withdraw from a Fixed jar that is not yet mature.
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
+    /// Withdraws all jars for user, or only specified list of jars if `jars` argument is `Some`
     fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+}
+
+#[make_integration_version]
+pub trait ScoreApi {
+    /// Records the score for a batch of accounts and updates their jars score accordingly.
+    ///
+    /// This method processes a batch of new scores for multiple accounts, updates their
+    /// respective jars score, calculates interest based on the current timestamp, and emits
+    /// an event with the recorded scores.
+    ///
+    /// # Arguments
+    ///
+    /// * `batch` - A vector of tuples, where each tuple contains an `AccountId` and a vector
+    ///   of tuples representing the new scores and their associated timestamps (in UTC).
+    ///
+    /// # Panics
+    ///
+    /// - This function will panic if an account does not have score jars.
+    /// - This function will panic if a product associated with a jar does not exist.
+    fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
+
+    /// Return users timezone if user has any step jars
+    fn get_timezone(&self, account_id: AccountId) -> Option<I64>;
+
+    /// Returns current active score interest if user has any step jars
+    fn get_score_interest(&self, account_id: AccountId) -> Option<U128>;
 }
 
 #[cfg(feature = "integration-methods")]

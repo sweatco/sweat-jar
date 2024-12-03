@@ -17,11 +17,16 @@ rand = { workspace = true }
 futures = { workspace = true }
 ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
+tokio = { workspace = true }
 mutants = { workspace = true }
+dirs = { workspace = true }
 
-sweat-jar-model = { workspace = true, features = ["integration-test", "integration-methods", "integration-api"] }
+sweat-jar-model = { workspace = true, features = [
+    "integration-test",
+    "integration-methods",
+    "integration-api",
+] }
 sweat-model = { workspace = true, features = ["integration-api"] }
+
 nitka = { workspace = true }
 near-workspaces = { workspace = true }
-
-tokio = { version = "1.18.1", features = ["full"] }

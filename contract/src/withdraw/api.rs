@@ -1,5 +1,5 @@
 use near_sdk::{
-    ext_contract, is_promise_success,
+    ext_contract,
     json_types::U128,
     near_bindgen,
     serde::{Deserialize, Serialize},
@@ -11,6 +11,8 @@ use sweat_jar_model::{
     withdraw::{BulkWithdrawView, Fee, WithdrawView},
     TokenAmount, JAR_BATCH_SIZE,
 };
+
+use crate::internal::is_promise_success;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(crate = "near_sdk::serde")]
@@ -29,15 +31,17 @@ use crate::{
     event::{emit, EventKind},
     jar::model::Jar,
     product::model::WithdrawalFee,
+    score::AccountScore,
     AccountId, Contract, ContractExt, Product,
 };
 
 impl Contract {
     fn can_be_withdrawn(jar: &Jar, product: &Product, now: u64) -> bool {
-        !jar.is_pending_withdraw && jar.is_liquidable(product, now)
+        !jar.is_pending_withdraw && jar.is_liquidable(product, now) && !jar.is_empty()
     }
 }
 
+#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub trait WithdrawCallbacks {
     fn after_withdraw(
@@ -56,7 +60,7 @@ pub trait WithdrawCallbacks {
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_if_needed(&account_id);
 
         let jar = self.get_jar_internal(&account_id, jar_id.0).clone();
 
@@ -71,8 +75,13 @@ impl WithdrawApi for Contract {
 
         assert_is_liquidable(&jar, &product, now);
 
-        let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
-        let close_jar = withdrawn_jar.should_be_closed(&product, now);
+        let score = self
+            .get_score(&account_id)
+            .map(AccountScore::claimable_score)
+            .unwrap_or_default();
+
+        let mut withdrawn_jar = jar.withdrawn(&score, &product, amount, now);
+        let close_jar = withdrawn_jar.should_be_closed(&score, &product, now);
 
         withdrawn_jar.lock();
         *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
@@ -82,12 +91,17 @@ impl WithdrawApi for Contract {
 
     fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.migrate_account_jars_if_needed(account_id.clone());
+        self.migrate_account_if_needed(&account_id);
         let now = env::block_timestamp_ms();
 
-        let Some(account_jars) = self.account_jars.get(&account_id) else {
+        let Some(account_jars) = self.accounts.get(&account_id) else {
             return PromiseOrValue::Value(BulkWithdrawView::default());
         };
+
+        let score = self
+            .get_score(&account_id)
+            .map(AccountScore::claimable_score)
+            .unwrap_or_default();
 
         let jars_filter: Option<Vec<JarId>> = jars.map(|jars| jars.into_iter().map(|j| j.0).collect());
 
@@ -118,8 +132,8 @@ impl WithdrawApi for Contract {
             .map(|(jar, product)| {
                 let amount = jar.principal;
 
-                let mut withdrawn_jar = jar.withdrawn(&product, amount, now);
-                let should_be_closed = withdrawn_jar.should_be_closed(&product, now);
+                let mut withdrawn_jar = jar.withdrawn(&score, &product, amount, now);
+                let should_be_closed = withdrawn_jar.should_be_closed(&score, &product, now);
 
                 withdrawn_jar.lock();
                 *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;

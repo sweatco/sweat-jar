@@ -1,4 +1,4 @@
-use near_sdk::{assert_one_yocto, near_bindgen, require};
+use near_sdk::{assert_one_yocto, env::panic_str, near_bindgen, require};
 use sweat_jar_model::{
     api::ProductApi,
     product::{ProductView, RegisterProductCommand},
@@ -7,7 +7,7 @@ use sweat_jar_model::{
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    product::model::Product,
+    product::model::{Apy, Product, Terms},
     Base64VecU8, Contract, ContractExt,
 };
 
@@ -21,6 +21,19 @@ impl ProductApi for Contract {
         assert!(self.products.get(&command.id).is_none(), "Product already exists");
 
         let product: Product = command.into();
+
+        if product.is_score_product() {
+            let apy = match product.apy {
+                Apy::Constant(apy) => apy,
+                Apy::Downgradable(_) => panic_str("Step based products do not support downgradable APY"),
+            };
+
+            assert!(apy.is_zero(), "Step based products do not support constant APY");
+
+            if let Terms::Fixed(fixed) = &product.terms {
+                assert!(!fixed.allows_top_up, "Step based products don't support top up");
+            }
+        }
 
         product.assert_fee_amount();
 

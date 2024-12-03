@@ -17,6 +17,7 @@ impl From<Product> for ProductView {
             terms: value.terms.into(),
             withdrawal_fee: value.withdrawal_fee.map(Into::into),
             is_enabled: value.is_enabled,
+            score_cap: value.score_cap,
         }
     }
 }

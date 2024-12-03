@@ -3,11 +3,11 @@
 use near_sdk::{json_types::U128, test_utils::test_env::alice, AccountId};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
-    MS_IN_YEAR, U32,
+    UDecimal, MS_IN_YEAR, U32,
 };
 
 use crate::{
-    common::{test_data::set_test_future_success, tests::Context, udecimal::UDecimal, Timestamp},
+    common::{test_data::set_test_future_success, tests::Context, Timestamp},
     jar::model::Jar,
     product::model::{Apy, Product, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise, PRINCIPAL},
@@ -18,7 +18,7 @@ fn prepare_jar(product: &Product) -> (AccountId, Jar, Context) {
     let alice = alice();
     let admin = admin();
 
-    let jar = Jar::generate(0, &alice, &product.id).principal(1_000_000);
+    let jar = Jar::new(0);
     let context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&[jar.clone()]);
@@ -30,9 +30,7 @@ fn prepare_jar_created_at(product: &Product, created_at: Timestamp) -> (AccountI
     let alice = alice();
     let admin = admin();
 
-    let jar = Jar::generate(0, &alice, &product.id)
-        .created_at(created_at)
-        .principal(1_000_000);
+    let jar = Jar::new(0).created_at(created_at);
     let context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_jars(&[jar.clone()]);
@@ -42,7 +40,7 @@ fn prepare_jar_created_at(product: &Product, created_at: Timestamp) -> (AccountI
 
 #[test]
 fn withdraw_locked_jar_before_maturity_by_not_owner() {
-    let (_, _, context) = prepare_jar(&generate_product());
+    let (_, _, context) = prepare_jar(&Product::new());
 
     expect_panic(&context, "Account 'owner' doesn't exist", || {
         context.contract().withdraw(U32(0), None);
@@ -53,7 +51,7 @@ fn withdraw_locked_jar_before_maturity_by_not_owner() {
 
 #[test]
 fn withdraw_locked_jar_before_maturity_by_owner() {
-    let (alice, jar, mut context) = prepare_jar_created_at(&generate_product().lockup_term(200), 100);
+    let (alice, jar, mut context) = prepare_jar_created_at(&Product::new().lockup_term(200), 100);
 
     context.set_block_timestamp_in_ms(120);
 
@@ -68,7 +66,7 @@ fn withdraw_locked_jar_before_maturity_by_owner() {
 
 #[test]
 fn withdraw_locked_jar_after_maturity_by_not_owner() {
-    let product = generate_product();
+    let product = Product::new();
     let (_, jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
@@ -82,7 +80,7 @@ fn withdraw_locked_jar_after_maturity_by_not_owner() {
 
 #[test]
 fn withdraw_locked_jar_after_maturity_by_owner() {
-    let product = generate_product();
+    let product = Product::new();
     let (alice, jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
@@ -93,7 +91,7 @@ fn withdraw_locked_jar_after_maturity_by_owner() {
 #[test]
 #[should_panic(expected = "Account 'owner' doesn't exist")]
 fn withdraw_flexible_jar_by_not_owner() {
-    let product = generate_flexible_product();
+    let product = Product::new().flexible();
     let (_, jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_days(1);
@@ -102,7 +100,7 @@ fn withdraw_flexible_jar_by_not_owner() {
 
 #[test]
 fn withdraw_flexible_jar_by_owner_full() {
-    let product = generate_flexible_product();
+    let product = Product::new().flexible();
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_days(1);
@@ -124,7 +122,7 @@ fn withdraw_flexible_jar_by_owner_full() {
 
 #[test]
 fn withdraw_flexible_jar_by_owner_with_sufficient_balance() {
-    let product = generate_flexible_product();
+    let product = Product::new().flexible();
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_days(1);
@@ -137,7 +135,7 @@ fn withdraw_flexible_jar_by_owner_with_sufficient_balance() {
 
 #[test]
 fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
-    let product = generate_flexible_product();
+    let product = Product::new().flexible();
     let (alice, jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_days(1);
@@ -155,9 +153,7 @@ fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
 
 #[test]
 fn dont_delete_jar_after_withdraw_with_interest_left() {
-    let product = generate_product()
-        .lockup_term(MS_IN_YEAR)
-        .apy(Apy::Constant(UDecimal::new(2, 1)));
+    let product = Product::new().apy(Apy::Constant(UDecimal::new(2, 1)));
 
     let (alice, _, mut context) = prepare_jar(&product);
 
@@ -180,7 +176,7 @@ fn dont_delete_jar_after_withdraw_with_interest_left() {
 #[test]
 fn product_with_fixed_fee() {
     let fee = 10;
-    let product = generate_product_with_fee(&WithdrawalFee::Fix(fee));
+    let product = Product::new().with_withdrawal_fee(WithdrawalFee::Fix(fee));
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 
     let initial_principal = reference_jar.principal;
@@ -206,7 +202,7 @@ fn product_with_fixed_fee() {
 fn product_with_percent_fee() {
     let fee_value = UDecimal::new(5, 4);
     let fee = WithdrawalFee::Percent(fee_value.clone());
-    let product = generate_product_with_fee(&fee);
+    let product = Product::new().with_withdrawal_fee(fee);
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 
     let initial_principal = reference_jar.principal;
@@ -233,7 +229,7 @@ fn product_with_percent_fee() {
 fn test_failed_withdraw_promise() {
     set_test_future_success(false);
 
-    let product = generate_product();
+    let product = Product::new();
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
@@ -252,21 +248,14 @@ fn test_failed_withdraw_promise() {
 
 #[test]
 fn test_failed_withdraw_internal() {
-    let product = generate_product();
+    let product = Product::new();
     let (alice, reference_jar, context) = prepare_jar(&product);
     let withdrawn_amount = 1_234;
 
     let mut contract = context.contract();
 
     let jar_view = contract.get_jar(alice.clone(), U32(reference_jar.id));
-    let jar = contract
-        .account_jars
-        .get(&alice)
-        .unwrap()
-        .iter()
-        .next()
-        .unwrap()
-        .clone();
+    let jar = contract.accounts.get(&alice).unwrap().iter().next().unwrap().clone();
 
     let withdraw =
         contract.after_withdraw_internal(jar.account_id.clone(), jar.id, true, withdrawn_amount, None, false);
@@ -282,20 +271,13 @@ fn test_failed_withdraw_internal() {
 
 #[test]
 fn test_failed_bulk_withdraw_internal() {
-    let product = generate_product();
+    let product = Product::new();
     let (alice, reference_jar, context) = prepare_jar(&product);
 
     let mut contract = context.contract();
 
     let jar_view = contract.get_jar(alice.clone(), U32(reference_jar.id));
-    let jar = contract
-        .account_jars
-        .get(&alice)
-        .unwrap()
-        .iter()
-        .next()
-        .unwrap()
-        .clone();
+    let jar = contract.accounts.get(&alice).unwrap().iter().next().unwrap().clone();
 
     let withdraw = contract.after_bulk_withdraw_internal(
         jar.account_id.clone(),
@@ -319,10 +301,8 @@ fn test_failed_bulk_withdraw_internal() {
 
 #[test]
 fn withdraw_from_locked_jar() {
-    let product = Product::generate("product")
-        .apy(Apy::Constant(UDecimal::new(1, 0)))
-        .lockup_term(MS_IN_YEAR);
-    let mut jar = Jar::generate(0, &alice(), &product.id).principal(MS_IN_YEAR as u128);
+    let product = Product::new().apy(Apy::Constant(UDecimal::new(1, 0)));
+    let mut jar = Jar::new(0).principal(MS_IN_YEAR as u128);
 
     jar.lock();
 
@@ -346,15 +326,13 @@ fn withdraw_all() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::generate("product").enabled(true).lockup_term(MS_IN_YEAR);
-    let long_term_product = Product::generate("long_term_product")
-        .enabled(true)
-        .lockup_term(MS_IN_YEAR * 2);
+    let product = Product::new();
+    let long_term_product = Product::new().id("long_term_product").lockup_term(MS_IN_YEAR * 2);
 
-    let mature_jar = Jar::generate(1, &alice, &product.id).principal(PRINCIPAL + 2);
+    let mature_jar = Jar::new(1).principal(PRINCIPAL + 1);
 
-    let immature_jar = Jar::generate(2, &alice, &long_term_product.id).principal(PRINCIPAL + 3);
-    let locked_jar = Jar::generate(3, &alice, &product.id).principal(PRINCIPAL + 4).locked();
+    let immature_jar = Jar::new(2).product_id(&long_term_product.id).principal(PRINCIPAL + 3);
+    let locked_jar = Jar::new(3).product_id(&product.id).principal(PRINCIPAL + 4).locked();
 
     let mut context = Context::new(admin)
         .with_products(&[product, long_term_product])
@@ -368,7 +346,7 @@ fn withdraw_all() {
 
     let withdrawn_jars = context.contract().withdraw_all(None).unwrap();
 
-    assert_eq!(withdrawn_jars.total_amount.0, 1000002);
+    assert_eq!(withdrawn_jars.total_amount.0, 1000001);
 
     assert_eq!(
         withdrawn_jars
@@ -397,12 +375,10 @@ fn batch_withdraw_all() {
     let alice = alice();
     let admin = admin();
 
-    let product = generate_product()
-        .lockup_term(MS_IN_YEAR)
-        .apy(Apy::Constant(UDecimal::new(12, 2)));
+    let product = Product::new().enabled(true).lockup_term(MS_IN_YEAR);
 
     let jars: Vec<_> = (0..8)
-        .map(|id| Jar::generate(id, &alice, &product.id).principal(PRINCIPAL + id as u128))
+        .map(|id| Jar::new(id).principal(PRINCIPAL + id as u128))
         .collect();
 
     let mut context = Context::new(admin).with_products(&[product]).with_jars(&jars);
@@ -428,18 +404,4 @@ fn batch_withdraw_all() {
         .collect();
 
     assert_eq!(jars, [0, 7, 2, 6, 4,]);
-}
-
-pub(crate) fn generate_product() -> Product {
-    Product::generate("product").enabled(true)
-}
-
-pub(crate) fn generate_flexible_product() -> Product {
-    Product::generate("flexible_product").enabled(true).flexible()
-}
-
-pub(crate) fn generate_product_with_fee(fee: &WithdrawalFee) -> Product {
-    Product::generate("product_with_fee")
-        .enabled(true)
-        .with_withdrawal_fee(fee.clone())
 }
