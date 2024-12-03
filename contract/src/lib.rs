@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, ops::Deref};
 
 use jar::model::JarVersionedLegacy;
 use near_sdk::{
@@ -11,7 +11,7 @@ use sweat_jar_model::{api::InitApi, ProductId};
 use crate::{
     jar::{
         account::versioned::AccountVersioned,
-        model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3Wrapper},
+        model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3, AccountLegacyV3Wrapper},
     },
     product::model::v1::Product,
 };
@@ -113,9 +113,13 @@ impl Archive {
         self.accounts_v1.contains_key(account_id) || self.accounts_v2.contains_key(account_id)
     }
 
-    fn get_account(&self, account_id: &AccountId) -> Option<AccountLegacyV2> {
+    fn get_account(&self, account_id: &AccountId) -> Option<AccountLegacyV3> {
+        if let Some(account) = self.accounts_v3.get(account_id).cloned() {
+            return Some(account.deref().clone());
+        }
+
         if let Some(account) = self.accounts_v2.get(account_id) {
-            return Some(account.clone());
+            return Some(account.clone().into());
         }
 
         if let Some(account) = self.accounts_v1.get(account_id) {

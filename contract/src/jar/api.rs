@@ -10,7 +10,7 @@ use sweat_jar_model::{
 use crate::{
     assert::assert_not_locked_legacy,
     event::{emit, EventKind, RestakeData},
-    jar::{account::Account, model::AccountLegacyV2, view::DetailedJarV2},
+    jar::{account::Account, model::AccountLegacyV3, view::DetailedJarV2},
     product::model::v1::{InterestCalculator, Product},
     Contract, ContractExt,
 };
@@ -120,10 +120,11 @@ impl JarApi for Contract {
 
 pub(crate) type MigratingAccount = (Account, HashMap<ProductId, TokenAmount>);
 
-impl From<&AccountLegacyV2> for MigratingAccount {
-    fn from(value: &AccountLegacyV2) -> Self {
+impl From<&AccountLegacyV3> for MigratingAccount {
+    fn from(value: &AccountLegacyV3) -> Self {
         let mut account = Account {
             nonce: value.last_id,
+            score: value.score,
             ..Account::default()
         };
 

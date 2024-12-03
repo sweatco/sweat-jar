@@ -6,7 +6,7 @@ use crate::{
     jar::{
         account::{versioned::AccountVersioned, Account},
         api::MigratingAccount,
-        model::{AccountLegacyV2, JarCache},
+        model::{AccountLegacyV3, JarCache},
     },
     product::model::InterestCalculator,
     Contract, ContractExt,
@@ -31,7 +31,7 @@ impl Contract {
 }
 
 impl Contract {
-    pub(crate) fn map_legacy_account(&self, legacy_account: &AccountLegacyV2) -> Account {
+    pub(crate) fn map_legacy_account(&self, legacy_account: &AccountLegacyV3) -> Account {
         let now = env::block_timestamp_ms();
         let (mut account, claimed_balances) = MigratingAccount::from(legacy_account);
 

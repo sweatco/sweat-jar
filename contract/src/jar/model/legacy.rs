@@ -62,7 +62,7 @@ pub struct AccountLegacyV2 {
 }
 
 #[near]
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct AccountLegacyV3 {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
     pub last_id: JarId,
@@ -70,7 +70,7 @@ pub struct AccountLegacyV3 {
     pub score: AccountScore,
 }
 
-#[derive(BorshSerialize, Debug, PartialEq)]
+#[derive(BorshSerialize, Debug, PartialEq, Clone)]
 #[borsh(crate = "near_sdk::borsh")]
 pub enum AccountLegacyV3Wrapper {
     V1(AccountLegacyV3),
@@ -113,12 +113,24 @@ impl DerefMut for AccountLegacyV3Wrapper {
     }
 }
 
-impl From<AccountLegacyV1> for AccountLegacyV2 {
+impl From<AccountLegacyV1> for AccountLegacyV3 {
     #[mutants::skip]
     fn from(value: AccountLegacyV1) -> Self {
-        AccountLegacyV2 {
+        Self {
             last_id: value.last_id,
             jars: value.jars.into_iter().map(Into::into).collect(),
+            score: AccountScore::default(),
+        }
+    }
+}
+
+impl From<AccountLegacyV2> for AccountLegacyV3 {
+    #[mutants::skip]
+    fn from(value: AccountLegacyV2) -> Self {
+        Self {
+            last_id: value.last_id,
+            jars: value.jars.into_iter().map(Into::into).collect(),
+            score: AccountScore::default(),
         }
     }
 }
