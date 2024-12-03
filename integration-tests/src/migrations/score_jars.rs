@@ -14,7 +14,7 @@ async fn migrate_to_score_jars() -> Result<()> {
     build_contract("build-integration".into())?;
 
     let ft_code = load_wasm("res/sweat.wasm");
-    let jar_old_code = load_wasm("res_test/sweat_jar_pre_score_jars.wasm");
+    let jar_old_code = load_wasm("res_test/sweat_jar_pre_step_jars.wasm");
     let jar_new_code = load_wasm("res/sweat_jar.wasm");
 
     let worker = near_workspaces::sandbox().await?;
@@ -61,7 +61,7 @@ async fn migrate_to_score_jars() -> Result<()> {
     let bob_jars = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
     assert!(bob_jars.is_empty());
 
-    let staked = old_jar_contract
+    let staked_1 = old_jar_contract
         .create_jar(
             &bob,
             RegisterProductCommand::Locked10Minutes6PercentsTopUp.get().id,
@@ -70,13 +70,23 @@ async fn migrate_to_score_jars() -> Result<()> {
         )
         .await?;
 
+    let staked_2 = old_jar_contract
+        .create_jar(
+            &bob,
+            RegisterProductCommand::Locked10Minutes6PercentsTopUp.get().id,
+            150_000,
+            &ft_contract,
+        )
+        .await?;
+
     let bob_jars_old = old_jar_contract.get_jars_for_account(bob.to_near()).await?;
 
-    assert_eq!(bob_jars_old.len(), 1);
+    assert_eq!(bob_jars_old.len(), 2);
 
-    assert_eq!(staked.0, 100_000);
+    assert_eq!(staked_1.0, 100_000);
+    assert_eq!(staked_2.0, 150_000);
 
-    assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 900_000);
+    assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 750_000);
 
     drop(old_jar_contract);
 
@@ -113,11 +123,11 @@ async fn migrate_to_score_jars() -> Result<()> {
 
     let bob_jars = new_jar_contract.get_jars_for_account(bob.to_near()).await?;
 
-    assert_eq!(bob_jars.len(), 2);
+    assert_eq!(bob_jars.len(), 3);
 
     assert_eq!(staked.0, 100_000);
 
-    assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 800_000);
+    assert_eq!(ft_contract.ft_balance_of(bob.to_near()).await?.0, 650_000);
 
     new_jar_contract
         .register_product(RegisterProductCommand::Locked10Minutes20000ScoreCap.get())

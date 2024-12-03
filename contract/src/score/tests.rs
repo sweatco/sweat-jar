@@ -298,7 +298,7 @@ fn revert_scores_on_failed_claim() {
         // Clear accounts cache to test deserialization
         if day == 3 {
             ctx.contract().accounts.flush();
-            ctx.contract().accounts = LookupMap::new(StorageKey::AccountsVersioned);
+            ctx.contract().accounts = LookupMap::new(StorageKey::Accounts);
         }
 
         // Normal claim. Score should change:
