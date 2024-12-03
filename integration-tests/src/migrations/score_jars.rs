@@ -14,7 +14,7 @@ async fn migrate_to_score_jars() -> Result<()> {
     build_contract("build-integration".into())?;
 
     let ft_code = load_wasm("res/sweat.wasm");
-    let jar_old_code = load_wasm("res_test/sweat_jar_pre_score_jars.wasm");
+    let jar_old_code = load_wasm("res_test/sweat_jar_pre_step_jars.wasm");
     let jar_new_code = load_wasm("res/sweat_jar.wasm");
 
     let worker = near_workspaces::sandbox().await?;
