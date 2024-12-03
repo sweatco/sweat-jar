@@ -43,7 +43,7 @@ impl MigrationToStepJars for Contract {
         let mut old_state: ContractBeforeStepJars = env::state_read().expect("Failed to extract old contract state.");
 
         let mut products: near_sdk::collections::UnorderedMap<ProductId, Product> =
-            near_sdk::collections::UnorderedMap::new(StorageKey::ProductsV2);
+            near_sdk::collections::UnorderedMap::new(StorageKey::Products);
 
         for (product_id, product) in &old_state.products {
             products.insert(
@@ -69,9 +69,9 @@ impl MigrationToStepJars for Contract {
             manager: old_state.manager,
             products,
             last_jar_id: old_state.last_jar_id,
-            accounts: LookupMap::new(StorageKey::AccountsVersioned),
-            account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
-            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
+            accounts: LookupMap::new(StorageKey::Accounts),
+            account_jars_non_versioned: LookupMap::new(StorageKey::AccountsLegacyV2),
+            account_jars_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
             products_cache: HashMap::default().into(),
         }
     }

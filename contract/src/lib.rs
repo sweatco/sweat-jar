@@ -71,15 +71,15 @@ pub struct Contract {
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
-    ProductsLegacy,
-    AccountJarsLegacy,
+    _ProductsLegacyV1,
+    AccountsLegacyV1,
     /// Jars with claim remainder
-    AccountJarsV1,
+    AccountsLegacyV2,
     /// Products migrated to near_sdk 5
-    ProductsV1,
+    _ProductsLegacyV2,
     /// Products migrated to step jars
-    ProductsV2,
-    AccountsVersioned,
+    Products,
+    Accounts,
 }
 
 #[near_bindgen]
@@ -91,11 +91,11 @@ impl InitApi for Contract {
             token_account_id,
             fee_account_id,
             manager,
-            products: UnorderedMap::new(StorageKey::ProductsV1),
-            account_jars_non_versioned: LookupMap::new(StorageKey::AccountJarsV1),
-            account_jars_v1: LookupMap::new(StorageKey::AccountJarsLegacy),
+            products: UnorderedMap::new(StorageKey::_ProductsLegacyV2),
+            account_jars_non_versioned: LookupMap::new(StorageKey::AccountsLegacyV2),
+            account_jars_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
             last_jar_id: 0,
-            accounts: LookupMap::new(StorageKey::AccountsVersioned),
+            accounts: LookupMap::new(StorageKey::Accounts),
             products_cache: HashMap::default().into(),
         }
     }
