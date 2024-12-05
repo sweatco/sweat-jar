@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use near_sdk::{collections::UnorderedMap, env, near, near_bindgen, store::LookupMap, AccountId, PanicOnDefault};
-use sweat_jar_model::{jar::JarId, ProductId};
+use sweat_jar_model::{api::StateMigration, jar::JarId, ProductId};
 
 use crate::{
     jar::model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3Wrapper},
@@ -23,11 +23,11 @@ pub struct ContractBeforeMigration {
 }
 
 #[near_bindgen]
-impl Contract {
+impl StateMigration for Contract {
     #[init(ignore_state)]
     #[private]
     #[mutants::skip]
-    pub fn migrate() -> Self {
+    fn migrate_state() -> Self {
         let mut old_state: ContractBeforeMigration = env::state_read().expect("Failed to extract old contract state.");
 
         let mut products: UnorderedMap<ProductId, Product> = UnorderedMap::new(StorageKey::Products);

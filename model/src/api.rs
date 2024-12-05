@@ -114,8 +114,8 @@ pub trait MigratonToNearSdk5 {
 }
 
 #[make_integration_version]
-pub trait MigrationToStepJars {
-    fn migrate_state_to_step_jars() -> Self;
+pub trait StateMigration {
+    fn migrate_state() -> Self;
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
