@@ -3,21 +3,13 @@ use nitka::near_sdk::serde_json::{json, Value};
 use crate::product::RegisterProductCommand;
 
 impl RegisterProductCommand {
-    pub(crate) fn json_legacy_for_premium(&self, public_key: String) -> Value {
-        let mut json = self.json_legacy();
-        if let Value::Object(obj) = &mut json {
-            obj.insert("public_key".to_string(), Value::String(public_key));
-        }
-        json
-    }
-
     pub(crate) fn json_legacy(&self) -> Value {
         match self {
             RegisterProductCommand::Locked12Months12Percents => json!({
                 "id": "locked_12_months_12_percents",
                 "apy_default": ["12", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -33,7 +25,7 @@ impl RegisterProductCommand {
                 "id": "locked_6_months_6_percents",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -50,7 +42,7 @@ impl RegisterProductCommand {
                 "apy_default": ["12", 2],
                 "apy_fallback": ["6", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "flexible",
                 },
@@ -62,7 +54,7 @@ impl RegisterProductCommand {
                 "id": "locked_6_months_6_percents_with_withdraw_fee",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -82,7 +74,7 @@ impl RegisterProductCommand {
                 "id": "locked_10_minutes_6_percents",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -98,7 +90,7 @@ impl RegisterProductCommand {
                 "id": "flexible_5_minutes_60000_percents",
                 "apy_default": ["60000", 2],
                 "cap_min": "10000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -114,7 +106,7 @@ impl RegisterProductCommand {
                 "id": "flexible_10_minutes_60000_percents",
                 "apy_default": ["60000", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -130,7 +122,7 @@ impl RegisterProductCommand {
                 "id": "locked_10_minutes_6_percents_top_up",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -146,7 +138,7 @@ impl RegisterProductCommand {
                 "id": "locked_10_minutes_6_percents_with_fixed_withdraw_fee",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -166,7 +158,7 @@ impl RegisterProductCommand {
                 "id": "locked_10_minutes_6_percents_with_percent_withdraw_fee",
                 "apy_default": ["6", 2],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {
@@ -186,7 +178,7 @@ impl RegisterProductCommand {
                 "id": "locked_10_minutes_20000_score_cap",
                 "apy_default": ["0", 0],
                 "cap_min": "100000",
-                "cap_max": "100000000000",
+                "cap_max": "1000000000000000000000000000",
                 "terms": {
                     "type": "fixed",
                     "data": {

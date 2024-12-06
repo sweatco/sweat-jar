@@ -30,3 +30,4 @@ sweat-model = { workspace = true, features = ["integration-api"] }
 
 nitka = { workspace = true }
 near-workspaces = { workspace = true }
+log = "0.4.22"
