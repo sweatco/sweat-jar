@@ -42,10 +42,7 @@ impl ProductApi for Contract {
 
         self.products.insert(&product_id, &product);
 
-        emit(EventKind::EnableProduct(EnableProductData {
-            id: product_id,
-            is_enabled,
-        }));
+        emit(EventKind::EnableProduct(EnableProductData { product_id, is_enabled }));
     }
 
     #[payable]

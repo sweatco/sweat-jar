@@ -11,7 +11,7 @@ use crate::{common::Timestamp, env, product::model::Product, PACKAGE_NAME, VERSI
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
     RegisterProduct(Product),
-    Deposit((ProductId, U128)),
+    Deposit(DepositData),
     Claim(ClaimData),
     Withdraw(WithdrawData),
     WithdrawAll(Vec<WithdrawData>),
@@ -35,9 +35,19 @@ struct SweatJarEvent {
     event_kind: EventKind,
 }
 
-/// `JarId` and interest to claim
+/// Making a deposit into a Jar.
+/// `.0` – ID of a Product describing terms of the Jar.
+/// `.1` – amount of tokens to deposit.
+pub type DepositData = (ProductId, U128);
+
+/// Claiming interest from a single Jar.
+/// `.0` – ID of a Product describing terms of the Jar.
+/// `.1` – amount of interest that a User claimed.
 pub type ClaimEventItem = (ProductId, U128);
 
+/// Batched claiming interest from a User's account
+/// `timestamp` – Unix timestamp of a block where interest was calculated and `ft_transfer` was initiated.
+/// `items`     – information about interest claimed from Jars for each Product.
 #[derive(Default, Debug)]
 #[near(serializers=[json])]
 pub struct ClaimData {
@@ -45,10 +55,16 @@ pub struct ClaimData {
     pub items: Vec<ClaimEventItem>,
 }
 
+/// Withdrawing principal of mature deposits for a single Jar.
+/// `.0` – ID of a Product describing terms of the Jar.
+/// `.1` – withdrawal fee amount (according to the Product terms).
+/// `.2` – amount of withdrawal (minus fee).
 /// (id, fee, amount)
 pub type WithdrawData = (ProductId, U128, U128);
 
-// TODO: doc change
+/// Restaking of a single Jar.
+/// `product_id` – ID of a Product describing terms of the Jar.
+/// `restaked`   – amount of restaked tokens.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct RestakeData {
@@ -56,6 +72,14 @@ pub struct RestakeData {
     pub restaked: U128,
 }
 
+/// Batched restaking of all User's mature deposits into a single deposit for a particular Product.
+/// `timestamp` – Unix timestamp of the operation. In case of partial withdrawal it's time
+///               of the initial call.
+/// `from`      – a list of Product IDs of deposits sourcing a principal for a new deposit.
+/// `into`      – ID of a Product describing terms of the Jar for the new deposit.
+/// `restaked`  – amount of tokens being restaked. It's sum of principals of mature deposits
+///              for `from` Product IDs minus `withdrawn` amount.
+/// `withdrawn` – amount of withdrawn tokens.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct RestakeAllData {
@@ -93,31 +117,43 @@ impl RestakeData {
     }
 }
 
+/// Applying a penalty to a User.
+/// `account_id` – ID of an Account that is subject to the penalty.
+/// `is_applied` – the penalty is applied or cancelled.
+/// `timestamp`  – Unix timestamp of the operation.
 #[derive(Debug)]
 #[near(serializers=[json])]
-// TODO: doc change
 pub struct PenaltyData {
     pub account_id: AccountId,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
+/// Batched applying a penalty to several User.
+/// `account_ids` – IDs of Accounts that are subjects to the penalty.
+/// `is_applied`  – the penalty is applied or cancelled.
+/// `timestamp`   – Unix timestamp of the operation.
 #[derive(Debug)]
 #[near(serializers=[json])]
-// TODO: doc change
 pub struct BatchPenaltyData {
     pub account_ids: Vec<AccountId>,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
+/// Enabling or disabling a Product.
+/// `product_id` – ID of affected Product.
+/// `is_enabled` – whether the Product became enabled or disabled.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct EnableProductData {
-    pub id: ProductId,
+    pub product_id: ProductId,
     pub is_enabled: bool,
 }
 
+/// Change public key for a Product.
+/// `product_id` – ID of affected Product.
+/// `pk`         – a public key that was set.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct ChangeProductPublicKeyData {
@@ -125,6 +161,9 @@ pub struct ChangeProductPublicKeyData {
     pub pk: Base64VecU8,
 }
 
+/// Update of User's score.
+/// `account_id` – ID of an Account that is subject to Score update.
+/// `score` – a new Score.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct ScoreData {
