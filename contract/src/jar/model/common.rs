@@ -227,6 +227,9 @@ impl Contract {
         let product = self.get_product(product_id);
 
         if product.is_score_product() {
+            // For score products we need to migrate earlier to write timezone to already migrated account
+            self.migrate_account_if_needed(&account_id);
+
             match (ticket.timezone, self.get_score_mut(&account_id)) {
                 // Time zone already set. No actions required.
                 (Some(_) | None, Some(_)) => (),
