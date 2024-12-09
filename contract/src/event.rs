@@ -2,65 +2,28 @@ use near_sdk::{
     json_types::{Base64VecU8, U128},
     log, near, serde_json, AccountId,
 };
-use sweat_jar_model::{jar::JarId, Local, ProductId, Score, TokenAmount, U32, UTC};
+use sweat_jar_model::{Local, ProductId, Score, TokenAmount, U32, UTC};
 
-use crate::{
-    common::Timestamp,
-    env,
-    jar::model::{Jar, JarCache},
-    product::model::Product,
-    PACKAGE_NAME, VERSION,
-};
+use crate::{common::Timestamp, env, product::model::Product, PACKAGE_NAME, VERSION};
 
 #[derive(Debug)]
 #[near(serializers=[json])]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
     RegisterProduct(Product),
-    CreateJar(EventJar),
-    Claim(Vec<ClaimEventItem>),
+    Deposit(DepositData),
+    Claim(ClaimData),
     Withdraw(WithdrawData),
     WithdrawAll(Vec<WithdrawData>),
-    Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
-    RestakeAll(Vec<RestakeData>),
+    RestakeAll(RestakeAllData),
     ApplyPenalty(PenaltyData),
     BatchApplyPenalty(BatchPenaltyData),
     EnableProduct(EnableProductData),
     ChangeProductPublicKey(ChangeProductPublicKeyData),
-    TopUp(TopUpData),
     RecordScore(Vec<ScoreData>),
     OldScoreWarning((Score, Local)),
-}
-
-#[derive(Debug)]
-#[near(serializers=[json])]
-pub struct EventJar {
-    id: JarId,
-    account_id: AccountId,
-    product_id: ProductId,
-    created_at: Timestamp,
-    principal: TokenAmount,
-    cache: Option<JarCache>,
-    claimed_balance: TokenAmount,
-    is_pending_withdraw: bool,
-    is_penalty_applied: bool,
-}
-
-impl From<Jar> for EventJar {
-    fn from(jar: Jar) -> Self {
-        Self {
-            id: jar.id,
-            account_id: jar.account_id.clone(),
-            product_id: jar.product_id.clone(),
-            created_at: jar.created_at,
-            principal: jar.principal,
-            cache: jar.cache,
-            claimed_balance: jar.claimed_balance,
-            is_pending_withdraw: jar.is_pending_withdraw,
-            is_penalty_applied: jar.is_penalty_applied,
-        }
-    }
+    JarsMerge(AccountId),
 }
 
 #[derive(Debug)]
@@ -72,46 +35,125 @@ struct SweatJarEvent {
     event_kind: EventKind,
 }
 
-/// `JarId` and interest to claim
-pub type ClaimEventItem = (JarId, U128);
+/// Making a deposit into a Jar.
+/// `.0` – ID of a Product describing terms of the Jar.
+/// `.1` – amount of tokens to deposit.
+pub type DepositData = (ProductId, U128);
 
-/// (id, fee, amount)
-pub type WithdrawData = (JarId, U128, U128);
+/// Claiming interest from a single Jar.
+/// `.0` – ID of a Product describing terms of the Jar.
+/// `.1` – amount of interest that a User claimed.
+pub type ClaimEventItem = (ProductId, U128);
 
-#[derive(Debug)]
+/// Batched claiming interest from a User's account
+/// `timestamp` – Unix timestamp of a block where interest was calculated and `ft_transfer` was initiated.
+/// `items`     – information about interest claimed from Jars for each Product.
+#[derive(Default, Debug)]
 #[near(serializers=[json])]
-pub struct MigrationEventItem {
-    pub original_id: String,
-    pub id: JarId,
-    pub account_id: AccountId,
+pub struct ClaimData {
+    pub timestamp: Timestamp,
+    pub items: Vec<ClaimEventItem>,
 }
 
-/// (`old_id`, `new_id`)
-pub type RestakeData = (JarId, JarId);
+/// Withdrawing principal of mature deposits for a single Jar.
+/// `.0` – ID of a Product describing terms of the Jar.
+/// `.1` – withdrawal fee amount (according to the Product terms).
+/// `.2` – amount of withdrawal (minus fee).
+/// (id, fee, amount)
+pub type WithdrawData = (ProductId, U128, U128);
 
+/// Restaking of a single Jar.
+/// `product_id` – ID of a Product describing terms of the Jar.
+/// `restaked`   – amount of restaked tokens.
+#[derive(Debug)]
+#[near(serializers=[json])]
+pub struct RestakeData {
+    pub product_id: ProductId,
+    pub restaked: U128,
+}
+
+/// Batched restaking of all User's mature deposits into a single deposit for a particular Product.
+/// `timestamp` – Unix timestamp of the operation. In case of partial withdrawal it's time
+///               of the initial call.
+/// `from`      – a list of Product IDs of deposits sourcing a principal for a new deposit.
+/// `into`      – ID of a Product describing terms of the Jar for the new deposit.
+/// `restaked`  – amount of tokens being restaked. It's sum of principals of mature deposits
+///              for `from` Product IDs minus `withdrawn` amount.
+/// `withdrawn` – amount of withdrawn tokens.
+#[derive(Debug)]
+#[near(serializers=[json])]
+pub struct RestakeAllData {
+    pub timestamp: Timestamp,
+    pub from: Vec<ProductId>,
+    pub into: ProductId,
+    pub restaked: U128,
+    pub withdrawn: U128,
+}
+
+impl RestakeAllData {
+    pub fn new(
+        timestamp: Timestamp,
+        from: Vec<ProductId>,
+        into: ProductId,
+        restaked: TokenAmount,
+        withdrawn: TokenAmount,
+    ) -> Self {
+        RestakeAllData {
+            timestamp,
+            from,
+            into,
+            restaked: restaked.into(),
+            withdrawn: withdrawn.into(),
+        }
+    }
+}
+
+impl RestakeData {
+    pub fn new(product_id: ProductId, restaked: TokenAmount) -> Self {
+        RestakeData {
+            product_id,
+            restaked: restaked.into(),
+        }
+    }
+}
+
+/// Applying a penalty to a User.
+/// `account_id` – ID of an Account that is subject to the penalty.
+/// `is_applied` – the penalty is applied or cancelled.
+/// `timestamp`  – Unix timestamp of the operation.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct PenaltyData {
-    pub id: JarId,
+    pub account_id: AccountId,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
+/// Batched applying a penalty to several User.
+/// `account_ids` – IDs of Accounts that are subjects to the penalty.
+/// `is_applied`  – the penalty is applied or cancelled.
+/// `timestamp`   – Unix timestamp of the operation.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct BatchPenaltyData {
-    pub jars: Vec<JarId>,
+    pub account_ids: Vec<AccountId>,
     pub is_applied: bool,
     pub timestamp: Timestamp,
 }
 
+/// Enabling or disabling a Product.
+/// `product_id` – ID of affected Product.
+/// `is_enabled` – whether the Product became enabled or disabled.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct EnableProductData {
-    pub id: ProductId,
+    pub product_id: ProductId,
     pub is_enabled: bool,
 }
 
+/// Change public key for a Product.
+/// `product_id` – ID of affected Product.
+/// `pk`         – a public key that was set.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct ChangeProductPublicKeyData {
@@ -119,13 +161,9 @@ pub struct ChangeProductPublicKeyData {
     pub pk: Base64VecU8,
 }
 
-#[derive(Debug)]
-#[near(serializers=[json])]
-pub struct TopUpData {
-    pub id: JarId,
-    pub amount: U128,
-}
-
+/// Update of User's score.
+/// `account_id` – ID of an Account that is subject to Score update.
+/// `score` – a new Score.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct ScoreData {
@@ -170,16 +208,12 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-
-    use std::str::FromStr;
-
-    use near_sdk::{json_types::U128, AccountId};
+    use near_sdk::json_types::U128;
     use sweat_jar_model::Local;
 
     use crate::{
-        common::tests::Context,
-        event::{EventKind, ScoreData, SweatJarEvent, TopUpData},
-        jar::model::{Jar, JarLastVersion},
+        common::tests::{Context, WhitespaceTrimmer},
+        event::{ClaimData, EventKind, SweatJarEvent},
         test_utils::admin,
     };
 
@@ -192,127 +226,34 @@ mod test {
 
     #[test]
     fn event_to_string() {
-        assert_eq!(
-            SweatJarEvent::from(EventKind::TopUp(TopUpData {
-                id: 10,
-                amount: U128(50),
-            }))
-            .to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.4.0",
-  "event": "top_up",
-  "data": {
-    "id": 10,
-    "amount": "50"
-  }
-}"#
-        );
+        let event = SweatJarEvent::from(EventKind::Claim(ClaimData {
+            timestamp: 1234567,
+            items: vec![
+                ("product_0".to_string(), U128(50)),
+                ("product_1".to_string(), U128(200)),
+            ],
+        }))
+        .to_json_event_string();
+        let json = r#"EVENT_JSON:{
+          "standard": "sweat_jar",
+          "version": "3.4.0",
+          "event": "claim",
+          "data": {
+            "timestamp": 1234567,
+            "items": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
+          }
+        }"#;
 
-        assert_eq!(
-            SweatJarEvent::from(EventKind::CreateJar(
-                Jar::V1(JarLastVersion {
-                    id: 555,
-                    account_id: "bob.near".to_string().try_into().unwrap(),
-                    product_id: "some_product".to_string(),
-                    created_at: 1234324235,
-                    principal: 78685678567,
-                    cache: None,
-                    claimed_balance: 4324,
-                    is_pending_withdraw: false,
-                    is_penalty_applied: false,
-                    claim_remainder: 55555,
-                })
-                .into()
-            ))
-            .to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.4.0",
-  "event": "create_jar",
-  "data": {
-    "id": 555,
-    "account_id": "bob.near",
-    "product_id": "some_product",
-    "created_at": 1234324235,
-    "principal": 78685678567,
-    "cache": null,
-    "claimed_balance": 4324,
-    "is_pending_withdraw": false,
-    "is_penalty_applied": false
-  }
-}"#
-        );
+        assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());
 
-        assert_eq!(
-            SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.4.0",
-  "event": "claim",
-  "data": [
-    [
-      1,
-      "1"
-    ],
-    [
-      2,
-      "2"
-    ]
-  ]
-}"#
-        );
+        let event = SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string();
+        let json = r#"EVENT_JSON:{
+          "standard": "sweat_jar",
+          "version": "3.4.0",
+          "event": "old_score_warning",
+          "data": [ 111, 5 ]
+        }"#;
 
-        assert_eq!(
-            SweatJarEvent::from(EventKind::RecordScore(vec![
-                ScoreData {
-                    account_id: AccountId::from_str("alice.near").unwrap(),
-                    score: vec![(10.into(), 10.into())],
-                },
-                ScoreData {
-                    account_id: AccountId::from_str("bob.near").unwrap(),
-                    score: vec![(20.into(), 20.into())],
-                }
-            ]))
-            .to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.4.0",
-  "event": "record_score",
-  "data": [
-    {
-      "account_id": "alice.near",
-      "score": [
-        [
-          "10",
-          10
-        ]
-      ]
-    },
-    {
-      "account_id": "bob.near",
-      "score": [
-        [
-          "20",
-          20
-        ]
-      ]
-    }
-  ]
-}"#
-        );
-
-        assert_eq!(
-            SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.4.0",
-  "event": "old_score_warning",
-  "data": [
-    111,
-    5
-  ]
-}"#
-        );
+        assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());
     }
 }

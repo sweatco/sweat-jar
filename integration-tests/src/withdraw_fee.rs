@@ -1,5 +1,5 @@
 use nitka::misc::ToNear;
-use sweat_jar_model::{api::WithdrawApiIntegration, U32};
+use sweat_jar_model::api::WithdrawApiIntegration;
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{
@@ -24,22 +24,18 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
 
     let fee_balance_before = context.ft_contract().ft_balance_of(fee_account.to_near()).await?.0;
 
+    let product_id = RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee.id();
     context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            RegisterProductCommand::Locked10Minutes6PercentsWithFixedWithdrawFee.id(),
-            1_000_000,
-            &context.ft_contract(),
-        )
+        .create_jar(&alice, product_id.clone(), 1_000_000, &context.ft_contract())
         .await?;
 
     let mut alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_000_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_000_000, alice_balance.0);
 
     context.fast_forward_hours(1).await?;
 
-    let withdraw_result = context.sweat_jar().withdraw(U32(1), None).with_user(&alice).await?;
+    let withdraw_result = context.sweat_jar().withdraw(product_id).with_user(&alice).await?;
     let withdrawn_amount = withdraw_result.withdrawn_amount;
     let fee_amount = withdraw_result.fee;
 
@@ -47,7 +43,7 @@ async fn test_fixed_withdraw_fee() -> anyhow::Result<()> {
     assert_eq!(1_000, fee_amount.0);
 
     alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_999_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_999_000, alice_balance.0);
 
     let fee_balance_after = context.ft_contract().ft_balance_of(fee_account.to_near()).await?.0;
     assert_eq!(1_000, fee_balance_after - fee_balance_before);
@@ -70,22 +66,18 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
 
     let fee_balance_before = context.ft_contract().ft_balance_of(fee_account.to_near()).await?.0;
 
+    let product_id = RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee.id();
     context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            RegisterProductCommand::Locked10Minutes6PercentsWithPercentWithdrawFee.id(),
-            1_000_000,
-            &context.ft_contract(),
-        )
+        .create_jar(&alice, product_id.clone(), 1_000_000, &context.ft_contract())
         .await?;
 
     let mut alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_000_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_000_000, alice_balance.0);
 
     context.fast_forward_hours(1).await?;
 
-    let withdraw_result = context.sweat_jar().withdraw(U32(1), None).with_user(&alice).await?;
+    let withdraw_result = context.sweat_jar().withdraw(product_id).with_user(&alice).await?;
     let withdrawn_amount = withdraw_result.withdrawn_amount;
     let fee_amount = withdraw_result.fee;
 
@@ -93,7 +85,7 @@ async fn test_percent_withdraw_fee() -> anyhow::Result<()> {
     assert_eq!(10_000, fee_amount.0);
 
     alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?;
-    assert_eq!(99_990_000, alice_balance.0);
+    assert_eq!(99_999_999_999_999_999_999_990_000, alice_balance.0);
 
     let fee_balance_after = context.ft_contract().ft_balance_of(fee_account.to_near()).await?.0;
     assert_eq!(10_000, fee_balance_after - fee_balance_before);

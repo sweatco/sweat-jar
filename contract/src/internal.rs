@@ -1,12 +1,8 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use near_sdk::require;
-use sweat_jar_model::{
-    jar::{JarId, JarIdView},
-    ProductId,
-};
 
-use crate::{env, jar::model::Jar, AccountId, Contract, Product};
+use crate::{env, AccountId, Contract};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -27,62 +23,8 @@ impl Contract {
         self.assert_manager();
     }
 
-    pub(crate) fn increment_and_get_last_jar_id(&mut self) -> JarId {
-        self.last_jar_id += 1;
-        self.last_jar_id
-    }
-
-    pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {
-        // TODO: Remove after complete migration and return '&[Jar]`
-        if let Some(record) = self.account_jars_v1.get(account_id) {
-            return record.jars.iter().map(|j| j.clone().into()).collect();
-        }
-
-        if let Some(record) = self.account_jars_non_versioned.get(account_id) {
-            return record.jars.clone();
-        }
-
-        self.accounts
-            .get(account_id)
-            .map_or(vec![], |record| record.jars.clone())
-    }
-
-    // TODO: Restore previous version after V2 migration
-    pub(crate) fn account_jars_with_ids(&self, account_id: &AccountId, ids: &[JarIdView]) -> Vec<Jar> {
-        // iterates once over jars and once over ids
-        let mut jars: HashMap<JarId, Jar> = self
-            .account_jars(account_id)
-            .into_iter()
-            .map(|jar| (jar.id, jar))
-            .collect();
-
-        ids.iter()
-            .map(|id| {
-                jars.remove(&id.0)
-                    .unwrap_or_else(|| env::panic_str(&format!("Jar with id: '{}' doesn't exist", id.0)))
-            })
-            .collect()
-    }
-
-    pub(crate) fn add_new_jar(&mut self, account_id: &AccountId, jar: Jar) {
-        self.migrate_account_if_needed(account_id);
-        let jars = self.accounts.entry(account_id.clone()).or_default();
-        jars.last_id = jar.id;
-        jars.push(jar);
-    }
-
-    // UnorderedMap doesn't have cache and deserializes `Product` on each get
-    // This cached getter significantly reduces gas usage
-    pub fn get_product(&self, product_id: &ProductId) -> Product {
-        self.products_cache
-            .borrow_mut()
-            .entry(product_id.clone())
-            .or_insert_with(|| {
-                self.products
-                    .get(product_id)
-                    .unwrap_or_else(|| env::panic_str(&format!("Product '{product_id}' doesn't exist")))
-            })
-            .clone()
+    pub(crate) fn assert_migrated(&self, account_id: &AccountId) {
+        require!(!self.archive.contains_account(account_id), "Must migrate account first");
     }
 }
 
@@ -99,6 +41,17 @@ pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce()
             gas_needed - gas_left
         ));
     }
+}
+
+#[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
+pub fn is_promise_success() -> bool {
+    near_sdk::is_promise_success()
+}
+
+#[cfg(test)]
+pub fn is_promise_success() -> bool {
+    crate::common::test_data::get_test_future_success()
 }
 
 #[cfg(test)]
@@ -147,15 +100,4 @@ mod test {
         let gas_left = env::prepaid_gas().as_gas() - env::used_gas().as_gas();
         assert_gas(gas_left - GAS_FOR_ASSERT_CALL - 1, || "Error message");
     }
-}
-
-#[cfg(not(test))]
-#[mutants::skip] // Covered by integration tests
-pub fn is_promise_success() -> bool {
-    near_sdk::is_promise_success()
-}
-
-#[cfg(test)]
-pub fn is_promise_success() -> bool {
-    crate::common::test_data::get_test_future_success()
 }

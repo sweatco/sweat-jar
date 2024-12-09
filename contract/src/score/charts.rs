@@ -4,42 +4,76 @@ use anyhow::Result;
 use fake::Fake;
 use itertools::Itertools;
 use near_sdk::test_utils::test_env::{alice, bob};
-use sweat_jar_model::{jar::JarId, Score, Timezone, MS_IN_DAY, UTC};
+use sweat_jar_model::{Score, Timezone, UDecimal, MS_IN_DAY, MS_IN_YEAR, UTC};
 use visu::{render_chart, Graph};
 
 use crate::{
-    common::test_data::set_test_log_events,
-    test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
-    test_utils::{admin, PRODUCT, SCORE_PRODUCT},
+    common::{test_data::set_test_log_events, tests::Context},
+    jar::model::Jar,
+    product::model::{Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
+    test_utils::{admin, DEFAULT_PRODUCT_NAME, DEFAULT_SCORE_PRODUCT_NAME},
 };
 
-fn generate_year_data() -> (Vec<u128>, Vec<u128>) {
-    const JAR: JarId = 0;
-    const STEP_JAR: JarId = 1;
+fn generate_regular_product() -> Product {
+    Product {
+        id: DEFAULT_PRODUCT_NAME.to_string(),
+        terms: Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR,
+            apy: Apy::Constant(UDecimal::new(12000, 5)),
+        }),
+        ..Product::new()
+    }
+}
+fn generate_score_based_product() -> Product {
+    Product {
+        id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            lockup_term: MS_IN_YEAR,
+            score_cap: 20_000,
+        }),
+        ..Product::new()
+    }
+}
 
+fn generate_year_data() -> (Vec<u128>, Vec<u128>) {
     set_test_log_events(false);
 
-    let mut ctx = TestBuilder::new()
-        .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
-        .jar(STEP_JAR, JarField::Timezone(Timezone::hour_shift(3)))
-        .product(PRODUCT, APY(12))
-        .jar(JAR, ())
-        .build();
+    let regular_product = generate_regular_product();
+    let score_based_product = generate_score_based_product();
+    let mut ctx = Context::new(admin())
+        .with_products(&vec![regular_product.clone(), score_based_product.clone()])
+        .with_jars(
+            &alice(),
+            &vec![
+                (
+                    regular_product.id.clone(),
+                    Jar::new().with_deposit(0, 100 * 10u128.pow(18)),
+                ),
+                (
+                    score_based_product.id.clone(),
+                    Jar::new().with_deposit(0, 100 * 10u128.pow(18)),
+                ),
+            ],
+        );
+    ctx.contract().get_account_mut(&alice()).score.timezone = Timezone::hour_shift(3);
 
     let mut result = vec![];
 
     ctx.switch_account(admin());
 
     for day in 1..400 {
-        ctx.set_block_timestamp_in_days(day.try_into().unwrap());
+        ctx.set_block_timestamp_in_days(day);
 
         if day < 100 {
-            ctx.record_score(UTC(MS_IN_DAY * day), (4_000..10_000).fake(), alice());
+            ctx.record_score(&alice(), UTC(MS_IN_DAY * day), (4_000..10_000).fake());
         } else {
-            ctx.record_score(UTC(MS_IN_DAY * day), (15_000..20_000).fake(), alice());
+            ctx.record_score(&alice(), UTC(MS_IN_DAY * day), (15_000..20_000).fake());
         }
 
-        result.push((ctx.interest(STEP_JAR), ctx.interest(JAR)));
+        result.push((
+            ctx.interest(&alice(), &score_based_product.id),
+            ctx.interest(&alice(), &regular_product.id),
+        ));
     }
 
     result.into_iter().unzip()
@@ -57,26 +91,30 @@ fn plot_year() -> Result<()> {
         x_title: "Days",
         y_title: "Interest",
         output_file: "../docs/year_walk.png",
-        ..Default::default()
     })?;
 
     Ok(())
 }
 
-fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>) {
-    const ALICE_JAR: JarId = 0;
-    const BOB_JAR: JarId = 1;
+type WeekData = (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>);
 
+fn generate_first_week_data() -> WeekData {
     set_test_log_events(false);
 
-    let mut ctx = TestBuilder::new()
-        .product(SCORE_PRODUCT, [APY(0), ScoreCap(20_000)])
-        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
-        .jar(
-            BOB_JAR,
-            [JarField::Account(bob()), JarField::Timezone(Timezone::hour_shift(0))],
+    let product = generate_score_based_product();
+    let mut ctx = Context::new(admin())
+        .with_products(&vec![product.clone()])
+        .with_jars(
+            &alice(),
+            &[(product.id.clone(), Jar::new().with_deposit(0, 100 * 10u128.pow(18)))],
         )
-        .build();
+        .with_jars(
+            &bob(),
+            &[(product.id.clone(), Jar::new().with_deposit(0, 100 * 10u128.pow(18)))],
+        );
+
+    ctx.contract().get_account_mut(&alice()).score.timezone = Timezone::hour_shift(0);
+    ctx.contract().get_account_mut(&bob()).score.timezone = Timezone::hour_shift(0);
 
     let mut result = vec![];
     let mut score_walked: u128;
@@ -91,40 +129,40 @@ fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Ve
         let score: Score = (0..1000).fake();
 
         ctx.switch_account(admin());
-        ctx.record_score(UTC(day * MS_IN_DAY), score, alice());
-        ctx.record_score(UTC(day * MS_IN_DAY), score, bob());
+        ctx.record_score(&alice(), UTC(day * MS_IN_DAY), score);
+        ctx.record_score(&bob(), UTC(day * MS_IN_DAY), score);
 
         if day > 1 {
-            ctx.record_score(UTC((day - 1) * MS_IN_DAY), score, alice());
-            ctx.record_score(UTC((day - 1) * MS_IN_DAY), score, bob());
+            ctx.record_score(&alice(), UTC((day - 1) * MS_IN_DAY), score);
+            ctx.record_score(&bob(), UTC((day - 1) * MS_IN_DAY), score);
         }
 
         score_walked = u128::from(score);
 
-        let (today, yesterday) = ctx.score(ALICE_JAR).scores();
+        let (today, yesterday) = ctx.score(&alice()).scores();
 
         // if hour % 15 == 0 {
-        let claimed = ctx.claim_total(bob());
+        let claimed = ctx.claim_total(&bob());
         total_claimed += claimed;
         // }
 
         result.push((
             score_walked,
-            ctx.interest(ALICE_JAR),
+            ctx.interest(&alice(), &product.id),
             total_claimed,
             today as u128,
             yesterday as u128,
         ));
     }
 
-    let (today, yesterday) = ctx.score(BOB_JAR).scores();
+    let (today, yesterday) = ctx.score(&bob()).scores();
 
-    let claimed = ctx.claim_total(bob());
+    let claimed = ctx.claim_total(&bob());
     total_claimed += claimed;
 
     result.push((
         0,
-        ctx.interest(ALICE_JAR),
+        ctx.interest(&alice(), &product.id),
         total_claimed,
         today as u128,
         yesterday as u128,
@@ -145,7 +183,6 @@ fn plot_first_week() -> Result<()> {
         x_title: "Hours",
         y_title: "Interest",
         output_file: "../docs/first_week.png",
-        ..Default::default()
     })?;
 
     Ok(())
@@ -154,17 +191,16 @@ fn plot_first_week() -> Result<()> {
 #[test]
 #[ignore]
 fn plot_first_week_with_claim() -> Result<()> {
-    // let (score_walked, ideal_jar, real_jar, claimed_ideal, claimed_real) = generate_first_week_data(true);
-    //
-    // render_chart(Graph {
-    //     title: "Step Jars First Week With Claim",
-    //     data: [&score_walked, &ideal_jar, &real_jar, &claimed_ideal, &claimed_real],
-    //     legend: ["Steps Walked", "Ideal jar", "Real Jar", "Claimed Ideal", "Claimed Real"],
-    //     x_title: "Hours",
-    //     y_title: "Interest",
-    //     output_file: "../docs/first_week_claim.png",
-    //     ..Default::default()
-    // })?;
+    let (score_walked, ideal_jar, real_jar, claimed_ideal, claimed_real) = generate_first_week_data();
+
+    render_chart(Graph {
+        title: "Step Jars First Week With Claim",
+        data: [&score_walked, &ideal_jar, &real_jar, &claimed_ideal, &claimed_real],
+        legend: ["Steps Walked", "Ideal jar", "Real Jar", "Claimed Ideal", "Claimed Real"],
+        x_title: "Hours",
+        y_title: "Interest",
+        output_file: "../docs/first_week_claim.png",
+    })?;
 
     Ok(())
 }

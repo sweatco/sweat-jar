@@ -2404,6 +2404,7 @@ dependencies = [
  "ed25519-dalek 2.1.1",
  "fake",
  "futures",
+ "log",
  "mutants",
  "near-workspaces",
  "nitka 0.4.0",

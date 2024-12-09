@@ -5,42 +5,17 @@ use std::{
 
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::{
-    jar::{
-        account::{v1::AccountV1, AccountJarsLastVersion},
-        model::AccountJarsLegacy,
-    },
-    migration::account_jars_non_versioned::AccountJarsNonVersioned,
-    score::AccountScore,
-};
+use crate::jar::account::{v1::AccountV1, Account};
 
-pub type Account = AccountVersioned;
-
-#[derive(BorshSerialize, Debug, PartialEq)]
+#[derive(BorshSerialize, Debug, PartialEq, Clone)]
 #[borsh(crate = "near_sdk::borsh")]
 pub enum AccountVersioned {
     V1(AccountV1),
 }
 
 impl AccountVersioned {
-    pub fn score(&self) -> Option<&AccountScore> {
-        if self.has_score_jars() {
-            Some(&self.score)
-        } else {
-            None
-        }
-    }
-
-    pub fn score_mut(&mut self) -> Option<&mut AccountScore> {
-        if self.has_score_jars() {
-            Some(&mut self.score)
-        } else {
-            None
-        }
-    }
-
-    pub fn has_score_jars(&self) -> bool {
-        self.score.is_valid()
+    pub(crate) fn new(account: Account) -> Self {
+        AccountVersioned::V1(account)
     }
 }
 
@@ -62,17 +37,17 @@ impl BorshDeserialize for AccountVersioned {
 
 impl Default for AccountVersioned {
     fn default() -> Self {
-        Self::V1(AccountV1::default())
+        Self::V1(Account::default())
     }
 }
 
 impl Deref for AccountVersioned {
-    type Target = AccountJarsLastVersion;
+    type Target = Account;
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::V1(jars) => jars,
+            Self::V1(account) => account,
             // Guaranteed by `BorshDeserialize` implementation
-            // Self::V2(jar) => jar, <- Add new version here
+            // Self::V2(account) => account, <- Add new version here
         }
     }
 }
@@ -80,21 +55,9 @@ impl Deref for AccountVersioned {
 impl DerefMut for AccountVersioned {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::V1(jars) => jars,
+            Self::V1(account) => account,
             // Guaranteed by `BorshDeserialize` implementation
-            // Self::V2(jar) => jar, <- Add new version here
+            // Self::V2(account) => account, <- Add new version here
         }
-    }
-}
-
-impl From<AccountJarsLegacy> for Account {
-    fn from(value: AccountJarsLegacy) -> Self {
-        Self::V1(value.into())
-    }
-}
-
-impl From<AccountJarsNonVersioned> for Account {
-    fn from(value: AccountJarsNonVersioned) -> Self {
-        Self::V1(value.into())
     }
 }

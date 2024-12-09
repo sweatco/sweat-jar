@@ -6,13 +6,13 @@ use ed25519_dalek::{Signer, SigningKey};
 use general_purpose::STANDARD;
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
-use sweat_jar_model::{Score, TokenAmount, UDecimal, MS_IN_YEAR};
+use sweat_jar_model::{ProductId, TokenAmount, UDecimal, MS_IN_YEAR};
 
 use crate::{
-    common::{tests::Context, Duration},
+    common::tests::Context,
     jar::model::JarTicket,
-    product::model::{Apy, Cap, FixedProductTerms, Product, Terms, WithdrawalFee},
-    test_utils::PRODUCT,
+    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee},
+    test_utils::DEFAULT_PRODUCT_NAME,
     Contract,
 };
 
@@ -43,22 +43,41 @@ impl MessageSigner {
     }
 }
 
+impl Default for Product {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Product {
     pub fn new() -> Self {
         Self {
-            id: PRODUCT.to_string(),
-            apy: Apy::Constant(UDecimal::new(12, 2)),
+            id: DEFAULT_PRODUCT_NAME.to_string(),
             cap: Cap { min: 0, max: 1_000_000 },
             terms: Terms::Fixed(FixedProductTerms {
                 lockup_term: MS_IN_YEAR,
-                allows_top_up: false,
-                allows_restaking: false,
+                apy: Apy::new_downgradable(),
             }),
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
-            score_cap: 0,
+            is_restakable: true,
         }
+    }
+
+    pub fn with_id(mut self, id: ProductId) -> Self {
+        self.id = id;
+        self
+    }
+
+    pub fn with_terms(mut self, terms: Terms) -> Self {
+        self.terms = terms;
+        self
+    }
+
+    pub fn with_public_key(mut self, public_key: Option<Vec<u8>>) -> Self {
+        self.public_key = public_key;
+        self
     }
 }
 
@@ -83,68 +102,13 @@ impl Product {
         self
     }
 
-    pub(crate) fn flexible(mut self) -> Self {
-        self.terms = Terms::Flexible;
-        self
-    }
-
     pub(crate) fn with_withdrawal_fee(mut self, fee: WithdrawalFee) -> Self {
         self.withdrawal_fee = Some(fee);
         self
     }
 
-    pub(crate) fn lockup_term(mut self, term: Duration) -> Self {
-        self.terms = match self.terms {
-            Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
-                lockup_term: term,
-                ..terms
-            }),
-            Terms::Flexible => Terms::Fixed(FixedProductTerms {
-                lockup_term: term,
-                allows_top_up: false,
-                allows_restaking: false,
-            }),
-        };
-
-        self
-    }
-
-    pub(crate) fn with_allows_top_up(mut self, allows_top_up: bool) -> Self {
-        self.terms = match self.terms {
-            Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms { allows_top_up, ..terms }),
-            Terms::Flexible => Terms::Fixed(FixedProductTerms {
-                allows_top_up,
-                lockup_term: MS_IN_YEAR,
-                allows_restaking: false,
-            }),
-        };
-
-        self
-    }
-
-    pub(crate) fn with_allows_restaking(mut self, allows_restaking: bool) -> Self {
-        self.terms = match self.terms {
-            Terms::Fixed(terms) => Terms::Fixed(FixedProductTerms {
-                allows_restaking,
-                ..terms
-            }),
-            Terms::Flexible => Terms::Fixed(FixedProductTerms {
-                allows_restaking,
-                lockup_term: MS_IN_YEAR,
-                allows_top_up: false,
-            }),
-        };
-
-        self
-    }
-
-    pub(crate) fn apy(mut self, apy: impl Into<Apy>) -> Self {
-        self.apy = apy.into();
-        self
-    }
-
-    pub(crate) fn score_cap(mut self, cap: Score) -> Self {
-        self.score_cap = cap;
+    pub(crate) fn terms(mut self, terms: Terms) -> Self {
+        self.terms = terms;
         self
     }
 }
@@ -162,14 +126,16 @@ impl Context {
             &ticket.product_id,
             amount,
             ticket.valid_until.0,
-            None,
+            0,
         )
     }
 }
 
-/// Constant APY described as percent. Value of 10 means 10% or UDecimal::new(10, 2)
-impl Into<Apy> for u32 {
-    fn into(self) -> Apy {
-        Apy::Constant(UDecimal::new(self.into(), 2))
+impl Apy {
+    pub(crate) fn new_downgradable() -> Self {
+        Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        })
     }
 }

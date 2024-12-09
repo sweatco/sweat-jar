@@ -1,6 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::jar::{CeFiJar, JarId};
+use near_sdk::{json_types::U128, near, serde_json, AccountId, PromiseOrValue};
 
 use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
 
@@ -11,12 +10,6 @@ use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, Contract
 pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
-
-    /// Represents a request to create `DeFi` Jars from provided `CeFi` Jars.
-    Migrate(Vec<CeFiJar>),
-
-    /// Represents a request to refill (top up) an existing jar using its `JarId`.
-    TopUp(JarId),
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.
@@ -42,15 +35,7 @@ impl FungibleTokenReceiver for Contract {
         match ft_message {
             FtMessage::Stake(message) => {
                 let receiver_id = message.receiver_id.unwrap_or(sender_id);
-                self.create_jar(receiver_id, message.ticket, amount, message.signature);
-            }
-            FtMessage::Migrate(jars) => {
-                require!(sender_id == self.manager, "Migration can be performed only by admin");
-
-                self.migrate_jars(jars, amount);
-            }
-            FtMessage::TopUp(jar_id) => {
-                self.top_up(&sender_id, jar_id, amount);
+                self.deposit(receiver_id, message.ticket, amount.0, &message.signature);
             }
         }
 
@@ -63,19 +48,14 @@ mod tests {
     use std::panic::catch_unwind;
 
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-    use near_sdk::{
-        json_types::U128,
-        serde_json::json,
-        test_utils::test_env::{alice, bob},
-    };
-    use sweat_jar_model::{api::JarApi, UDecimal, U32};
+    use near_sdk::{json_types::U128, serde_json::json, test_utils::test_env::alice};
+    use sweat_jar_model::{UDecimal, MS_IN_YEAR};
 
     use crate::{
         common::tests::Context,
-        jar::model::Jar,
         product::{
             helpers::MessageSigner,
-            model::{Apy, DowngradableApy, Product},
+            model::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
         },
         test_utils::admin,
         Contract,
@@ -99,13 +79,18 @@ mod tests {
             }
         });
 
+        let ticket_amount = 1_000_000;
         context.switch_account_to_ft_contract_account();
         context
             .contract()
-            .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
+            .ft_on_transfer(alice.clone(), ticket_amount.into(), msg.to_string());
 
-        let jar = context.contract().get_jar(alice, U32(1));
-        assert_eq!(jar.id.0, 1);
+        let principal = context
+            .contract()
+            .get_account(&alice)
+            .get_jar(&product.id)
+            .total_principal();
+        assert_eq!(ticket_amount, principal);
     }
 
     #[test]
@@ -126,7 +111,7 @@ mod tests {
                 &product.id,
                 ticket_amount,
                 ticket_valid_until,
-                None,
+                0,
             )
             .as_str(),
         );
@@ -145,10 +130,14 @@ mod tests {
         context.switch_account_to_ft_contract_account();
         context
             .contract()
-            .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
+            .ft_on_transfer(alice.clone(), ticket_amount.into(), msg.to_string());
 
-        let jar = context.contract().get_jar(alice.clone(), U32(1));
-        assert_eq!(jar.id.0, 1);
+        let principal = context
+            .contract()
+            .get_account(&alice)
+            .get_jar(&product.id)
+            .total_principal();
+        assert_eq!(ticket_amount, principal);
 
         let result = catch_unwind(move || {
             context
@@ -156,167 +145,6 @@ mod tests {
                 .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string())
         });
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn transfer_with_top_up_message_for_refillable_product() {
-        let alice = alice();
-        let admin = admin();
-
-        let product = Product::new().with_allows_top_up(true);
-
-        let initial_jar_principal = 100;
-        let reference_jar = Jar::new(0).principal(initial_jar_principal);
-
-        let mut context = Context::new(admin)
-            .with_products(&[product])
-            .with_jars(&[reference_jar.clone()]);
-
-        let msg = json!({
-            "type": "top_up",
-            "data": reference_jar.id,
-        });
-
-        context.switch_account_to_ft_contract_account();
-        let top_up_amount = 700;
-        context
-            .contract()
-            .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
-
-        let jar = context.contract().get_jar(alice, U32(0));
-        assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
-    }
-
-    #[test]
-    #[should_panic(expected = "The product doesn't allow top-ups")]
-    fn transfer_with_top_up_message_for_not_refillable_product() {
-        let alice = alice();
-        let admin = admin();
-
-        let product = Product::new().with_allows_top_up(false);
-
-        let reference_jar = Jar::new(0).principal(500);
-
-        let mut context = Context::new(admin)
-            .with_products(&[product])
-            .with_jars(&[reference_jar.clone()]);
-
-        let msg = json!({
-            "type": "top_up",
-            "data": reference_jar.id,
-        });
-
-        context.switch_account_to_ft_contract_account();
-        context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
-    }
-
-    #[test]
-    fn transfer_with_top_up_message_for_flexible_product() {
-        let alice = alice();
-        let admin = admin();
-
-        let product = Product::new().flexible();
-
-        let initial_jar_principal = 100_000;
-        let reference_jar = Jar::new(0).principal(initial_jar_principal);
-
-        let mut context = Context::new(admin)
-            .with_products(&[product])
-            .with_jars(&[reference_jar.clone()]);
-
-        let msg = json!({
-            "type": "top_up",
-            "data": reference_jar.id,
-        });
-
-        context.switch_account_to_ft_contract_account();
-
-        let top_up_amount = 1_000;
-        context
-            .contract()
-            .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
-
-        let jar = context.contract().get_jar(alice, U32(0));
-        assert_eq!(initial_jar_principal + top_up_amount, jar.principal.0);
-    }
-
-    #[test]
-    fn transfer_with_migration_message() {
-        let alice = alice();
-        let bob = bob();
-        let admin = admin();
-
-        let product = Product::new();
-        let reference_restakable_product = Product::new().id("restakable_product");
-
-        let mut context =
-            Context::new(admin.clone()).with_products(&[product.clone(), reference_restakable_product.clone()]);
-
-        let amount_alice = 100;
-        let amount_bob = 200;
-        let msg = json!({
-            "type": "migrate",
-            "data": [
-                {
-                    "id": "cefi_product_1",
-                    "account_id": alice,
-                    "product_id": product.id,
-                    "principal": amount_alice.to_string(),
-                    "created_at": "0",
-                },
-                {
-                    "id": "cefi_product_2",
-                    "account_id": bob,
-                    "product_id": reference_restakable_product.id,
-                    "principal": amount_bob.to_string(),
-                    "created_at": "0",
-                },
-            ]
-        });
-
-        context.switch_account_to_ft_contract_account();
-        context
-            .contract()
-            .ft_on_transfer(admin, U128(amount_alice + amount_bob), msg.to_string());
-
-        let alice_jars = context.contract().get_jars_for_account(alice);
-        assert_eq!(alice_jars.len(), 1);
-        assert_eq!(alice_jars.first().unwrap().principal.0, amount_alice);
-
-        let bob_jars = context.contract().get_jars_for_account(bob);
-        assert_eq!(bob_jars.len(), 1);
-        assert_eq!(bob_jars.first().unwrap().principal.0, amount_bob);
-    }
-
-    #[test]
-    #[should_panic(expected = "Migration can be performed only by admin")]
-    fn transfer_with_migration_message_by_not_admin() {
-        let alice = alice();
-        let admin = admin();
-
-        let product = Product::new();
-        let reference_restakable_product = Product::new().id("restakable_product");
-
-        let mut context = Context::new(admin).with_products(&[product.clone(), reference_restakable_product]);
-
-        let amount_alice = 1_000;
-        let msg = json!({
-            "type": "migrate",
-            "data": [
-                {
-                    "id": "cefi_product_3",
-                    "account_id": alice,
-                    "product_id": product.id,
-                    "principal": amount_alice.to_string(),
-                    "created_at": "0",
-                },
-            ]
-        });
-
-        context.switch_account_to_ft_contract_account();
-        context
-            .contract()
-            .ft_on_transfer(alice, U128(amount_alice), msg.to_string());
     }
 
     #[test]
@@ -351,9 +179,12 @@ mod tests {
         let signer = MessageSigner::new();
         let product = Product::new()
             .public_key(signer.public_key())
-            .apy(Apy::Downgradable(DowngradableApy {
-                default: UDecimal::new(20, 2),
-                fallback: UDecimal::new(10, 2),
+            .terms(Terms::Fixed(FixedProductTerms {
+                lockup_term: MS_IN_YEAR,
+                apy: Apy::Downgradable(DowngradableApy {
+                    default: UDecimal::new(20, 2),
+                    fallback: UDecimal::new(10, 2),
+                }),
             }));
 
         (signer, product)

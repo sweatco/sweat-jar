@@ -7,6 +7,17 @@ use crate::{ProductId, Score, MS_IN_YEAR};
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers=[json])]
+pub struct ProductView {
+    pub id: ProductId,
+    pub cap: CapView,
+    pub terms: TermsView,
+    pub withdrawal_fee: Option<WithdrawalFeeView>,
+    pub is_enabled: bool,
+    pub is_restakable: bool,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
 pub struct DowngradableApyView {
     pub default: f32,
     pub fallback: f32,
@@ -28,18 +39,31 @@ pub struct CapView {
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers=[json])]
-pub struct FixedProductTermsView {
-    pub lockup_term: U64,
-    pub allows_top_up: bool,
-    pub allows_restaking: bool,
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
+pub enum TermsView {
+    Fixed(FixedProductTermsView),
+    Flexible(FlexibleProductTermsView),
+    ScoreBased(ScoreBasedProductTermsView),
 }
 
 #[derive(Clone, Debug, PartialEq)]
 #[near(serializers=[json])]
-#[serde(tag = "type", content = "data", rename_all = "snake_case")]
-pub enum TermsView {
-    Fixed(FixedProductTermsView),
-    Flexible,
+pub struct FixedProductTermsView {
+    pub apy: ApyView,
+    pub lockup_term: U64,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
+pub struct FlexibleProductTermsView {
+    pub apy: ApyView,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+#[near(serializers=[json])]
+pub struct ScoreBasedProductTermsView {
+    pub lockup_term: U64,
+    pub score_cap: Score,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -50,35 +74,24 @@ pub enum WithdrawalFeeView {
     Percent(f32),
 }
 
-#[derive(Clone, Debug, PartialEq)]
-#[near(serializers=[json])]
-pub struct ProductView {
+#[near(serializers=[borsh, json])]
+#[derive(PartialEq, Clone, Debug)]
+// TODO: doc change
+pub struct ProductDto {
     pub id: ProductId,
-    pub apy: ApyView,
-    pub cap: CapView,
-    pub terms: TermsView,
-    pub withdrawal_fee: Option<WithdrawalFeeView>,
+    pub cap: (U128, U128),
+    pub terms: TermsDto,
+    pub withdrawal_fee: Option<WithdrawalFeeDto>,
+    pub public_key: Option<Base64VecU8>,
     pub is_enabled: bool,
-    #[serde(default)]
-    pub score_cap: Score,
+    pub is_restakable: bool,
 }
 
 #[near(serializers=[borsh, json])]
 #[derive(PartialEq, Clone, Debug)]
-pub struct FixedProductTermsDto {
-    pub lockup_term: U64,
-    pub allows_top_up: bool,
-    pub allows_restaking: bool,
-}
-
-impl Default for FixedProductTermsDto {
-    fn default() -> Self {
-        Self {
-            lockup_term: U64(MS_IN_YEAR),
-            allows_restaking: false,
-            allows_top_up: false,
-        }
-    }
+pub struct ApyDto {
+    pub default: (U128, u32),
+    pub fallback: Option<(U128, u32)>,
 }
 
 #[near(serializers=[borsh, json])]
@@ -86,7 +99,60 @@ impl Default for FixedProductTermsDto {
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum TermsDto {
     Fixed(FixedProductTermsDto),
-    Flexible,
+    Flexible(FlexibleProductTermsDto),
+    ScoreBased(ScoreBasedProductTermsDto),
+}
+
+#[near(serializers=[borsh, json])]
+#[derive(PartialEq, Clone, Debug)]
+pub struct FixedProductTermsDto {
+    pub apy: ApyDto,
+    pub lockup_term: U64,
+}
+
+#[near(serializers=[borsh, json])]
+#[derive(PartialEq, Clone, Debug)]
+pub struct FlexibleProductTermsDto {
+    pub apy: ApyDto,
+}
+
+#[near(serializers=[borsh, json])]
+#[derive(PartialEq, Clone, Debug)]
+pub struct ScoreBasedProductTermsDto {
+    pub lockup_term: U64,
+    pub score_cap: Score,
+}
+
+impl Default for ProductDto {
+    fn default() -> Self {
+        Self {
+            id: "default_product".to_string(),
+            cap: (U128(100), U128(100_000_000_000)),
+            terms: TermsDto::default(),
+            withdrawal_fee: None,
+            public_key: None,
+            is_enabled: true,
+            is_restakable: true,
+        }
+    }
+}
+
+impl Default for FixedProductTermsDto {
+    fn default() -> Self {
+        Self {
+            lockup_term: U64(MS_IN_YEAR),
+            apy: ApyDto::default(),
+        }
+    }
+}
+
+impl Default for ApyDto {
+    fn default() -> Self {
+        ApyDto {
+            default: (U128(12), 2),
+            fallback: None,
+        }
+    }
 }
 
 impl Default for TermsDto {
@@ -108,34 +174,12 @@ pub enum WithdrawalFeeDto {
     Percent(U128, u32),
 }
 
-#[near(serializers=[borsh, json])]
-#[derive(PartialEq, Clone, Debug)]
-pub struct RegisterProductCommand {
-    pub id: ProductId,
-    pub apy_default: (U128, u32),
-    pub apy_fallback: Option<(U128, u32)>,
-    pub cap_min: U128,
-    pub cap_max: U128,
-    pub terms: TermsDto,
-    pub withdrawal_fee: Option<WithdrawalFeeDto>,
-    pub public_key: Option<Base64VecU8>,
-    pub is_enabled: bool,
-    pub score_cap: Score,
-}
-
-impl Default for RegisterProductCommand {
-    fn default() -> Self {
-        Self {
-            id: "default_product".to_string(),
-            apy_default: (U128(12), 2),
-            apy_fallback: None,
-            cap_min: U128(100),
-            cap_max: U128(100_000_000_000),
-            terms: TermsDto::default(),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
-            score_cap: 0,
+impl ProductView {
+    pub fn get_base_apy(&self) -> &ApyView {
+        match &self.terms {
+            TermsView::Fixed(value) => &value.apy,
+            TermsView::Flexible(value) => &value.apy,
+            TermsView::ScoreBased(_) => panic!("No APY for a score based product"),
         }
     }
 }

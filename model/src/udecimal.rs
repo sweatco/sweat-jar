@@ -3,7 +3,7 @@ use std::{
     ops::{Add, Mul},
 };
 
-use near_sdk::near;
+use near_sdk::{json_types::U128, near};
 
 /// `UDecimal` represents a scientific representation of decimals.
 ///
@@ -25,6 +25,10 @@ pub struct UDecimal {
 impl UDecimal {
     pub const fn new(significand: u128, exponent: u32) -> Self {
         Self { significand, exponent }
+    }
+
+    pub const fn zero() -> Self {
+        Self::new(0, 0)
     }
 
     /// Use this method only for View structures because
@@ -84,6 +88,12 @@ impl Add for UDecimal {
             significand: self_sig.saturating_add(other_sig),
             exponent: max_exponent,
         }
+    }
+}
+
+impl From<(U128, u32)> for UDecimal {
+    fn from(value: (U128, u32)) -> Self {
+        Self::new(value.0 .0, value.1)
     }
 }
 

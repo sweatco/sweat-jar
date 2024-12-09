@@ -7,7 +7,7 @@ use nitka::{
     },
     ContractCall,
 };
-use sweat_jar_model::{api::SweatJarContract, jar::JarId, Timezone};
+use sweat_jar_model::{api::SweatJarContract, Timezone};
 use sweat_model::{FungibleTokenCoreIntegration, SweatContract};
 
 trait Internal {
@@ -70,21 +70,13 @@ pub trait JarContractExtensions {
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
 
-    fn top_up(
-        &self,
-        account: &Account,
-        jar_id: JarId,
-        amount: U128,
-        ft_contract: &SweatContract<'_>,
-    ) -> ContractCall<U128>;
-
     fn get_signature_material(
         &self,
         receiver_id: &Account,
         product_id: &String,
         valid_until: u64,
         amount: u128,
-        last_jar_id: Option<String>,
+        nonce: u32,
     ) -> String;
 }
 
@@ -175,33 +167,13 @@ impl JarContractExtensions for SweatJarContract<'_> {
         self.create_jar_internal(user, msg, amount, ft_contract)
     }
 
-    fn top_up(
-        &self,
-        account: &Account,
-        jar_id: JarId,
-        amount: U128,
-        ft_contract: &SweatContract<'_>,
-    ) -> ContractCall<U128> {
-        let msg = json!({
-            "type": "top_up",
-            "data": jar_id,
-        });
-
-        println!("▶️ Top up with msg: {:?}", msg,);
-
-        ft_contract
-            .ft_transfer_call(self.contract.as_account().to_near(), amount, None, msg.to_string())
-            .deposit(NearToken::from_yoctonear(1))
-            .with_user(account)
-    }
-
     fn get_signature_material(
         &self,
         receiver_id: &Account,
         product_id: &String,
         valid_until: u64,
         amount: u128,
-        last_jar_id: Option<String>,
+        nonce: u32,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",
@@ -209,7 +181,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
             receiver_id.id(),
             product_id,
             amount,
-            last_jar_id.map_or_else(String::new, |value| value),
+            nonce,
             valid_until,
         )
     }
