@@ -226,10 +226,12 @@ impl Contract {
         let product_id = &ticket.product_id;
         let product = self.get_product(product_id);
 
-        if product.is_score_product() {
-            // For score products we need to migrate earlier to write timezone to already migrated account
-            self.migrate_account_if_needed(&account_id);
+        product.assert_enabled();
+        product.assert_cap(amount);
 
+        self.migrate_account_if_needed(&account_id);
+
+        if product.is_score_product() {
             match (ticket.timezone, self.get_score_mut(&account_id)) {
                 // Time zone already set. No actions required.
                 (Some(_) | None, Some(_)) => (),
@@ -244,8 +246,6 @@ impl Contract {
             }
         }
 
-        product.assert_enabled();
-        product.assert_cap(amount);
         self.verify(&account_id, amount, &ticket, signature);
 
         let id = self.increment_and_get_last_jar_id();
