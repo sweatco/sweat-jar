@@ -24,6 +24,8 @@ impl Contract {
         let jar_id = jar_id.0;
         let account_id = env::predecessor_account_id();
 
+        self.migrate_account_if_needed(&account_id);
+
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 
         let jar = self.get_jar_internal(&account_id, jar_id);

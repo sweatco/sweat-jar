@@ -1,8 +1,10 @@
 #![cfg(test)]
 
 use fake::Fake;
+use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
     json_types::{I64, U128},
+    serde_json::json,
     store::LookupMap,
     test_utils::test_env::{alice, bob},
     NearToken, Timestamp,
@@ -19,6 +21,7 @@ use crate::{
         test_data::{set_test_future_success, set_test_log_events},
         tests::Context,
     },
+    jar::model::AccountJarsLegacy,
     test_builder::{JarField, ProductField::*, TestAccess, TestBuilder},
     test_utils::{admin, expect_panic, UnwrapPromise, PRODUCT, SCORE_PRODUCT},
     StorageKey,
@@ -459,4 +462,41 @@ fn claim_when_there_were_no_walkchains_for_some_time() {
     ctx.set_block_timestamp_in_ms(1733140384365); // Mon Dec 02 2024 11:53:04
 
     assert_eq!(ctx.contract().get_total_interest(alice()).amount.total.0, 0);
+}
+
+#[test]
+fn test_steps_and_migration() {
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
+        .build();
+
+    ctx.contract().account_jars_v1.insert(
+        alice(),
+        AccountJarsLegacy {
+            last_id: 0,
+            jars: vec![],
+        },
+    );
+
+    ctx.switch_account_to_ft_contract_account();
+    ctx.contract().ft_on_transfer(
+        alice(),
+        10_000.into(),
+        json!({
+            "type": "stake",
+            "data": {
+                "ticket": {
+                    "product_id": SCORE_PRODUCT,
+                    "valid_until": "0",
+                    "timezone": 0,
+                }
+            }
+        })
+        .to_string()
+        .into(),
+    );
+
+    ctx.record_score(UTC(0), 25000, alice());
 }
