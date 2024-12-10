@@ -9,7 +9,11 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::{test_data::set_test_future_success, tests::Context, Timestamp},
+    common::{
+        test_data::set_test_future_success,
+        tests::{Context, TokenUtils},
+        Timestamp,
+    },
     jar::model::{Deposit, Jar},
     product::model::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise},
@@ -370,6 +374,48 @@ fn withdraw_all() {
         .cloned()
         .collect();
     assert_eq!(jars_principal, target_principal);
+}
+
+#[test]
+fn withdraw_all_with_fee() {
+    let term_in_days = 365;
+
+    let fixed_fee = 100;
+    let product_with_fixed_fee = testing_product_fixed(term_in_days)
+        .id("fixed_fee_product")
+        .with_withdrawal_fee(WithdrawalFee::Fix(fixed_fee));
+
+    let percent_fee = UDecimal::new(1, 2);
+    let product_with_percent_fee = testing_product_fixed(term_in_days)
+        .id("percent_fee_product")
+        .with_withdrawal_fee(WithdrawalFee::Percent(percent_fee));
+
+    let product_with_fixed_fee_principal = 100.to_otto();
+    let product_with_percent_fee_principal = 1_000.to_otto();
+
+    let mut context = Context::new(admin())
+        .with_products(&[product_with_fixed_fee.clone(), product_with_percent_fee.clone()])
+        .with_jars(
+            &alice(),
+            &[
+                (
+                    product_with_fixed_fee.id,
+                    Jar::new().with_deposit(0, product_with_fixed_fee_principal),
+                ),
+                (
+                    product_with_percent_fee.id,
+                    Jar::new().with_deposit(0, product_with_percent_fee_principal),
+                ),
+            ],
+        );
+
+    context.set_block_timestamp_in_days(term_in_days + 1);
+    context.switch_account(alice());
+    context.contract().claim_total(None);
+
+    let withdrawn = context.withdraw_all(&alice());
+    let total_fee = withdrawn.withdrawals.iter().map(|withdrawal| withdrawal.fee.0).sum();
+    assert_eq!(fixed_fee + percent_fee * product_with_percent_fee_principal, total_fee);
 }
 
 #[test]
