@@ -104,6 +104,15 @@ pub trait RestakeApi {
 }
 
 #[make_integration_version]
+pub trait FeeApi {
+    /// Returns amount of FT collected as withdrawal fee and available for withdrawal.
+    fn get_fee_amount(&self) -> U128;
+
+    /// Transfers collected fee to a dedicated account.
+    fn withdraw_fee(&mut self) -> ::near_sdk::PromiseOrValue<U128>;
+}
+
+#[make_integration_version]
 pub trait MigrationToClaimRemainder {
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>);
 }

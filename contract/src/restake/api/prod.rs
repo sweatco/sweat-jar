@@ -14,9 +14,8 @@ impl RemainderTransfer for Contract {
         self.ft_contract()
             .ft_transfer(
                 &request.account_id,
-                request.withdrawal.amount,
+                request.withdrawal.net_amount(),
                 "withdraw_remainder",
-                &self.wrap_fee(request.withdrawal.fee),
             )
             .then(ext_self::ext(env::current_account_id()).after_transfer_remainder(request, event))
             .into()

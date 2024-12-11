@@ -1,7 +1,7 @@
 #![cfg(not(test))]
 
 use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Gas, NearToken, Promise};
-use sweat_jar_model::{withdraw::Fee, TokenAmount};
+use sweat_jar_model::TokenAmount;
 
 use crate::{Contract, ContractExt};
 
@@ -25,19 +25,13 @@ impl Contract {
 }
 
 pub(crate) trait FungibleTokenInterface {
-    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise;
+    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str) -> Promise;
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
     #[mutants::skip] // Covered by integration tests
-    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise {
-        if let Some(fee) = fee {
-            Promise::new(self.address.clone())
-                .ft_transfer(receiver_id, amount - fee.amount, Some(memo.to_string()))
-                .ft_transfer(&fee.beneficiary_id, fee.amount, Some(format!("{memo} fee")))
-        } else {
-            Promise::new(self.address.clone()).ft_transfer(receiver_id, amount, Some(memo.to_string()))
-        }
+    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str) -> Promise {
+        Promise::new(self.address.clone()).ft_transfer(receiver_id, amount, Some(memo.to_string()))
     }
 }
 

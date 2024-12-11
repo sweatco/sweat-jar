@@ -45,6 +45,7 @@ impl StateMigration for Contract {
             products,
             accounts: LookupMap::new(StorageKey::Accounts),
             products_cache: HashMap::default().into(),
+            fee_amount: 0,
             archive: Archive {
                 accounts_v1: old_state.accounts_v1,
                 accounts_v2: old_state.accounts_v2,

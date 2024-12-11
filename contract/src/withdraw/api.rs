@@ -7,7 +7,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::WithdrawApi,
-    withdraw::{BulkWithdrawView, Fee, WithdrawView},
+    withdraw::{BulkWithdrawView, WithdrawView},
     ProductId, TokenAmount,
 };
 
@@ -17,19 +17,44 @@ use crate::internal::is_promise_success;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(crate = "near_sdk::serde")]
-pub(super) struct WithdrawalRequest {
+pub(crate) struct WithdrawalRequest {
     pub product_id: ProductId,
+    pub withdrawal: WithdrawalDto,
+    pub partition_index: usize,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+#[serde(crate = "near_sdk::serde")]
+pub(crate) struct WithdrawalDto {
     pub amount: TokenAmount,
     pub fee: TokenAmount,
-    pub partition_index: usize,
+}
+
+impl WithdrawalDto {
+    pub fn new(amount: TokenAmount, fee: TokenAmount) -> Self {
+        Self { amount, fee }
+    }
+
+    #[cfg(not(test))]
+    pub fn net_amount(&self) -> TokenAmount {
+        self.amount - self.fee
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(crate = "near_sdk::serde")]
 pub(super) struct BulkWithdrawalRequest {
     pub requests: Vec<WithdrawalRequest>,
-    pub total_amount: TokenAmount,
-    pub total_fee: TokenAmount,
+}
+
+#[cfg(not(test))]
+impl BulkWithdrawalRequest {
+    fn total_net_amount(&self) -> TokenAmount {
+        self.requests
+            .iter()
+            .map(|request| request.withdrawal.net_amount())
+            .sum()
+    }
 }
 
 #[cfg(not(test))]
@@ -67,8 +92,7 @@ impl WithdrawApi for Contract {
 
         let request = WithdrawalRequest {
             product_id,
-            amount,
-            fee,
+            withdrawal: WithdrawalDto::new(amount, fee),
             partition_index,
         };
 
@@ -93,13 +117,10 @@ impl WithdrawApi for Contract {
             let fee = product.calculate_fee(amount);
 
             request.requests.push(WithdrawalRequest {
-                amount,
-                partition_index,
                 product_id: product.id,
-                fee,
+                withdrawal: WithdrawalDto::new(amount, fee),
+                partition_index,
             });
-            request.total_amount += amount;
-            request.total_fee += fee;
         }
 
         for request in &request.requests {
@@ -127,12 +148,14 @@ impl Contract {
         account.get_jar_mut(&request.product_id).unlock();
 
         if !is_promise_success {
-            return WithdrawView::new(&request.product_id, 0, None);
+            return WithdrawView::new(&request.product_id, 0, 0);
         }
 
         self.clean_up(&account_id, &request);
+        self.fee_amount += request.withdrawal.fee;
 
-        let withdrawal_result = WithdrawView::new(&request.product_id, request.amount, self.wrap_fee(request.fee));
+        let withdrawal_result =
+            WithdrawView::new(&request.product_id, request.withdrawal.amount, request.withdrawal.fee);
 
         emit(EventKind::Withdraw((
             request.product_id,
@@ -185,28 +208,19 @@ impl Contract {
                 .get_jar_mut(&request.product_id)
                 .unlock();
 
-            let deposit_withdrawal = WithdrawView::new(&request.product_id, request.amount, self.wrap_fee(request.fee));
+            let deposit_withdrawal =
+                WithdrawView::new(&request.product_id, request.withdrawal.amount, request.withdrawal.fee);
 
             result.total_amount.0 += deposit_withdrawal.withdrawn_amount.0;
             result.withdrawals.push(deposit_withdrawal);
         }
 
         for request in &request.requests {
+            self.fee_amount += request.withdrawal.fee;
             self.clean_up(account_id, request);
         }
 
         result
-    }
-
-    pub(crate) fn wrap_fee(&self, amount: TokenAmount) -> Option<Fee> {
-        if amount == 0 {
-            None
-        } else {
-            Some(Fee {
-                beneficiary_id: self.fee_account_id.clone(),
-                amount,
-            })
-        }
     }
 }
 
@@ -247,7 +261,7 @@ impl Contract {
         request: WithdrawalRequest,
     ) -> PromiseOrValue<WithdrawView> {
         self.ft_contract()
-            .ft_transfer(account_id, request.amount, "withdraw", &self.wrap_fee(request.fee))
+            .ft_transfer(account_id, request.withdrawal.net_amount(), "withdraw")
             .then(Self::after_withdraw_call(account_id.clone(), request))
             .into()
     }
@@ -263,12 +277,7 @@ impl Contract {
         );
 
         self.ft_contract()
-            .ft_transfer(
-                account_id,
-                request.total_amount,
-                "bulk_withdraw",
-                &self.wrap_fee(request.total_fee),
-            )
+            .ft_transfer(account_id, request.total_net_amount(), "bulk_withdraw")
             .then(Self::after_bulk_withdraw_call(account_id.clone(), request))
             .into()
     }

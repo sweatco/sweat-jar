@@ -125,7 +125,7 @@ impl Contract {
         });
 
         self.ft_contract()
-            .ft_transfer(account_id, claimed_amount.get_total().0, "claim", &None)
+            .ft_transfer(account_id, claimed_amount.get_total().0, "claim")
             .then(after_claim_call(
                 account_id.clone(),
                 claimed_amount,

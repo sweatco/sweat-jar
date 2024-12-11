@@ -17,7 +17,7 @@ use crate::{
     jar::model::{Deposit, Jar},
     product::model::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise},
-    withdraw::api::{BulkWithdrawalRequest, WithdrawalRequest},
+    withdraw::api::{BulkWithdrawalRequest, WithdrawalDto, WithdrawalRequest},
 };
 
 fn testing_product_fixed(term_in_days: u64) -> Product {
@@ -253,8 +253,7 @@ fn test_failed_withdraw_internal() {
 
     let request = WithdrawalRequest {
         product_id: product.id.clone(),
-        amount: jar.total_principal(),
-        fee: 0,
+        withdrawal: WithdrawalDto::new(jar.total_principal(), 0),
         partition_index: 0,
     };
     let withdraw = context
@@ -282,12 +281,9 @@ fn test_failed_bulk_withdraw_internal() {
     let request = BulkWithdrawalRequest {
         requests: vec![WithdrawalRequest {
             product_id: product.id.clone(),
-            amount: jar.total_principal(),
-            fee: 0,
+            withdrawal: WithdrawalDto::new(jar.total_principal(), 0),
             partition_index: 0,
         }],
-        total_amount: jar.total_principal(),
-        total_fee: 0,
     };
 
     let withdraw = context
@@ -415,7 +411,9 @@ fn withdraw_all_with_fee() {
 
     let withdrawn = context.withdraw_all(&alice());
     let total_fee = withdrawn.withdrawals.iter().map(|withdrawal| withdrawal.fee.0).sum();
-    assert_eq!(fixed_fee + percent_fee * product_with_percent_fee_principal, total_fee);
+    let expected_fee = fixed_fee + percent_fee * product_with_percent_fee_principal;
+    assert_eq!(expected_fee, total_fee);
+    assert_eq!(expected_fee, context.contract().fee_amount);
 }
 
 #[test]

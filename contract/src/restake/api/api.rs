@@ -11,6 +11,7 @@ use sweat_jar_model::{api::RestakeApi, ProductId, TokenAmount};
 use crate::{
     event::{emit, EventKind, EventKind::RestakeAll, RestakeAllData},
     internal::is_promise_success,
+    withdraw::api::WithdrawalDto,
     Contract, ContractExt,
 };
 
@@ -21,13 +22,6 @@ pub(super) struct Request {
     pub withdrawal: WithdrawalDto,
     pub deposit: DepositDto,
     pub partitions: Vec<(ProductId, usize)>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-#[serde(crate = "near_sdk::serde")]
-pub(super) struct WithdrawalDto {
-    pub amount: TokenAmount,
-    pub fee: TokenAmount,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -130,6 +124,7 @@ impl RemainderTransferCallback for Contract {
         }
 
         if is_promise_success() {
+            self.fee_amount += request.withdrawal.fee;
             self.clean_up_and_deposit(request);
             emit(event);
         }

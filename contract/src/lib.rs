@@ -6,7 +6,7 @@ use near_sdk::{
     BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
-use sweat_jar_model::{api::InitApi, ProductId};
+use sweat_jar_model::{api::InitApi, ProductId, TokenAmount};
 
 use crate::{
     jar::{
@@ -20,6 +20,7 @@ mod assert;
 mod claim;
 mod common;
 mod event;
+mod fee;
 mod ft_interface;
 mod ft_receiver;
 mod integration_test;
@@ -61,6 +62,7 @@ pub struct Contract {
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
 
+    pub fee_amount: TokenAmount,
     pub archive: Archive,
 }
 
@@ -92,6 +94,7 @@ impl InitApi for Contract {
             products: UnorderedMap::new(StorageKey::Products),
             products_cache: HashMap::default().into(),
             accounts: LookupMap::new(StorageKey::Accounts),
+            fee_amount: 0,
             archive: Archive {
                 accounts_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
                 accounts_v2: LookupMap::new(StorageKey::AccountsLegacyV2),

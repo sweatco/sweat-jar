@@ -24,12 +24,12 @@ pub struct BulkWithdrawView {
 
 impl WithdrawView {
     #[must_use]
-    pub fn new(product_id: &ProductId, amount: TokenAmount, fee: Option<Fee>) -> Self {
-        let (withdrawn_amount, fee) = fee.map_or((amount, 0), |fee| (amount - fee.amount, fee.amount));
+    pub fn new(product_id: &ProductId, amount: TokenAmount, fee: TokenAmount) -> Self {
+        let net_amount = amount - fee;
 
         Self {
             product_id: product_id.clone(),
-            withdrawn_amount: U128(withdrawn_amount),
+            withdrawn_amount: net_amount.into(),
             fee: U128(fee),
         }
     }
@@ -40,20 +40,13 @@ mod test {
     use near_sdk::json_types::U128;
 
     use crate::{
-        withdraw::{Fee, WithdrawView},
+        withdraw::WithdrawView,
         ProductId,
     };
 
     #[test]
     fn withdrawal_view() {
-        let fee = WithdrawView::new(
-            &ProductId::new(),
-            1_000_000,
-            Some(Fee {
-                beneficiary_id: "account_id".to_string().try_into().unwrap(),
-                amount: 100,
-            }),
-        );
+        let fee = WithdrawView::new(&ProductId::new(), 1_000_000, 100);
 
         assert_eq!(
             fee,
