@@ -29,9 +29,8 @@ dock: build-in-docker ##@Build Shorthand for `build-in-docker`
 deploy: ##@Deploy Deploy the contract to dev account on Testnet.
 	./scripts/deploy.sh
 
-testnet-deploy: ##@Test Deploy the contract to dev account on Testnet.
-	make build
-	near deploy v8.jar.sweatty.testnet ./res/sweat_jar.wasm --force
+deploy-testnet: ##@Test Deploy the contract to dev account on Testnet.
+	./scripts/deploy-testnet.sh
 
 cov: ##@Testing Run unit tests with coverage.
 	cargo llvm-cov --hide-instantiations --open --ignore-filename-regex tests.rs

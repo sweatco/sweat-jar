@@ -9,7 +9,7 @@ use crate::{
     score::AccountScore,
 };
 
-#[near]
+#[near(serializers=[json, borsh])]
 #[derive(Default, Debug, PartialEq)]
 pub struct AccountV1 {
     /// The last jar ID. Is used as nonce in `get_ticket_hash` method.

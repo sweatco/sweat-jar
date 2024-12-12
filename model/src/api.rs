@@ -207,6 +207,20 @@ pub trait ProductApi {
     fn register_product(&mut self, command: RegisterProductCommand);
 
     #[deposit_one_yocto]
+    /// WARN: Testnet only method. Should never be deployed to mainnet
+    ///
+    /// Update a product in the contract. This function can only be called by the administrator.
+    ///
+    /// # Arguments
+    ///
+    /// * `command` - A `RegisterProductCommand` struct containing information about the product.
+    ///
+    /// # Panics
+    ///
+    /// This method will panic if a product with the id does not exist.
+    fn update_product(&mut self, command: RegisterProductCommand);
+
+    #[deposit_one_yocto]
     /// Sets the enabled status of a specific product.
     ///
     /// This method allows modifying the enabled status of a product, which determines whether users can create
@@ -297,11 +311,4 @@ pub trait ScoreApi {
 
     /// Returns current active score interest if user has any step jars
     fn get_score_interest(&self, account_id: AccountId) -> Option<U128>;
-}
-
-#[cfg(feature = "integration-methods")]
-#[make_integration_version]
-pub trait IntegrationTestMethods {
-    fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
-    fn bulk_create_jars(&mut self, account_id: AccountId, product_id: ProductId, principal: u128, number_of_jars: u16);
 }

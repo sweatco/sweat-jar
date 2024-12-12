@@ -12,6 +12,9 @@ pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
 
+    /// Stake more than one jars. Mostly used for test purposes.
+    StakeMany((StakeMessage, u16)),
+
     /// Represents a request to create `DeFi` Jars from provided `CeFi` Jars.
     Migrate(Vec<CeFiJar>),
 
@@ -43,6 +46,17 @@ impl FungibleTokenReceiver for Contract {
             FtMessage::Stake(message) => {
                 let receiver_id = message.receiver_id.unwrap_or(sender_id);
                 self.create_jar(receiver_id, message.ticket, amount, message.signature);
+            }
+            FtMessage::StakeMany((message, count)) => {
+                let receiver_id = message.receiver_id.unwrap_or(sender_id);
+                for _ in 0..count {
+                    self.create_jar(
+                        receiver_id.clone(),
+                        message.ticket.clone(),
+                        (amount.0 / count as u128).into(),
+                        message.signature.clone(),
+                    );
+                }
             }
             FtMessage::Migrate(jars) => {
                 require!(sender_id == self.manager, "Migration can be performed only by admin");

@@ -47,40 +47,36 @@ impl TestnetContext {
     }
 }
 
-async fn acc_from_file(path: &str, worker: &Worker<Testnet>) -> anyhow::Result<Account> {
+async fn acc_from_file(path: &str, worker: &Worker<Testnet>) -> Result<Account> {
     let account = Account::from_file(path, &worker)?;
     Ok(account)
 }
 
-async fn acc_with_name(name: &str, worker: &Worker<Testnet>) -> anyhow::Result<Account> {
+async fn acc_with_name(name: &str, worker: &Worker<Testnet>) -> Result<Account> {
     let home = dirs::home_dir().unwrap();
-    acc_from_file(
-        &format!("{}/.near-credentials/testnet/{name}.json", home.display()),
-        worker,
-    )
-    .await
+    acc_from_file(&format!("{}/.near-credentials/testnet/{name}", home.display()), worker).await
 }
 
 async fn jar_testnet_contract(worker: &Worker<Testnet>) -> Result<Contract> {
-    let account = acc_with_name("v8.jar.sweatty.testnet", worker).await?;
+    let account = acc_with_name("v8.jar.sweatty.testnet.json", worker).await?;
     let contract = Contract::from_secret_key(account.id().clone(), account.secret_key().clone(), worker);
     Ok(contract)
 }
 
 async fn token_testnet_contract(worker: &Worker<Testnet>) -> Result<Contract> {
-    let account = acc_with_name("vfinal.token.sweat.testnet", worker).await?;
+    let account = acc_with_name("vfinal.token.sweat.testnet.json", worker).await?;
     let contract = Contract::from_secret_key(account.id().clone(), account.secret_key().clone(), worker);
     Ok(contract)
 }
 
 async fn testnet_user(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("testnet_user.testnet", worker).await
+    acc_with_name("testnet_user.testnet.json", worker).await
 }
 
 async fn testnet_user_2(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("testnet_user_2.testnet", worker).await
+    acc_with_name("testnet_user_3.testnet.json", worker).await
 }
 
 async fn jar_manager(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("bob_account.testnet", worker).await
+    acc_with_name("bob_account.testnet.json", worker).await
 }

@@ -7,7 +7,7 @@ use sweat_jar_model::{
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    product::model::{Apy, Product, Terms},
+    product::model::{Apy, Product},
     Base64VecU8, Contract, ContractExt,
 };
 
@@ -15,31 +15,11 @@ use crate::{
 impl ProductApi for Contract {
     #[payable]
     fn register_product(&mut self, command: RegisterProductCommand) {
-        self.assert_manager();
-        assert_one_yocto();
+        self.register_product_internal(command, false);
+    }
 
-        assert!(self.products.get(&command.id).is_none(), "Product already exists");
-
-        let product: Product = command.into();
-
-        if product.is_score_product() {
-            let apy = match product.apy {
-                Apy::Constant(apy) => apy,
-                Apy::Downgradable(_) => panic_str("Step based products do not support downgradable APY"),
-            };
-
-            assert!(apy.is_zero(), "Step based products do not support constant APY");
-
-            if let Terms::Fixed(fixed) = &product.terms {
-                assert!(!fixed.allows_top_up, "Step based products don't support top up");
-            }
-        }
-
-        product.assert_fee_amount();
-
-        self.products.insert(&product.id, &product);
-
-        emit(EventKind::RegisterProduct(product));
+    fn update_product(&mut self, command: RegisterProductCommand) {
+        self.register_product_internal(command, true);
     }
 
     #[payable]
@@ -78,5 +58,48 @@ impl ProductApi for Contract {
 
     fn get_products(&self) -> Vec<ProductView> {
         self.products.values().map(|product| product.clone().into()).collect()
+    }
+}
+
+impl Contract {
+    fn register_product_internal(&mut self, command: RegisterProductCommand, update: bool) {
+        use crate::product::model::Terms;
+
+        self.assert_manager();
+        assert_one_yocto();
+
+        if update {
+            assert!(
+                self.products.get(&command.id).is_some(),
+                "This product can't be updated because it doesn't exist"
+            );
+        } else {
+            assert!(self.products.get(&command.id).is_none(), "Product already exists");
+        }
+
+        let product: Product = command.into();
+
+        if product.is_score_product() {
+            let apy = match product.apy {
+                Apy::Constant(apy) => apy,
+                Apy::Downgradable(_) => panic_str("Step based products do not support downgradable APY"),
+            };
+
+            assert!(apy.is_zero(), "Step based products do not support constant APY");
+
+            if let Terms::Fixed(fixed) = &product.terms {
+                assert!(!fixed.allows_top_up, "Step based products don't support top up");
+            }
+        }
+
+        product.assert_fee_amount();
+
+        self.products.insert(&product.id, &product);
+
+        if update {
+            emit(EventKind::UpdateProduct(product));
+        } else {
+            emit(EventKind::RegisterProduct(product));
+        }
     }
 }

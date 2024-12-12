@@ -17,6 +17,7 @@ use crate::{
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
     RegisterProduct(Product),
+    UpdateProduct(Product),
     CreateJar(EventJar),
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
