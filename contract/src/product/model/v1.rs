@@ -145,6 +145,12 @@ impl Product {
             "Fee for this product is too high. It is possible for a user to pay more in fees than they staked."
         );
     }
+
+    pub(crate) fn assert_score_based_product_is_protected(&self) {
+        if matches!(self.terms, Terms::ScoreBased(_)) {
+            require!(self.public_key.is_some(), "Score based must be protected.");
+        }
+    }
 }
 
 // TODO: add tests

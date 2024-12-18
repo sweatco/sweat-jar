@@ -21,7 +21,7 @@ impl ProductApi for Contract {
         assert!(self.products.get(&command.id).is_none(), "Product already exists");
 
         let product: Product = command.into();
-
+        product.assert_score_based_product_is_protected();
         product.assert_fee_amount();
 
         self.products.insert(&product.id, &product);

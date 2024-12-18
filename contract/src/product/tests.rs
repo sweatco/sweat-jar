@@ -9,7 +9,7 @@ use sweat_jar_model::{
     api::ProductApi,
     product::{
         ApyDto, ApyView, DowngradableApyView, FixedProductTermsDto, FlexibleProductTermsDto, ProductDto, ProductView,
-        TermsDto, TermsView, WithdrawalFeeDto, WithdrawalFeeView,
+        ScoreBasedProductTermsDto, TermsDto, TermsView, WithdrawalFeeDto, WithdrawalFeeView,
     },
     UDecimal, MS_IN_YEAR,
 };
@@ -312,6 +312,54 @@ fn interest_precision() {
         let time: Timestamp = (10..MS_IN_YEAR).fake();
         assert_eq!(terms.get_interest(&account, &jar, time).0, time as u128);
     }
+}
+
+#[test]
+fn register_score_based_product_with_signature() {
+    let admin = admin();
+    let mut context = Context::new(admin.clone());
+
+    let signer = MessageSigner::new();
+    let product_dto = ProductDto {
+        id: "score_based_product".to_string(),
+        cap: (0.into(), 10_000_000.into()),
+        terms: TermsDto::ScoreBased(ScoreBasedProductTermsDto {
+            lockup_term: U64(MS_IN_YEAR),
+            score_cap: 30_000,
+        }),
+        withdrawal_fee: None,
+        public_key: Base64VecU8::from(signer.public_key()).into(),
+        is_enabled: true,
+        is_restakable: true,
+    };
+
+    context.switch_account(admin);
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product_dto.clone()));
+
+    assert_eq!(product_dto.id, context.contract().get_products().first().unwrap().id);
+}
+
+#[test]
+#[should_panic(expected = "Score based must be protected.")]
+fn register_score_based_product_without_signature() {
+    let admin = admin();
+    let mut context = Context::new(admin.clone());
+
+    let product_dto = ProductDto {
+        id: "score_based_product".to_string(),
+        cap: (0.into(), 10_000_000.into()),
+        terms: TermsDto::ScoreBased(ScoreBasedProductTermsDto {
+            lockup_term: U64(MS_IN_YEAR),
+            score_cap: 30_000,
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+        is_restakable: true,
+    };
+
+    context.switch_account(admin);
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product_dto.clone()));
 }
 
 fn generate_product() -> Product {
