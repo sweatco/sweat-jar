@@ -178,7 +178,7 @@ mod tests {
     fn generate_premium_product_context() -> (MessageSigner, Product) {
         let signer = MessageSigner::new();
         let product = Product::new()
-            .public_key(signer.public_key())
+            .with_public_key(signer.public_key().into())
             .terms(Terms::Fixed(FixedProductTerms {
                 lockup_term: MS_IN_YEAR,
                 apy: Apy::Downgradable(DowngradableApy {

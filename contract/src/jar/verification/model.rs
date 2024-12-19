@@ -22,7 +22,7 @@ impl Contract {
         let account = self.try_get_account(account_id);
         let product = self.get_product(&ticket.product_id);
 
-        if let Some(pk) = &product.public_key {
+        if let Some(pk) = &product.get_public_key() {
             let Some(signature) = signature else {
                 panic_str("Signature is required");
             };

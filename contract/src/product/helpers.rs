@@ -76,7 +76,7 @@ impl Product {
     }
 
     pub fn with_public_key(mut self, public_key: Option<Vec<u8>>) -> Self {
-        self.public_key = public_key;
+        self.public_key = public_key.map(Into::into);
         self
     }
 }
@@ -84,11 +84,6 @@ impl Product {
 impl Product {
     pub(crate) fn id(mut self, id: &str) -> Self {
         self.id = id.to_string();
-        self
-    }
-
-    pub(crate) fn public_key(mut self, pk: Vec<u8>) -> Self {
-        self.public_key = Some(pk);
         self
     }
 

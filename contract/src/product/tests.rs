@@ -106,14 +106,8 @@ fn register_downgradable_product() {
     assert_eq!(
         product.get_base_apy().clone(),
         Apy::Downgradable(DowngradableApy {
-            default: UDecimal {
-                significand: 12,
-                exponent: 2
-            },
-            fallback: UDecimal {
-                significand: 10,
-                exponent: 3
-            },
+            default: UDecimal::new(12, 2),
+            fallback: UDecimal::new(10, 3),
         })
     );
 
@@ -174,10 +168,7 @@ fn register_product_with_fee() {
 
     assert_eq!(
         product.withdrawal_fee,
-        Some(WithdrawalFee::Percent(UDecimal {
-            significand: 12,
-            exponent: 2
-        }))
+        Some(WithdrawalFee::Percent(UDecimal::new(12, 2)))
     );
 
     assert_eq!(view.withdrawal_fee, Some(WithdrawalFeeView::Percent(0.12)));
@@ -200,7 +191,7 @@ fn set_public_key() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let product = generate_product().public_key(signer.public_key());
+    let product = generate_product().with_public_key(signer.public_key().into());
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
     let new_signer = MessageSigner::new();
@@ -214,7 +205,7 @@ fn set_public_key() {
     });
 
     let product = context.contract().products.get(&product.id).unwrap();
-    assert_eq!(&new_pk, product.public_key.as_ref().unwrap());
+    assert_eq!(&new_pk, product.get_public_key().as_ref().unwrap());
 }
 
 #[test]
@@ -224,7 +215,7 @@ fn set_public_key_by_not_admin() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let product = generate_product().public_key(signer.public_key());
+    let product = generate_product().with_public_key(signer.public_key().into());
     let mut context = Context::new(admin).with_products(&[product.clone()]);
 
     let new_signer = MessageSigner::new();
@@ -242,7 +233,7 @@ fn set_public_key_without_deposit() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let product = generate_product().public_key(signer.public_key());
+    let product = generate_product().with_public_key(signer.public_key().into());
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
     let new_signer = MessageSigner::new();

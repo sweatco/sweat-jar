@@ -1,3 +1,5 @@
+use std::clone::Clone;
+
 use near_sdk::{assert_one_yocto, near_bindgen, require};
 use sweat_jar_model::{
     api::ProductApi,
@@ -51,7 +53,7 @@ impl ProductApi for Contract {
         assert_one_yocto();
 
         let mut product = self.get_product(&product_id);
-        product.public_key = Some(public_key.0.clone());
+        product.set_public_key(Some(public_key.clone()));
         self.products.insert(&product_id, &product);
 
         emit(EventKind::ChangeProductPublicKey(ChangeProductPublicKeyData {

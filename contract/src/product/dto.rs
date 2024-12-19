@@ -18,7 +18,7 @@ impl From<ProductDto> for Product {
             },
             terms: value.terms.into(),
             withdrawal_fee: value.withdrawal_fee.map(Into::into),
-            public_key: value.public_key.map(|key| key.0),
+            public_key: value.public_key,
             is_enabled: value.is_enabled,
             is_restakable: value.is_restakable,
         }

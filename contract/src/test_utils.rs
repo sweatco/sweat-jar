@@ -59,7 +59,7 @@ impl Jar {
 pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {
     Product::new()
         .id(id)
-        .public_key(signer.public_key())
+        .with_public_key(signer.public_key().into())
         .cap(0, 100_000_000_000)
         .terms(Terms::Fixed(FixedProductTerms {
             apy: Apy::Downgradable(DowngradableApy {

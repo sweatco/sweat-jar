@@ -1,6 +1,6 @@
 use std::cmp;
 
-use near_sdk::{near, require};
+use near_sdk::{json_types::Base64VecU8, near, require};
 use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR};
 
 use crate::{
@@ -34,7 +34,7 @@ pub struct Product {
     pub withdrawal_fee: Option<WithdrawalFee>,
 
     /// An optional ed25519 public key used for authorization to create a jar for this product.
-    pub public_key: Option<Vec<u8>>,
+    pub public_key: Option<Base64VecU8>, // TODO: remove pub
 
     /// Indicates whether it's possible to create a new jar for this product.
     pub is_enabled: bool,
@@ -98,6 +98,14 @@ impl Terms {
 }
 
 impl Product {
+    pub(crate) fn get_public_key(self) -> Option<Vec<u8>> {
+        self.public_key.map(|key| key.0)
+    }
+
+    pub(crate) fn set_public_key(&mut self, public_key: Option<Base64VecU8>) {
+        self.public_key = public_key.map(Into::into);
+    }
+
     pub(crate) fn calculate_fee(&self, principal: TokenAmount) -> TokenAmount {
         if let Some(fee) = self.withdrawal_fee.clone() {
             return match fee {
@@ -355,7 +363,7 @@ impl From<ProductLegacy> for Product {
             },
             terms,
             withdrawal_fee: value.withdrawal_fee,
-            public_key: value.public_key,
+            public_key: value.public_key.map(Into::into),
             is_enabled: value.is_enabled,
             is_restakable,
         }

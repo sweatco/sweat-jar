@@ -17,29 +17,34 @@ use near_sdk::{json_types::U128, near};
 /// * `exponent`: The part of the decimal number that represents the power to which 10 must be raised to yield the original number.
 #[near(serializers=[borsh, json])]
 #[derive(Copy, Clone, Default, Debug, PartialEq)]
-pub struct UDecimal {
-    pub significand: u128,
-    pub exponent: u32,
-}
+pub struct UDecimal(U128, u32);
 
 impl UDecimal {
-    pub const fn new(significand: u128, exponent: u32) -> Self {
-        Self { significand, exponent }
+    pub fn new(significand: u128, exponent: u32) -> Self {
+        Self(significand.into(), exponent)
     }
 
-    pub const fn zero() -> Self {
+    pub fn zero() -> Self {
         Self::new(0, 0)
+    }
+
+    pub fn significand(&self) -> u128 {
+        self.0 .0
+    }
+
+    pub fn exponent(&self) -> u32 {
+        self.1
     }
 
     /// Use this method only for View structures because
     /// it can cause a loss of precision
     #[allow(clippy::cast_precision_loss)]
     pub fn to_f32(self) -> f32 {
-        self.significand as f32 / 10u128.pow(self.exponent) as f32
+        self.significand() as f32 / 10u128.pow(self.exponent()) as f32
     }
 
-    pub const fn is_zero(&self) -> bool {
-        self.significand == 0
+    pub fn is_zero(&self) -> bool {
+        self.significand() == 0
     }
 }
 
@@ -53,7 +58,7 @@ impl Mul<u128> for UDecimal {
 impl Mul<u128> for &UDecimal {
     type Output = u128;
     fn mul(self, value: u128) -> Self::Output {
-        value * self.significand / 10u128.pow(self.exponent)
+        value * self.significand() / 10u128.pow(self.exponent())
     }
 }
 
@@ -61,10 +66,7 @@ impl Mul<UDecimal> for UDecimal {
     type Output = UDecimal;
 
     fn mul(self, rhs: UDecimal) -> Self::Output {
-        Self {
-            significand: self.significand * rhs.significand,
-            exponent: self.exponent + rhs.exponent,
-        }
+        Self::new(self.significand() * rhs.significand(), self.exponent() + rhs.exponent())
     }
 }
 
@@ -72,7 +74,7 @@ impl Add for UDecimal {
     type Output = Self;
 
     fn add(self, other: Self) -> Self::Output {
-        let max_exponent = max(self.exponent, other.exponent);
+        let max_exponent = max(self.exponent(), other.exponent());
 
         let adjust_significand = |mut significand: u128, exponent: u32| {
             for _ in 0..(max_exponent - exponent) {
@@ -81,13 +83,10 @@ impl Add for UDecimal {
             significand
         };
 
-        let self_sig = adjust_significand(self.significand, self.exponent);
-        let other_sig = adjust_significand(other.significand, other.exponent);
+        let self_sig = adjust_significand(self.significand(), self.exponent());
+        let other_sig = adjust_significand(other.significand(), other.exponent());
 
-        UDecimal {
-            significand: self_sig.saturating_add(other_sig),
-            exponent: max_exponent,
-        }
+        UDecimal::new(self_sig.saturating_add(other_sig), max_exponent)
     }
 }
 
@@ -100,6 +99,7 @@ impl From<(U128, u32)> for UDecimal {
 #[cfg(test)]
 mod tests {
     use fake::Fake;
+    use near_sdk::serde_json;
 
     use crate::UDecimal;
 
@@ -152,5 +152,16 @@ mod tests {
 
             assert!(diff < 0.00008, "Diff: {diff}");
         }
+    }
+
+    #[test]
+    fn test_serde() {
+        let value = UDecimal::new(5, 1);
+        let value_json = serde_json::to_string(&value).unwrap();
+        assert_eq!("[\"5\",1]", value_json);
+
+        let value_string = "[\"20000\",3]";
+        let value: UDecimal = serde_json::from_str(value_string).unwrap();
+        assert_eq!(UDecimal::new(20_000, 3), value);
     }
 }
