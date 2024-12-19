@@ -4,6 +4,7 @@ mod batch_penalty;
 mod claim;
 pub(crate) mod measure;
 pub(crate) mod random_element;
+mod record_score;
 mod register_product;
 mod restake;
 mod restake_all;
