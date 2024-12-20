@@ -1,28 +1,21 @@
 use std::clone::Clone;
 
 use near_sdk::{assert_one_yocto, near_bindgen, require};
-use sweat_jar_model::{
-    api::ProductApi,
-    product::{ProductDto, ProductView},
-    ProductId,
-};
+use sweat_jar_model::{api::ProductApi, product::Product, ProductId};
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    product::model::v1::Product,
+    product::model::v1::{ProductAssertions, ProductModelApi},
     Base64VecU8, Contract, ContractExt,
 };
 
 #[near_bindgen]
 impl ProductApi for Contract {
     #[payable]
-    fn register_product(&mut self, command: ProductDto) {
+    fn register_product(&mut self, product: Product) {
         self.assert_manager();
         assert_one_yocto();
-
-        assert!(self.products.get(&command.id).is_none(), "Product already exists");
-
-        let product: Product = command.into();
+        assert!(self.products.get(&product.id).is_none(), "Product already exists");
         product.assert_score_based_product_is_protected();
         product.assert_fee_amount();
 
@@ -62,7 +55,7 @@ impl ProductApi for Contract {
         }));
     }
 
-    fn get_products(&self) -> Vec<ProductView> {
-        self.products.values().map(|product| product.clone().into()).collect()
+    fn get_products(&self) -> Vec<Product> {
+        self.products.values().collect()
     }
 }

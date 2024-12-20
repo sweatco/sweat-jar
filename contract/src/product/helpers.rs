@@ -6,15 +6,9 @@ use ed25519_dalek::{Signer, SigningKey};
 use general_purpose::STANDARD;
 use near_sdk::AccountId;
 use rand::rngs::OsRng;
-use sweat_jar_model::{ProductId, TokenAmount, UDecimal, MS_IN_YEAR};
+use sweat_jar_model::TokenAmount;
 
-use crate::{
-    common::tests::Context,
-    jar::model::JarTicket,
-    product::model::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee},
-    test_utils::DEFAULT_PRODUCT_NAME,
-    Contract,
-};
+use crate::{common::tests::Context, jar::model::JarTicket, Contract};
 
 pub(crate) struct MessageSigner {
     signing_key: SigningKey,
@@ -43,71 +37,6 @@ impl MessageSigner {
     }
 }
 
-impl Default for Product {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl Product {
-    pub fn new() -> Self {
-        Self {
-            id: DEFAULT_PRODUCT_NAME.to_string(),
-            cap: Cap { min: 0, max: 1_000_000 },
-            terms: Terms::Fixed(FixedProductTerms {
-                lockup_term: MS_IN_YEAR,
-                apy: Apy::new_downgradable(),
-            }),
-            withdrawal_fee: None,
-            public_key: None,
-            is_enabled: true,
-            is_restakable: true,
-        }
-    }
-
-    pub fn with_id(mut self, id: ProductId) -> Self {
-        self.id = id;
-        self
-    }
-
-    pub fn with_terms(mut self, terms: Terms) -> Self {
-        self.terms = terms;
-        self
-    }
-
-    pub fn with_public_key(mut self, public_key: Option<Vec<u8>>) -> Self {
-        self.public_key = public_key.map(Into::into);
-        self
-    }
-}
-
-impl Product {
-    pub(crate) fn id(mut self, id: &str) -> Self {
-        self.id = id.to_string();
-        self
-    }
-
-    pub(crate) fn enabled(mut self, enabled: bool) -> Self {
-        self.is_enabled = enabled;
-        self
-    }
-
-    pub(crate) fn cap(mut self, min: TokenAmount, max: TokenAmount) -> Self {
-        self.cap = Cap { min, max };
-        self
-    }
-
-    pub(crate) fn with_withdrawal_fee(mut self, fee: WithdrawalFee) -> Self {
-        self.withdrawal_fee = Some(fee);
-        self
-    }
-
-    pub(crate) fn terms(mut self, terms: Terms) -> Self {
-        self.terms = terms;
-        self
-    }
-}
-
 impl Context {
     pub(crate) fn get_signature_material(
         &self,
@@ -123,14 +52,5 @@ impl Context {
             ticket.valid_until.0,
             0,
         )
-    }
-}
-
-impl Apy {
-    pub(crate) fn new_downgradable() -> Self {
-        Apy::Downgradable(DowngradableApy {
-            default: UDecimal::new(20, 2),
-            fallback: UDecimal::new(10, 2),
-        })
     }
 }

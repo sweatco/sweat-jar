@@ -2,9 +2,9 @@ use near_sdk::{
     json_types::{Base64VecU8, U128},
     log, near, serde_json, AccountId,
 };
-use sweat_jar_model::{Local, ProductId, Score, TokenAmount, U32, UTC};
+use sweat_jar_model::{product::Product, Local, ProductId, Score, TokenAmount, U32, UTC};
 
-use crate::{common::Timestamp, env, product::model::Product, PACKAGE_NAME, VERSION};
+use crate::{common::Timestamp, env, PACKAGE_NAME, VERSION};
 
 #[derive(Debug)]
 #[near(serializers=[json])]

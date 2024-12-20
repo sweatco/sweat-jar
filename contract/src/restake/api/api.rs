@@ -11,6 +11,7 @@ use sweat_jar_model::{api::RestakeApi, ProductId, TokenAmount};
 use crate::{
     event::{emit, EventKind, EventKind::RestakeAll, RestakeAllData},
     internal::is_promise_success,
+    product::model::v1::{ProductAssertions, ProductModelApi},
     withdraw::api::WithdrawalDto,
     Contract, ContractExt,
 };

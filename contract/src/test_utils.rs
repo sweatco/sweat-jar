@@ -3,20 +3,16 @@
 use std::panic::{catch_unwind, UnwindSafe};
 
 use near_sdk::{AccountId, PromiseOrValue};
-use sweat_jar_model::{TokenAmount, UDecimal, MS_IN_YEAR};
+use sweat_jar_model::{
+    product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+    TokenAmount, UDecimal, MS_IN_YEAR,
+};
 
 use crate::{
     common::Timestamp,
     jar::model::{Deposit, Jar},
-    product::{
-        helpers::MessageSigner,
-        model::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
-    },
+    product::helpers::MessageSigner,
 };
-
-/// Default product name. If product name wasn't specified it will have this name.
-pub(crate) const DEFAULT_PRODUCT_NAME: &str = "product";
-pub(crate) const DEFAULT_SCORE_PRODUCT_NAME: &str = "score_product";
 
 pub fn admin() -> AccountId {
     "admin".parse().unwrap()
@@ -57,16 +53,16 @@ impl Jar {
 }
 
 pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {
-    Product::new()
-        .id(id)
+    Product::default()
+        .with_id(id)
         .with_public_key(signer.public_key().into())
-        .cap(0, 100_000_000_000)
-        .terms(Terms::Fixed(FixedProductTerms {
+        .with_cap(0, 100_000_000_000)
+        .with_terms(Terms::Fixed(FixedProductTerms {
             apy: Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(20, 2),
                 fallback: UDecimal::new(10, 2),
             }),
-            lockup_term: MS_IN_YEAR,
+            lockup_term: MS_IN_YEAR.into(),
         }))
 }
 

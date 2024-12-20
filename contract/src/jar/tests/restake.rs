@@ -1,19 +1,19 @@
 use near_sdk::test_utils::test_env::{alice, bob, carol};
 use sweat_jar_model::{
     api::{JarApi, ProductApi, RestakeApi},
+    product::Product,
     MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
     common::tests::Context,
     jar::model::Jar,
-    product::model::Product,
     test_utils::{admin, expect_panic},
 };
 
 #[test]
 fn restake_by_not_owner() {
-    let product = Product::new();
+    let product = Product::default();
     let alice_jar = Jar::new();
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
@@ -44,7 +44,7 @@ fn restake_before_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let alice_jar = Jar::new();
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
@@ -60,7 +60,7 @@ fn restake_with_disabled_product() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let alice_jar = Jar::new();
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
@@ -83,7 +83,7 @@ fn restake_empty_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let alice_jar = Jar::new();
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
@@ -100,7 +100,7 @@ fn restake_after_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let principal = 1_000_000;
     let alice_jar = Jar::new().with_deposit(0, principal);
     let mut context = Context::new(admin.clone())

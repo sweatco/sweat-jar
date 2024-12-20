@@ -49,24 +49,19 @@ mod tests {
 
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
     use near_sdk::{json_types::U128, serde_json::json, test_utils::test_env::alice};
-    use sweat_jar_model::{UDecimal, MS_IN_YEAR};
-
-    use crate::{
-        common::tests::Context,
-        product::{
-            helpers::MessageSigner,
-            model::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
-        },
-        test_utils::admin,
-        Contract,
+    use sweat_jar_model::{
+        product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+        UDecimal, MS_IN_YEAR,
     };
+
+    use crate::{common::tests::Context, product::helpers::MessageSigner, test_utils::admin, Contract};
 
     #[test]
     fn transfer_with_create_jar_message() {
         let alice = alice();
         let admin = admin();
 
-        let product = Product::new();
+        let product = Product::default();
         let mut context = Context::new(admin).with_products(&[product.clone()]);
 
         let msg = json!({
@@ -177,10 +172,10 @@ mod tests {
 
     fn generate_premium_product_context() -> (MessageSigner, Product) {
         let signer = MessageSigner::new();
-        let product = Product::new()
+        let product = Product::default()
             .with_public_key(signer.public_key().into())
-            .terms(Terms::Fixed(FixedProductTerms {
-                lockup_term: MS_IN_YEAR,
+            .with_terms(Terms::Fixed(FixedProductTerms {
+                lockup_term: MS_IN_YEAR.into(),
                 apy: Apy::Downgradable(DowngradableApy {
                     default: UDecimal::new(20, 2),
                     fallback: UDecimal::new(10, 2),

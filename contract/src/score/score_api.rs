@@ -2,11 +2,14 @@ use near_sdk::{
     json_types::{I64, U128},
     near_bindgen, AccountId,
 };
-use sweat_jar_model::{api::ScoreApi, Score, Timezone, U32, UTC};
+use sweat_jar_model::{
+    api::ScoreApi,
+    product::{Product, Terms},
+    Score, Timezone, U32, UTC,
+};
 
 use crate::{
     event::{emit, EventKind, ScoreData},
-    product::model::{v1::Terms, Product},
     score::Chain,
     Contract, ContractExt,
 };

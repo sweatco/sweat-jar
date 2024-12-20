@@ -4,34 +4,39 @@ use anyhow::Result;
 use fake::Fake;
 use itertools::Itertools;
 use near_sdk::test_utils::test_env::{alice, bob};
-use sweat_jar_model::{Score, Timezone, UDecimal, MS_IN_DAY, MS_IN_YEAR, UTC};
+use sweat_jar_model::{
+    product::{
+        test_utils::{DEFAULT_PRODUCT_NAME, DEFAULT_SCORE_PRODUCT_NAME},
+        Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms,
+    },
+    Score, Timezone, UDecimal, MS_IN_DAY, MS_IN_YEAR, UTC,
+};
 use visu::{render_chart, Graph};
 
 use crate::{
     common::{test_data::set_test_log_events, tests::Context},
     jar::model::Jar,
-    product::model::{Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
-    test_utils::{admin, DEFAULT_PRODUCT_NAME, DEFAULT_SCORE_PRODUCT_NAME},
+    test_utils::admin,
 };
 
 fn generate_regular_product() -> Product {
     Product {
         id: DEFAULT_PRODUCT_NAME.to_string(),
         terms: Terms::Fixed(FixedProductTerms {
-            lockup_term: MS_IN_YEAR,
+            lockup_term: MS_IN_YEAR.into(),
             apy: Apy::Constant(UDecimal::new(12000, 5)),
         }),
-        ..Product::new()
+        ..Product::default()
     }
 }
 fn generate_score_based_product() -> Product {
     Product {
         id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
-            lockup_term: MS_IN_YEAR,
+            lockup_term: MS_IN_YEAR.into(),
             score_cap: 20_000,
         }),
-        ..Product::new()
+        ..Product::default()
     }
 }
 

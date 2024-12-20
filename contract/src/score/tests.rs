@@ -9,6 +9,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
+    product::{Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
     withdraw::WithdrawView,
     ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
 };
@@ -19,9 +20,9 @@ use crate::{
         tests::{Context, TokenUtils},
     },
     jar::model::{Jar, JarTicket},
-    product::model::{Apy, Cap, FixedProductTerms, InterestCalculator, Product, ScoreBasedProductTerms, Terms},
+    product::model::v1::InterestCalculator,
     score::AccountScore,
-    test_utils::{admin, DEFAULT_SCORE_PRODUCT_NAME},
+    test_utils::admin,
     StorageKey,
 };
 
@@ -46,34 +47,19 @@ fn same_interest_in_score_jar_as_in_const_jar() {
 
     let regular_product = Product {
         id: "regular_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000.to_otto(),
-        },
         terms: Terms::Fixed(FixedProductTerms {
-            lockup_term: term_in_ms,
+            lockup_term: term_in_ms.into(),
             apy: Apy::Constant(UDecimal::new(12000, 5)),
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..Product::default()
     };
 
     let score_product = Product {
-        id: "score_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000.to_otto(),
-        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
-            lockup_term: term_in_ms,
+            lockup_term: term_in_ms.into(),
             score_cap: 12_000,
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..generate_score_based_product()
     };
 
     let mut context = Context::new(admin()).with_products(&[regular_product.clone(), score_product.clone()]);
@@ -126,19 +112,11 @@ fn score_jar_claim_often_vs_claim_at_the_end() {
     let term_in_ms = term_in_days * MS_IN_DAY;
 
     let product = Product {
-        id: "score_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000.to_otto(),
-        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
-            lockup_term: term_in_ms,
+            lockup_term: term_in_ms.into(),
             score_cap: 20_000,
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..generate_score_based_product()
     };
 
     let mut context = Context::new(admin())
@@ -204,19 +182,11 @@ fn interest_does_not_increase_with_no_score() {
     let term_in_ms = term_in_days * MS_IN_DAY;
 
     let product = Product {
-        id: "score_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000_000_000_000,
-        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
-            lockup_term: term_in_ms,
+            lockup_term: term_in_ms.into(),
             score_cap: 20_000,
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..generate_score_based_product()
     };
 
     let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
@@ -254,19 +224,11 @@ fn withdraw_score_jar() {
     let term_in_ms = term_in_days * MS_IN_DAY;
 
     let product = Product {
-        id: "score_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000_000_000_000,
-        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
-            lockup_term: term_in_ms,
+            lockup_term: term_in_ms.into(),
             score_cap: 20_000,
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..generate_score_based_product()
     };
 
     let mut context = Context::new(admin())
@@ -318,19 +280,11 @@ fn revert_scores_on_failed_claim() {
     let term_in_ms = term_in_days * MS_IN_DAY;
 
     let product = Product {
-        id: "score_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000_000_000_000,
-        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
-            lockup_term: term_in_ms,
+            lockup_term: term_in_ms.into(),
             score_cap: 20_000,
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..generate_score_based_product()
     };
 
     let mut context = Context::new(admin()).with_products(&[product.clone()]).with_jars(
@@ -531,19 +485,11 @@ fn record_max_score() {
 
 fn generate_score_based_product() -> Product {
     Product {
-        id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000_000 * 10u128.pow(18),
-        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             score_cap: 20_000,
-            lockup_term: 10 * MS_IN_DAY,
+            lockup_term: (10 * MS_IN_DAY).into(),
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..Product::default()
     }
 }
 
@@ -588,37 +534,16 @@ fn claim_when_there_were_no_walkchains_for_some_time() {
     set_test_log_events(false);
 
     let product = Product {
-        id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000_000 * 10u128.pow(18),
-        },
         terms: Terms::ScoreBased(ScoreBasedProductTerms {
             score_cap: 18_000,
-            lockup_term: 7 * MS_IN_DAY,
+            lockup_term: (7 * MS_IN_DAY).into(),
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..generate_score_based_product()
     };
 
     let mut ctx = Context::new(admin()).with_products(&[product.clone()]);
-    // ctx.switch_account(admin());
-    // ctx.contract().deposit(
-    //     alice(),
-    //     JarTicket {
-    //         product_id: product.id.clone(),
-    //         valid_until: MS_IN_YEAR.into(),
-    //         timezone: Some(Timezone::hour_shift(0)),
-    //     },
-    //     100_000_000.to_otto(),
-    //     &None,
-    // );
 
-    // let mut binding = ctx.contract();
     ctx.switch_account(admin());
-
     ctx.set_block_timestamp_in_ms(1732653318018 - MS_IN_DAY);
     ctx.contract().deposit(
         alice(),
@@ -635,11 +560,6 @@ fn claim_when_there_were_no_walkchains_for_some_time() {
     ctx.contract()
         .record_score(vec![(alice(), vec![(15100, 1732653318018.into())])]);
 
-    // let account = binding.get_account_mut(&alice());
-    //
-    // account.score.updated = 1732653318018.into(); // Tue Nov 26 2024 20:35:18
-    // account.score.scores = [15100, 0];
-
     ctx.set_block_timestamp_in_ms(1733139450015);
     ctx.contract().deposit(
         alice(),
@@ -651,8 +571,6 @@ fn claim_when_there_were_no_walkchains_for_some_time() {
         100_000_000.to_otto(),
         &None,
     );
-
-    // drop(binding);
 
     ctx.set_block_timestamp_in_ms(1733140384365); // Mon Dec 02 2024 11:53:04
 

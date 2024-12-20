@@ -64,6 +64,7 @@ use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     common, env,
     event::{emit, EventKind, WithdrawData},
+    product::model::v1::ProductModelApi,
     AccountId, Contract, ContractExt,
 };
 

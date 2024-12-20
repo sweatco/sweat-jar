@@ -2,12 +2,12 @@ use near_sdk::{
     json_types::{Base64VecU8, U64},
     near, AccountId,
 };
-use sweat_jar_model::{Timezone, TokenAmount};
+use sweat_jar_model::{product::Terms, Timezone, TokenAmount};
 
 use crate::{
     common::Timestamp,
     event::{emit, EventKind::Deposit},
-    product::model::v1::Terms,
+    product::model::v1::ProductAssertions,
     Contract,
 };
 

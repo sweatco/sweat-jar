@@ -4,6 +4,7 @@ use itertools::Itertools;
 use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
+    product::{Apy, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
     withdraw::BulkWithdrawView,
     TokenAmount, UDecimal, MS_IN_DAY,
 };
@@ -15,7 +16,6 @@ use crate::{
         Timestamp,
     },
     jar::model::{Deposit, Jar},
-    product::model::{Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
     test_utils::{admin, expect_panic, UnwrapPromise},
     withdraw::api::{BulkWithdrawalRequest, WithdrawalDto, WithdrawalRequest},
 };
@@ -25,35 +25,21 @@ fn testing_product_fixed(term_in_days: u64) -> Product {
 
     Product {
         id: "regular_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000_000_000_000,
-        },
         terms: Terms::Fixed(FixedProductTerms {
-            lockup_term: term_in_ms,
+            lockup_term: term_in_ms.into(),
             apy: Apy::Constant(UDecimal::new(12000, 5)),
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: true,
+        ..Product::default()
     }
 }
 
 fn testing_product_flexible() -> Product {
     Product {
         id: "flexible_product".to_string(),
-        cap: Cap {
-            min: 0,
-            max: 1_000_000_000_000_000,
-        },
         terms: Terms::Flexible(FlexibleProductTerms {
             apy: Apy::Constant(UDecimal::new(12000, 5)),
         }),
-        withdrawal_fee: None,
-        public_key: None,
-        is_enabled: true,
-        is_restakable: false,
+        ..Product::default()
     }
 }
 
@@ -161,7 +147,7 @@ fn dont_delete_jar_after_withdraw_with_interest_left() {
     let principal = 1_000_000;
     let target_interest = 200_000;
     let product = testing_product_fixed(term_in_days).with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: term_in_days * MS_IN_DAY,
+        lockup_term: (term_in_days * MS_IN_DAY).into(),
         apy: Apy::Constant(UDecimal::new(20000, 5)),
     }));
     let (alice, _, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
@@ -184,10 +170,10 @@ fn product_with_fixed_fee() {
     let fee = 10;
     let product = testing_product_fixed(term_in_days)
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: term_in_days * MS_IN_DAY,
+            lockup_term: (term_in_days * MS_IN_DAY).into(),
             apy: Apy::Constant(UDecimal::new(20000, 5)),
         }))
-        .with_withdrawal_fee(WithdrawalFee::Fix(fee));
+        .with_withdrawal_fee(WithdrawalFee::Fix(fee.into()));
     let (alice, _, mut context) = prepare_jar_with_deposit(&product, Some(0), Some(principal));
 
     context.set_block_timestamp_in_ms(term_in_days * MS_IN_DAY + 1);
@@ -203,7 +189,7 @@ fn product_with_percent_fee() {
     let fee = UDecimal::new(5, 4);
     let product = testing_product_fixed(term_in_days)
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: term_in_days * MS_IN_DAY,
+            lockup_term: (term_in_days * MS_IN_DAY).into(),
             apy: Apy::Constant(UDecimal::new(20000, 5)),
         }))
         .with_withdrawal_fee(WithdrawalFee::Percent(fee));
@@ -328,9 +314,9 @@ fn withdraw_from_locked_jar() {
 fn withdraw_all() {
     let test_duration_id_days = 365;
 
-    let regular_product = testing_product_fixed(test_duration_id_days).id("regular_product");
-    let long_term_product = testing_product_fixed(test_duration_id_days * 2).id("long_term_product");
-    let illegal_product = testing_product_fixed(90).id("illegal_product");
+    let regular_product = testing_product_fixed(test_duration_id_days).with_id("regular_product");
+    let long_term_product = testing_product_fixed(test_duration_id_days * 2).with_id("long_term_product");
+    let illegal_product = testing_product_fixed(90).with_id("illegal_product");
 
     let regular_principal = 10_000_000;
     let long_term_principal = 2_000_000;
@@ -378,12 +364,12 @@ fn withdraw_all_with_fee() {
 
     let fixed_fee = 100;
     let product_with_fixed_fee = testing_product_fixed(term_in_days)
-        .id("fixed_fee_product")
-        .with_withdrawal_fee(WithdrawalFee::Fix(fixed_fee));
+        .with_id("fixed_fee_product")
+        .with_withdrawal_fee(WithdrawalFee::Fix(fixed_fee.into()));
 
     let percent_fee = UDecimal::new(1, 2);
     let product_with_percent_fee = testing_product_fixed(term_in_days)
-        .id("percent_fee_product")
+        .with_id("percent_fee_product")
         .with_withdrawal_fee(WithdrawalFee::Percent(percent_fee));
 
     let product_with_fixed_fee_principal = 100.to_otto();

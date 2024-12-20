@@ -173,14 +173,17 @@ impl Default for AccountScore {
 #[cfg(test)]
 mod test {
     use near_sdk::env::block_timestamp_ms;
-    use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC};
+    use sweat_jar_model::{
+        product::{test_utils::DEFAULT_SCORE_PRODUCT_NAME, Cap, Product, ScoreBasedProductTerms, Terms},
+        Day, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+    };
 
     use crate::{
         common::tests::Context,
         jar::account::Account,
-        product::model::{Cap, InterestCalculator, Product, ScoreBasedProductTerms, Terms},
+        product::model::v1::InterestCalculator,
         score::{account_score::Chain, AccountScore},
-        test_utils::{admin, DEFAULT_SCORE_PRODUCT_NAME},
+        test_utils::admin,
     };
 
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
@@ -298,13 +301,10 @@ mod test {
     fn generate_score_based_product() -> Product {
         Product {
             id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
-            cap: Cap {
-                min: 0,
-                max: 100_000_000 * 10u128.pow(18),
-            },
+            cap: Cap::new(0, 100_000_000 * 10u128.pow(18)),
             terms: Terms::ScoreBased(ScoreBasedProductTerms {
                 score_cap: 20_000,
-                lockup_term: MS_IN_YEAR,
+                lockup_term: MS_IN_YEAR.into(),
             }),
             withdrawal_fee: None,
             public_key: None,

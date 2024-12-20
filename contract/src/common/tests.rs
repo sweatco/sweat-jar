@@ -8,7 +8,7 @@ use std::{
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, ProductId, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use sweat_jar_model::{api::InitApi, product::Product, ProductId, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
 use crate::{
     common::Timestamp,
@@ -16,7 +16,6 @@ use crate::{
         account::{versioned::AccountVersioned, Account},
         model::Jar,
     },
-    product::model::Product,
     test_utils::AfterCatchUnwind,
     Contract,
 };

@@ -8,7 +8,7 @@ use crate::{
         api::MigratingAccount,
         model::{AccountLegacyV3, JarCache},
     },
-    product::model::InterestCalculator,
+    product::model::v1::InterestCalculator,
     Contract, ContractExt,
 };
 
@@ -63,19 +63,21 @@ impl Contract {
 #[cfg(test)]
 mod tests {
     use near_sdk::test_utils::test_env::alice;
-    use sweat_jar_model::{UDecimal, MS_IN_YEAR};
+    use sweat_jar_model::{
+        product::{Apy, FixedProductTerms, Product, Terms},
+        UDecimal, MS_IN_YEAR,
+    };
 
     use crate::{
         common::tests::Context,
         jar::model::{AccountLegacyV2, JarCache, JarLegacyV1, JarVersionedLegacy},
-        product::model::{Apy, FixedProductTerms, Product, Terms},
         test_utils::admin,
     };
 
     #[test]
     fn migrate_legacy_account() {
-        let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: MS_IN_YEAR,
+        let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR.into(),
             apy: Apy::Constant(UDecimal::new(10_000, 5)),
         }));
         let mut context = Context::new(admin()).with_products(&[product.clone()]);

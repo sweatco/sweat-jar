@@ -6,14 +6,11 @@ use near_sdk::{
     BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
-use sweat_jar_model::{api::InitApi, ProductId, TokenAmount};
+use sweat_jar_model::{api::InitApi, product::Product, ProductId, TokenAmount};
 
-use crate::{
-    jar::{
-        account::versioned::AccountVersioned,
-        model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3, AccountLegacyV3Wrapper},
-    },
-    product::model::v1::Product,
+use crate::jar::{
+    account::versioned::AccountVersioned,
+    model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3, AccountLegacyV3Wrapper},
 };
 
 mod assert;

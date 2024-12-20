@@ -4,7 +4,7 @@ use std::{
 };
 
 use near_sdk::{env, env::panic_str, near, AccountId};
-use sweat_jar_model::{ProductId, Timezone, TokenAmount};
+use sweat_jar_model::{product::Product, ProductId, Timezone, TokenAmount};
 
 use crate::{
     common::Timestamp,
@@ -12,7 +12,7 @@ use crate::{
         account::Account,
         model::{Deposit, Jar, JarCompanion},
     },
-    product::model::v1::{InterestCalculator, Product},
+    product::model::v1::InterestCalculator,
     score::AccountScore,
     Contract,
 };

@@ -1,8 +1,9 @@
 #![cfg(test)]
 
 use near_sdk::{json_types::U64, test_utils::test_env::alice};
+use sweat_jar_model::product::Product;
 
-use crate::{common::tests::Context, jar::model::JarTicket, product::model::Product, test_utils::admin};
+use crate::{common::tests::Context, jar::model::JarTicket, test_utils::admin};
 
 #[test]
 #[should_panic(expected = "It's not possible to create new jars for this product")]
@@ -10,7 +11,7 @@ fn create_jar_for_disabled_product() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new().enabled(false);
+    let product = Product::default().with_enabled(false);
     let context = Context::new(admin).with_products(&[product.clone()]);
 
     let ticket = JarTicket {
@@ -28,11 +29,12 @@ mod signature_tests {
         json_types::{Base64VecU8, U64},
         test_utils::test_env::alice,
     };
+    use sweat_jar_model::product::Product;
 
     use crate::{
         common::tests::Context,
         jar::model::JarTicket,
-        product::{helpers::MessageSigner, model::Product},
+        product::helpers::MessageSigner,
         test_utils::{admin, generate_premium_product},
     };
 
@@ -190,7 +192,7 @@ mod signature_tests {
     fn verify_ticket_without_signature_when_not_required() {
         let admin = admin();
 
-        let product = Product::new();
+        let product = Product::default();
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;

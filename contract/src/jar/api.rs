@@ -4,6 +4,7 @@ use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
+    product::Product,
     ProductId, TokenAmount,
 };
 
@@ -11,7 +12,7 @@ use crate::{
     assert::assert_not_locked_legacy,
     event::{emit, EventKind, RestakeData},
     jar::{account::Account, model::AccountLegacyV3, view::DetailedJarV2},
-    product::model::v1::{InterestCalculator, Product},
+    product::model::v1::{InterestCalculator, ProductAssertions},
     Contract, ContractExt,
 };
 

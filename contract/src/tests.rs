@@ -10,7 +10,7 @@ use near_sdk::{
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::AggregatedTokenAmountView,
-    product::ApyView,
+    product::{Apy, DowngradableApy, FixedProductTerms, Terms},
     TokenAmount, UDecimal, MS_IN_YEAR, U32,
 };
 
@@ -18,11 +18,7 @@ use super::*;
 use crate::{
     common::test_data::set_test_log_events,
     jar::model::Jar,
-    product::{
-        helpers::MessageSigner,
-        model::{Apy, DowngradableApy, FixedProductTerms, Terms},
-        tests::get_product_dto,
-    },
+    product::{helpers::MessageSigner, tests::get_testing_product},
     test_utils::{admin, UnwrapPromise},
 };
 
@@ -32,7 +28,7 @@ fn add_product_to_list_by_admin() {
     let mut context = Context::new(admin.clone());
 
     context.switch_account(&admin);
-    context.with_deposit_yocto(1, |context| context.contract().register_product(get_product_dto()));
+    context.with_deposit_yocto(1, |context| context.contract().register_product(get_testing_product()));
 
     let products = context.contract().get_products();
     assert_eq!(products.len(), 1);
@@ -45,7 +41,7 @@ fn add_product_to_list_by_not_admin() {
     let admin = admin();
     let mut context = Context::new(admin);
 
-    context.with_deposit_yocto(1, |context| context.contract().register_product(get_product_dto()));
+    context.with_deposit_yocto(1, |context| context.contract().register_product(get_testing_product()));
 }
 
 #[test]
@@ -66,8 +62,8 @@ fn get_total_interest_with_single_jar_after_30_minutes() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
     let jar = Jar::new().with_deposit(0, 100_000_000);
@@ -91,8 +87,8 @@ fn get_total_interest_with_single_jar_on_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
     let jar = Jar::new().with_deposit(0, 100_000_000);
@@ -118,8 +114,8 @@ fn get_total_interest_with_single_jar_after_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
     let jar = Jar::new().with_deposit(0, 100_000_000);
@@ -138,8 +134,8 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
     let jar = Jar::new().with_deposit(0, 100_000_000);
@@ -167,9 +163,9 @@ fn get_total_interest_for_premium_with_penalty_after_half_term() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let product = Product::new()
+    let product = Product::default()
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: MS_IN_YEAR,
+            lockup_term: MS_IN_YEAR.into(),
             apy: Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(20000, 5),
                 fallback: UDecimal::new(10000, 5),
@@ -201,9 +197,9 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
     let admin = admin();
 
     let signer = MessageSigner::new();
-    let product = Product::new()
+    let product = Product::default()
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: 3_600_000,
+            lockup_term: 3_600_000.into(),
             apy: Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(23000, 5),
                 fallback: UDecimal::new(10000, 5),
@@ -216,10 +212,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied() {
         .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
 
     let products = context.contract().get_products();
-    assert!(matches!(
-        products.first().unwrap().get_base_apy(),
-        ApyView::Downgradable(_)
-    ));
+    assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Downgradable(_)));
 
     context.switch_account(&admin);
 
@@ -245,9 +238,9 @@ fn apply_penalty_in_batch() {
     let bob = bob();
 
     let signer = MessageSigner::new();
-    let product = Product::new()
+    let product = Product::default()
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: MS_IN_YEAR,
+            lockup_term: MS_IN_YEAR.into(),
             apy: Apy::Downgradable(DowngradableApy {
                 default: UDecimal::new(20000, 5),
                 fallback: UDecimal::new(10000, 5),
@@ -294,8 +287,8 @@ fn get_interest_after_withdraw() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(12000, 5)),
     }));
     let jar = Jar::new().with_deposit(0, 100_000_000);
@@ -318,7 +311,7 @@ fn unlock_not_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let jar = Jar::new().with_deposit(0, 300_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
@@ -338,7 +331,7 @@ fn unlock_by_manager() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let jar = Jar::new().with_deposit(0, 300_000_000);
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
@@ -411,7 +404,7 @@ fn claim_often_vs_claim_once() {
         assert_eq!(alice_interest, bobs_claimed);
     }
 
-    let product = Product::new();
+    let product = Product::default();
 
     test(product.clone(), 10_000_000_000_000_000_000_000_000_000, 365, 0);
 

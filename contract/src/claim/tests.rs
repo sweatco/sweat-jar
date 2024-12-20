@@ -4,13 +4,14 @@ use near_sdk::{json_types::U128, test_utils::test_env::alice, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, WithdrawApi},
     claimed_amount_view::ClaimedAmountView,
+    product::{Apy, FixedProductTerms, Product, Terms},
     UDecimal, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
 };
 
 use crate::{
     common::{test_data::set_test_future_success, tests::Context},
     jar::model::Jar,
-    product::model::{Apy, FixedProductTerms, InterestCalculator, Product, Terms},
+    product::model::v1::InterestCalculator,
     test_utils::{admin, UnwrapPromise},
 };
 
@@ -19,7 +20,7 @@ fn claim_total_when_nothing_to_claim() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let jar = Jar::new().with_deposit(0, 100_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
@@ -36,7 +37,7 @@ fn claim_total_detailed_when_having_tokens() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let jar = Jar::new().with_deposit(0, 100_000_000).with_deposit(1, 200_000_000);
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
@@ -68,7 +69,7 @@ fn claim_pending_withdraw_jar() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new();
+    let product = Product::default();
     let jar = Jar::new()
         .with_deposit(0, 100_000_000)
         .with_deposit(1, 200_000_000)
@@ -96,8 +97,8 @@ fn dont_delete_jar_on_all_interest_claim() {
     let alice = alice();
     let admin = admin();
 
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(2, 1)),
     }));
     let jar = Jar::new().with_deposit(0, 800_000).with_deposit(MS_IN_DAY, 200_000);
@@ -124,8 +125,8 @@ fn claim_all_withdraw_all_and_delete_jar() {
     let admin = admin();
 
     let lockup_term = 3 * MS_IN_YEAR;
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: lockup_term.into(),
         apy: Apy::Constant(UDecimal::new(2, 1)),
     }));
     let jar = Jar::new().with_deposit(0, 500_000);
@@ -161,10 +162,10 @@ fn withdraw_all_claim_all_and_delete_jar() {
     let admin = admin();
 
     let lockup_term = 2 * MS_IN_YEAR;
-    let product = Product::new()
-        .with_id("testing_product".to_string())
+    let product = Product::default()
+        .with_id("testing_product")
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term,
+            lockup_term: lockup_term.into(),
             apy: Apy::Constant(UDecimal::new(1, 1)),
         }));
     let jar = Jar::new().with_deposit(0, 1_500_000);
@@ -198,10 +199,10 @@ fn failed_future_claim() {
     let admin = admin();
 
     let lockup_term = MS_IN_YEAR;
-    let product = Product::new()
-        .with_id("broken_product".to_string())
+    let product = Product::default()
+        .with_id("broken_product")
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term,
+            lockup_term: lockup_term.into(),
             apy: Apy::Constant(UDecimal::new(2, 1)),
         }));
     let jar = Jar::new().with_deposit(0, 700_000);

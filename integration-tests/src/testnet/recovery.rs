@@ -9,20 +9,20 @@ use nitka::{
 use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration},
     claimed_amount_view::ClaimedAmountView,
-    product::{ApyDto, FixedProductTermsDto, ProductDto, ScoreBasedProductTermsDto, TermsDto, WithdrawalFeeDto},
-    MS_IN_DAY, MS_IN_SECOND,
+    product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},
+    UDecimal, MS_IN_DAY, MS_IN_SECOND,
 };
 use sweat_model::FungibleTokenCoreIntegration;
 use tokio::time::sleep;
 
 use crate::{jar_contract_extensions::JarContractExtensions, testnet::testnet_context::TestnetContext};
 
-fn _get_products() -> Vec<ProductDto> {
+fn _get_products() -> Vec<Product> {
     let json_str = read_to_string("../products_testnet.json").unwrap();
 
     let json: Value = serde_json::from_str(&json_str).unwrap();
 
-    let mut products: Vec<ProductDto> = vec![];
+    let mut products: Vec<Product> = vec![];
 
     for product_val in json.as_array().unwrap() {
         let id = product_val["product_id"].as_str().unwrap().to_string();
@@ -42,9 +42,9 @@ fn _get_products() -> Vec<ProductDto> {
             let percent = product_val["fee_percent"].as_f64().unwrap();
 
             if fixed != 0 {
-                Some(WithdrawalFeeDto::Fix(fixed.into()))
+                Some(WithdrawalFee::Fix(fixed.into()))
             } else if percent != 0.0 {
-                Some(WithdrawalFeeDto::Percent(((percent * 1000.0) as u128).into(), 3))
+                Some(WithdrawalFee::Percent(UDecimal::new((percent * 1000.0) as u128, 3)))
             } else {
                 None
             }
@@ -54,15 +54,12 @@ fn _get_products() -> Vec<ProductDto> {
 
         let lockup_seconds = product_val["lockup_seconds"].as_u64().unwrap();
 
-        products.push(ProductDto {
+        products.push(Product {
             id,
-            cap: (cap_min.into(), cap_max.into()),
-            terms: TermsDto::Fixed(FixedProductTermsDto {
+            cap: Cap::new(cap_min, cap_max),
+            terms: Terms::Fixed(FixedProductTerms {
                 lockup_term: (lockup_seconds * MS_IN_SECOND).into(),
-                apy: ApyDto {
-                    default: (((apy * 1000.0) as u128).into(), 3),
-                    fallback: None,
-                },
+                apy: Apy::Constant(UDecimal::new((apy * 1000.0) as u128, 3)),
             }),
             withdrawal_fee,
             public_key: Some(pk.into()),
@@ -75,10 +72,10 @@ fn _get_products() -> Vec<ProductDto> {
 }
 
 async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) -> Result<()> {
-    jar.register_product(ProductDto {
+    jar.register_product(Product {
         id: "5_days_20000_score".to_string(),
-        cap: (1_000_000.into(), 500_000_000_000_000_000_000_000.into()),
-        terms: TermsDto::ScoreBased(ScoreBasedProductTermsDto {
+        cap: Cap::new(1_000_000, 500_000_000_000_000_000_000_000),
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: (MS_IN_DAY * 5).into(),
             score_cap: 20_000,
         }),

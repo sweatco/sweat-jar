@@ -1,10 +1,10 @@
 use near_sdk::near;
-use sweat_jar_model::{ProductId, Score};
-
-use crate::{
-    common::Duration,
-    product::model::common::{Apy, Cap, WithdrawalFee},
+use sweat_jar_model::{
+    product::{Apy, Cap, WithdrawalFee},
+    ProductId, Score,
 };
+
+use crate::common::Duration;
 
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[near(serializers=[borsh, json])]

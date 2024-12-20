@@ -1,19 +1,15 @@
 use near_sdk::test_utils::test_env::alice;
 use sweat_jar_model::{
     api::{ProductApi, RestakeApi},
+    product::{Apy, FixedProductTerms, Product, Terms},
     UDecimal, MS_IN_YEAR,
 };
 
-use crate::{
-    common::tests::Context,
-    jar::model::Jar,
-    product::model::{Apy, FixedProductTerms, Product, Terms},
-    test_utils::admin,
-};
+use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
 
 #[test]
 fn restake_all_for_single_product() {
-    let product = Product::new();
+    let product = Product::default();
     let jar = Jar::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 4, 100_000), (MS_IN_YEAR / 2, 100_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
@@ -37,14 +33,14 @@ fn restake_all_for_single_product() {
 
 #[test]
 fn restake_all_for_different_products() {
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(10_000, 5)),
     }));
-    let another_product = Product::new()
+    let another_product = Product::default()
         .with_id("another_product".into())
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: MS_IN_YEAR,
+            lockup_term: MS_IN_YEAR.into(),
             apy: Apy::Constant(UDecimal::new(20_000, 5)),
         }));
     let jar = Jar::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 2, 100_000)]);
@@ -80,14 +76,14 @@ fn restake_all_for_different_products() {
 
 #[test]
 fn restake_all_to_new_product() {
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(10_000, 5)),
     }));
-    let another_product = Product::new()
+    let another_product = Product::default()
         .with_id("another_product".into())
         .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: MS_IN_YEAR,
+            lockup_term: MS_IN_YEAR.into(),
             apy: Apy::Constant(UDecimal::new(20_000, 5)),
         }));
     let jar = Jar::new().with_deposits(vec![(0, 50_000), (MS_IN_YEAR / 4, 20_000)]);
@@ -119,8 +115,8 @@ fn restake_all_to_new_product() {
 #[test]
 #[should_panic(expected = "Product not_existing_product is not found")]
 fn restake_all_to_not_existing_product() {
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(10_000, 5)),
     }));
     let jar = Jar::new().with_deposits(vec![(0, 500_000), (MS_IN_YEAR / 5, 700_000)]);
@@ -138,8 +134,8 @@ fn restake_all_to_not_existing_product() {
 #[test]
 #[should_panic(expected = "It's not possible to create new jars for this product")]
 fn restake_all_to_disabled_product() {
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(7_000, 5)),
     }));
     let jar = Jar::new().with_deposits(vec![(0, 150_000), (MS_IN_YEAR / 3, 770_000)]);
@@ -159,8 +155,8 @@ fn restake_all_to_disabled_product() {
 
 #[test]
 fn restake_all_with_withdrawal() {
-    let product = Product::new().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR,
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
         apy: Apy::Constant(UDecimal::new(10_000, 5)),
     }));
     let jar = Jar::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 4, 800_000)]);

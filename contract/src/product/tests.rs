@@ -8,24 +8,27 @@ use near_sdk::{
 use sweat_jar_model::{
     api::ProductApi,
     product::{
-        ApyDto, ApyView, DowngradableApyView, FixedProductTermsDto, FlexibleProductTermsDto, ProductDto, ProductView,
-        ScoreBasedProductTermsDto, TermsDto, TermsView, WithdrawalFeeDto, WithdrawalFeeView,
+        Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ScoreBasedProductTerms, Terms,
+        WithdrawalFee,
     },
     UDecimal, MS_IN_YEAR,
 };
 
 use crate::{
-    common::{tests::Context, Timestamp},
+    common::{
+        tests::{Context, TokenUtils},
+        Timestamp,
+    },
     jar::{account::Account, model::Jar},
     product::{
         helpers::MessageSigner,
-        model::{Apy, DowngradableApy, FixedProductTerms, InterestCalculator, Product, Terms, WithdrawalFee},
+        model::v1::{InterestCalculator, ProductAssertions, ProductModelApi},
     },
     test_utils::admin,
 };
 
-pub(crate) fn get_product_dto() -> ProductDto {
-    ProductDto {
+pub(crate) fn get_testing_product() -> Product {
+    Product {
         id: "product".to_string(),
         ..Default::default()
     }
@@ -34,7 +37,7 @@ pub(crate) fn get_product_dto() -> ProductDto {
 #[test]
 fn disable_product_when_enabled() {
     let admin = admin();
-    let product = &Product::new();
+    let product = &Product::default();
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
@@ -56,7 +59,7 @@ fn disable_product_when_enabled() {
 #[should_panic(expected = "Status matches")]
 fn enable_product_when_enabled() {
     let admin = admin();
-    let product = &Product::new();
+    let product = &Product::default();
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
@@ -79,26 +82,26 @@ fn register_product_with_existing_id() {
     context.switch_account(&admin);
 
     context.with_deposit_yocto(1, |context| {
-        let first_command = get_product_dto();
-        context.contract().register_product(first_command)
+        let first_product = get_testing_product();
+        context.contract().register_product(first_product)
     });
 
     context.with_deposit_yocto(1, |context| {
-        let second_command = get_product_dto();
-        context.contract().register_product(second_command)
+        let second_product = get_testing_product();
+        context.contract().register_product(second_product)
     });
 }
 
 #[test]
 fn register_downgradable_product() {
-    let (product, view) = register_product(ProductDto {
+    let product = register_product(Product {
         id: "downgradable_product".to_string(),
-        terms: TermsDto::Fixed(FixedProductTermsDto {
-            apy: ApyDto {
-                fallback: Some((U128(10), 3)),
-                ..ApyDto::default()
-            },
-            lockup_term: Default::default(),
+        terms: Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR.into(),
+            apy: Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(12, 2),
+                fallback: UDecimal::new(10, 3),
+            }),
         }),
         ..Default::default()
     });
@@ -110,14 +113,6 @@ fn register_downgradable_product() {
             fallback: UDecimal::new(10, 3),
         })
     );
-
-    assert_eq!(
-        view.get_base_apy().clone(),
-        ApyView::Downgradable(DowngradableApyView {
-            default: 0.12,
-            fallback: 0.01
-        })
-    )
 }
 
 #[test]
@@ -125,10 +120,10 @@ fn register_downgradable_product() {
     expected = "Fee for this product is too high. It is possible for a user to pay more in fees than they staked."
 )]
 fn register_product_with_too_high_fixed_fee() {
-    register_product(ProductDto {
+    register_product(Product {
         id: "product_with_fixed_fee".to_string(),
-        withdrawal_fee: WithdrawalFeeDto::Fix(U128(200)).into(),
-        terms: TermsDto::Fixed(FixedProductTermsDto {
+        withdrawal_fee: WithdrawalFee::Fix(U128(200)).into(),
+        terms: Terms::Fixed(FixedProductTerms {
             apy: Default::default(),
             lockup_term: U64(MS_IN_YEAR),
         }),
@@ -141,28 +136,27 @@ fn register_product_with_too_high_fixed_fee() {
     expected = "Fee for this product is too high. It is possible for a user to pay more in fees than they staked."
 )]
 fn register_product_with_too_high_percent_fee() {
-    register_product(ProductDto {
+    register_product(Product {
         id: "product_with_fixed_fee".to_string(),
-        withdrawal_fee: WithdrawalFeeDto::Percent(U128(100), 0).into(),
+        withdrawal_fee: WithdrawalFee::Percent(UDecimal::new(100, 0)).into(),
         ..Default::default()
     });
 }
 
 #[test]
 fn register_product_with_fee() {
-    let (product, view) = register_product(ProductDto {
+    let product = register_product(Product {
         id: "product_with_fixed_fee".to_string(),
-        withdrawal_fee: WithdrawalFeeDto::Fix(U128(10)).into(),
+        withdrawal_fee: WithdrawalFee::Fix(U128(10)).into(),
+        cap: Cap::new(20, 10_000_000.to_otto()),
         ..Default::default()
     });
 
-    assert_eq!(product.withdrawal_fee, Some(WithdrawalFee::Fix(10)));
+    assert_eq!(product.withdrawal_fee, Some(WithdrawalFee::Fix(10.into())));
 
-    assert_eq!(view.withdrawal_fee, Some(WithdrawalFeeView::Fix(U128(10))));
-
-    let (product, view) = register_product(ProductDto {
+    let product = register_product(Product {
         id: "product_with_percent_fee".to_string(),
-        withdrawal_fee: WithdrawalFeeDto::Percent(U128(12), 2).into(),
+        withdrawal_fee: WithdrawalFee::Percent(UDecimal::new(12, 2)).into(),
         ..Default::default()
     });
 
@@ -170,20 +164,17 @@ fn register_product_with_fee() {
         product.withdrawal_fee,
         Some(WithdrawalFee::Percent(UDecimal::new(12, 2)))
     );
-
-    assert_eq!(view.withdrawal_fee, Some(WithdrawalFeeView::Percent(0.12)));
 }
 
 #[test]
 fn register_product_with_flexible_terms() {
-    let (product, view) = register_product(ProductDto {
+    let product = register_product(Product {
         id: "product_with_fixed_fee".to_string(),
-        terms: TermsDto::Flexible(FlexibleProductTermsDto { apy: ApyDto::default() }),
-        ..ProductDto::default()
+        terms: Terms::Flexible(FlexibleProductTerms { apy: Apy::default() }),
+        ..Product::default()
     });
 
     assert!(matches!(product.terms, Terms::Flexible(_)));
-    assert!(matches!(view.terms, TermsView::Flexible(_)));
 }
 
 #[test]
@@ -265,7 +256,7 @@ fn assert_cap_more_than_max() {
 fn get_interest_before_maturity() {
     let terms = Terms::Fixed(FixedProductTerms {
         apy: Apy::Constant(UDecimal::new(12, 2)),
-        lockup_term: 2 * MS_IN_YEAR,
+        lockup_term: (2 * MS_IN_YEAR).into(),
     });
     let jar = Jar::new().with_deposit(0, 100_000_000);
     let account = Account::default();
@@ -278,7 +269,7 @@ fn get_interest_before_maturity() {
 fn get_interest_after_maturity() {
     let terms = Terms::Fixed(FixedProductTerms {
         apy: Apy::Constant(UDecimal::new(12, 2)),
-        lockup_term: MS_IN_YEAR,
+        lockup_term: MS_IN_YEAR.into(),
     });
     let jar = Jar::new().with_deposit(0, 100_000_000);
     let account = Account::default();
@@ -291,7 +282,7 @@ fn get_interest_after_maturity() {
 fn interest_precision() {
     let terms = Terms::Fixed(FixedProductTerms {
         apy: Apy::Constant(UDecimal::new(1, 0)),
-        lockup_term: MS_IN_YEAR,
+        lockup_term: MS_IN_YEAR.into(),
     });
     let jar = Jar::new().with_deposit(0, u128::from(MS_IN_YEAR));
     let account = Account::default();
@@ -311,10 +302,10 @@ fn register_score_based_product_with_signature() {
     let mut context = Context::new(admin.clone());
 
     let signer = MessageSigner::new();
-    let product_dto = ProductDto {
+    let product = Product {
         id: "score_based_product".to_string(),
-        cap: (0.into(), 10_000_000.into()),
-        terms: TermsDto::ScoreBased(ScoreBasedProductTermsDto {
+        cap: Cap::default(),
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: U64(MS_IN_YEAR),
             score_cap: 30_000,
         }),
@@ -325,9 +316,9 @@ fn register_score_based_product_with_signature() {
     };
 
     context.switch_account(admin);
-    context.with_deposit_yocto(1, |context| context.contract().register_product(product_dto.clone()));
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 
-    assert_eq!(product_dto.id, context.contract().get_products().first().unwrap().id);
+    assert_eq!(product.id, context.contract().get_products().first().unwrap().id);
 }
 
 #[test]
@@ -336,10 +327,10 @@ fn register_score_based_product_without_signature() {
     let admin = admin();
     let mut context = Context::new(admin.clone());
 
-    let product_dto = ProductDto {
+    let product_dto = Product {
         id: "score_based_product".to_string(),
-        cap: (0.into(), 10_000_000.into()),
-        terms: TermsDto::ScoreBased(ScoreBasedProductTermsDto {
+        cap: Cap::default(),
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
             lockup_term: U64(MS_IN_YEAR),
             score_cap: 30_000,
         }),
@@ -354,29 +345,17 @@ fn register_score_based_product_without_signature() {
 }
 
 fn generate_product() -> Product {
-    Product::new().cap(100, 100_000_000_000)
+    Product::default().with_cap(100, 100_000_000_000)
 }
 
-fn register_product(command: ProductDto) -> (Product, ProductView) {
+fn register_product(product: Product) -> Product {
     let admin = admin();
 
     let mut context = Context::new(admin.clone());
 
     context.switch_account(&admin);
-    context.with_deposit_yocto(1, |context| context.contract().register_product(command));
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product));
+    let result = context.contract().get_products().first().unwrap().clone();
 
-    let product = context.contract().products.into_iter().last().unwrap().1.clone();
-    let view = context.contract().get_products().first().unwrap().clone();
-
-    (product, view)
-}
-
-impl Product {
-    fn get_base_apy(&self) -> &Apy {
-        match &self.terms {
-            Terms::Fixed(value) => &value.apy,
-            Terms::Flexible(value) => &value.apy,
-            Terms::ScoreBased(_) => panic!("No APY for a score based product"),
-        }
-    }
+    result
 }

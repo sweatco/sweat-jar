@@ -7,7 +7,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{ProductId, TokenAmount};
 
-use crate::{common::Timestamp, jar::model::JarTicket, Contract};
+use crate::{common::Timestamp, jar::model::JarTicket, product::model::v1::ProductModelApi, Contract};
 
 impl Contract {
     pub(crate) fn verify(

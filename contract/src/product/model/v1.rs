@@ -1,7 +1,10 @@
 use std::cmp;
 
-use near_sdk::{json_types::Base64VecU8, near, require};
-use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR};
+use near_sdk::{json_types::Base64VecU8, require};
+use sweat_jar_model::{
+    product::{FixedProductTerms, FlexibleProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},
+    ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
+};
 
 use crate::{
     common::{Duration, Timestamp},
@@ -10,141 +13,95 @@ use crate::{
         account::Account,
         model::{Deposit, Jar},
     },
-    product::model::{
-        common::{Apy, Cap, WithdrawalFee},
-        legacy::{ProductLegacy, Terms as TermsLegacy},
-    },
+    product::model::legacy::{ProductLegacy, Terms as TermsLegacy},
     Contract,
 };
 
-/// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
-#[near(serializers=[borsh, json])]
-#[derive(Clone, Debug)]
-pub struct Product {
-    /// The unique identifier of the product.
-    pub id: ProductId,
-
-    /// The capacity boundaries of the deposit jar, specifying the minimum and maximum principal amount.
-    pub cap: Cap,
-
-    /// The terms specific to the product, which can be either Flexible or Fixed.
-    pub terms: Terms,
-
-    /// Describes whether a withdrawal fee is applicable and, if so, its details.
-    pub withdrawal_fee: Option<WithdrawalFee>,
-
-    /// An optional ed25519 public key used for authorization to create a jar for this product.
-    pub public_key: Option<Base64VecU8>, // TODO: remove pub
-
-    /// Indicates whether it's possible to create a new jar for this product.
-    pub is_enabled: bool,
-
-    pub is_restakable: bool,
+pub(crate) trait TermsApi {
+    fn allows_early_withdrawal(&self) -> bool;
+    fn is_liquid(&self, deposit: &Deposit) -> bool;
 }
 
-/// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
-#[near(serializers=[borsh, json])]
-#[derive(Clone, Debug, PartialEq)]
-#[serde(tag = "type", content = "data", rename_all = "snake_case")]
-pub enum Terms {
-    /// Describes additional terms for Fixed products.
-    Fixed(FixedProductTerms),
-
-    /// Describes additional terms for Flexible products.
-    Flexible(FlexibleProductTerms),
-
-    /// TODO: doc
-    ScoreBased(ScoreBasedProductTerms),
-}
-
-/// The `FixedProductTerms` struct contains terms specific to Fixed products.
-#[near(serializers=[borsh, json])]
-#[derive(Clone, Debug, PartialEq)]
-pub struct FixedProductTerms {
-    /// The maturity term of the jar, during which it yields interest. After this period, the user can withdraw principal
-    /// or potentially restake the jar.
-    pub lockup_term: Duration,
-    pub apy: Apy,
-}
-
-/// TODO: doc
-#[near(serializers=[borsh, json])]
-#[derive(Clone, Debug, PartialEq)]
-pub struct FlexibleProductTerms {
-    pub apy: Apy,
-}
-
-/// TODO: doc
-#[near(serializers=[borsh, json])]
-#[derive(Clone, Debug, PartialEq)]
-pub struct ScoreBasedProductTerms {
-    pub score_cap: Score,
-    pub lockup_term: Duration,
-}
-
-impl Terms {
-    pub(crate) fn allows_early_withdrawal(&self) -> bool {
+impl TermsApi for Terms {
+    fn allows_early_withdrawal(&self) -> bool {
         matches!(self, Terms::Flexible(_))
     }
 
-    pub(crate) fn is_liquid(&self, deposit: &Deposit) -> bool {
+    fn is_liquid(&self, deposit: &Deposit) -> bool {
         let now = env::block_timestamp_ms();
         match self {
-            Terms::Fixed(terms) => deposit.is_liquid(now, terms.lockup_term),
+            Terms::Fixed(terms) => deposit.is_liquid(now, terms.lockup_term.0),
             Terms::Flexible(_) => true,
-            Terms::ScoreBased(terms) => deposit.is_liquid(now, terms.lockup_term),
+            Terms::ScoreBased(terms) => deposit.is_liquid(now, terms.lockup_term.0),
         }
     }
 }
 
-impl Product {
-    pub(crate) fn get_public_key(self) -> Option<Vec<u8>> {
+pub(crate) trait ProductModelApi {
+    fn get_public_key(self) -> Option<Vec<u8>>;
+    fn set_public_key(&mut self, public_key: Option<Base64VecU8>);
+    fn calculate_fee(&self, principal: TokenAmount) -> TokenAmount;
+}
+
+impl ProductModelApi for Product {
+    fn get_public_key(self) -> Option<Vec<u8>> {
         self.public_key.map(|key| key.0)
     }
 
-    pub(crate) fn set_public_key(&mut self, public_key: Option<Base64VecU8>) {
+    fn set_public_key(&mut self, public_key: Option<Base64VecU8>) {
         self.public_key = public_key.map(Into::into);
     }
 
-    pub(crate) fn calculate_fee(&self, principal: TokenAmount) -> TokenAmount {
+    fn calculate_fee(&self, principal: TokenAmount) -> TokenAmount {
         if let Some(fee) = self.withdrawal_fee.clone() {
             return match fee {
-                WithdrawalFee::Fix(amount) => amount,
+                WithdrawalFee::Fix(amount) => amount.0,
                 WithdrawalFee::Percent(percent) => percent * principal,
             };
         }
 
         0
     }
+}
 
-    pub(crate) fn assert_cap(&self, amount: TokenAmount) {
-        if self.cap.min > amount || amount > self.cap.max {
+pub(crate) trait ProductAssertions {
+    fn assert_cap(&self, amount: TokenAmount);
+    fn assert_enabled(&self);
+    fn assert_restakable(&self);
+    fn assert_fee_amount(&self);
+    fn assert_score_based_product_is_protected(&self);
+}
+
+impl ProductAssertions for Product {
+    fn assert_cap(&self, amount: TokenAmount) {
+        if self.cap.min() > amount || amount > self.cap.max() {
             env::panic_str(&format!(
                 "Total amount is out of product bounds: [{}..{}]",
-                self.cap.min, self.cap.max
+                self.cap.min(),
+                self.cap.max()
             ));
         }
     }
 
-    pub(crate) fn assert_enabled(&self) {
+    fn assert_enabled(&self) {
         require!(
             self.is_enabled,
             "It's not possible to create new jars for this product: the product is disabled."
         );
     }
 
-    pub(crate) fn assert_restakable(&self) {
+    fn assert_restakable(&self) {
         require!(self.is_enabled, "The product is not restakable.");
     }
 
     /// Check if fee in new product is not too high
-    pub(crate) fn assert_fee_amount(&self) {
+    fn assert_fee_amount(&self) {
         let Some(ref fee) = self.withdrawal_fee else {
             return;
         };
 
         let fee_ok = match fee {
-            WithdrawalFee::Fix(amount) => amount < &self.cap.min,
+            WithdrawalFee::Fix(amount) => amount.0 < self.cap.min(),
             WithdrawalFee::Percent(percent) => percent.to_f32() < 100.0,
         };
 
@@ -154,7 +111,15 @@ impl Product {
         );
     }
 
-    pub(crate) fn assert_score_based_product_is_protected(&self) {
+    #[cfg(feature = "integration-test")]
+    fn assert_score_based_product_is_protected(&self) {
+        if matches!(self.terms, Terms::ScoreBased(_)) && self.public_key.is_some() {
+            env::log_str("Must panic in production!");
+        }
+    }
+
+    #[cfg(not(feature = "integration-test"))]
+    fn assert_score_based_product_is_protected(&self) {
         if matches!(self.terms, Terms::ScoreBased(_)) {
             require!(self.public_key.is_some(), "Score based must be protected.");
         }
@@ -241,7 +206,7 @@ impl InterestCalculator for FixedProductTerms {
         let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
             cmp::max(cache_date, deposit.created_at)
         });
-        let until_date = cmp::min(now, deposit.created_at + self.lockup_term);
+        let until_date = cmp::min(now, deposit.created_at + self.lockup_term.0);
 
         until_date.saturating_sub(since_date)
     }
@@ -286,7 +251,7 @@ impl InterestCalculator for ScoreBasedProductTerms {
             return 0;
         }
 
-        let term_end = cmp::max(now, deposit.created_at + self.lockup_term);
+        let term_end = cmp::max(now, deposit.created_at + self.lockup_term.0);
         if now >= term_end {
             return 0;
         }
@@ -341,12 +306,12 @@ impl From<ProductLegacy> for Product {
             TermsLegacy::Fixed(terms) => (
                 if value.score_cap > 0 {
                     Terms::ScoreBased(ScoreBasedProductTerms {
-                        lockup_term: terms.lockup_term,
+                        lockup_term: terms.lockup_term.into(),
                         score_cap: value.score_cap,
                     })
                 } else {
                     Terms::Fixed(FixedProductTerms {
-                        lockup_term: terms.lockup_term,
+                        lockup_term: terms.lockup_term.into(),
                         apy: value.apy,
                     })
                 },
@@ -357,10 +322,7 @@ impl From<ProductLegacy> for Product {
 
         Self {
             id: value.id,
-            cap: Cap {
-                min: value.cap.min,
-                max: value.cap.max,
-            },
+            cap: value.cap,
             terms,
             withdrawal_fee: value.withdrawal_fee,
             public_key: value.public_key.map(Into::into),

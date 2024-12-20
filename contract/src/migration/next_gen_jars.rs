@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use near_sdk::{collections::UnorderedMap, env, near, near_bindgen, store::LookupMap, AccountId, PanicOnDefault};
-use sweat_jar_model::{api::StateMigration, jar::JarId, ProductId};
+use sweat_jar_model::{api::StateMigration, jar::JarId, product::Product, ProductId};
 
 use crate::{
     jar::model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3Wrapper},
-    product::model::{legacy::ProductLegacy, Product},
+    product::model::legacy::ProductLegacy,
     Archive, Contract, ContractExt, StorageKey,
 };
 

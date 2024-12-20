@@ -1,11 +1,11 @@
 use near_sdk::near;
-use sweat_jar_model::TokenAmount;
+use sweat_jar_model::{product::Terms, TokenAmount};
 
 use crate::{
     assert::assert_not_locked,
     common::{Duration, Timestamp},
     jar::model::JarCache,
-    product::model::Terms,
+    product::model::v1::TermsApi,
 };
 
 /// The `Jar` struct represents a deposit jar within the smart contract.

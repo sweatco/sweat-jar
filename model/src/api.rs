@@ -12,7 +12,7 @@ use nitka_proc::make_integration_version;
 use crate::{
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedInterestView, JarView},
-    product::{ProductDto, ProductView},
+    product::Product,
     withdraw::{BulkWithdrawView, WithdrawView},
     ProductId, Score, UTC,
 };
@@ -175,7 +175,7 @@ pub trait ProductApi {
     /// # Panics
     ///
     /// This method will panic if a product with the same id already exists.
-    fn register_product(&mut self, command: ProductDto);
+    fn register_product(&mut self, product: Product);
 
     #[deposit_one_yocto]
     /// Sets the enabled status of a specific product.
@@ -211,7 +211,7 @@ pub trait ProductApi {
     /// # Returns
     ///
     /// A `Vec<ProductView>` containing information about all registered products.
-    fn get_products(&self) -> Vec<ProductView>;
+    fn get_products(&self) -> Vec<Product>;
 }
 
 /// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.
