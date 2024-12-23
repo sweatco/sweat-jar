@@ -88,7 +88,7 @@ impl RestakeApi for Contract {
         let event = RestakeAll(event_data);
 
         if withdrawal_amount > 0 {
-            let withdrawal_fee = total_fee * withdrawal_amount / total_mature_balance;
+            let withdrawal_fee = (total_fee * withdrawal_amount).div_ceil(total_mature_balance);
             request.withdrawal = WithdrawalDto {
                 amount: withdrawal_amount,
                 fee: withdrawal_fee,
