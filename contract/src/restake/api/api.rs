@@ -94,6 +94,10 @@ impl RestakeApi for Contract {
                 fee: withdrawal_fee,
             };
 
+            for (product_id, _) in &request.partitions {
+                self.get_account_mut(&request.account_id).get_jar_mut(product_id).lock();
+            }
+
             self.transfer_remainder(request, event)
         } else {
             self.clean_up_and_deposit(request);

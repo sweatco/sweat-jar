@@ -9,7 +9,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    assert::assert_not_locked_legacy,
+    assert::{assert_not_locked, assert_not_locked_legacy},
     event::{emit, EventKind, RestakeData},
     jar::{account::Account, model::AccountLegacyV3, view::DetailedJarV2},
     product::model::v1::{InterestCalculator, ProductAssertions},
@@ -22,6 +22,7 @@ impl Contract {
         product.assert_restakable();
 
         let jar = self.get_account(account_id).get_jar(&product.id);
+        assert_not_locked(jar);
 
         let (amount, partition_index) = jar.get_liquid_balance(&product.terms);
 
