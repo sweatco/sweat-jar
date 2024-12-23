@@ -70,7 +70,6 @@ impl Contract {
             account.try_set_timezone(ticket.timezone);
         }
 
-        let account = self.get_or_create_account_mut(&account_id);
         account.deposit(product_id, amount, None);
 
         emit(Deposit((product_id.clone(), amount.into())));
