@@ -35,9 +35,5 @@ async fn measure_restake_all() -> Result<()> {
         .total_gas_burnt;
     dbg!(pretty_gas_string(gas));
 
-    //   1  jar -  6 TGas 225 GGas total:  6225437862976
-    // 100 jars - 50 TGas 709 GGas total: 50709431315947
-    // 200 jars - 86 TGas 607 GGas total: 86607517267105
-
     Ok(())
 }
