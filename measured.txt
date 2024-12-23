@@ -2,248 +2,227 @@ stake:
 {
   "Flexible6Months6Percents": {
     "cost": [
-      "  17 753 962 358 519 - number of jars: 1  ",
-      "  17 930 512 525 898 - number of jars: 11  ",
-      "  18 105 976 608 254 - number of jars: 21  ",
-      "  18 274 443 973 586 - number of jars: 31  ",
-      "  18 455 037 116 846 - number of jars: 41  ",
-      "  18 619 755 183 086 - number of jars: 51  "
+      "  17 802 216 837 953 - number of jars: 1  ",
+      "  17 837 047 902 029 - number of jars: 11  ",
+      "  17 868 591 233 129 - number of jars: 21  ",
+      "  17 903 391 855 233 - number of jars: 31  ",
+      "  17 935 081 636 901 - number of jars: 41  ",
+      "  17 971 782 002 609 - number of jars: 51  "
     ],
     "diff": [
-      "  176 550 167 379 - jar cost: 17 655 016 737  ",
-      "  175 464 082 356 - jar cost: 17 546 408 235  ",
-      "  168 467 365 332 - jar cost: 16 846 736 533  ",
-      "  180 593 143 260 - jar cost: 18 059 314 326  ",
-      "  164 718 066 240 - jar cost: 16 471 806 624  "
+      "  34 831 064 076 - jar cost: 3 483 106 407  ",
+      "  31 543 331 100 - jar cost: 3 154 333 110  ",
+      "  34 800 622 104 - jar cost: 3 480 062 210  ",
+      "  31 689 781 668 - jar cost: 3 168 978 166  ",
+      "  36 700 365 708 - jar cost: 3 670 036 570  "
     ],
-    "total": "109 139 687 766 189"
+    "total": "107 318 111 467 854"
   },
   "Locked10Minutes6Percents": {
     "cost": [
-      "  17 785 983 860 153 - number of jars: 1  ",
-      "  17 962 534 027 532 - number of jars: 11  ",
-      "  18 137 998 109 888 - number of jars: 21  ",
-      "  18 306 465 475 220 - number of jars: 31  ",
-      "  18 487 058 618 480 - number of jars: 41  ",
-      "  18 651 776 684 720 - number of jars: 51  "
+      "  17 801 730 220 889 - number of jars: 1  ",
+      "  17 836 561 284 965 - number of jars: 11  ",
+      "  17 868 104 616 065 - number of jars: 21  ",
+      "  17 902 905 238 169 - number of jars: 31  ",
+      "  17 934 595 019 837 - number of jars: 41  ",
+      "  17 971 295 385 545 - number of jars: 51  "
     ],
     "diff": [
-      "  176 550 167 379 - jar cost: 17 655 016 737  ",
-      "  175 464 082 356 - jar cost: 17 546 408 235  ",
-      "  168 467 365 332 - jar cost: 16 846 736 533  ",
-      "  180 593 143 260 - jar cost: 18 059 314 326  ",
-      "  164 718 066 240 - jar cost: 16 471 806 624  "
+      "  34 831 064 076 - jar cost: 3 483 106 407  ",
+      "  31 543 331 100 - jar cost: 3 154 333 110  ",
+      "  34 800 622 104 - jar cost: 3 480 062 210  ",
+      "  31 689 781 668 - jar cost: 3 168 978 166  ",
+      "  36 700 365 708 - jar cost: 3 670 036 570  "
     ],
-    "total": "109 331 816 775 993"
+    "total": "107 315 191 765 470"
   },
   "Locked12Months12Percents": {
     "cost": [
-      "  17 753 779 948 301 - number of jars: 1  ",
-      "  17 930 330 115 680 - number of jars: 11  ",
-      "  18 105 794 198 036 - number of jars: 21  ",
-      "  18 274 261 563 368 - number of jars: 31  ",
-      "  18 454 854 706 628 - number of jars: 41  ",
-      "  18 619 572 772 868 - number of jars: 51  "
+      "  17 801 730 220 889 - number of jars: 1  ",
+      "  17 836 561 284 965 - number of jars: 11  ",
+      "  17 868 104 616 065 - number of jars: 21  ",
+      "  17 902 905 238 169 - number of jars: 31  ",
+      "  17 934 595 019 837 - number of jars: 41  ",
+      "  17 971 295 385 545 - number of jars: 51  "
     ],
     "diff": [
-      "  176 550 167 379 - jar cost: 17 655 016 737  ",
-      "  175 464 082 356 - jar cost: 17 546 408 235  ",
-      "  168 467 365 332 - jar cost: 16 846 736 533  ",
-      "  180 593 143 260 - jar cost: 18 059 314 326  ",
-      "  164 718 066 240 - jar cost: 16 471 806 624  "
+      "  34 831 064 076 - jar cost: 3 483 106 407  ",
+      "  31 543 331 100 - jar cost: 3 154 333 110  ",
+      "  34 800 622 104 - jar cost: 3 480 062 210  ",
+      "  31 689 781 668 - jar cost: 3 168 978 166  ",
+      "  36 700 365 708 - jar cost: 3 670 036 570  "
     ],
-    "total": "109 138 593 304 881"
+    "total": "107 315 191 765 470"
   },
   "Locked6Months6Percents": {
     "cost": [
-      "  17 752 655 038 635 - number of jars: 1  ",
-      "  17 927 175 492 894 - number of jars: 11  ",
-      "  18 100 898 649 486 - number of jars: 21  ",
-      "  18 267 376 616 742 - number of jars: 31  ",
-      "  18 446 228 834 238 - number of jars: 41  ",
-      "  18 608 957 502 402 - number of jars: 51  "
+      "  17 800 646 470 995 - number of jars: 1  ",
+      "  17 835 398 550 495 - number of jars: 11  ",
+      "  17 866 941 881 595 - number of jars: 21  ",
+      "  17 901 637 190 931 - number of jars: 31  ",
+      "  17 933 326 972 599 - number of jars: 41  ",
+      "  17 969 816 712 771 - number of jars: 51  "
     ],
     "diff": [
-      "  174 520 454 259 - jar cost: 17 452 045 425  ",
-      "  173 723 156 592 - jar cost: 17 372 315 659  ",
-      "  166 477 967 256 - jar cost: 16 647 796 725  ",
-      "  178 852 217 496 - jar cost: 17 885 221 749  ",
-      "  162 728 668 164 - jar cost: 16 272 866 816  "
+      "  34 752 079 500 - jar cost: 3 475 207 950  ",
+      "  31 543 331 100 - jar cost: 3 154 333 110  ",
+      "  34 695 309 336 - jar cost: 3 469 530 933  ",
+      "  31 689 781 668 - jar cost: 3 168 978 166  ",
+      "  36 489 740 172 - jar cost: 3 648 974 017  "
     ],
-    "total": "109 103 292 134 397"
+    "total": "107 307 767 779 386"
   },
   "Locked6Months6PercentsWithWithdrawFee": {
     "cost": [
-      "  17 765 866 042 224 - number of jars: 1  ",
-      "  17 957 459 272 851 - number of jars: 11  ",
-      "  18 147 920 344 119 - number of jars: 21  ",
-      "  18 331 430 772 699 - number of jars: 31  ",
-      "  18 527 020 904 871 - number of jars: 41  ",
-      "  18 706 782 034 359 - number of jars: 51  "
+      "  17 813 757 723 360 - number of jars: 1  ",
+      "  17 847 153 900 972 - number of jars: 11  ",
+      "  17 880 763 995 144 - number of jars: 21  ",
+      "  17 912 776 297 164 - number of jars: 31  ",
+      "  17 948 096 901 060 - number of jars: 41  ",
+      "  17 979 850 034 940 - number of jars: 51  "
     ],
     "diff": [
-      "  191 593 230 627 - jar cost: 19 159 323 062  ",
-      "  190 461 071 268 - jar cost: 19 046 107 126  ",
-      "  183 510 428 580 - jar cost: 18 351 042 858  ",
-      "  195 590 132 172 - jar cost: 19 559 013 217  ",
-      "  179 761 129 488 - jar cost: 17 976 112 948  "
+      "  33 396 177 612 - jar cost: 3 339 617 761  ",
+      "  33 610 094 172 - jar cost: 3 361 009 417  ",
+      "  32 012 302 020 - jar cost: 3 201 230 202  ",
+      "  35 320 603 896 - jar cost: 3 532 060 389  ",
+      "  31 753 133 880 - jar cost: 3 175 313 388  "
     ],
-    "total": "109 436 479 371 123"
+    "total": "107 382 398 852 640"
   }
 }
 restake: 
 {
   "Locked10Minutes6Percents": {
     "cost": [
-      "  6 040 557 619 623 - number of jars: 1  ",
-      "  6 214 208 905 167 - number of jars: 11  ",
-      "  6 386 698 348 868 - number of jars: 21  ",
-      "  6 551 956 143 044 - number of jars: 31  ",
-      "  6 744 078 566 132 - number of jars: 41  ",
-      "  6 908 251 520 859 - number of jars: 51  "
+      "  6 156 782 151 296 - number of jars: 1  ",
+      "  6 188 477 384 129 - number of jars: 11  ",
+      "  6 219 709 517 552 - number of jars: 21  ",
+      "  6 250 692 355 907 - number of jars: 31  ",
+      "  6 281 427 704 027 - number of jars: 41  ",
+      "  6 312 163 052 147 - number of jars: 51  "
     ],
     "diff": [
-      "  173 651 285 544 - jar cost: 17 365 128 554  ",
-      "  172 489 443 701 - jar cost: 17 248 944 370  ",
-      "  165 257 794 176 - jar cost: 16 525 779 417  ",
-      "  192 122 423 088 - jar cost: 19 212 242 308  ",
-      "  164 172 954 727 - jar cost: 16 417 295 472  "
+      "  31 695 232 833 - jar cost: 3 169 523 283  ",
+      "  31 232 133 423 - jar cost: 3 123 213 342  ",
+      "  30 982 838 355 - jar cost: 3 098 283 835  ",
+      "  30 735 348 120 - jar cost: 3 073 534 812  ",
+      "  30 735 348 120 - jar cost: 3 073 534 812  "
     ],
-    "total": "38 845 751 103 693"
+    "total": "37 409 252 165 058"
   }
 }
 claim: 
 {
   "Locked10Minutes6Percents": {
     "cost": [
-      "  5 813 029 688 726 - number of jars: 1  ",
-      "  5 972 338 762 988 - number of jars: 11  ",
-      "  6 132 788 999 822 - number of jars: 21  ",
-      "  6 290 934 697 100 - number of jars: 31  ",
-      "  6 473 278 471 094 - number of jars: 41  ",
-      "  6 634 550 641 172 - number of jars: 51  "
+      "  6 054 738 920 216 - number of jars: 1  ",
+      "  18 301 879 464 846 - number of jars: 11  ",
+      "  18 376 556 290 818 - number of jars: 21  ",
+      "  18 456 697 039 386 - number of jars: 31  ",
+      "  18 531 050 522 250 - number of jars: 41  ",
+      "  18 615 589 724 394 - number of jars: 51  "
     ],
     "diff": [
-      "  159 309 074 262 - jar cost: 15 930 907 426  ",
-      "  160 450 236 834 - jar cost: 16 045 023 683  ",
-      "  158 145 697 278 - jar cost: 15 814 569 727  ",
-      "  182 343 773 994 - jar cost: 18 234 377 399  ",
-      "  161 272 170 078 - jar cost: 16 127 217 007  "
+      "  12 247 140 544 630 - jar cost: 1 224 714 054 463  ",
+      "  74 676 825 972 - jar cost: 7 467 682 597  ",
+      "  80 140 748 568 - jar cost: 8 014 074 856  ",
+      "  74 353 482 864 - jar cost: 7 435 348 286  ",
+      "  84 539 202 144 - jar cost: 8 453 920 214  "
     ],
-    "total": "37 316 921 260 902"
+    "total": "98 336 511 961 910"
   },
   "Locked10Minutes6PercentsWithFixedWithdrawFee": {
     "cost": [
-      "  5 783 164 038 101 - number of jars: 1  ",
-      "  5 954 595 559 823 - number of jars: 11  ",
-      "  6 126 693 513 905 - number of jars: 21  ",
-      "  6 296 674 516 799 - number of jars: 31  ",
-      "  6 488 634 623 477 - number of jars: 41  ",
-      "  6 663 962 717 615 - number of jars: 51  "
+      "  6 059 335 524 035 - number of jars: 1  ",
+      "  18 322 538 602 785 - number of jars: 11  ",
+      "  18 401 956 148 829 - number of jars: 21  ",
+      "  18 476 520 257 229 - number of jars: 31  ",
+      "  18 559 188 512 229 - number of jars: 41  ",
+      "  18 633 759 202 677 - number of jars: 51  "
     ],
     "diff": [
-      "  171 431 521 722 - jar cost: 17 143 152 172  ",
-      "  172 097 954 082 - jar cost: 17 209 795 408  ",
-      "  169 981 002 894 - jar cost: 16 998 100 289  ",
-      "  191 960 106 678 - jar cost: 19 196 010 667  ",
-      "  175 328 094 138 - jar cost: 17 532 809 413  "
+      "  12 263 203 078 750 - jar cost: 1 226 320 307 875  ",
+      "  79 417 546 044 - jar cost: 7 941 754 604  ",
+      "  74 564 108 400 - jar cost: 7 456 410 840  ",
+      "  82 668 255 000 - jar cost: 8 266 825 500  ",
+      "  74 570 690 448 - jar cost: 7 457 069 044  "
     ],
-    "total": "37 313 724 969 720"
+    "total": "98 453 298 247 784"
   },
   "Locked10Minutes6PercentsWithPercentWithdrawFee": {
     "cost": [
-      "  5 783 319 400 205 - number of jars: 1  ",
-      "  5 957 524 771 931 - number of jars: 11  ",
-      "  6 131 873 303 201 - number of jars: 21  ",
-      "  6 304 338 545 987 - number of jars: 31  ",
-      "  6 499 016 555 261 - number of jars: 41  ",
-      "  6 676 127 901 179 - number of jars: 51  "
+      "  6 060 352 781 393 - number of jars: 1  ",
+      "  18 325 434 406 841 - number of jars: 11  ",
+      "  18 404 957 265 653 - number of jars: 21  ",
+      "  18 479 521 374 053 - number of jars: 31  ",
+      "  18 562 400 254 589 - number of jars: 41  ",
+      "  18 636 785 002 181 - number of jars: 51  "
     ],
     "diff": [
-      "  174 205 371 726 - jar cost: 17 420 537 172  ",
-      "  174 348 531 270 - jar cost: 17 434 853 127  ",
-      "  172 465 242 786 - jar cost: 17 246 524 278  ",
-      "  194 678 009 274 - jar cost: 19 467 800 927  ",
-      "  177 111 345 918 - jar cost: 17 711 134 591  "
+      "  12 265 081 625 448 - jar cost: 1 226 508 162 544  ",
+      "  79 522 858 812 - jar cost: 7 952 285 881  ",
+      "  74 564 108 400 - jar cost: 7 456 410 840  ",
+      "  82 878 880 536 - jar cost: 8 287 888 053  ",
+      "  74 384 747 592 - jar cost: 7 438 474 759  "
     ],
-    "total": "37 352 200 477 764"
+    "total": "98 469 451 084 710"
   }
 }
 withdraw: 
 {
   "Locked10Minutes6Percents": {
     "cost": [
-      "  17 998 822 754 620 - number of jars: 1  ",
-      "  18 347 956 488 496 - number of jars: 11  ",
-      "  18 692 342 632 028 - number of jars: 21  ",
-      "  19 020 560 551 096 - number of jars: 31  ",
-      "  19 406 305 281 460 - number of jars: 41  ",
-      "  19 735 493 764 384 - number of jars: 51  "
+      "  18 147 689 359 707 - number of jars: 1  ",
+      "  18 216 505 771 461 - number of jars: 11  ",
+      "  18 278 774 418 288 - number of jars: 21  ",
+      "  18 343 508 864 847 - number of jars: 31  ",
+      "  18 405 207 501 087 - number of jars: 41  ",
+      "  18 471 853 369 155 - number of jars: 51  "
     ],
     "diff": [
-      "  349 133 733 876 - jar cost: 34 913 373 387  ",
-      "  344 386 143 532 - jar cost: 34 438 614 353  ",
-      "  328 217 919 068 - jar cost: 32 821 791 906  ",
-      "  385 744 730 364 - jar cost: 38 574 473 036  ",
-      "  329 188 482 924 - jar cost: 32 918 848 292  "
+      "  68 816 411 754 - jar cost: 6 881 641 175  ",
+      "  62 268 646 827 - jar cost: 6 226 864 682  ",
+      "  64 734 446 559 - jar cost: 6 473 444 655  ",
+      "  61 698 636 240 - jar cost: 6 169 863 624  ",
+      "  66 645 868 068 - jar cost: 6 664 586 806  "
     ],
-    "total": "113 201 481 472 084"
+    "total": "109 863 539 284 545"
   },
   "Locked10Minutes6PercentsWithFixedWithdrawFee": {
     "cost": [
-      "  23 359 845 641 261 - number of jars: 1  ",
-      "  23 754 599 461 989 - number of jars: 11  ",
-      "  24 142 522 516 097 - number of jars: 21  ",
-      "  24 518 215 548 573 - number of jars: 31  ",
-      "  24 948 513 539 481 - number of jars: 41  ",
-      "  25 323 590 615 937 - number of jars: 51  "
+      "  18 173 230 572 109 - number of jars: 1  ",
+      "  18 240 384 642 825 - number of jars: 11  ",
+      "  18 304 808 087 616 - number of jars: 21  ",
+      "  18 366 940 156 947 - number of jars: 31  ",
+      "  18 432 690 866 487 - number of jars: 41  ",
+      "  18 494 389 502 727 - number of jars: 51  "
     ],
     "diff": [
-      "  394 753 820 728 - jar cost: 39 475 382 072  ",
-      "  387 923 054 108 - jar cost: 38 792 305 410  ",
-      "  375 693 032 476 - jar cost: 37 569 303 247  ",
-      "  430 297 990 908 - jar cost: 43 029 799 090  ",
-      "  375 077 076 456 - jar cost: 37 507 707 645  "
+      "  67 154 070 716 - jar cost: 6 715 407 071  ",
+      "  64 423 444 791 - jar cost: 6 442 344 479  ",
+      "  62 132 069 331 - jar cost: 6 213 206 933  ",
+      "  65 750 709 540 - jar cost: 6 575 070 954  ",
+      "  61 698 636 240 - jar cost: 6 169 863 624  "
     ],
-    "total": "146 047 287 323 338"
+    "total": "110 012 443 828 711"
   },
   "Locked10Minutes6PercentsWithPercentWithdrawFee": {
     "cost": [
-      "  23 361 765 000 779 - number of jars: 1  ",
-      "  23 761 083 419 931 - number of jars: 11  ",
-      "  24 154 710 301 299 - number of jars: 21  ",
-      "  24 547 877 262 063 - number of jars: 31  ",
-      "  24 969 631 702 803 - number of jars: 41  ",
-      "  25 349 300 528 631 - number of jars: 51  "
+      "  18 176 626 083 573 - number of jars: 1  ",
+      "  18 244 446 937 036 - number of jars: 11  ",
+      "  18 308 923 038 211 - number of jars: 21  ",
+      "  18 371 055 107 542 - number of jars: 31  ",
+      "  18 436 911 129 850 - number of jars: 41  ",
+      "  18 498 609 766 090 - number of jars: 51  "
     ],
     "diff": [
-      "  399 318 419 152 - jar cost: 39 931 841 915  ",
-      "  393 626 881 368 - jar cost: 39 362 688 136  ",
-      "  393 166 960 764 - jar cost: 39 316 696 076  ",
-      "  421 754 440 740 - jar cost: 42 175 444 074  ",
-      "  379 668 825 828 - jar cost: 37 966 882 582  "
+      "  67 820 853 463 - jar cost: 6 782 085 346  ",
+      "  64 476 101 175 - jar cost: 6 447 610 117  ",
+      "  62 132 069 331 - jar cost: 6 213 206 933  ",
+      "  65 856 022 308 - jar cost: 6 585 602 230  ",
+      "  61 698 636 240 - jar cost: 6 169 863 624  "
     ],
-    "total": "146 144 368 215 506"
-  }
-}
-restake: 
-{
-  "Locked10Minutes6Percents": {
-    "cost": [
-      "  6 061 326 681 827 - number of jars: 1  ",
-      "  6 092 675 487 281 - number of jars: 11  ",
-      "  6 123 713 450 288 - number of jars: 21  ",
-      "  6 154 751 413 295 - number of jars: 31  ",
-      "  6 185 421 763 691 - number of jars: 41  ",
-      "  6 216 148 884 251 - number of jars: 51  "
-    ],
-    "diff": [
-      "  31 348 805 454 - jar cost: 3 134 880 545  ",
-      "  31 037 963 007 - jar cost: 3 103 796 300  ",
-      "  31 037 963 007 - jar cost: 3 103 796 300  ",
-      "  30 670 350 396 - jar cost: 3 067 035 039  ",
-      "  30 727 120 560 - jar cost: 3 072 712 056  "
-    ],
-    "total": "36 834 037 680 633"
+    "total": "110 036 572 062 302"
   }
 }
