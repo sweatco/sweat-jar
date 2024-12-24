@@ -5,7 +5,7 @@ use near_sdk::{
 use sweat_jar_model::{
     api::ScoreApi,
     product::{Product, Terms},
-    Score, Timezone, U32, UTC,
+    Score, Timezone, UTC,
 };
 
 use crate::{
@@ -37,7 +37,7 @@ impl ScoreApi for Contract {
 
             event.push(ScoreData {
                 account_id,
-                score: new_score.to_event(),
+                score: new_score,
             });
         }
 
@@ -60,18 +60,10 @@ impl ScoreApi for Contract {
 trait ScoreConverter {
     /// Convert Score to a User's timezone
     fn adjust(&self, timezone: Timezone) -> Chain;
-    fn to_event(&self) -> Vec<(U32, UTC)>;
 }
 
 impl ScoreConverter for Vec<(Score, UTC)> {
     fn adjust(&self, timezone: Timezone) -> Chain {
         self.iter().map(|score| (score.0, timezone.adjust(score.1))).collect()
-    }
-
-    fn to_event(&self) -> Vec<(U32, UTC)> {
-        self.iter()
-            .copied()
-            .map(|(score, timestamp)| (U32(score.into()), timestamp))
-            .collect()
     }
 }

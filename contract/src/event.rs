@@ -2,7 +2,7 @@ use near_sdk::{
     json_types::{Base64VecU8, U128},
     log, near, serde_json, AccountId,
 };
-use sweat_jar_model::{product::Product, Local, ProductId, Score, TokenAmount, U32, UTC};
+use sweat_jar_model::{product::Product, Local, ProductId, Score, TokenAmount, UTC};
 
 use crate::{common::Timestamp, env, PACKAGE_NAME, VERSION};
 
@@ -168,7 +168,7 @@ pub struct ChangeProductPublicKeyData {
 #[near(serializers=[json])]
 pub struct ScoreData {
     pub account_id: AccountId,
-    pub score: Vec<(U32, UTC)>,
+    pub score: Vec<(Score, UTC)>,
 }
 
 impl From<EventKind> for SweatJarEvent {

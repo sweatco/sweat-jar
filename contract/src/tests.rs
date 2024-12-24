@@ -4,14 +4,13 @@ use common::tests::Context;
 use fake::Fake;
 use near_sdk::{
     json_types::U128,
-    serde_json::{from_str, to_string},
     test_utils::test_env::{alice, bob},
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::AggregatedTokenAmountView,
     product::{Apy, DowngradableApy, FixedProductTerms, Terms},
-    TokenAmount, UDecimal, MS_IN_YEAR, U32,
+    TokenAmount, UDecimal, MS_IN_YEAR,
 };
 
 use super::*;
@@ -361,15 +360,6 @@ fn unlock_by_manager() {
             .is_pending_withdraw
     );
 }
-
-#[test]
-fn test_u32() {
-    let n = U32(12345678);
-
-    assert_eq!(n, from_str(&to_string(&n).unwrap()).unwrap());
-    assert_eq!(U32::from(12345678_u32), n);
-}
-
 #[test]
 fn claim_often_vs_claim_once() {
     fn test(mut product: Product, principal: TokenAmount, days: u64, n: usize) {
