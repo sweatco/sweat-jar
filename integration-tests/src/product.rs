@@ -36,14 +36,6 @@ impl RegisterProductCommand {
 }
 
 impl RegisterProductCommand {
-    pub(crate) fn json_for_premium(&self, public_key: String) -> Value {
-        let mut json = self.json();
-        if let Value::Object(obj) = &mut json {
-            obj.insert("public_key".to_string(), Value::String(public_key));
-        }
-        json
-    }
-
     pub(crate) fn get(self) -> Product {
         from_value(self.json()).unwrap()
     }

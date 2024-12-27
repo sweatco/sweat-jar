@@ -15,8 +15,6 @@ impl Contract {
         ticket: &JarTicket,
         signature: &Option<Base64VecU8>,
     ) {
-        ticket.verify_expiration_date();
-
         let account = self.try_get_account(account_id);
         let product = self.get_product(&ticket.product_id);
 
@@ -24,6 +22,8 @@ impl Contract {
             let Some(signature) = signature else {
                 panic_str("Signature is required");
             };
+            ticket.verify_expiration_date();
+
             let nonce = account.map_or(0, |account| account.nonce);
             let message = DepositMessage::new(
                 &env::current_account_id(),

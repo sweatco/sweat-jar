@@ -1,11 +1,20 @@
 use std::ops::Deref;
 
 use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
-use near_sdk::{env::sha256, require, AccountId};
+use near_sdk::require;
+#[cfg(not(feature = "integration-test"))]
+use near_sdk::AccountId;
+#[cfg(feature = "integration-test")]
+use nitka::near_sdk::AccountId;
+use sha2::{Digest, Sha256};
 
 use crate::{ProductId, Timestamp, TokenAmount};
 
 pub struct DepositMessage(String);
+
+pub fn sha256(value: &[u8]) -> Vec<u8> {
+    Sha256::digest(value).to_vec()
+}
 
 impl DepositMessage {
     pub fn new(
@@ -69,8 +78,9 @@ pub mod test_utils {
 
     use base64::{engine::general_purpose::STANDARD, Engine};
     use ed25519_dalek::{Signer, SigningKey};
-    use near_sdk::env::sha256;
     use rand::rngs::OsRng;
+
+    use crate::signer::sha256;
 
     pub struct MessageSigner {
         signing_key: SigningKey,

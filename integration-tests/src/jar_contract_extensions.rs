@@ -2,7 +2,7 @@ use near_workspaces::{types::NearToken, Account};
 use nitka::{
     misc::ToNear,
     near_sdk::{
-        json_types::U128,
+        json_types::{Base64VecU8, U128},
         serde_json::{json, Value},
     },
     ContractCall,
@@ -56,6 +56,8 @@ pub trait JarContractExtensions {
         user: &Account,
         product_id: String,
         amount: u128,
+        signature: Base64VecU8,
+        valid_until: u64,
         timezone: Timezone,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
@@ -65,19 +67,21 @@ pub trait JarContractExtensions {
         user: &Account,
         product_id: String,
         amount: u128,
-        signature: String,
+        signature: Base64VecU8,
         valid_until: u64,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
+}
 
-    fn get_signature_material(
+pub trait JarContractLegacyExtensions {
+    fn create_legacy_step_jar(
         &self,
-        receiver_id: &Account,
-        product_id: &String,
-        valid_until: u64,
+        user: &Account,
+        product_id: String,
         amount: u128,
-        nonce: u32,
-    ) -> String;
+        timezone: Timezone,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
 }
 
 impl JarContractExtensions for SweatJarContract<'_> {
@@ -113,6 +117,8 @@ impl JarContractExtensions for SweatJarContract<'_> {
         user: &Account,
         product_id: String,
         amount: u128,
+        signature: Base64VecU8,
+        valid_until: u64,
         timezone: Timezone,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128> {
@@ -128,9 +134,10 @@ impl JarContractExtensions for SweatJarContract<'_> {
             "data": {
                 "ticket": {
                     "product_id": product_id,
-                    "valid_until": "0",
+                    "valid_until": valid_until.to_string(),
                     "timezone": timezone,
-                }
+                },
+                "signature": signature,
             }
         });
 
@@ -142,7 +149,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
         user: &Account,
         product_id: String,
         amount: u128,
-        signature: String,
+        signature: Base64VecU8,
         valid_until: u64,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128> {
@@ -166,23 +173,35 @@ impl JarContractExtensions for SweatJarContract<'_> {
 
         self.create_jar_internal(user, msg, amount, ft_contract)
     }
+}
 
-    fn get_signature_material(
+impl JarContractLegacyExtensions for SweatJarContract<'_> {
+    fn create_legacy_step_jar(
         &self,
-        receiver_id: &Account,
-        product_id: &String,
-        valid_until: u64,
+        user: &Account,
+        product_id: String,
         amount: u128,
-        nonce: u32,
-    ) -> String {
-        format!(
-            "{},{},{},{},{},{}",
-            self.contract.as_account().id(),
-            receiver_id.id(),
+        timezone: Timezone,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
+        println!(
+            "▶️ Create jar(product = {:?}) for user {:?} with {:?} tokens",
             product_id,
-            amount,
-            nonce,
-            valid_until,
-        )
+            user.id(),
+            amount
+        );
+
+        let msg = json!({
+            "type": "stake",
+            "data": {
+                "ticket": {
+                    "product_id": product_id,
+                    "valid_until": "0",
+                    "timezone": timezone,
+                },
+            }
+        });
+
+        self.create_jar_internal(user, msg, amount, ft_contract)
     }
 }

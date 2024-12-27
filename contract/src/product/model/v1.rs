@@ -111,14 +111,6 @@ impl ProductAssertions for Product {
         );
     }
 
-    #[cfg(feature = "integration-test")]
-    fn assert_score_based_product_is_protected(&self) {
-        if matches!(self.terms, Terms::ScoreBased(_)) && self.public_key.is_some() {
-            env::log_str("Must panic in production!");
-        }
-    }
-
-    #[cfg(not(feature = "integration-test"))]
     fn assert_score_based_product_is_protected(&self) {
         if matches!(self.terms, Terms::ScoreBased(_)) {
             require!(self.public_key.is_some(), "Score based must be protected.");

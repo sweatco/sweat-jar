@@ -8,7 +8,9 @@ use sweat_jar_model::{
 use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::{
-    jar_contract_extensions::JarContractExtensions, migrations::helpers::load_wasm, product::RegisterProductCommand,
+    jar_contract_extensions::{JarContractExtensions, JarContractLegacyExtensions},
+    migrations::helpers::load_wasm,
+    product::RegisterProductCommand,
 };
 
 #[tokio::test]
@@ -91,7 +93,7 @@ async fn prepare_legacy_jar_contract(
         .await?;
     client
         .jar()
-        .create_step_jar(
+        .create_legacy_step_jar(
             &accounts.alice,
             RegisterProductCommand::Locked10Minutes20000ScoreCap.id(),
             100000000000000000000000000,
