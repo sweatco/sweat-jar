@@ -3,6 +3,7 @@ pub mod claimed_amount_view;
 pub mod jar;
 pub mod product;
 mod score;
+pub mod signer;
 mod timezone;
 mod udecimal;
 pub mod withdraw;

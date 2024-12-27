@@ -1,7 +1,8 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, serde_json, AccountId, PromiseOrValue};
+use sweat_jar_model::jar::JarTicket;
 
-use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
+use crate::{near_bindgen, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -51,10 +52,14 @@ mod tests {
     use near_sdk::{json_types::U128, serde_json::json, test_utils::test_env::alice};
     use sweat_jar_model::{
         product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+        signer::{
+            test_utils::{Base64String, MessageSigner},
+            DepositMessage,
+        },
         UDecimal, MS_IN_YEAR,
     };
 
-    use crate::{common::tests::Context, product::helpers::MessageSigner, test_utils::admin, Contract};
+    use crate::{common::tests::Context, test_utils::admin};
 
     #[test]
     fn transfer_with_create_jar_message() {
@@ -99,17 +104,16 @@ mod tests {
 
         let ticket_amount = 1_000_000u128;
         let ticket_valid_until = 100_000_000u64;
-        let signature = signer.sign_base64(
-            Contract::get_signature_material(
-                &context.owner,
-                &alice,
-                &product.id,
-                ticket_amount,
-                ticket_valid_until,
-                0,
-            )
-            .as_str(),
+        let message = DepositMessage::new(
+            &context.owner,
+            &alice,
+            &product.id,
+            ticket_amount,
+            ticket_valid_until,
+            0,
         );
+        dbg!(message.to_string());
+        let signature: Base64String = signer.sign(message.as_str()).into();
 
         let msg = json!({
             "type": "stake",
@@ -118,7 +122,7 @@ mod tests {
                     "product_id": product.id,
                     "valid_until": ticket_valid_until.to_string(),
                 },
-                "signature": signature,
+                "signature": *signature,
             }
         });
 

@@ -9,6 +9,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
+    jar::JarTicket,
     product::{Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
     withdraw::WithdrawView,
     ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
@@ -19,7 +20,7 @@ use crate::{
         test_data::{set_test_future_success, set_test_log_events},
         tests::{Context, TokenUtils},
     },
-    jar::model::{Jar, JarTicket},
+    jar::model::Jar,
     product::model::v1::InterestCalculator,
     score::AccountScore,
     test_utils::admin,

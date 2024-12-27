@@ -5,13 +5,13 @@ use std::panic::{catch_unwind, UnwindSafe};
 use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::{
     product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+    signer::test_utils::MessageSigner,
     TokenAmount, UDecimal, MS_IN_YEAR,
 };
 
 use crate::{
     common::Timestamp,
     jar::model::{Deposit, Jar},
-    product::helpers::MessageSigner,
 };
 
 pub fn admin() -> AccountId {

@@ -1,9 +1,9 @@
 #![cfg(test)]
 
 use near_sdk::{json_types::U64, test_utils::test_env::alice};
-use sweat_jar_model::product::Product;
+use sweat_jar_model::{jar::JarTicket, product::Product};
 
-use crate::{common::tests::Context, jar::model::JarTicket, test_utils::admin};
+use crate::{common::tests::Context, test_utils::admin};
 
 #[test]
 #[should_panic(expected = "It's not possible to create new jars for this product")]
@@ -29,12 +29,10 @@ mod signature_tests {
         json_types::{Base64VecU8, U64},
         test_utils::test_env::alice,
     };
-    use sweat_jar_model::product::Product;
+    use sweat_jar_model::{jar::JarTicket, product::Product, signer::test_utils::MessageSigner};
 
     use crate::{
         common::tests::Context,
-        jar::model::JarTicket,
-        product::helpers::MessageSigner,
         test_utils::{admin, generate_premium_product},
     };
 
@@ -53,7 +51,7 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount).as_str());
 
         context
             .contract()
@@ -105,7 +103,7 @@ mod signature_tests {
         // signature made for wrong product
         let signature = signer.sign(
             context
-                .get_signature_material(&admin, &ticket_for_another_product, amount)
+                .get_deposit_message(&admin, &ticket_for_another_product, amount)
                 .as_str(),
         );
 
@@ -136,7 +134,7 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_signature_material(&alice, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount).as_str());
 
         context
             .contract()
@@ -162,7 +160,7 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount).as_str());
 
         context
             .contract()

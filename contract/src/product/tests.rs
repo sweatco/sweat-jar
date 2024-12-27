@@ -11,6 +11,7 @@ use sweat_jar_model::{
         Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ScoreBasedProductTerms, Terms,
         WithdrawalFee,
     },
+    signer::test_utils::MessageSigner,
     UDecimal, MS_IN_YEAR,
 };
 
@@ -20,10 +21,7 @@ use crate::{
         Timestamp,
     },
     jar::{account::Account, model::Jar},
-    product::{
-        helpers::MessageSigner,
-        model::v1::{InterestCalculator, ProductAssertions, ProductModelApi},
-    },
+    product::model::v1::{InterestCalculator, ProductAssertions, ProductModelApi},
     test_utils::admin,
 };
 

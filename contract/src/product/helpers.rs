@@ -1,50 +1,18 @@
 #![cfg(test)]
 
-use base64::{engine::general_purpose, Engine};
-use crypto_hash::{digest, Algorithm};
-use ed25519_dalek::{Signer, SigningKey};
-use general_purpose::STANDARD;
 use near_sdk::AccountId;
-use rand::rngs::OsRng;
-use sweat_jar_model::TokenAmount;
+use sweat_jar_model::{jar::JarTicket, signer::DepositMessage, TokenAmount};
 
-use crate::{common::tests::Context, jar::model::JarTicket, Contract};
-
-pub(crate) struct MessageSigner {
-    signing_key: SigningKey,
-}
-
-impl MessageSigner {
-    pub(crate) fn new() -> Self {
-        let mut csprng = OsRng;
-        let signing_key: SigningKey = SigningKey::generate(&mut csprng);
-
-        Self { signing_key }
-    }
-
-    pub(crate) fn sign(&self, message: &str) -> Vec<u8> {
-        let message_hash = digest(Algorithm::SHA256, message.as_bytes());
-        let signature = self.signing_key.sign(message_hash.as_slice());
-        signature.to_bytes().to_vec()
-    }
-
-    pub(crate) fn sign_base64(&self, message: &str) -> String {
-        STANDARD.encode(self.sign(message))
-    }
-
-    pub(crate) fn public_key(&self) -> Vec<u8> {
-        self.signing_key.verifying_key().as_ref().to_vec()
-    }
-}
+use crate::common::tests::Context;
 
 impl Context {
-    pub(crate) fn get_signature_material(
+    pub(crate) fn get_deposit_message(
         &self,
         receiver_id: &AccountId,
         ticket: &JarTicket,
         amount: TokenAmount,
     ) -> String {
-        Contract::get_signature_material(
+        DepositMessage::new(
             &self.owner,
             receiver_id,
             &ticket.product_id,
@@ -52,5 +20,6 @@ impl Context {
             ticket.valid_until.0,
             0,
         )
+        .to_string()
     }
 }

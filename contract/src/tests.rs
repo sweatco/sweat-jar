@@ -10,6 +10,7 @@ use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     jar::AggregatedTokenAmountView,
     product::{Apy, DowngradableApy, FixedProductTerms, Terms},
+    signer::test_utils::MessageSigner,
     TokenAmount, UDecimal, MS_IN_YEAR,
 };
 
@@ -17,7 +18,7 @@ use super::*;
 use crate::{
     common::test_data::set_test_log_events,
     jar::model::Jar,
-    product::{helpers::MessageSigner, tests::get_testing_product},
+    product::tests::get_testing_product,
     test_utils::{admin, UnwrapPromise},
 };
 

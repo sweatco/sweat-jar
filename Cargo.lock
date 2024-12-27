@@ -5246,19 +5246,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha256"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18278f6a914fa3070aa316493f7d2ddfb9ac86ebc06fa3b83bffda487e9065b0"
-dependencies = [
- "async-trait",
- "bytes",
- "hex 0.4.3",
- "sha2 0.10.8",
- "tokio",
-]
-
-[[package]]
 name = "sha3"
 version = "0.10.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5528,11 +5515,14 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 name = "sweat-jar-model"
 version = "3.4.0"
 dependencies = [
+ "base64 0.22.1",
+ "ed25519-dalek 2.1.1",
  "fake",
  "near-sdk 5.5.0",
  "near-workspaces",
  "nitka 0.4.0",
  "nitka-proc",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -5553,17 +5543,12 @@ name = "sweat_jar"
 version = "3.4.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
- "crypto-hash",
- "ed25519-dalek 2.1.1",
  "fake",
  "itertools 0.13.0",
  "mutants",
  "near-contract-standards 5.5.0",
  "near-sdk 5.5.0",
  "near-self-update-proc",
- "rand 0.8.5",
- "sha256",
  "sweat-jar-model",
  "visu",
 ]
