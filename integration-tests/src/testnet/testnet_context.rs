@@ -1,35 +1,41 @@
 use anyhow::Result;
-use near_workspaces::{network::Testnet, Account, Contract, Worker};
+use near_workspaces::{Account, Contract};
 use sweat_jar_model::api::SweatJarContract;
 use sweat_model::SweatContract;
+
+use crate::testnet::testnet_helpers::{acc_with_name, jar_testnet_contract, token_testnet_contract};
 
 pub struct TestnetContext {
     token_contract: Contract,
 
     pub manager: Account,
     pub user: Account,
-    #[allow(dead_code)]
-    pub user2: Account,
 
     jar_contract: Contract,
 }
 
 impl TestnetContext {
     pub async fn new() -> Result<Self> {
+        Self::custom(
+            "user_load_oracle_testing.testnet",
+            "jar_contract_load_oracle_testing.testnet",
+        )
+        .await
+    }
+
+    pub async fn custom(user: &str, jar: &str) -> Result<Self> {
         let worker = near_workspaces::testnet().await?;
 
-        let user = testnet_user(&worker).await?;
-        let user2 = testnet_user_2(&worker).await?;
-        let manager = jar_manager(&worker).await?;
+        let user = acc_with_name(user, &worker).await?;
+        let manager = acc_with_name("bob_account.testnet", &worker).await?;
         let token_contract = token_testnet_contract(&worker).await?;
 
-        let jar_contract = jar_testnet_contract(&worker).await?;
+        let jar_contract = jar_testnet_contract(&worker, jar).await?;
 
         Ok(Self {
             token_contract,
             manager,
             user,
-            user2,
             jar_contract,
         })
     }
@@ -45,42 +51,4 @@ impl TestnetContext {
             contract: &self.token_contract,
         }
     }
-}
-
-async fn acc_from_file(path: &str, worker: &Worker<Testnet>) -> anyhow::Result<Account> {
-    let account = Account::from_file(path, &worker)?;
-    Ok(account)
-}
-
-async fn acc_with_name(name: &str, worker: &Worker<Testnet>) -> anyhow::Result<Account> {
-    let home = dirs::home_dir().unwrap();
-    acc_from_file(
-        &format!("{}/.near-credentials/testnet/{name}.json", home.display()),
-        worker,
-    )
-    .await
-}
-
-async fn jar_testnet_contract(worker: &Worker<Testnet>) -> Result<Contract> {
-    let account = acc_with_name("v8.jar.sweatty.testnet", worker).await?;
-    let contract = Contract::from_secret_key(account.id().clone(), account.secret_key().clone(), worker);
-    Ok(contract)
-}
-
-async fn token_testnet_contract(worker: &Worker<Testnet>) -> Result<Contract> {
-    let account = acc_with_name("vfinal.token.sweat.testnet", worker).await?;
-    let contract = Contract::from_secret_key(account.id().clone(), account.secret_key().clone(), worker);
-    Ok(contract)
-}
-
-async fn testnet_user(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("testnet_user.testnet", worker).await
-}
-
-async fn testnet_user_2(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("testnet_user_2.testnet", worker).await
-}
-
-async fn jar_manager(worker: &Worker<Testnet>) -> Result<Account> {
-    acc_with_name("bob_account.testnet", worker).await
 }

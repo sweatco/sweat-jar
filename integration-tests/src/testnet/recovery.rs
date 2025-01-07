@@ -185,22 +185,3 @@ async fn testnet_sanity_check() -> Result<()> {
 
     Ok(())
 }
-
-#[ignore]
-#[tokio::test]
-async fn sandbox() -> Result<()> {
-    let ctx = TestnetContext::new().await?;
-
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
-    dbg!(&jars);
-
-    ctx.jar_contract()
-        .unlock_jars_for_account(ctx.user2.to_near())
-        .with_user(&ctx.manager)
-        .await?;
-
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user2.to_near()).await?;
-    dbg!(&jars);
-
-    Ok(())
-}
