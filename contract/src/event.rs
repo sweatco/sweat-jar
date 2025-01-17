@@ -36,9 +36,10 @@ struct SweatJarEvent {
 }
 
 /// Making a deposit into a Jar.
-/// `.0` – ID of a Product describing terms of the Jar.
-/// `.1` – amount of tokens to deposit.
-pub type DepositData = (ProductId, U128);
+/// `.0` – ID of an Account for which tokens are being deposited.
+/// `.1` – ID of a Product describing terms of the Jar.
+/// `.2` – amount of tokens to deposit.
+pub type DepositData = (AccountId, ProductId, U128);
 
 /// Claiming interest from a single Jar.
 /// `.0` – ID of a Product describing terms of the Jar.
@@ -46,13 +47,29 @@ pub type DepositData = (ProductId, U128);
 pub type ClaimEventItem = (ProductId, U128);
 
 /// Batched claiming interest from a User's account
+/// `account_id`– ID of an Account whose tokens are being claimed.
 /// `timestamp` – Unix timestamp of a block where interest was calculated and `ft_transfer` was initiated.
 /// `items`     – information about interest claimed from Jars for each Product.
-#[derive(Default, Debug)]
+#[derive(Debug)]
 #[near(serializers=[json])]
 pub struct ClaimData {
-    pub timestamp: Timestamp,
-    pub items: Vec<ClaimEventItem>,
+    account_id: AccountId,
+    timestamp: Timestamp,
+    items: Vec<ClaimEventItem>,
+}
+
+impl ClaimData {
+    pub fn new(account_id: &AccountId, timestamp: Timestamp) -> Self {
+        Self {
+            account_id: account_id.clone(),
+            timestamp,
+            items: Vec::new(),
+        }
+    }
+
+    pub fn add(&mut self, item: ClaimEventItem) {
+        self.items.push(item);
+    }
 }
 
 /// Withdrawing principal of mature deposits for a single Jar.
@@ -208,7 +225,9 @@ impl SweatJarEvent {
 
 #[cfg(test)]
 mod test {
-    use near_sdk::json_types::U128;
+    use std::str::FromStr;
+
+    use near_sdk::{json_types::U128, AccountId};
     use sweat_jar_model::Local;
 
     use crate::{
@@ -227,6 +246,7 @@ mod test {
     #[test]
     fn event_to_string() {
         let event = SweatJarEvent::from(EventKind::Claim(ClaimData {
+            account_id: AccountId::from_str("someone.near").unwrap(),
             timestamp: 1234567,
             items: vec![
                 ("product_0".to_string(), U128(50)),
@@ -239,6 +259,7 @@ mod test {
           "version": "3.4.0",
           "event": "claim",
           "data": {
+            "account_id": "someone.near",
             "timestamp": 1234567,
             "items": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
           }

@@ -40,10 +40,7 @@ impl ClaimApi for Contract {
 
         let mut rollback_jars = HashMap::new();
         let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
-        let mut event_data = ClaimData {
-            timestamp: now,
-            ..ClaimData::default()
-        };
+        let mut event_data = ClaimData::new(&account_id, now);
 
         for (product_id, jar) in &account.jars {
             if jar.is_pending_withdraw {
@@ -68,7 +65,7 @@ impl ClaimApi for Contract {
             let jar = account.get_jar_mut(&product_id);
             jar.claim(remainder, now).lock();
 
-            event_data.items.push((product_id.clone(), interest.into()));
+            event_data.add((product_id.clone(), interest.into()));
         }
 
         let account_rollback = AccountV1Companion {
