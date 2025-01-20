@@ -72,7 +72,7 @@ impl RestakeApi for Contract {
         require!(target_amount <= total_mature_balance, "Not enough funds to restake");
 
         let mut request = Request {
-            account_id,
+            account_id: account_id.clone(),
             withdrawal: WithdrawalDto::default(),
             deposit: DepositDto {
                 product_id,
@@ -85,7 +85,7 @@ impl RestakeApi for Contract {
 
         event_data.restaked = target_amount.into();
         event_data.withdrawn = withdrawal_amount.into();
-        let event = RestakeAll(event_data);
+        let event = RestakeAll(account_id, event_data);
 
         if withdrawal_amount > 0 {
             let withdrawal_fee = (total_fee * withdrawal_amount).div_ceil(total_mature_balance);

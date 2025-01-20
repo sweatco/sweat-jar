@@ -11,12 +11,12 @@ use crate::{common::Timestamp, env, PACKAGE_NAME, VERSION};
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
     RegisterProduct(Product),
-    Deposit(DepositData),
-    Claim(ClaimData),
-    Withdraw(WithdrawData),
-    WithdrawAll(Vec<WithdrawData>),
-    Restake(RestakeData),
-    RestakeAll(RestakeAllData),
+    Deposit(AccountId, DepositData),
+    Claim(AccountId, ClaimData),
+    Withdraw(AccountId, WithdrawData),
+    WithdrawAll(AccountId, Vec<WithdrawData>),
+    Restake(AccountId, RestakeData),
+    RestakeAll(AccountId, RestakeAllData),
     ApplyPenalty(PenaltyData),
     BatchApplyPenalty(BatchPenaltyData),
     EnableProduct(EnableProductData),
@@ -36,10 +36,9 @@ struct SweatJarEvent {
 }
 
 /// Making a deposit into a Jar.
-/// `.0` – ID of an Account for which tokens are being deposited.
-/// `.1` – ID of a Product describing terms of the Jar.
-/// `.2` – amount of tokens to deposit.
-pub type DepositData = (AccountId, ProductId, U128);
+/// `.0` – ID of a Product describing terms of the Jar.
+/// `.1` – amount of tokens to deposit.
+pub type DepositData = (ProductId, U128);
 
 /// Claiming interest from a single Jar.
 /// `.0` – ID of a Product describing terms of the Jar.
@@ -47,21 +46,18 @@ pub type DepositData = (AccountId, ProductId, U128);
 pub type ClaimEventItem = (ProductId, U128);
 
 /// Batched claiming interest from a User's account
-/// `account_id`– ID of an Account whose tokens are being claimed.
 /// `timestamp` – Unix timestamp of a block where interest was calculated and `ft_transfer` was initiated.
 /// `items`     – information about interest claimed from Jars for each Product.
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub struct ClaimData {
-    account_id: AccountId,
     timestamp: Timestamp,
     items: Vec<ClaimEventItem>,
 }
 
 impl ClaimData {
-    pub fn new(account_id: &AccountId, timestamp: Timestamp) -> Self {
+    pub fn new(timestamp: Timestamp) -> Self {
         Self {
-            account_id: account_id.clone(),
             timestamp,
             items: Vec::new(),
         }
@@ -245,24 +241,28 @@ mod test {
 
     #[test]
     fn event_to_string() {
-        let event = SweatJarEvent::from(EventKind::Claim(ClaimData {
-            account_id: AccountId::from_str("someone.near").unwrap(),
-            timestamp: 1234567,
-            items: vec![
-                ("product_0".to_string(), U128(50)),
-                ("product_1".to_string(), U128(200)),
-            ],
-        }))
+        let event = SweatJarEvent::from(EventKind::Claim(
+            AccountId::from_str("someone.near").unwrap(),
+            ClaimData {
+                timestamp: 1234567,
+                items: vec![
+                    ("product_0".to_string(), U128(50)),
+                    ("product_1".to_string(), U128(200)),
+                ],
+            },
+        ))
         .to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
           "version": "4.0.0",
           "event": "claim",
-          "data": {
-            "account_id": "someone.near",
-            "timestamp": 1234567,
-            "items": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
-          }
+          "data": [
+            "someone.near",
+            {
+              "timestamp": 1234567,
+              "items": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
+            }
+          ]
         }"#;
 
         assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());

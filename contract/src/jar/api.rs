@@ -98,12 +98,13 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, product_id: ProductId) {
-        self.assert_migrated(&env::predecessor_account_id());
+        let account_id = env::predecessor_account_id();
+        self.assert_migrated(&account_id);
 
-        let result = self.restake_internal(&env::predecessor_account_id(), &self.get_product(&product_id));
+        let result = self.restake_internal(&account_id, &self.get_product(&product_id));
 
         if let Some(amount) = result {
-            emit(EventKind::Restake(RestakeData::new(product_id, amount)));
+            emit(EventKind::Restake(account_id, RestakeData::new(product_id, amount)));
         } else {
             require!(result.is_some(), "Nothing to restake");
         }

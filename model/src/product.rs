@@ -181,31 +181,37 @@ pub mod test_utils {
             }
         }
 
+        #[must_use]
         pub fn with_id(mut self, id: &str) -> Self {
             self.id = id.to_string();
             self
         }
 
+        #[must_use]
         pub fn with_enabled(mut self, enabled: bool) -> Self {
             self.is_enabled = enabled;
             self
         }
 
+        #[must_use]
         pub fn with_terms(mut self, terms: Terms) -> Self {
             self.terms = terms;
             self
         }
 
+        #[must_use]
         pub fn with_public_key(mut self, public_key: Option<Vec<u8>>) -> Self {
             self.public_key = public_key.map(Into::into);
             self
         }
 
+        #[must_use]
         pub fn with_withdrawal_fee(mut self, fee: WithdrawalFee) -> Self {
             self.withdrawal_fee = Some(fee);
             self
         }
 
+        #[must_use]
         pub fn with_cap(mut self, min: TokenAmount, max: TokenAmount) -> Self {
             self.cap = Cap::new(min, max);
             self

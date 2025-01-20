@@ -47,6 +47,7 @@ impl Contract {
 }
 
 #[ext_contract(ext_self)]
+#[allow(dead_code)]
 trait FeeWithdrawCallback {
     fn after_fee_withdrawn(&mut self, amount: U128) -> U128;
 }

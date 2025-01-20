@@ -47,6 +47,6 @@ impl Contract {
 
         account.deposit(product_id, amount, None);
 
-        emit(Deposit((account_id, product_id.clone(), amount.into())));
+        emit(Deposit(account_id, (product_id.clone(), amount.into())));
     }
 }

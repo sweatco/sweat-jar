@@ -1,4 +1,7 @@
-use std::ops::Deref;
+use std::{
+    fmt::{Display, Formatter},
+    ops::Deref,
+};
 
 use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::require;
@@ -33,9 +36,11 @@ impl DepositMessage {
     pub fn sha256(&self) -> Vec<u8> {
         sha256(self.0.as_bytes())
     }
+}
 
-    pub fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for DepositMessage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.clone())
     }
 }
 

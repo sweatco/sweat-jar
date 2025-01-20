@@ -158,11 +158,14 @@ impl Contract {
         let withdrawal_result =
             WithdrawView::new(&request.product_id, request.withdrawal.amount, request.withdrawal.fee);
 
-        emit(EventKind::Withdraw((
-            request.product_id,
-            withdrawal_result.fee,
-            withdrawal_result.withdrawn_amount,
-        )));
+        emit(EventKind::Withdraw(
+            account_id,
+            (
+                request.product_id,
+                withdrawal_result.fee,
+                withdrawal_result.withdrawn_amount,
+            ),
+        ));
 
         withdrawal_result
     }
@@ -178,7 +181,7 @@ impl Contract {
         }
 
         let result = self.process_bulk_withdrawal_success(&account_id, request);
-        emit(collect_bulk_withdrawal_event_data(&result));
+        emit(collect_bulk_withdrawal_event_data(account_id, &result));
 
         result
     }
@@ -225,7 +228,7 @@ impl Contract {
     }
 }
 
-fn collect_bulk_withdrawal_event_data(withdrawal_result: &BulkWithdrawView) -> EventKind {
+fn collect_bulk_withdrawal_event_data(account_id: AccountId, withdrawal_result: &BulkWithdrawView) -> EventKind {
     let event_data: Vec<WithdrawData> = withdrawal_result
         .withdrawals
         .iter()
@@ -238,7 +241,7 @@ fn collect_bulk_withdrawal_event_data(withdrawal_result: &BulkWithdrawView) -> E
         })
         .collect();
 
-    EventKind::WithdrawAll(event_data)
+    EventKind::WithdrawAll(account_id, event_data)
 }
 
 impl Contract {
