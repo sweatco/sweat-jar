@@ -25,7 +25,6 @@ impl Contract {
 }
 
 pub(crate) trait FungibleTokenInterface {
-    #[allow(clippy::ref_option)]
     fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise;
 }
 
