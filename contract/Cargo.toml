@@ -27,7 +27,6 @@ near-contract-standards = { workspace = true }
 sweat-jar-model = { workspace = true }
 
 [dev-dependencies]
-visu = { workspace = true }
 fake = { workspace = true }
 rand = { workspace = true }
 sha256 = { workspace = true }

@@ -309,6 +309,7 @@ impl Contract {
             .into()
     }
 
+    #[allow(clippy::ref_option)]
     fn after_withdraw_call(
         account_id: AccountId,
         jar_id: JarId,
