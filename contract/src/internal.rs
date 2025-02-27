@@ -35,9 +35,9 @@ pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce()
         let error = error();
 
         env::panic_str(&format!(
-            r#"Not enough gas left. Consider attaching more gas to the transaction.
+            r"Not enough gas left. Consider attaching more gas to the transaction.
                {error}
-               Gas left: {gas_left} Needed: {gas_needed}. Need additional {} gas"#,
+               Gas left: {gas_left} Needed: {gas_needed}. Need additional {} gas",
             gas_needed - gas_left
         ));
     }

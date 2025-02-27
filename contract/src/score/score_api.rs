@@ -53,7 +53,7 @@ impl ScoreApi for Contract {
     fn get_score(&self, account_id: AccountId) -> Option<U128> {
         let account = self.get_account(&account_id);
 
-        Some((account.score.active_score() as u128).into())
+        Some(u128::from(account.score.active_score()).into())
     }
 }
 

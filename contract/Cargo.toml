@@ -26,7 +26,6 @@ near-contract-standards = { workspace = true }
 sweat-jar-model = { workspace = true }
 
 [dev-dependencies]
-visu = { workspace = true }
 fake = { workspace = true }
 anyhow = { workspace = true }
 itertools = { workspace = true }
