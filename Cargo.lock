@@ -2226,7 +2226,6 @@ dependencies = [
  "dirs",
  "fake",
  "futures",
- "log",
  "mutants",
  "near-workspaces",
  "nitka 0.4.0",
