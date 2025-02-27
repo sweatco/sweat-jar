@@ -5,7 +5,6 @@ use fake::Fake;
 use itertools::Itertools;
 use near_sdk::test_utils::test_env::{alice, bob};
 use sweat_jar_model::{jar::JarId, Score, Timezone, MS_IN_DAY, UTC};
-use visu::{render_chart, Graph};
 
 use crate::{
     common::test_data::set_test_log_events,
@@ -48,17 +47,20 @@ fn generate_year_data() -> (Vec<u128>, Vec<u128>) {
 #[test]
 #[ignore]
 fn plot_year() -> Result<()> {
-    let (score, simple) = generate_year_data();
+    let (_score, _simple) = generate_year_data();
 
-    render_chart(Graph {
-        title: "Step Jars Interest",
-        data: [&score, &simple],
-        legend: ["Step Jar", "Simple Jar"],
-        x_title: "Days",
-        y_title: "Interest",
-        output_file: "../docs/year_walk.png",
-        ..Default::default()
-    })?;
+    // TODO: fix
+    // visu dependency caused https://github.com/sweatco/sweat-jar/actions/runs/13550344429/job/37872207500?pr=124
+    // on linux machines
+    // render_chart(Graph {
+    //     title: "Step Jars Interest",
+    //     data: [&score, &simple],
+    //     legend: ["Step Jar", "Simple Jar"],
+    //     x_title: "Days",
+    //     y_title: "Interest",
+    //     output_file: "../docs/year_walk.png",
+    //     ..Default::default()
+    // })?;
 
     Ok(())
 }
@@ -136,17 +138,17 @@ fn generate_first_week_data() -> (Vec<u128>, Vec<u128>, Vec<u128>, Vec<u128>, Ve
 #[test]
 #[ignore]
 fn plot_first_week() -> Result<()> {
-    let (score_walked, interest_alice, claimed, today, yesterday) = generate_first_week_data();
+    let (_score_walked, _interest_alice, _claimed, _today, _yesterday) = generate_first_week_data();
 
-    render_chart(Graph {
-        title: "Step Jars First Week",
-        data: [&score_walked, &interest_alice, &today, &yesterday, &claimed],
-        legend: ["Steps Walked", "Interest Alice", "Today", "Yesterday", "Claimed"],
-        x_title: "Hours",
-        y_title: "Interest",
-        output_file: "../docs/first_week.png",
-        ..Default::default()
-    })?;
+    // render_chart(Graph {
+    //     title: "Step Jars First Week",
+    //     data: [&score_walked, &interest_alice, &today, &yesterday, &claimed],
+    //     legend: ["Steps Walked", "Interest Alice", "Today", "Yesterday", "Claimed"],
+    //     x_title: "Hours",
+    //     y_title: "Interest",
+    //     output_file: "../docs/first_week.png",
+    //     ..Default::default()
+    // })?;
 
     Ok(())
 }
