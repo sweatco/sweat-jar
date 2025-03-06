@@ -18,6 +18,7 @@ impl ProductApi for Contract {
         assert!(self.products.get(&product.id).is_none(), "Product already exists");
         product.assert_score_based_product_is_protected();
         product.assert_fee_amount();
+        product.assert_cap_order();
 
         self.products.insert(&product.id, &product);
 

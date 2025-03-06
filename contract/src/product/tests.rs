@@ -342,6 +342,29 @@ fn register_score_based_product_without_signature() {
     context.with_deposit_yocto(1, |context| context.contract().register_product(product_dto.clone()));
 }
 
+#[test]
+#[should_panic(expected = "Cap minimum must be less than maximum")]
+fn register_product_with_inverted_cap() {
+    let admin = admin();
+    let mut context = Context::new(admin.clone());
+
+    let product_dto = Product {
+        id: "inverted_cap_product".to_string(),
+        cap: Cap::new(1_000_000, 100),
+        terms: Terms::Fixed(FixedProductTerms {
+            lockup_term: U64(MS_IN_YEAR),
+            apy: Apy::default(),
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+        is_restakable: true,
+    };
+
+    context.switch_account(admin);
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product_dto.clone()));
+}
+
 fn generate_product() -> Product {
     Product::default().with_cap(100, 100_000_000_000)
 }
