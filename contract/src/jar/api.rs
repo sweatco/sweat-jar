@@ -1,45 +1,21 @@
 use std::{collections::HashMap, convert::Into};
 
-use near_sdk::{env, json_types::U128, near_bindgen, require, AccountId};
+use near_sdk::{env, json_types::U128, near_bindgen, AccountId};
 use sweat_jar_model::{
     api::JarApi,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
-    product::Product,
+    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView}
+    ,
     ProductId, TokenAmount,
 };
 
 use crate::{
-    assert::{assert_not_locked, assert_not_locked_legacy},
-    event::{emit, EventKind, RestakeData},
+    assert::assert_not_locked_legacy,
     jar::{account::Account, model::AccountLegacyV3, view::DetailedJarV2},
-    product::model::v1::{InterestCalculator, ProductAssertions},
+    product::model::v1::InterestCalculator,
     Contract, ContractExt,
 };
 
 impl Contract {
-    fn restake_internal(&mut self, account_id: &AccountId, product: &Product) -> Option<TokenAmount> {
-        product.assert_enabled();
-        product.assert_restakable();
-
-        let jar = self.get_account(account_id).get_jar(&product.id);
-        assert_not_locked(jar);
-
-        let (amount, partition_index) = jar.get_liquid_balance(&product.terms);
-
-        if amount == 0 {
-            return None;
-        }
-
-        self.update_jar_cache(account_id, &product.id);
-
-        let account = self.get_account_mut(account_id);
-        let jar = account.get_jar_mut(&product.id);
-        jar.clean_up_deposits(partition_index);
-        account.deposit(&product.id, amount, None);
-
-        Some(amount)
-    }
-
     fn get_total_interest_for_account(&self, account: &Account) -> AggregatedInterestView {
         let mut detailed_amounts = HashMap::<ProductId, U128>::new();
         let mut total_amount: TokenAmount = 0;
@@ -95,19 +71,6 @@ impl JarApi for Contract {
         }
 
         AggregatedInterestView::default()
-    }
-
-    fn restake(&mut self, product_id: ProductId) {
-        let account_id = env::predecessor_account_id();
-        self.assert_migrated(&account_id);
-
-        let result = self.restake_internal(&account_id, &self.get_product(&product_id));
-
-        if let Some(amount) = result {
-            emit(EventKind::Restake(account_id, RestakeData::new(product_id, amount)));
-        } else {
-            require!(result.is_some(), "Nothing to restake");
-        }
     }
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {

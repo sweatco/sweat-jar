@@ -27,6 +27,7 @@ pub struct Product {
     /// Indicates whether it's possible to create a new jar for this product.
     pub is_enabled: bool,
 
+    #[deprecated(note = "It doesn't have any effect and will be removed")]
     pub is_restakable: bool,
 }
 

@@ -6,6 +6,7 @@ use sweat_jar_model::{
         WithdrawApiIntegration,
     },
     claimed_amount_view::ClaimedAmountView,
+    jar::DepositTicket,
 };
 use sweat_model::SweatApiIntegration;
 
@@ -114,9 +115,14 @@ async fn restake_many_jars() -> Result<()> {
     };
     assert_eq!(1, claimed.detailed.len());
 
+    let ticket = DepositTicket {
+        product_id: product_id.clone(),
+        valid_until: 0.into(),
+        timezone: None,
+    };
     context
         .sweat_jar()
-        .restake_all(product_id, None)
+        .restake_all(ticket, None, None)
         .with_user(&alice)
         .result()
         .await?;

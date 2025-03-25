@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use near_workspaces::types::Gas;
-use sweat_jar_model::api::JarApiIntegration;
+use sweat_jar_model::{
+    api::RestakeApiIntegration,
+    jar::DepositTicket,
+};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -79,9 +82,14 @@ pub(crate) async fn measure_restake(input: (RegisterProductCommand, usize)) -> a
 
     context.fast_forward_hours(2).await?;
 
+    let ticket = DepositTicket {
+        product_id: product.id(),
+        valid_until: 0.into(),
+        timezone: None,
+    };
     Ok(context
         .sweat_jar()
-        .restake(product.id())
+        .restake(product.id(), ticket, None, None)
         .with_user(&alice)
         .result()
         .await?

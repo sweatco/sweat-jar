@@ -1,7 +1,9 @@
 use near_sdk::test_utils::test_env::alice;
 use sweat_jar_model::{
     api::{ProductApi, RestakeApi},
+    jar::DepositTicket,
     product::{Apy, FixedProductTerms, Product, Terms},
+    signer::{test_utils::MessageSigner, DepositMessage},
     UDecimal, MS_IN_YEAR,
 };
 
@@ -13,13 +15,20 @@ fn restake_all_for_single_product() {
     let jar = Jar::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 4, 100_000), (MS_IN_YEAR / 2, 100_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
-        .with_jars(&alice(), &[(product.id.clone(), jar)]);
+        .with_jars(&alice(), &[(product.id.clone(), jar.clone())]);
 
     let test_time = MS_IN_YEAR * 6 / 4;
     context.set_block_timestamp_in_ms(test_time);
 
     context.switch_account(alice());
-    context.contract().restake_all(product.id.clone(), None);
+
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
 
     let contract = context.contract();
     let account = contract.get_account(&alice());
@@ -49,14 +58,23 @@ fn restake_all_for_different_products() {
         .with_products(&[product.clone(), another_product.clone()])
         .with_jars(
             &alice(),
-            &[(product.id.clone(), jar), (another_product.id.clone(), another_jar)],
+            &[
+                (product.id.clone(), jar.clone()),
+                (another_product.id.clone(), another_jar.clone()),
+            ],
         );
 
     let test_time = MS_IN_YEAR * 2;
     context.set_block_timestamp_in_ms(test_time);
 
     context.switch_account(alice());
-    context.contract().restake_all(another_product.id.clone(), None);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: another_product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
 
     let contract = context.contract();
     let account = contract.get_account(&alice());
@@ -95,7 +113,13 @@ fn restake_all_to_new_product() {
     context.set_block_timestamp_in_ms(test_time);
 
     context.switch_account(alice());
-    context.contract().restake_all(another_product.id.clone(), None);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: another_product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
 
     let contract = context.contract();
     let account = contract.get_account(&alice());
@@ -128,20 +152,30 @@ fn restake_all_to_not_existing_product() {
     context.set_block_timestamp_in_ms(test_time);
 
     context.switch_account(alice());
-    context.contract().restake_all("not_existing_product".into(), None);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: "not_existing_product".into(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
 }
 
 #[test]
 #[should_panic(expected = "It's not possible to create new jars for this product")]
 fn restake_all_to_disabled_product() {
-    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
-        lockup_term: MS_IN_YEAR.into(),
-        apy: Apy::Constant(UDecimal::new(7_000, 5)),
-    }));
+    let signer = MessageSigner::new();
+
+    let product = Product::default()
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR.into(),
+            apy: Apy::Constant(UDecimal::new(7_000, 5)),
+        }))
+        .with_public_key(Some(signer.public_key()));
     let jar = Jar::new().with_deposits(vec![(0, 150_000), (MS_IN_YEAR / 3, 770_000)]);
     let mut context = Context::new(admin())
         .with_products(&[product.clone()])
-        .with_jars(&alice(), &[(product.id.clone(), jar)]);
+        .with_jars(&alice(), &[(product.id.clone(), jar.clone())]);
 
     let test_time = MS_IN_YEAR * 2;
     context.set_block_timestamp_in_ms(test_time);
@@ -150,7 +184,23 @@ fn restake_all_to_disabled_product() {
     context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id.clone(), false));
 
     context.switch_account(alice());
-    context.contract().restake_all(product.id, None);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    let message = DepositMessage::new(
+        &context.owner,
+        &alice(),
+        &product.id,
+        jar.total_principal(),
+        valid_until,
+        0,
+    );
+    let signature = signer.sign(message.as_str());
+
+    context.contract().restake_all(ticket, Some(signature.into()), None);
 }
 
 #[test]
@@ -168,7 +218,13 @@ fn restake_all_with_withdrawal() {
     context.set_block_timestamp_in_ms(test_time);
 
     context.switch_account(alice());
-    context.contract().restake_all(product.id.clone(), Some(100_000.into()));
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, Some(100_000.into()));
 
     let contract = context.contract();
     let account = contract.get_account(&alice());

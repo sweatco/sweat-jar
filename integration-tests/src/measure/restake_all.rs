@@ -1,6 +1,9 @@
 use anyhow::Result;
 use nitka::{measure::utils::pretty_gas_string, set_integration_logs_enabled};
-use sweat_jar_model::api::{ClaimApiIntegration, RestakeApiIntegration};
+use sweat_jar_model::{
+    api::{ClaimApiIntegration, RestakeApiIntegration},
+    jar::DepositTicket,
+};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -26,9 +29,14 @@ async fn measure_restake_all() -> Result<()> {
 
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
+    let ticket = DepositTicket {
+        product_id: product.get().id,
+        valid_until: 0.into(),
+        timezone: None,
+    };
     let gas = context
         .sweat_jar()
-        .restake_all(product.get().id, None)
+        .restake_all(ticket, None, None)
         .with_user(&alice)
         .result()
         .await?

@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use near_sdk::{json_types::U64, test_utils::test_env::alice};
-use sweat_jar_model::{jar::JarTicket, product::Product};
+use sweat_jar_model::{jar::DepositTicket, product::Product};
 
 use crate::{common::tests::Context, test_utils::admin};
 
@@ -14,7 +14,7 @@ fn create_jar_for_disabled_product() {
     let product = Product::default().with_enabled(false);
     let context = Context::new(admin).with_products(&[product.clone()]);
 
-    let ticket = JarTicket {
+    let ticket = DepositTicket {
         product_id: product.id,
         valid_until: U64(0),
         timezone: None,
@@ -29,7 +29,7 @@ mod signature_tests {
         json_types::{Base64VecU8, U64},
         test_utils::test_env::alice,
     };
-    use sweat_jar_model::{jar::JarTicket, product::Product, signer::test_utils::MessageSigner};
+    use sweat_jar_model::{jar::DepositTicket, product::Product, signer::test_utils::MessageSigner};
 
     use crate::{
         common::tests::Context,
@@ -45,7 +45,7 @@ mod signature_tests {
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 14_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(123000000),
             timezone: None,
@@ -69,7 +69,7 @@ mod signature_tests {
         let context = Context::new(admin).with_products(&[product.clone()]);
 
         let amount = 1_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(100000000),
             timezone: None,
@@ -94,7 +94,7 @@ mod signature_tests {
         let context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
 
         let amount = 15_000_000;
-        let ticket_for_another_product = JarTicket {
+        let ticket_for_another_product = DepositTicket {
             product_id: another_product.id,
             valid_until: U64(100000000),
             timezone: None,
@@ -128,7 +128,7 @@ mod signature_tests {
         context.set_block_timestamp_in_days(365);
 
         let amount = 5_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(100000000),
             timezone: None,
@@ -154,7 +154,7 @@ mod signature_tests {
         let not_existing_product = generate_premium_product("not_existing_product", &signer);
 
         let amount = 500_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: not_existing_product.id,
             valid_until: U64(100000000),
             timezone: None,
@@ -177,7 +177,7 @@ mod signature_tests {
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 3_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(100000000),
             timezone: None,
@@ -194,7 +194,7 @@ mod signature_tests {
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(0),
             timezone: None,

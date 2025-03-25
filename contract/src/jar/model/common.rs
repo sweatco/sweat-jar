@@ -1,5 +1,5 @@
 use near_sdk::{json_types::Base64VecU8, near, AccountId};
-use sweat_jar_model::{jar::JarTicket, product::Terms, TokenAmount};
+use sweat_jar_model::{jar::DepositTicket, product::Terms, TokenAmount};
 
 use crate::{
     common::Timestamp,
@@ -22,7 +22,7 @@ impl Contract {
     pub(crate) fn deposit(
         &mut self,
         account_id: AccountId,
-        ticket: JarTicket,
+        ticket: DepositTicket,
         amount: TokenAmount,
         signature: &Option<Base64VecU8>,
     ) {

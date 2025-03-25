@@ -68,12 +68,15 @@ pub(crate) trait ProductAssertions {
     fn assert_cap_order(&self);
     fn assert_cap(&self, amount: TokenAmount);
     fn assert_enabled(&self);
-    fn assert_restakable(&self);
     fn assert_fee_amount(&self);
     fn assert_score_based_product_is_protected(&self);
 }
 
 impl ProductAssertions for Product {
+    fn assert_cap_order(&self) {
+        require!(self.cap.min() < self.cap.max(), "Cap minimum must be less than maximum");
+    }
+
     fn assert_cap(&self, amount: TokenAmount) {
         if self.cap.min() > amount || amount > self.cap.max() {
             env::panic_str(&format!(
@@ -89,14 +92,6 @@ impl ProductAssertions for Product {
             self.is_enabled,
             "It's not possible to create new jars for this product: the product is disabled."
         );
-    }
-
-    fn assert_restakable(&self) {
-        require!(self.is_enabled, "The product is not restakable.");
-    }
-
-    fn assert_cap_order(&self) {
-        require!(self.cap.min() < self.cap.max(), "Cap minimum must be less than maximum");
     }
 
     /// Check if fee in new product is not too high

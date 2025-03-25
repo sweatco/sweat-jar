@@ -1,6 +1,6 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::jar::JarTicket;
+use sweat_jar_model::jar::DepositTicket;
 
 use crate::{near_bindgen, Base64VecU8, Contract, ContractExt};
 
@@ -17,7 +17,7 @@ pub enum FtMessage {
 #[near(serializers=[json])]
 pub struct StakeMessage {
     /// Data of the `JarTicket` required for validating the request and specifying the product.
-    ticket: JarTicket,
+    ticket: DepositTicket,
 
     /// An optional ed25519 signature used to verify the authenticity of the request.
     signature: Option<Base64VecU8>,

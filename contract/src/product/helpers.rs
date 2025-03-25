@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use near_sdk::AccountId;
-use sweat_jar_model::{jar::JarTicket, signer::DepositMessage, TokenAmount};
+use sweat_jar_model::{jar::DepositTicket, signer::DepositMessage, TokenAmount};
 
 use crate::common::tests::Context;
 
@@ -9,7 +9,7 @@ impl Context {
     pub(crate) fn get_deposit_message(
         &self,
         receiver_id: &AccountId,
-        ticket: &JarTicket,
+        ticket: &DepositTicket,
         amount: TokenAmount,
     ) -> String {
         DepositMessage::new(

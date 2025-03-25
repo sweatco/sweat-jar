@@ -1,6 +1,7 @@
 use near_sdk::test_utils::test_env::{alice, bob, carol};
 use sweat_jar_model::{
     api::{JarApi, ProductApi, RestakeApi},
+    jar::DepositTicket,
     product::Product,
     MS_IN_DAY, MS_IN_YEAR,
 };
@@ -21,20 +22,44 @@ fn restake_by_not_owner() {
 
     context.switch_account(bob());
     expect_panic(&context, "Account bob.near is not found", || {
-        context.contract().restake(product.id.clone());
+        let valid_until = MS_IN_YEAR * 10;
+        let ticket = DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: valid_until.into(),
+            timezone: None,
+        };
+        context.contract().restake(product.id.clone(), ticket, None, None);
     });
 
     expect_panic(&context, "Account bob.near is not found", || {
-        context.contract().restake_all(product.id.clone(), None);
+        let valid_until = MS_IN_YEAR * 10;
+        let ticket = DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: valid_until.into(),
+            timezone: None,
+        };
+        context.contract().restake_all(ticket, None, None);
     });
 
     context.switch_account(carol());
     expect_panic(&context, "Account carol.near is not found", || {
-        context.contract().restake(product.id.clone());
+        let valid_until = MS_IN_YEAR * 10;
+        let ticket = DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: valid_until.into(),
+            timezone: None,
+        };
+        context.contract().restake(product.id.clone(), ticket, None, None);
     });
 
     expect_panic(&context, "Account carol.near is not found", || {
-        context.contract().restake_all(product.id, None);
+        let valid_until = MS_IN_YEAR * 10;
+        let ticket = DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: valid_until.into(),
+            timezone: None,
+        };
+        context.contract().restake_all(ticket, None, None);
     });
 }
 
@@ -51,7 +76,13 @@ fn restake_before_maturity() {
         .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     context.switch_account(&alice);
-    context.contract().restake(product.id);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake(product.id, ticket, None, None);
 }
 
 #[test]
@@ -74,7 +105,13 @@ fn restake_with_disabled_product() {
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
-    context.contract().restake(product.id);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake(product.id, ticket, None, None);
 }
 
 #[test]
@@ -92,7 +129,13 @@ fn restake_empty_jar() {
     context.set_block_timestamp_in_days(366);
 
     context.switch_account(&alice);
-    context.contract().restake(product.id);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake(product.id, ticket, None, None);
 }
 
 #[test]
@@ -111,7 +154,13 @@ fn restake_after_maturity() {
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    context.contract().restake(product.id.clone());
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake(product.id, ticket, None, None);
 
     let alice_jars = context.contract().get_jars_for_account(alice);
     assert_eq!(1, alice_jars.len());

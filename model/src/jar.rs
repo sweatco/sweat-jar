@@ -52,7 +52,7 @@ pub struct AggregatedInterestView {
 /// to verify the authenticity of the data against an Ed25519 signature provided in the `ft_transfer_call` data.
 #[derive(Clone, Debug)]
 #[near(serializers=[json])]
-pub struct JarTicket {
+pub struct DepositTicket {
     /// The unique identifier of the product for which the jar is intended to be created.
     /// This `product_id` links the request to the specific terms and conditions of the product that will govern the behavior of the jar.
     pub product_id: String,

@@ -9,7 +9,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
-    jar::JarTicket,
+    jar::DepositTicket,
     product::{Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
     withdraw::WithdrawView,
     ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
@@ -388,7 +388,7 @@ fn timestamps() {
     ctx.switch_account(admin());
     ctx.contract().deposit(
         alice(),
-        JarTicket {
+        DepositTicket {
             product_id: product.id.clone(),
             valid_until: (BASE_TIME + MS_IN_YEAR).into(),
             timezone: Some(Timezone::hour_shift(4)),
@@ -519,7 +519,7 @@ impl Context {
         self.switch_account(admin());
         self.contract().deposit(
             account_id.clone(),
-            JarTicket {
+            DepositTicket {
                 product_id: product_id.clone(),
                 valid_until: (self.now() + MS_IN_YEAR).into(),
                 timezone,
@@ -548,7 +548,7 @@ fn claim_when_there_were_no_walkchains_for_some_time() {
     ctx.set_block_timestamp_in_ms(1732653318018 - MS_IN_DAY);
     ctx.contract().deposit(
         alice(),
-        JarTicket {
+        DepositTicket {
             product_id: product.id.clone(),
             valid_until: (1733139450015 + MS_IN_YEAR).into(),
             timezone: Some(Timezone::hour_shift(0)),
@@ -564,7 +564,7 @@ fn claim_when_there_were_no_walkchains_for_some_time() {
     ctx.set_block_timestamp_in_ms(1733139450015);
     ctx.contract().deposit(
         alice(),
-        JarTicket {
+        DepositTicket {
             product_id: product.id.clone(),
             valid_until: (1733139450015 + MS_IN_YEAR).into(),
             timezone: None,

@@ -11,7 +11,7 @@ use nitka_proc::make_integration_version;
 
 use crate::{
     claimed_amount_view::ClaimedAmountView,
-    jar::{AggregatedInterestView, JarView},
+    jar::{AggregatedInterestView, DepositTicket, JarView},
     product::Product,
     withdraw::{BulkWithdrawView, WithdrawView},
     ProductId, Score, UTC,
@@ -72,6 +72,12 @@ pub trait JarApi {
     /// Returns 0 if the account has no associated jars.
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView;
 
+    fn unlock_jars_for_account(&mut self, account_id: AccountId);
+}
+
+#[make_integration_version]
+pub trait RestakeApi {
+    /// TODO: update doc
     /// Restakes the contents of a specified deposit jar into a new jar.
     ///
     /// # Arguments
@@ -88,19 +94,26 @@ pub trait JarApi {
     /// - If the product of the original jar does not support restaking.
     /// - If the function is called by an account other than the owner of the original jar.
     /// - If the original jar is not yet mature.
-    fn restake(&mut self, product_id: ProductId);
+    fn restake(
+        &mut self,
+        from: ProductId,
+        ticket: DepositTicket,
+        signature: Option<Base64VecU8>,
+        amount: Option<U128>,
+    ) -> ::near_sdk::PromiseOrValue<()>;
 
-    fn unlock_jars_for_account(&mut self, account_id: AccountId);
-}
-
-#[make_integration_version]
-pub trait RestakeApi {
+    /// TODO: update doc
     /// Restakes all jars for user into a Product with corresponding `product_id`.
     /// If `amount` is some, only this amount will be restaked. The rest of mature principal
     /// will be withdrawn.
     ///
     /// TODO: make with ft_transfer_call to support extra deposit
-    fn restake_all(&mut self, product_id: ProductId, amount: Option<U128>) -> ::near_sdk::PromiseOrValue<()>;
+    fn restake_all(
+        &mut self,
+        ticket: DepositTicket,
+        signature: Option<Base64VecU8>,
+        amount: Option<U128>,
+    ) -> ::near_sdk::PromiseOrValue<()>;
 }
 
 #[make_integration_version]

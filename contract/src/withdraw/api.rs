@@ -1,7 +1,7 @@
 #[cfg(test)]
 use common::test_data::get_test_future_success;
 use near_sdk::{
-    ext_contract, near_bindgen,
+    ext_contract, near, near_bindgen,
     serde::{Deserialize, Serialize},
     PromiseOrValue,
 };
@@ -23,8 +23,8 @@ pub(crate) struct WithdrawalRequest {
     pub partition_index: usize,
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-#[serde(crate = "near_sdk::serde")]
+#[derive(Debug, Default, Copy, Clone)]
+#[near(serializers=[json])]
 pub(crate) struct WithdrawalDto {
     pub amount: TokenAmount,
     pub fee: TokenAmount,

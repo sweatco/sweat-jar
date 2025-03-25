@@ -4,6 +4,7 @@ use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, RestakeApiIntegration},
+    jar::DepositTicket,
     TokenAmount,
 };
 
@@ -38,7 +39,16 @@ async fn restake() -> Result<()> {
     let first_jar_timestamp = jars.first().unwrap().created_at.0;
 
     context.fast_forward_hours(1).await?;
-    context.sweat_jar().restake(product.get().id).with_user(&alice).await?;
+    let ticket = DepositTicket {
+        product_id: product.get().id,
+        valid_until: 0.into(),
+        timezone: None,
+    };
+    context
+        .sweat_jar()
+        .restake(product.get().id, ticket, None, None)
+        .with_user(&alice)
+        .await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
     assert_eq!(1, jars.len());
@@ -114,9 +124,14 @@ async fn restake_all() -> Result<()> {
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
     // Restaking in batches
+    let ticket = DepositTicket {
+        product_id: product_5_min.id(),
+        valid_until: 0.into(),
+        timezone: None,
+    };
     context
         .sweat_jar()
-        .restake_all(product_5_min.id(), None)
+        .restake_all(ticket, None, None)
         .with_user(&alice)
         .await?;
 
