@@ -2,6 +2,7 @@ use std::cmp;
 
 use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::{
+    bs58::decode,
     env,
     env::{panic_str, sha256},
     json_types::{Base64VecU8, U128, U64},
@@ -423,4 +424,49 @@ impl Contract {
             .verify_strict(ticket_hash, &signature)
             .is_ok()
     }
+}
+
+#[test]
+fn test_signatures() {
+    use base64::{decode, encode};
+
+    let signature = Base64VecU8::from(
+        "tIAT0LXRtG/UEXF19OLKMJMKQgUL+c/qRBrms/kyg5FPbjj1gItz8YDttQ2lsnmHayYylffsFwmsjn8cHh/JCQ=="
+            .to_string()
+            .as_bytes()
+            .to_vec(),
+    );
+
+    let pk_string = "RMc5WrBzz2z2dxxclXYuy/RPslb8X2DCCVYAGV48bhs=";
+
+    let decoded_product_public_key = decode(pk_string).unwrap();
+
+    assert_eq!(
+        decoded_product_public_key,
+        [
+            68, 199, 57, 90, 176, 115, 207, 108, 246, 119, 28, 92, 149, 118, 46, 203, 244, 79, 178, 86, 252, 95, 96,
+            194, 9, 86, 0, 25, 94, 60, 110, 27
+        ]
+    );
+
+    dbg!(&decoded_product_public_key);
+
+    let signature_string = "tIAT0LXRtG/UEXF19OLKMJMKQgUL+c/qRBrms/kyg5FPbjj1gItz8YDttQ2lsnmHayYylffsFwmsjn8cHh/JCQ==";
+
+    // dbg!(decode(signature_string).unwrap());
+
+    dbg!(
+        "{}",
+        encode(sha256(
+            Contract::get_signature_material(
+                &AccountId::new_unvalidated("jars.sweat".into()),
+                &AccountId::new_unvalidated("9d9d0100f7cc75ecd2fad22a00099d83ccd092dd0d2fd02e3b71aa4b72b6d64d".into()),
+                &"steps_365d_20000_score_cap".to_string(),
+                2500000000000000000,
+                1743428273000,
+                None,
+            )
+            .as_bytes()
+        ))
+    );
 }
