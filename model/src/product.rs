@@ -31,6 +31,12 @@ pub struct Product {
     pub is_restakable: bool,
 }
 
+impl Product {
+    pub fn is_protected(&self) -> bool {
+        self.public_key.is_some()
+    }
+}
+
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
