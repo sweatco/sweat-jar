@@ -16,7 +16,6 @@ pub enum EventKind {
     Withdraw(AccountId, WithdrawData),
     WithdrawAll(AccountId, Vec<WithdrawData>),
     Restake(AccountId, RestakeData),
-    RestakeAll(AccountId, RestakeAllData),
     ApplyPenalty(PenaltyData),
     BatchApplyPenalty(BatchPenaltyData),
     EnableProduct(EnableProductData),
@@ -75,16 +74,6 @@ impl ClaimData {
 /// (id, fee, amount)
 pub type WithdrawData = (ProductId, U128, U128);
 
-/// Restaking of a single Jar.
-/// `product_id` – ID of a Product describing terms of the Jar.
-/// `restaked`   – amount of restaked tokens.
-#[derive(Debug)]
-#[near(serializers=[json])]
-pub struct RestakeData {
-    pub product_id: ProductId,
-    pub restaked: U128,
-}
-
 /// Batched restaking of all User's mature deposits into a single deposit for a particular Product.
 /// `timestamp` – Unix timestamp of the operation. In case of partial withdrawal it's time
 ///               of the initial call.
@@ -95,7 +84,7 @@ pub struct RestakeData {
 /// `withdrawn` – amount of withdrawn tokens.
 #[derive(Debug)]
 #[near(serializers=[json])]
-pub struct RestakeAllData {
+pub struct RestakeData {
     pub timestamp: Timestamp,
     pub from: Vec<ProductId>,
     pub into: ProductId,
@@ -103,7 +92,7 @@ pub struct RestakeAllData {
     pub withdrawn: U128,
 }
 
-impl RestakeAllData {
+impl RestakeData {
     pub fn new(
         timestamp: Timestamp,
         from: Vec<ProductId>,
@@ -111,21 +100,12 @@ impl RestakeAllData {
         restaked: TokenAmount,
         withdrawn: TokenAmount,
     ) -> Self {
-        RestakeAllData {
+        Self {
             timestamp,
             from,
             into,
             restaked: restaked.into(),
             withdrawn: withdrawn.into(),
-        }
-    }
-}
-
-impl RestakeData {
-    pub fn new(product_id: ProductId, restaked: TokenAmount) -> Self {
-        RestakeData {
-            product_id,
-            restaked: restaked.into(),
         }
     }
 }

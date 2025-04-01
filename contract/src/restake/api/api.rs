@@ -8,7 +8,7 @@ use sweat_jar_model::{api::RestakeApi, jar::DepositTicket, ProductId, TokenAmoun
 
 use crate::{
     assert::assert_not_locked,
-    event::{emit, EventKind, EventKind::RestakeAll, RestakeAllData},
+    event::{emit, EventKind, EventKind::Restake, RestakeData},
     internal::is_promise_success,
     product::model::v1::{ProductAssertions, ProductModelApi},
     withdraw::api::WithdrawalDto,
@@ -104,7 +104,7 @@ impl Contract {
         builder: impl RequestBuilder,
     ) -> PromiseOrValue<()> {
         let request = self.prepare_request_safely(ticket, signature, builder);
-        let event = RestakeAll(request.account_id.clone(), RestakeAllData::from(&request));
+        let event = Restake(request.account_id.clone(), RestakeData::from(&request));
 
         for (product_id, _) in request.partitions.iter() {
             self.update_jar_cache(&request.account_id, product_id);
@@ -247,7 +247,7 @@ impl RequestBuilder for RestakeAllRequestBuilder {
     }
 }
 
-impl From<&Request> for RestakeAllData {
+impl From<&Request> for RestakeData {
     fn from(value: &Request) -> Self {
         let from = value
             .partitions
