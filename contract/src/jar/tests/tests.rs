@@ -114,7 +114,9 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Not matching signature")]
+    #[should_panic(
+        expected = "Not matching signature. Signature material: owner,admin,another_premium_product,15000000,,100000000"
+    )]
     fn verify_ticket_with_not_matching_signature() {
         let admin = admin();
 

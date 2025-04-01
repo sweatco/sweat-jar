@@ -362,30 +362,28 @@ impl Contract {
             let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
             require!(is_time_valid, "Ticket is outdated");
 
-            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
-            let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
-
-            require!(is_signature_valid, "Not matching signature");
-        }
-    }
-
-    fn get_ticket_hash(
-        account_id: &AccountId,
-        amount: TokenAmount,
-        ticket: &JarTicket,
-        last_jar_id: Option<JarId>,
-    ) -> Vec<u8> {
-        sha256(
-            Self::get_signature_material(
+            let signature_material = Self::get_signature_material(
                 &env::current_account_id(),
                 account_id,
                 &ticket.product_id,
                 amount,
                 ticket.valid_until.0,
                 last_jar_id,
-            )
-            .as_bytes(),
-        )
+            );
+
+            let hash = Self::get_ticket_hash(&signature_material);
+            let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
+
+            if !is_signature_valid {
+                panic_str(&format!(
+                    "Not matching signature. Signature material: {signature_material}"
+                ));
+            }
+        }
+    }
+
+    fn get_ticket_hash(signature_material: &str) -> Vec<u8> {
+        sha256(signature_material.as_bytes())
     }
 
     pub(crate) fn get_signature_material(
