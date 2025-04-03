@@ -231,6 +231,8 @@ impl Contract {
 
         self.migrate_account_if_needed(&account_id);
 
+        self.verify(&account_id, amount, &ticket, signature);
+
         if product.is_score_product() {
             match (ticket.timezone, self.get_score_mut(&account_id)) {
                 // Time zone already set. No actions required.
@@ -245,8 +247,6 @@ impl Contract {
                 }
             }
         }
-
-        self.verify(&account_id, amount, &ticket, signature);
 
         let id = self.increment_and_get_last_jar_id();
         let now = env::block_timestamp_ms();
