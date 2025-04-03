@@ -367,8 +367,8 @@ impl Contract {
                 account_id,
                 &ticket.product_id,
                 amount,
-                ticket.valid_until.0,
                 last_jar_id,
+                ticket.valid_until.0,
             );
 
             let hash = Self::get_ticket_hash(&signature_material);
@@ -391,16 +391,23 @@ impl Contract {
         receiver_account_id: &AccountId,
         product_id: &ProductId,
         amount: TokenAmount,
-        valid_until: Timestamp,
         last_jar_id: Option<JarId>,
+        valid_until: Timestamp,
     ) -> String {
+        let last_jar_id = last_jar_id.unwrap_or_default();
+
         format!(
             "{},{},{},{},{},{}",
             contract_account_id,
             receiver_account_id,
             product_id,
             amount,
-            last_jar_id.map_or_else(String::new, |value| value.to_string()),
+            // The value must be an empty string if `last_jar_id` is 0
+            if last_jar_id == 0 {
+                String::new()
+            } else {
+                last_jar_id.to_string()
+            },
             valid_until,
         )
     }

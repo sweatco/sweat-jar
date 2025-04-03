@@ -125,8 +125,8 @@ mod tests {
                 &alice,
                 &product.id,
                 ticket_amount,
-                ticket_valid_until,
                 None,
+                ticket_valid_until,
             )
             .as_str(),
         );
@@ -156,6 +156,52 @@ mod tests {
                 .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string())
         });
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn signature_for_step_jar() {
+        let alice = alice();
+        let admin = admin();
+
+        let (signer, product) = generate_premium_product_context();
+
+        let product = product.apy(Apy::Constant(UDecimal::default())).score_cap(20_000);
+
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
+
+        let ticket_amount = 1_000_000u128;
+        let ticket_valid_until = 100_000_000u64;
+        let signature = signer.sign_base64(
+            Contract::get_signature_material(
+                &context.owner,
+                &alice,
+                &product.id,
+                ticket_amount,
+                None,
+                ticket_valid_until,
+            )
+            .as_str(),
+        );
+
+        let msg = json!({
+            "type": "stake",
+            "data": {
+                "ticket": {
+                    "product_id": product.id,
+                    "valid_until": ticket_valid_until.to_string(),
+                    "timezone": 3,
+                },
+                "signature": signature,
+            }
+        });
+
+        context.switch_account_to_ft_contract_account();
+        context
+            .contract()
+            .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
+
+        let jar = context.contract().get_jar(alice.clone(), U32(1));
+        assert_eq!(jar.id.0, 1);
     }
 
     #[test]
