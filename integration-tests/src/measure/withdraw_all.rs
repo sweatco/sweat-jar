@@ -28,7 +28,7 @@ async fn measure_withdraw_all() -> Result<()> {
 
     let gas = context
         .sweat_jar()
-        .withdraw_all(None)
+        .withdraw_all()
         .with_user(&alice)
         .result()
         .await?

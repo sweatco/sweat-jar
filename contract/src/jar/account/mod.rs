@@ -1,4 +1,4 @@
 pub mod v1;
 pub mod versioned;
 
-pub type AccountJarsLastVersion = v1::AccountV1;
+pub type Account = v1::AccountV1;

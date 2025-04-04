@@ -1,25 +1,23 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{cell::RefCell, collections::HashMap, ops::Deref};
 
+use jar::model::JarVersionedLegacy;
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
-use product::model::{Apy, Product};
-use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
+use sweat_jar_model::{api::InitApi, product::Product, ProductId, TokenAmount};
 
-use crate::{
-    jar::{
-        account::versioned::Account,
-        model::{AccountJarsLegacy, Jar},
-    },
-    migration::account_jars_non_versioned::AccountJarsNonVersioned,
+use crate::jar::{
+    account::versioned::AccountVersioned,
+    model::{AccountLegacyV1, AccountLegacyV2, AccountLegacyV3, AccountLegacyV3Wrapper},
 };
 
 mod assert;
 mod claim;
 mod common;
 mod event;
+mod fee;
 mod ft_interface;
 mod ft_receiver;
 mod integration_test;
@@ -28,8 +26,8 @@ mod jar;
 mod migration;
 mod penalty;
 mod product;
+mod restake;
 mod score;
-mod test_builder;
 mod test_utils;
 mod tests;
 mod withdraw;
@@ -53,19 +51,18 @@ pub struct Contract {
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
 
-    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
-    pub last_jar_id: JarId,
-
     /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub accounts: LookupMap<AccountId, Account>,
-
-    pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
-    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+    pub accounts: LookupMap<AccountId, AccountVersioned>,
 
     /// Cache to make access to products faster
     /// Is not stored in contract state so it should be always skipped by borsh
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
+
+    pub fee_amount: TokenAmount,
+    pub archive: Archive,
+
+    pub new_version_account_id: AccountId,
 }
 
 #[near]
@@ -77,7 +74,9 @@ pub(crate) enum StorageKey {
     AccountsLegacyV2,
     /// Products migrated to near_sdk 5
     _ProductsLegacyV2,
-    /// Products migrated to step jars
+    /// Score supporting products
+    ProductsLegacyV2,
+    AccountsLegacyV3,
     Products,
     Accounts,
 }
@@ -86,36 +85,59 @@ pub(crate) enum StorageKey {
 impl InitApi for Contract {
     #[init]
     #[private]
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        new_version_account_id: AccountId,
+    ) -> Self {
         Self {
             token_account_id,
             fee_account_id,
             manager,
-            products: UnorderedMap::new(StorageKey::_ProductsLegacyV2),
-            account_jars_non_versioned: LookupMap::new(StorageKey::AccountsLegacyV2),
-            account_jars_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
-            last_jar_id: 0,
-            accounts: LookupMap::new(StorageKey::Accounts),
+            products: UnorderedMap::new(StorageKey::Products),
             products_cache: HashMap::default().into(),
+            accounts: LookupMap::new(StorageKey::Accounts),
+            fee_amount: 0,
+            archive: Archive {
+                accounts_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
+                accounts_v2: LookupMap::new(StorageKey::AccountsLegacyV2),
+                accounts_v3: LookupMap::new(StorageKey::AccountsLegacyV3),
+            },
+            new_version_account_id,
         }
     }
 }
 
-pub(crate) trait JarsStorage<J> {
-    fn get_jar(&self, id: JarId) -> &J;
-    fn get_jar_mut(&mut self, id: JarId) -> &mut J;
+#[near]
+pub struct Archive {
+    pub accounts_v1: LookupMap<AccountId, AccountLegacyV1>,
+    pub accounts_v2: LookupMap<AccountId, AccountLegacyV2>,
+    pub accounts_v3: LookupMap<AccountId, AccountLegacyV3Wrapper>,
 }
 
-impl JarsStorage<Jar> for Vec<Jar> {
-    fn get_jar(&self, id: JarId) -> &Jar {
-        self.iter()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
+impl Archive {
+    fn contains_account(&self, account_id: &AccountId) -> bool {
+        self.accounts_v1.contains_key(account_id) || self.accounts_v2.contains_key(account_id)
     }
 
-    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar {
-        self.iter_mut()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
+    fn get_account(&self, account_id: &AccountId) -> Option<AccountLegacyV3> {
+        if let Some(account) = self.accounts_v3.get(account_id).cloned() {
+            return Some(account.deref().clone());
+        }
+
+        if let Some(account) = self.accounts_v2.get(account_id) {
+            return Some(account.clone().into());
+        }
+
+        if let Some(account) = self.accounts_v1.get(account_id) {
+            return Some(account.clone().into());
+        }
+
+        None
+    }
+
+    fn get_jars(&self, account_id: &AccountId) -> Option<Vec<JarVersionedLegacy>> {
+        self.get_account(account_id).map(|account| account.jars)
     }
 }

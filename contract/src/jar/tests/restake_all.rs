@@ -1,154 +1,237 @@
 use near_sdk::test_utils::test_env::alice;
 use sweat_jar_model::{
-    api::{ClaimApi, JarApi},
-    MS_IN_YEAR,
+    api::{ProductApi, RestakeApi},
+    jar::DepositTicket,
+    product::{Apy, FixedProductTerms, Product, Terms},
+    signer::{test_utils::MessageSigner, DepositMessage},
+    UDecimal, MS_IN_YEAR,
 };
 
-use crate::{
-    common::tests::Context,
-    jar::model::Jar,
-    product::model::Product,
-    test_utils::{admin, PRINCIPAL},
-};
+use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
 
 #[test]
-fn restake_all() {
-    let alice = alice();
-    let admin = admin();
+fn restake_all_for_single_product() {
+    let product = Product::default();
+    let jar = Jar::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 4, 100_000), (MS_IN_YEAR / 2, 100_000)]);
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), jar.clone())]);
 
-    let restakable_product = Product::new().id("restakable_product").with_allows_restaking(true);
+    let test_time = MS_IN_YEAR * 6 / 4;
+    context.set_block_timestamp_in_ms(test_time);
 
-    let disabled_restakable_product = Product::new()
-        .id("disabled_restakable_product")
-        .with_allows_restaking(true)
-        .enabled(false);
+    context.switch_account(alice());
 
-    let non_restakable_product = Product::new().id("non_restakable_product").with_allows_restaking(false);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
 
-    let long_term_restakable_product = Product::new()
-        .id("long_term_restakable_product")
-        .with_allows_restaking(true)
-        .lockup_term(MS_IN_YEAR * 2);
-
-    let restakable_jar_1 = Jar::new(0).product_id(&restakable_product.id).principal(PRINCIPAL);
-    let restakable_jar_2 = Jar::new(1).product_id(&restakable_product.id).principal(PRINCIPAL);
-
-    let disabled_jar = Jar::new(2)
-        .product_id(&disabled_restakable_product.id)
-        .principal(PRINCIPAL);
-
-    let non_restakable_jar = Jar::new(3).product_id(&non_restakable_product.id).principal(PRINCIPAL);
-
-    let long_term_jar = Jar::new(4)
-        .product_id(&long_term_restakable_product.id)
-        .principal(PRINCIPAL);
-
-    let mut context = Context::new(admin)
-        .with_products(&[
-            restakable_product,
-            disabled_restakable_product,
-            non_restakable_product,
-            long_term_restakable_product,
-        ])
-        .with_jars(&[
-            restakable_jar_1.clone(),
-            restakable_jar_2.clone(),
-            disabled_jar.clone(),
-            non_restakable_jar.clone(),
-            long_term_jar.clone(),
-        ]);
-
-    context.set_block_timestamp_in_days(366);
-
-    context.switch_account(&alice);
-
-    let restaked_jars = context.contract().restake_all(None);
-
-    assert_eq!(restaked_jars.len(), 2);
-    assert_eq!(
-        restaked_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
-        // 4 was last jar is, so 2 new restaked jars will have ids 5 and 6
-        vec![5, 6]
-    );
-
-    let all_jars = context.contract().get_jars_for_account(alice);
-
-    assert_eq!(
-        all_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
-        [
-            restakable_jar_1.id,
-            restakable_jar_2.id,
-            disabled_jar.id,
-            non_restakable_jar.id,
-            long_term_jar.id,
-            5,
-            6,
-        ]
-    )
+    let contract = context.contract();
+    let account = contract.get_account(&alice());
+    let jar = account.get_jar(&product.id);
+    assert_eq!(2, jar.deposits.len());
+    assert_eq!(test_time, jar.deposits.last().unwrap().created_at);
+    assert_eq!(200_000, jar.deposits.last().unwrap().principal);
+    assert_eq!(test_time, jar.cache.unwrap().updated_at);
+    assert_eq!(60_000, jar.cache.unwrap().interest);
 }
 
 #[test]
-fn restake_all_after_maturity_for_restakable_product_one_jar() {
-    let alice = alice();
-    let admin = admin();
+fn restake_all_for_different_products() {
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        apy: Apy::Constant(UDecimal::new(10_000, 5)),
+    }));
+    let another_product = Product::default()
+        .with_id("another_product".into())
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR.into(),
+            apy: Apy::Constant(UDecimal::new(20_000, 5)),
+        }));
+    let jar = Jar::new().with_deposits(vec![(0, 100_000), (MS_IN_YEAR / 2, 100_000)]);
+    let another_jar = Jar::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 2, 200_000)]);
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone(), another_product.clone()])
+        .with_jars(
+            &alice(),
+            &[
+                (product.id.clone(), jar.clone()),
+                (another_product.id.clone(), another_jar.clone()),
+            ],
+        );
 
-    let product = Product::new().with_allows_restaking(true);
-    let jar = Jar::new(0).principal(PRINCIPAL);
-    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
+    let test_time = MS_IN_YEAR * 2;
+    context.set_block_timestamp_in_ms(test_time);
 
-    context.set_block_timestamp_in_days(366);
+    context.switch_account(alice());
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: another_product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
 
-    context.switch_account(&alice);
-    let restaked = context.contract().restake_all(None).into_iter().next().unwrap();
+    let contract = context.contract();
+    let account = contract.get_account(&alice());
 
-    assert_eq!(restaked.account_id, alice);
-    assert_eq!(restaked.principal.0, PRINCIPAL);
-    assert_eq!(restaked.claimed_balance.0, 0);
+    let jar = account.get_jar(&product.id);
+    assert_eq!(0, jar.deposits.len());
+    assert_eq!(test_time, jar.cache.unwrap().updated_at);
+    assert_eq!(20_000, jar.cache.unwrap().interest);
 
-    let alice_jars = context.contract().get_jars_for_account(alice);
-
-    assert_eq!(2, alice_jars.len());
-    assert_eq!(0, alice_jars.iter().find(|item| item.id.0 == 0).unwrap().principal.0);
-    assert_eq!(
-        PRINCIPAL,
-        alice_jars.iter().find(|item| item.id.0 == 1).unwrap().principal.0
-    );
+    let another_jar = account.get_jar(&another_product.id);
+    assert_eq!(1, another_jar.deposits.len());
+    assert_eq!(test_time, another_jar.deposits.last().unwrap().created_at);
+    assert_eq!(600_000, another_jar.deposits.last().unwrap().principal);
+    assert_eq!(test_time, another_jar.cache.unwrap().updated_at);
+    assert_eq!(80_000, another_jar.cache.unwrap().interest);
 }
 
 #[test]
-fn batch_restake_all() {
-    let alice = alice();
-    let admin = admin();
+fn restake_all_to_new_product() {
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        apy: Apy::Constant(UDecimal::new(10_000, 5)),
+    }));
+    let another_product = Product::default()
+        .with_id("another_product".into())
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR.into(),
+            apy: Apy::Constant(UDecimal::new(20_000, 5)),
+        }));
+    let jar = Jar::new().with_deposits(vec![(0, 50_000), (MS_IN_YEAR / 4, 20_000)]);
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone(), another_product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), jar)]);
 
-    let product = Product::new().with_allows_restaking(true).lockup_term(MS_IN_YEAR);
+    let test_time = MS_IN_YEAR * 3 / 2;
+    context.set_block_timestamp_in_ms(test_time);
 
-    let jars: Vec<_> = (0..8)
-        .map(|id| Jar::new(id).principal(PRINCIPAL + id as u128))
-        .collect();
+    context.switch_account(alice());
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: another_product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
 
-    let mut context = Context::new(admin).with_products(&[product]).with_jars(&jars);
+    let contract = context.contract();
+    let account = contract.get_account(&alice());
 
-    context.set_block_timestamp_in_days(366);
+    let jar = account.get_jar(&product.id);
+    assert_eq!(0, jar.deposits.len());
+    assert_eq!(test_time, jar.cache.unwrap().updated_at);
+    assert_eq!(7_000, jar.cache.unwrap().interest);
 
-    context.switch_account(&alice);
+    let another_jar = account.get_jar(&another_product.id);
+    assert_eq!(1, another_jar.deposits.len());
+    assert_eq!(test_time, another_jar.deposits.last().unwrap().created_at);
+    assert_eq!(70_000, another_jar.deposits.last().unwrap().principal);
+    assert!(another_jar.cache.is_none());
+}
 
-    context.contract().claim_total(None);
+#[test]
+#[should_panic(expected = "Product not_existing_product is not found")]
+fn restake_all_to_not_existing_product() {
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        apy: Apy::Constant(UDecimal::new(10_000, 5)),
+    }));
+    let jar = Jar::new().with_deposits(vec![(0, 500_000), (MS_IN_YEAR / 5, 700_000)]);
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), jar)]);
 
-    let restaked: Vec<_> = context
-        .contract()
-        .restake_all(Some(vec![1.into(), 2.into(), 5.into()]))
-        .into_iter()
-        .map(|j| j.id.0)
-        .collect();
+    let test_time = MS_IN_YEAR * 3 / 2;
+    context.set_block_timestamp_in_ms(test_time);
 
-    assert_eq!(restaked, [8, 9, 10]);
+    context.switch_account(alice());
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: "not_existing_product".into(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, None);
+}
 
-    let jars: Vec<_> = context
-        .contract()
-        .get_jars_for_account(alice)
-        .into_iter()
-        .map(|j| j.id.0)
-        .collect();
+#[test]
+#[should_panic(expected = "It's not possible to create new jars for this product")]
+fn restake_all_to_disabled_product() {
+    let signer = MessageSigner::new();
 
-    assert_eq!(jars, [0, 7, 8, 3, 4, 9, 6, 10,]);
+    let product = Product::default()
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            lockup_term: MS_IN_YEAR.into(),
+            apy: Apy::Constant(UDecimal::new(7_000, 5)),
+        }))
+        .with_public_key(Some(signer.public_key()));
+    let jar = Jar::new().with_deposits(vec![(0, 150_000), (MS_IN_YEAR / 3, 770_000)]);
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), jar.clone())]);
+
+    let test_time = MS_IN_YEAR * 2;
+    context.set_block_timestamp_in_ms(test_time);
+
+    context.switch_account(admin());
+    context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id.clone(), false));
+
+    context.switch_account(alice());
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    let message = DepositMessage::new(
+        &context.owner,
+        &alice(),
+        &product.id,
+        jar.total_principal(),
+        valid_until,
+        0,
+    );
+    let signature = signer.sign(message.as_str());
+
+    context.contract().restake_all(ticket, Some(signature.into()), None);
+}
+
+#[test]
+fn restake_all_with_withdrawal() {
+    let product = Product::default().with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        apy: Apy::Constant(UDecimal::new(10_000, 5)),
+    }));
+    let jar = Jar::new().with_deposits(vec![(0, 200_000), (MS_IN_YEAR / 4, 800_000)]);
+    let mut context = Context::new(admin())
+        .with_products(&[product.clone()])
+        .with_jars(&alice(), &[(product.id.clone(), jar)]);
+
+    let test_time = MS_IN_YEAR * 2;
+    context.set_block_timestamp_in_ms(test_time);
+
+    context.switch_account(alice());
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+    context.contract().restake_all(ticket, None, Some(100_000.into()));
+
+    let contract = context.contract();
+    let account = contract.get_account(&alice());
+    let jar = account.get_jar(&product.id);
+    assert_eq!(1, jar.deposits.len());
+    assert_eq!(test_time, jar.deposits.last().unwrap().created_at);
+    assert_eq!(100_000, jar.deposits.last().unwrap().principal);
+    assert_eq!(test_time, jar.cache.unwrap().updated_at);
+    assert_eq!(100_000, jar.cache.unwrap().interest);
 }

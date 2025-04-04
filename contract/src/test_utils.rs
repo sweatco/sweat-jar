@@ -2,79 +2,63 @@
 
 use std::panic::{catch_unwind, UnwindSafe};
 
-use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
-use sweat_jar_model::{TokenAmount, UDecimal};
+use near_sdk::{AccountId, PromiseOrValue};
+use sweat_jar_model::{
+    product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+    signer::test_utils::MessageSigner,
+    TokenAmount, UDecimal, MS_IN_YEAR,
+};
 
 use crate::{
     common::Timestamp,
-    jar::model::{Jar, JarLastVersion},
-    product::{
-        helpers::MessageSigner,
-        model::{Apy, DowngradableApy, Product},
-    },
+    jar::model::{Deposit, Jar},
 };
-
-pub const PRINCIPAL: u128 = 1_000_000;
-
-/// Default product name. If product name wasn't specified it will have this name.
-pub(crate) const PRODUCT: &str = "product";
-pub(crate) const SCORE_PRODUCT: &str = "score_product";
 
 pub fn admin() -> AccountId {
     "admin".parse().unwrap()
 }
 
 impl Jar {
-    pub(crate) fn new(id: u32) -> Jar {
-        JarLastVersion {
-            id,
-            account_id: alice(),
-            product_id: PRODUCT.to_string(),
-            created_at: 0,
-            principal: 1_000_000,
+    pub(crate) fn new() -> Self {
+        Jar {
+            deposits: vec![],
             cache: None,
-            claimed_balance: 0,
             is_pending_withdraw: false,
-            is_penalty_applied: false,
-            claim_remainder: Default::default(),
+            claim_remainder: 0,
         }
-        .into()
     }
 
-    pub(crate) fn product_id(mut self, product_id: &str) -> Jar {
-        self.product_id = product_id.to_string();
+    pub(crate) fn with_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Self {
+        self.deposits.push(Deposit::new(created_at, principal));
         self
     }
 
-    pub(crate) fn account_id(mut self, account_id: &AccountId) -> Jar {
-        self.account_id = account_id.clone();
+    pub(crate) fn with_deposits(mut self, deposits: Vec<(Timestamp, TokenAmount)>) -> Self {
+        self.deposits.extend(
+            deposits
+                .into_iter()
+                .map(|(created_at, deposit)| Deposit::new(created_at, deposit)),
+        );
         self
     }
 
-    pub(crate) fn principal(mut self, principal: TokenAmount) -> Jar {
-        self.principal = principal;
-        self
-    }
-
-    pub(crate) fn created_at(mut self, created_at: Timestamp) -> Jar {
-        self.created_at = created_at;
-        self
-    }
-
-    pub(crate) fn pending_withdraw(mut self) -> Jar {
+    pub(crate) fn with_pending_withdraw(mut self) -> Self {
         self.is_pending_withdraw = true;
         self
     }
 }
 
 pub fn generate_premium_product(id: &str, signer: &MessageSigner) -> Product {
-    Product::new()
-        .id(id)
-        .public_key(signer.public_key())
-        .cap(0, 100_000_000_000)
-        .apy(Apy::Downgradable(DowngradableApy {
-            default: UDecimal::new(20, 2),
-            fallback: UDecimal::new(10, 2),
+    Product::default()
+        .with_id(id)
+        .with_public_key(signer.public_key().into())
+        .with_cap(0, 100_000_000_000)
+        .with_terms(Terms::Fixed(FixedProductTerms {
+            apy: Apy::Downgradable(DowngradableApy {
+                default: UDecimal::new(20, 2),
+                fallback: UDecimal::new(10, 2),
+            }),
+            lockup_term: MS_IN_YEAR.into(),
         }))
 }
 
@@ -87,11 +71,11 @@ impl AfterCatchUnwind for () {
 }
 
 pub fn expect_panic(ctx: &impl AfterCatchUnwind, msg: &str, action: impl FnOnce() + UnwindSafe) {
-    let res = catch_unwind(move || action());
+    let res = catch_unwind(action);
 
-    let panic_msg = res.err().expect(&format!(
-        "Contract didn't panic when expected to.\nExpected message: {msg}"
-    ));
+    let panic_msg = res
+        .err()
+        .unwrap_or_else(|| panic!("Contract didn't panic when expected to.\nExpected message: {msg}"));
 
     if msg.is_empty() {
         ctx.after_catch_unwind();
