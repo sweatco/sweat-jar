@@ -1,6 +1,18 @@
-use near_sdk::{env, env::panic_str, near_bindgen, require};
-use sweat_jar_model::{ProductId, TokenAmount};
+use std::{io::Error, str, str::Utf8Error};
 
+use near_sdk::{
+    base64::{engine::general_purpose, Engine},
+    borsh::{to_vec, BorshSerialize},
+    env,
+    env::panic_str,
+    near_bindgen, require,
+    store::key::{Identity, ToKey},
+    AccountId, IntoStorageKey, PromiseOrValue,
+};
+use sweat_jar_model::{base64_string::Base64String, ProductId, TokenAmount};
+
+#[cfg(not(test))]
+use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     event::{emit, EventKind},
     jar::{
@@ -9,7 +21,7 @@ use crate::{
         model::{AccountLegacyV3, JarCache},
     },
     product::model::v1::InterestCalculator,
-    Contract, ContractExt,
+    Contract, ContractExt, StorageKey,
 };
 
 #[near_bindgen]
@@ -27,6 +39,55 @@ impl Contract {
         self.accounts.insert(account_id.clone(), AccountVersioned::new(account));
 
         emit(EventKind::JarsMerge(account_id));
+    }
+
+    #[cfg(not(test))]
+    pub fn migrate_account_to_new_contract(&mut self) -> PromiseOrValue<()> {
+        let (msg, balance, memo) = self.prepare_migration_data();
+
+        self.ft_contract()
+            .ft_transfer_call(&self.new_version_account_id, balance, memo.as_str(), msg.as_str())
+            .into()
+    }
+
+    pub(crate) fn store_account(&mut self, account_id: AccountId, account: Base64String) {
+        let mut account_bytes: Vec<u8> = account.into();
+        // Prepend enum variant index
+        account_bytes.splice(0..0, vec![0]);
+
+        let key = Identity::to_key(
+            &StorageKey::Accounts.into_storage_key(),
+            account_id.as_bytes(),
+            &mut Vec::new(),
+        );
+        env::storage_write(&key, &account_bytes);
+    }
+
+    pub(crate) fn prepare_migration_data(&self) -> (Base64String, TokenAmount, String) {
+        let account_id = env::predecessor_account_id();
+
+        let (account, balance) = self.prepare_account(&account_id);
+        let msg = Self::compose_message(&account);
+        let memo = format!("migrate {account_id}");
+
+        (msg, balance, memo)
+    }
+
+    fn prepare_account(&self, account_id: &AccountId) -> (Account, TokenAmount) {
+        let Some(account) = self.archive.get_account(account_id) else {
+            panic_str("No legacy account");
+        };
+
+        let account = self.map_legacy_account(&account);
+        let balance = account.get_total_principal();
+
+        (account, balance)
+    }
+
+    fn compose_message(account: &Account) -> Base64String {
+        let account_vec = to_vec(&account).unwrap_or_else(|_| panic_str("Failed to serialize account"));
+
+        account_vec.into()
     }
 }
 

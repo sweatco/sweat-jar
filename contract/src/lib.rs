@@ -61,6 +61,8 @@ pub struct Contract {
 
     pub fee_amount: TokenAmount,
     pub archive: Archive,
+
+    pub new_version_account_id: AccountId,
 }
 
 #[near]
@@ -83,7 +85,12 @@ pub(crate) enum StorageKey {
 impl InitApi for Contract {
     #[init]
     #[private]
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        new_version_account_id: AccountId,
+    ) -> Self {
         Self {
             token_account_id,
             fee_account_id,
@@ -97,6 +104,7 @@ impl InitApi for Contract {
                 accounts_v2: LookupMap::new(StorageKey::AccountsLegacyV2),
                 accounts_v3: LookupMap::new(StorageKey::AccountsLegacyV3),
             },
+            new_version_account_id,
         }
     }
 }

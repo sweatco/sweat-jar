@@ -27,7 +27,7 @@ impl StateMigration for Contract {
     #[init(ignore_state)]
     #[private]
     #[mutants::skip]
-    fn migrate_state() -> Self {
+    fn migrate_state(new_version_account_id: AccountId) -> Self {
         let mut old_state: ContractBeforeMigration = env::state_read().expect("Failed to extract old contract state.");
 
         let mut products: UnorderedMap<ProductId, Product> = UnorderedMap::new(StorageKey::Products);
@@ -51,6 +51,7 @@ impl StateMigration for Contract {
                 accounts_v2: old_state.accounts_v2,
                 accounts_v3: old_state.accounts_v3,
             },
+            new_version_account_id,
         }
     }
 }
