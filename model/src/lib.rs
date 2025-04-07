@@ -1,4 +1,6 @@
+pub mod account;
 pub mod api;
+pub mod base64_string;
 pub mod claimed_amount_view;
 pub mod jar;
 mod numbers;
@@ -17,6 +19,8 @@ pub type ProductId = String;
 
 /// Amount of fungible tokens
 pub type TokenAmount = u128;
+
+pub type Timestamp = u64;
 
 pub const MS_IN_SECOND: u64 = 1000;
 pub const MS_IN_MINUTE: u64 = MS_IN_SECOND * 60;

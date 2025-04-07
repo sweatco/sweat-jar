@@ -66,6 +66,8 @@ pub struct Contract {
     /// Is not stored in contract state so it should be always skipped by borsh
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
+
+    pub new_version_account_id: AccountId,
 }
 
 #[near]

@@ -1,3 +1,4 @@
+#[cfg(not(feature = "integration-api"))]
 use near_sdk::{
     json_types::{Base64VecU8, I64, U128},
     AccountId,
@@ -156,6 +157,11 @@ pub trait MigratonToNearSdk5 {
 #[make_integration_version]
 pub trait MigrationToStepJars {
     fn migrate_state_to_step_jars() -> Self;
+}
+
+#[make_integration_version]
+pub trait MigrationToV2 {
+    fn migrate_account(&mut self) -> ::near_sdk::PromiseOrValue<()>;
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
