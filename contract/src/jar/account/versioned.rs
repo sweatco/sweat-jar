@@ -3,10 +3,7 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use near_sdk::{
-    borsh::{BorshDeserialize, BorshSerialize},
-    near,
-};
+use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 
 use crate::jar::account::{v1::AccountV1, Account};
 

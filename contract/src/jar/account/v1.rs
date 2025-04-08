@@ -37,12 +37,6 @@ pub struct AccountV1Companion {
 }
 
 impl Account {
-    pub(crate) fn get_total_principal(&self) -> TokenAmount {
-        self.jars
-            .iter()
-            .fold(TokenAmount::default(), |acc, (_, jar)| acc + jar.total_principal())
-    }
-
     pub(crate) fn get_jar(&self, product_id: &ProductId) -> &Jar {
         self.jars
             .get(product_id)

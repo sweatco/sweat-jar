@@ -79,6 +79,9 @@ impl MessageVerifier {
 
 #[cfg(feature = "testing")]
 pub mod test_utils {
+    use std::ops::Deref;
+
+    use base64::{engine::general_purpose::STANDARD, Engine};
     use ed25519_dalek::{Signer, SigningKey};
     use rand::rngs::OsRng;
 
@@ -104,6 +107,21 @@ pub mod test_utils {
 
         pub fn public_key(&self) -> Vec<u8> {
             self.signing_key.verifying_key().as_ref().to_vec()
+        }
+    }
+
+    pub struct Base64String(String);
+
+    impl From<Vec<u8>> for Base64String {
+        fn from(value: Vec<u8>) -> Self {
+            Self(STANDARD.encode(value))
+        }
+    }
+
+    impl Deref for Base64String {
+        type Target = String;
+        fn deref(&self) -> &Self::Target {
+            &self.0
         }
     }
 }

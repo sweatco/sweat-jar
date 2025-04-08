@@ -1,5 +1,4 @@
 pub mod api;
-pub mod base64_string;
 pub mod claimed_amount_view;
 pub mod jar;
 pub mod product;

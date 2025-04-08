@@ -28,6 +28,10 @@ impl Jar {
         }
     }
 
+    pub(crate) fn total_principal(&self) -> TokenAmount {
+        self.deposits.iter().map(|deposit| deposit.principal).sum()
+    }
+
     pub(crate) fn with_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Self {
         self.deposits.push(Deposit::new(created_at, principal));
         self

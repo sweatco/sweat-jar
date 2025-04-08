@@ -32,7 +32,6 @@ impl Context {
         let owner: AccountId = "owner".to_string().try_into().unwrap();
         let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
         let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();
-        let new_version_owner: AccountId = "new_version".to_string().try_into().unwrap();
 
         let mut builder = VMContextBuilder::new();
         builder
@@ -43,7 +42,7 @@ impl Context {
 
         testing_env!(builder.build());
 
-        let contract = Contract::init(ft_contract_id.clone(), fee_account_id, manager, new_version_owner);
+        let contract = Contract::init(ft_contract_id.clone(), fee_account_id, manager);
 
         Self {
             owner,
