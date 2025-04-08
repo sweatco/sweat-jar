@@ -10,7 +10,7 @@ use crate::event::{emit, EventKind};
 
 const DAYS_STORED: usize = 2;
 
-type Chain = Vec<(Score, Local)>;
+pub(crate) type Chain = Vec<(Score, Local)>;
 
 #[near(serializers=[borsh, json])]
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -67,8 +67,14 @@ impl AccountScore {
         }
     }
 
+    pub fn try_reset_score(&mut self) {
+        if self.is_valid() {
+            self.reset_score();
+        }
+    }
+
     /// On claim we need to clear active scores so they aren't claimed twice or more.
-    pub fn claim_score(&mut self) -> ScoreRecord {
+    pub fn reset_score(&mut self) -> ScoreRecord {
         let today = self.timezone.today();
         let update_day = self.update_day();
 
@@ -108,7 +114,6 @@ impl AccountScore {
         assert_eq!((today - self.update_day()).0, 0, "Updating scores before claiming them");
 
         self.update_today(chain);
-
         self.updated = block_timestamp_ms().into();
     }
 
@@ -168,12 +173,17 @@ impl Default for AccountScore {
 #[cfg(test)]
 mod test {
     use near_sdk::env::block_timestamp_ms;
-    use sweat_jar_model::{Day, Timezone, MS_IN_DAY, MS_IN_HOUR, UTC};
+    use sweat_jar_model::{
+        product::{test_utils::DEFAULT_SCORE_PRODUCT_NAME, Cap, Product, ScoreBasedProductTerms, Terms},
+        Day, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+    };
 
     use crate::{
-        product::model::Product,
+        common::tests::Context,
+        jar::account::Account,
+        product::model::v1::InterestCalculator,
         score::{account_score::Chain, AccountScore},
-        test_builder::TestBuilder,
+        test_utils::admin,
     };
 
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
@@ -198,46 +208,38 @@ mod test {
 
     #[test]
     fn test_account_score() {
-        let mut ctx = TestBuilder::new().build();
+        let mut ctx = Context::new(admin());
+        let product = generate_score_based_product();
 
-        ctx.set_block_timestamp_in_ms(TODAY);
+        let mut now = TODAY;
+        ctx.set_block_timestamp_in_ms(now);
 
-        let product = Product::new().score_cap(20_000);
+        let mut score = AccountScore::new(TIMEZONE);
+        score.update(generate_chain());
+        let mut account = Account {
+            score,
+            ..Account::default()
+        };
 
-        let mut account_score = AccountScore::new(TIMEZONE);
+        assert_eq!(0.03, product.terms.get_apy(&account).to_f32());
 
-        account_score.update(generate_chain());
+        now += MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(now);
+        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
 
-        assert_eq!(
-            product.apy_for_score(&account_score.claimable_score().score).to_f32(),
-            0.03
-        );
+        now += MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(now);
+        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
 
-        ctx.advance_block_timestamp_days(1);
-        assert_eq!(
-            product.apy_for_score(&account_score.claimable_score().score).to_f32(),
-            0.05
-        );
-
-        ctx.advance_block_timestamp_days(1);
-        assert_eq!(
-            product.apy_for_score(&account_score.claimable_score().score).to_f32(),
-            0.05
-        );
-
-        assert_eq!(account_score.claim_score().score, vec![2000, 3000]);
-
-        assert_eq!(
-            product.apy_for_score(&account_score.claimable_score().score).to_f32(),
-            0.00
-        );
+        assert_eq!(vec![2000, 3000], account.score.reset_score().score);
+        assert_eq!(0.00, product.terms.get_apy(&account).to_f32());
     }
 
     #[test]
     #[should_panic(expected = "Walk data from future")]
     fn steps_from_future() {
-        let mut ctx = TestBuilder::new().build();
-        ctx.set_block_timestamp_today();
+        let mut ctx = Context::new(admin());
+        ctx.set_block_timestamp_in_ms(TODAY);
 
         let mut account_score = AccountScore::new(TIMEZONE);
         account_score.update(vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())]);
@@ -252,7 +254,7 @@ mod test {
             scores_history: [1000, 2000],
         };
 
-        let mut ctx = TestBuilder::new().build();
+        let mut ctx = Context::new(admin());
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
@@ -260,15 +262,15 @@ mod test {
 
         assert_eq!(score.updated, (MS_IN_DAY * 10).into());
         assert_eq!(score.scores(), (1006, 2005));
-        assert_eq!(score.claim_score().score, vec![2005]);
+        assert_eq!(score.reset_score().score, vec![2005]);
         assert_eq!(score.active_score(), 2005);
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 11);
-        assert_eq!(score.claim_score().score, vec![1006, 0]);
+        assert_eq!(score.reset_score().score, vec![1006, 0]);
         assert_eq!(score.active_score(), 1006);
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 12);
-        assert_eq!(score.claim_score().score, vec![0, 0]);
+        assert_eq!(score.reset_score().score, vec![0, 0]);
         assert_eq!(score.active_score(), 0);
     }
 
@@ -281,7 +283,7 @@ mod test {
             scores_history: [1000, 2000],
         };
 
-        let mut ctx = TestBuilder::new().build();
+        let mut ctx = Context::new(admin());
 
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
@@ -294,5 +296,20 @@ mod test {
         ctx.set_block_timestamp_in_ms(MS_IN_DAY * 12);
 
         assert_eq!(score.active_score(), 0);
+    }
+
+    fn generate_score_based_product() -> Product {
+        Product {
+            id: DEFAULT_SCORE_PRODUCT_NAME.to_string(),
+            cap: Cap::new(0, 100_000_000 * 10u128.pow(18)),
+            terms: Terms::ScoreBased(ScoreBasedProductTerms {
+                score_cap: 20_000,
+                lockup_term: MS_IN_YEAR.into(),
+            }),
+            withdrawal_fee: None,
+            public_key: None,
+            is_enabled: true,
+            is_restakable: true,
+        }
     }
 }

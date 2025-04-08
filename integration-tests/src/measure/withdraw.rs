@@ -2,14 +2,12 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use near_workspaces::types::Gas;
-use nitka::misc::ToNear;
-use sweat_jar_model::api::{JarApiIntegration, WithdrawApiIntegration};
+use sweat_jar_model::api::WithdrawApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
     measure::{
         measure::scoped_command_measure,
-        random_element::RandomElement,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
     product::RegisterProductCommand,
@@ -85,13 +83,9 @@ async fn measure_withdraw(input: (RegisterProductCommand, usize)) -> anyhow::Res
 
     context.fast_forward_hours(2).await?;
 
-    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-
-    let jar = jars.random_element();
-
     Ok(context
         .sweat_jar()
-        .withdraw(jar.id, None)
+        .withdraw(product.id())
         .with_user(&alice)
         .result()
         .await?

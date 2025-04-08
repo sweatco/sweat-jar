@@ -28,6 +28,9 @@ pub mod gas_data {
     /// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
     pub(crate) const GAS_FOR_AFTER_WITHDRAW: Gas = Gas::from_tgas(4);
 
+    #[cfg(not(test))]
+    pub(crate) const GAS_FOR_AFTER_FEE_WITHDRAW: Gas = Gas::from_tgas(4);
+
     /// Value is measured with `measure_withdraw_all`
     /// 10 `TGas` was enough for 200 jars. 15 here just in case.
     pub(crate) const GAS_FOR_BULK_AFTER_WITHDRAW: Gas = Gas::from_tgas(15);

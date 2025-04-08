@@ -1,41 +1,24 @@
-use near_sdk::{assert_one_yocto, env::panic_str, near_bindgen, require};
-use sweat_jar_model::{
-    api::ProductApi,
-    product::{ProductView, RegisterProductCommand},
-    ProductId,
-};
+use std::clone::Clone;
+
+use near_sdk::{assert_one_yocto, near_bindgen, require};
+use sweat_jar_model::{api::ProductApi, product::Product, ProductId};
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    product::model::{Apy, Product, Terms},
+    product::model::v1::{ProductAssertions, ProductModelApi},
     Base64VecU8, Contract, ContractExt,
 };
 
 #[near_bindgen]
 impl ProductApi for Contract {
     #[payable]
-    fn register_product(&mut self, command: RegisterProductCommand) {
+    fn register_product(&mut self, product: Product) {
         self.assert_manager();
         assert_one_yocto();
-
-        assert!(self.products.get(&command.id).is_none(), "Product already exists");
-
-        let product: Product = command.into();
-
-        if product.is_score_product() {
-            let apy = match product.apy {
-                Apy::Constant(apy) => apy,
-                Apy::Downgradable(_) => panic_str("Step based products do not support downgradable APY"),
-            };
-
-            assert!(apy.is_zero(), "Step based products do not support constant APY");
-
-            if let Terms::Fixed(fixed) = &product.terms {
-                assert!(!fixed.allows_top_up, "Step based products don't support top up");
-            }
-        }
-
+        assert!(self.products.get(&product.id).is_none(), "Product already exists");
+        product.assert_score_based_product_is_protected();
         product.assert_fee_amount();
+        product.assert_cap_order();
 
         self.products.insert(&product.id, &product);
 
@@ -55,10 +38,7 @@ impl ProductApi for Contract {
 
         self.products.insert(&product_id, &product);
 
-        emit(EventKind::EnableProduct(EnableProductData {
-            id: product_id,
-            is_enabled,
-        }));
+        emit(EventKind::EnableProduct(EnableProductData { product_id, is_enabled }));
     }
 
     #[payable]
@@ -67,7 +47,7 @@ impl ProductApi for Contract {
         assert_one_yocto();
 
         let mut product = self.get_product(&product_id);
-        product.public_key = Some(public_key.0.clone());
+        product.set_public_key(Some(public_key.clone()));
         self.products.insert(&product_id, &product);
 
         emit(EventKind::ChangeProductPublicKey(ChangeProductPublicKeyData {
@@ -76,7 +56,7 @@ impl ProductApi for Contract {
         }));
     }
 
-    fn get_products(&self) -> Vec<ProductView> {
-        self.products.values().map(|product| product.clone().into()).collect()
+    fn get_products(&self) -> Vec<Product> {
+        self.products.values().collect()
     }
 }

@@ -2,23 +2,29 @@
 
 use std::{
     borrow::Borrow,
-    collections::HashMap,
     sync::{Arc, Mutex, MutexGuard},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::Duration,
 };
 
 use near_contract_standards::fungible_token::Balance;
-use near_sdk::{env::block_timestamp_ms, test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, jar::JarId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
+use sweat_jar_model::{api::InitApi, product::Product, ProductId, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
-use crate::{jar::model::Jar, product::model::Product, test_utils::AfterCatchUnwind, Contract};
+use crate::{
+    common::Timestamp,
+    jar::{
+        account::{versioned::AccountVersioned, Account},
+        model::Jar,
+    },
+    test_utils::AfterCatchUnwind,
+    Contract,
+};
 
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
     pub owner: AccountId,
     ft_contract_id: AccountId,
     builder: VMContextBuilder,
-    pub account_jars: HashMap<AccountId, Vec<JarId>>,
 }
 
 impl Context {
@@ -43,8 +49,11 @@ impl Context {
             ft_contract_id,
             builder,
             contract: Arc::new(Mutex::new(contract)),
-            account_jars: HashMap::default(),
         }
+    }
+
+    pub(crate) fn now(&self) -> Timestamp {
+        self.builder.context.block_timestamp / 1_000_000
     }
 
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {
@@ -59,42 +68,20 @@ impl Context {
         self
     }
 
-    pub(crate) fn with_jars(mut self, jars: &[Jar]) -> Self {
+    pub(crate) fn with_jars(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
         if jars.is_empty() {
             return self;
         }
 
-        let max_id = jars.iter().map(|j| j.id).max().unwrap();
-
-        for jar in jars {
-            self.account_jars
-                .entry(jar.account_id.clone())
-                .or_default()
-                .push(jar.id);
-
-            self.contract()
-                .accounts
-                .entry(jar.account_id.clone())
-                .or_default()
-                .push(jar.clone());
+        let mut account = Account::default();
+        for (product_id, jar) in jars.iter() {
+            account.jars.insert(product_id.clone(), jar.clone());
         }
-
-        if max_id > self.contract().last_jar_id {
-            self.contract().last_jar_id = max_id;
-        }
+        self.contract()
+            .accounts
+            .insert(account_id.clone(), AccountVersioned::new(account));
 
         self
-    }
-
-    pub(crate) fn set_block_timestamp_today(&mut self) {
-        let start = SystemTime::now();
-        let today = start.duration_since(UNIX_EPOCH).expect("Time went backwards");
-        self.set_block_timestamp(today);
-    }
-
-    pub(crate) fn advance_block_timestamp_days(&mut self, days: u64) {
-        let now = block_timestamp_ms();
-        self.set_block_timestamp_in_ms(now + days * MS_IN_DAY);
     }
 
     pub(crate) fn set_block_timestamp_in_days(&mut self, days: u64) {
@@ -127,7 +114,7 @@ impl Context {
     }
 
     pub(crate) fn switch_account_to_ft_contract_account(&mut self) {
-        self.switch_account(&self.ft_contract_id.clone());
+        self.switch_account(self.ft_contract_id.clone());
     }
 
     pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
@@ -147,5 +134,32 @@ impl Context {
 impl AfterCatchUnwind for Context {
     fn after_catch_unwind(&self) {
         self.contract.clear_poison();
+    }
+}
+
+pub trait TokenUtils {
+    fn to_otto(&self) -> TokenAmount;
+}
+
+impl TokenUtils for u128 {
+    fn to_otto(&self) -> TokenAmount {
+        self * 10u128.pow(18)
+    }
+}
+
+pub trait WhitespaceTrimmer {
+    fn trim_whitespaces(&self) -> String;
+}
+
+impl WhitespaceTrimmer for &str {
+    fn trim_whitespaces(&self) -> String {
+        let words: Vec<_> = self.split_whitespace().collect();
+        words.join(" ")
+    }
+}
+
+impl WhitespaceTrimmer for String {
+    fn trim_whitespaces(&self) -> String {
+        self.as_str().trim_whitespaces()
     }
 }

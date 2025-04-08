@@ -1,69 +1,38 @@
 #![cfg(test)]
 
-use fake::Fake;
-use near_sdk::Timestamp;
-use sweat_jar_model::{ScoreRecord, UDecimal, MS_IN_YEAR};
+use near_sdk::{json_types::U64, test_utils::test_env::alice};
+use sweat_jar_model::{jar::DepositTicket, product::Product};
 
-use crate::{
-    product::model::{Apy, Product},
-    Jar,
-};
+use crate::{common::tests::Context, test_utils::admin};
 
 #[test]
-fn get_interest_before_maturity() {
-    let product = Product::new().lockup_term(2 * MS_IN_YEAR);
-    let jar = Jar::new(0).principal(100_000_000);
+#[should_panic(expected = "It's not possible to create new jars for this product")]
+fn create_jar_for_disabled_product() {
+    let alice = alice();
+    let admin = admin();
 
-    let interest = jar.get_interest(&ScoreRecord::default(), &product, MS_IN_YEAR).0;
-    assert_eq!(12_000_000, interest);
-}
+    let product = Product::default().with_enabled(false);
+    let context = Context::new(admin).with_products(&[product.clone()]);
 
-#[test]
-fn get_interest_after_maturity() {
-    let product = Product::new();
-    let jar = Jar::new(0).principal(100_000_000);
+    let ticket = DepositTicket {
+        product_id: product.id,
+        valid_until: U64(0),
+        timezone: None,
+    };
 
-    let interest = jar
-        .get_interest(&ScoreRecord::default(), &product, 400 * 24 * 60 * 60 * 1000)
-        .0;
-    assert_eq!(12_000_000, interest);
-}
-
-#[test]
-fn interest_precision() {
-    let product = Product::new().apy(Apy::Constant(UDecimal::new(1, 0)));
-    let jar = Jar::new(0).principal(MS_IN_YEAR as u128);
-
-    assert_eq!(
-        jar.get_interest(&ScoreRecord::default(), &product, 10000000000).0,
-        10000000000
-    );
-    assert_eq!(
-        jar.get_interest(&ScoreRecord::default(), &product, 10000000001).0,
-        10000000001
-    );
-
-    for _ in 0..100 {
-        let time: Timestamp = (10..MS_IN_YEAR).fake();
-        assert_eq!(
-            jar.get_interest(&ScoreRecord::default(), &product, time).0,
-            time as u128
-        );
-    }
+    context.contract().deposit(alice, ticket, 1_000_000, &None);
 }
 
 #[cfg(test)]
 mod signature_tests {
-
     use near_sdk::{
-        json_types::{Base64VecU8, U128, U64},
+        json_types::{Base64VecU8, U64},
         test_utils::test_env::alice,
     };
+    use sweat_jar_model::{jar::DepositTicket, product::Product, signer::test_utils::MessageSigner};
 
     use crate::{
         common::tests::Context,
-        jar::model::JarTicket,
-        product::{helpers::MessageSigner, model::Product},
         test_utils::{admin, generate_premium_product},
     };
 
@@ -76,17 +45,17 @@ mod signature_tests {
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 14_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(123000000),
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount).as_str());
 
         context
             .contract()
-            .verify(&admin, amount, &ticket, Some(Base64VecU8(signature)));
+            .verify(&admin, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[test]
@@ -100,7 +69,7 @@ mod signature_tests {
         let context = Context::new(admin).with_products(&[product.clone()]);
 
         let amount = 1_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(100000000),
             timezone: None,
@@ -110,7 +79,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(&alice, amount, &ticket, Some(Base64VecU8(signature)));
+            .verify(&alice, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[test]
@@ -125,7 +94,7 @@ mod signature_tests {
         let context = Context::new(admin.clone()).with_products(&[product, another_product.clone()]);
 
         let amount = 15_000_000;
-        let ticket_for_another_product = JarTicket {
+        let ticket_for_another_product = DepositTicket {
             product_id: another_product.id,
             valid_until: U64(100000000),
             timezone: None,
@@ -134,7 +103,7 @@ mod signature_tests {
         // signature made for wrong product
         let signature = signer.sign(
             context
-                .get_signature_material(&admin, &ticket_for_another_product, amount)
+                .get_deposit_message(&admin, &ticket_for_another_product, amount)
                 .as_str(),
         );
 
@@ -142,7 +111,7 @@ mod signature_tests {
             &admin,
             amount,
             &ticket_for_another_product,
-            Some(Base64VecU8(signature)),
+            &Some(Base64VecU8(signature)),
         );
     }
 
@@ -159,21 +128,21 @@ mod signature_tests {
         context.set_block_timestamp_in_days(365);
 
         let amount = 5_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(100000000),
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_signature_material(&alice, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount).as_str());
 
         context
             .contract()
-            .verify(&alice, amount, &ticket, Some(Base64VecU8(signature)));
+            .verify(&alice, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[test]
-    #[should_panic(expected = "Product 'not_existing_product' doesn't exist")]
+    #[should_panic(expected = "Product not_existing_product is not found")]
     fn verify_ticket_with_not_existing_product() {
         let admin = admin();
 
@@ -185,17 +154,17 @@ mod signature_tests {
         let not_existing_product = generate_premium_product("not_existing_product", &signer);
 
         let amount = 500_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: not_existing_product.id,
             valid_until: U64(100000000),
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_signature_material(&admin, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount).as_str());
 
         context
             .contract()
-            .verify(&admin, amount, &ticket, Some(Base64VecU8(signature)));
+            .verify(&admin, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[test]
@@ -208,46 +177,29 @@ mod signature_tests {
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 3_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(100000000),
             timezone: None,
         };
 
-        context.contract().verify(&admin, amount, &ticket, None);
+        context.contract().verify(&admin, amount, &ticket, &None);
     }
 
     #[test]
     fn verify_ticket_without_signature_when_not_required() {
         let admin = admin();
 
-        let product = Product::new();
+        let product = Product::default();
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         let amount = 4_000_000_000;
-        let ticket = JarTicket {
+        let ticket = DepositTicket {
             product_id: product.id,
             valid_until: U64(0),
             timezone: None,
         };
 
-        context.contract().verify(&admin, amount, &ticket, None);
-    }
-
-    #[test]
-    #[should_panic(expected = "It's not possible to create new jars for this product")]
-    fn create_jar_for_disabled_product() {
-        let alice = alice();
-        let admin = admin();
-
-        let product = Product::new().enabled(false);
-        let context = Context::new(admin).with_products(&[product.clone()]);
-
-        let ticket = JarTicket {
-            product_id: product.id,
-            valid_until: U64(0),
-            timezone: None,
-        };
-        context.contract().create_jar(alice, ticket, U128(1_000_000), None);
+        context.contract().verify(&admin, amount, &ticket, &None);
     }
 }
