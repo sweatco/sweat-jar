@@ -1,6 +1,9 @@
+use std::collections::HashSet;
+
 #[cfg(test)]
 use common::test_data::get_test_future_success;
 use near_sdk::{
+    env::panic_str,
     ext_contract, near, near_bindgen,
     serde::{Deserialize, Serialize},
     PromiseOrValue,
@@ -13,7 +16,7 @@ use sweat_jar_model::{
 
 #[cfg(not(test))]
 use crate::internal::assert_gas;
-use crate::internal::is_promise_success;
+use crate::{internal::is_promise_success, jar::model::Jar};
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(crate = "near_sdk::serde")]
@@ -100,7 +103,7 @@ impl WithdrawApi for Contract {
         self.transfer_withdraw(&account_id, request)
     }
 
-    fn withdraw_all(&mut self) -> PromiseOrValue<BulkWithdrawView> {
+    fn withdraw_all(&mut self, product_ids: Option<HashSet<ProductId>>) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
         self.assert_migrated(&account_id);
 
@@ -108,12 +111,19 @@ impl WithdrawApi for Contract {
 
         let mut request = BulkWithdrawalRequest::default();
 
-        for (product_id, jar) in &self.get_account(&account_id).jars {
+        let product_ids = product_ids.unwrap_or_else(|| self.get_account(&account_id).jars.keys().cloned().collect());
+        let account = self.get_account(&account_id);
+
+        for product_id in product_ids {
+            let jar = account
+                .jars
+                .get(&product_id)
+                .unwrap_or_else(|| panic_str(&format!("No jar found for {product_id}")));
             if jar.is_pending_withdraw {
                 continue;
             }
 
-            let product = self.get_product(product_id);
+            let product = self.get_product(&product_id);
             let (amount, partition_index) = jar.get_liquid_balance(&product.terms);
             let fee = product.calculate_fee(amount);
 

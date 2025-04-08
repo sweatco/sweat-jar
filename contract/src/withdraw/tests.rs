@@ -1,12 +1,14 @@
 #![cfg(test)]
 
+use std::collections::HashSet;
+
 use itertools::Itertools;
 use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
     product::{Apy, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
     withdraw::BulkWithdrawView,
-    TokenAmount, UDecimal, MS_IN_DAY,
+    ProductId, TokenAmount, UDecimal, MS_IN_DAY,
 };
 
 use crate::{
@@ -436,10 +438,83 @@ fn batch_withdraw_all() {
     assert!(jars.is_empty());
 }
 
+#[test]
+fn batch_withdraw_partially() {
+    let term_in_days = 180;
+
+    let product_1 = Product {
+        id: "product_1".to_string(),
+        ..testing_product_fixed(term_in_days)
+    };
+    let product_2 = Product {
+        id: "product_2".to_string(),
+        ..testing_product_fixed(term_in_days)
+    };
+    let product_3 = Product {
+        id: "product_3".to_string(),
+        ..testing_product_fixed(term_in_days)
+    };
+
+    let deposits_1: Vec<(Timestamp, TokenAmount)> = vec![(0, 7_000_000), (MS_IN_DAY, 300_000), (2 * MS_IN_DAY, 20_000)];
+    let deposits_2: Vec<(Timestamp, TokenAmount)> = vec![(0, 1_000_000), (MS_IN_DAY, 400_000)];
+    let deposits_3: Vec<(Timestamp, TokenAmount)> = vec![(0, 17_000_000)];
+
+    let jar_1 = create_jar(&deposits_1);
+    let jar_2 = create_jar(&deposits_2);
+    let jar_3 = create_jar(&deposits_3);
+
+    let mut context = Context::new(admin())
+        .with_products(&[product_1.clone(), product_2.clone(), product_3.clone()])
+        .with_jars(
+            &alice(),
+            &[(product_1.id.clone(), jar_1), (product_2.id.clone(), jar_2), (product_3.id.clone(), jar_3)],
+        );
+
+    // One day after last deposit unlock
+    context.set_block_timestamp_in_ms(term_in_days * MS_IN_DAY + deposits_1.last().unwrap().0 + MS_IN_DAY);
+
+    context.switch_account(alice());
+    context.contract().claim_total(None);
+    let withdrawn = context.withdraw_bulk(&alice(), HashSet::from([product_1.id.clone(), product_2.id.clone()]));
+
+    let total_target_deposits_principal = [deposits_1, deposits_2]
+        .concat()
+        .into_iter()
+        .map(|(_, principal)| principal)
+        .sum::<TokenAmount>();
+    assert_eq!(total_target_deposits_principal, withdrawn.total_amount.0);
+
+    let jars = context.contract().get_jars_for_account(alice());
+    assert_eq!(1, jars.len());
+    assert_eq!(deposits_3.first().unwrap().1, jars.first().unwrap().principal.0);
+}
+
+fn create_jar(deposits: &Vec<(Timestamp, TokenAmount)>) -> Jar {
+    Jar {
+        deposits: deposits
+            .into_iter()
+            .map(|(created_at, principal)| Deposit::new(created_at.clone(), principal.clone()))
+            .collect(),
+        ..Jar::new()
+    }
+}
+
 impl Context {
     fn withdraw_all(&mut self, account_id: &AccountId) -> BulkWithdrawView {
+        self.withdraw_internal(account_id, None)
+    }
+
+    fn withdraw_bulk(&mut self, account_id: &AccountId, product_ids: HashSet<ProductId>) -> BulkWithdrawView {
+        self.withdraw_internal(account_id, product_ids.into())
+    }
+
+    fn withdraw_internal(
+        &mut self,
+        account_id: &AccountId,
+        product_ids: Option<HashSet<ProductId>>,
+    ) -> BulkWithdrawView {
         self.switch_account(account_id);
-        let result = self.contract().withdraw_all();
+        let result = self.contract().withdraw_all(product_ids);
 
         match result {
             PromiseOrValue::Promise(_) => {
