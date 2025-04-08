@@ -27,6 +27,13 @@ impl Contract {
         self.assert_manager();
     }
 
+    pub(crate) fn assert_account_is_not_migrating(&self, account_id: &AccountId) {
+        require!(
+            !self.migration.migrating_accounts.contains(account_id),
+            "Account is migrating"
+        );
+    }
+
     pub(crate) fn increment_and_get_last_jar_id(&mut self) -> JarId {
         self.last_jar_id += 1;
         self.last_jar_id

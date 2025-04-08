@@ -22,7 +22,12 @@ pub struct SweatJarContract<'a> {
 
 #[make_integration_version]
 pub trait InitApi {
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self;
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        new_version_account_id: AccountId,
+    ) -> Self;
 }
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
@@ -161,6 +166,7 @@ pub trait MigrationToStepJars {
 
 #[make_integration_version]
 pub trait MigrationToV2 {
+    fn migrate_state_to_v2_ready(new_version_account_id: AccountId) -> Self;
     fn migrate_account(&mut self) -> ::near_sdk::PromiseOrValue<()>;
 }
 
