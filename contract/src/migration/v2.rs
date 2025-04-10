@@ -1,20 +1,28 @@
 use std::{cell::RefCell, collections::HashMap};
 
+#[cfg(not(test))]
+use crate::ft_interface::*;
+use crate::{
+    assert::assert_not_locked, internal::is_promise_success, jar::model::AccountJarsLegacy, product::model::Product,
+    Contract, ContractExt, MigrationState, StorageKey,
+};
+use crate::{internal::assert_gas, jar::account::versioned::Account as LegacyAccount};
+use near_sdk::env::log_str;
+use near_sdk::serde_json::json;
 use near_sdk::{
-    borsh::to_vec, collections::UnorderedMap, env::{self, panic_str}, json_types::Base64VecU8, near, serde_json, store::{LookupMap, LookupSet}, AccountId, PanicOnDefault, PromiseOrValue
+    borsh::to_vec,
+    collections::UnorderedMap,
+    env::{self, panic_str},
+    json_types::Base64VecU8,
+    near, serde_json,
+    store::{LookupMap, LookupSet},
+    AccountId, Gas, PanicOnDefault, PromiseOrValue,
 };
 use sweat_jar_model::{
     account::{v1::AccountScore, versioned::AccountVersioned, Account},
     api::MigrationToV2,
     jar::JarId,
     ProductId, ScoreRecord, TokenAmount,
-};
-use crate::jar::account::versioned::Account as LegacyAccount;
-#[cfg(not(test))]
-use crate::ft_interface::*;
-use crate::{
-    assert::assert_not_locked, internal::is_promise_success, jar::model::AccountJarsLegacy, product::model::Product,
-    Contract, ContractExt, MigrationState, StorageKey,
 };
 
 use super::account_jars_non_versioned::AccountJarsNonVersioned;
@@ -34,12 +42,15 @@ pub struct ContractBeforeMigration {
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
 }
 
+const TGAS_FOR_MIGRATION_TRANSFER: u64 = 100;
+const TGAS_FOR_MIGRATION_CALLBACK: u64 = 10;
+
 #[near]
 impl MigrationToV2 for Contract {
     #[private]
     #[init(ignore_state)]
     fn migrate_state_to_v2_ready(new_version_account_id: AccountId) -> Self {
-        let mut old_state: ContractBeforeMigration = env::state_read().expect("Failed to extract old contract state.");
+        let old_state: ContractBeforeMigration = env::state_read().expect("Failed to extract old contract state.");
 
         Contract {
             token_account_id: old_state.token_account_id,
@@ -60,23 +71,20 @@ impl MigrationToV2 for Contract {
 
     fn migrate_account(&mut self) -> PromiseOrValue<()> {
         let account_id = env::predecessor_account_id();
+        log_str(&format!("migrate_account({account_id})"));
+
         self.assert_account_is_not_migrating(&account_id);
 
-        let (account, principal) = self.map_legacy_account(account_id.clone());
-        if account.jars.is_empty() {
-            panic_str("Nothing to migrate");
-        }
-        self.lock_account(&account_id);
+        let (principal, memo, msg) = self.prepare_migration_params(account_id.clone());
 
-        let account = AccountVersioned::V1(account);
-        let account_vec: Base64VecU8 = to_vec(&account)
-            .unwrap_or_else(|_| panic_str("Failed to serialize account"))
-            .into();
-        let memo = format!("migrate {account_id}");
-        let msg =
-            serde_json::to_string(&account_vec).unwrap_or_else(|_| panic_str("Unable to serialize account bytes"));
-
-        // TODO: check amount of gas
+        assert_gas(
+            Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER + TGAS_FOR_MIGRATION_CALLBACK).as_gas(),
+            || format!("migrate_account({account_id})"),
+        );
+        log_str(&format!(
+            "transfer_account({account_id}) with gas available: {}",
+            Gas::from_gas(env::prepaid_gas().as_gas() - env::used_gas().as_gas())
+        ));
         self.transfer_account(&account_id, principal, memo, msg)
     }
 }
@@ -96,6 +104,7 @@ impl Contract {
                 principal,
                 memo.as_str(),
                 msg.as_str(),
+                TGAS_FOR_MIGRATION_TRANSFER,
             )
             .then(
                 Self::ext(env::current_account_id())
@@ -123,6 +132,11 @@ impl Contract {
 impl Contract {
     #[private]
     pub fn after_account_transferred(&mut self, account_id: AccountId) -> PromiseOrValue<()> {
+        env::log_str(&format!(
+            "after_account_transferred({account_id}) -> {}",
+            is_promise_success()
+        ));
+
         if is_promise_success() {
             self.clear_account(&account_id);
         }
@@ -134,6 +148,30 @@ impl Contract {
 }
 
 impl Contract {
+    fn prepare_migration_params(&mut self, account_id: AccountId) -> (TokenAmount, String, String) {
+        let (account, principal) = self.map_legacy_account(account_id.clone());
+        if account.jars.is_empty() {
+            panic_str("Nothing to migrate");
+        }
+        self.lock_account(&account_id);
+
+        let account = AccountVersioned::V1(account);
+        let account_vec: Base64VecU8 = to_vec(&account)
+            .unwrap_or_else(|_| panic_str("Failed to serialize account"))
+            .into();
+        let memo = format!("migrate {account_id}");
+        let msg = json!({
+                "type": "migrate",
+                "data": [
+                    account_id.clone(),
+                    account_vec,
+                ]
+        })
+        .to_string();
+
+        (principal, memo, msg)
+    }
+
     fn map_legacy_account(&self, account_id: AccountId) -> (Account, TokenAmount) {
         let now = env::block_timestamp_ms();
 
@@ -192,4 +230,79 @@ impl Contract {
     }
 }
 
-type MigratingAccount = (Account, HashMap<ProductId, TokenAmount>);
+#[cfg(test)]
+mod tests {
+    use near_sdk::test_utils::test_env::alice;
+
+    use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
+
+    use super::*;
+
+    #[test]
+    fn test_prepare_migration_params() {
+        let admin = admin();
+        let alice = alice();
+
+        let product_1 = Product {
+            id: "product_1".to_string(),
+            ..Product::new()
+        };
+        let product_2 = Product {
+            id: "product_2".to_string(),
+            ..Product::new()
+        };
+        let product_3 = Product {
+            id: "product_3".to_string(),
+            ..Product::new()
+        };
+        let product_4 = Product {
+            id: "product_4".to_string(),
+            ..Product::new()
+        };
+
+        let mut context = Context::new(admin.clone()).with_products(&[
+            product_1.clone(),
+            product_2.clone(),
+            product_3.clone(),
+            product_4.clone(),
+        ]);
+
+        context
+            .contract()
+            .create_jars(alice.clone(), "product_1".to_string(), 3 * 10u128.pow(18), 450);
+        context
+            .contract()
+            .create_jars(alice.clone(), "product_2".to_string(), 5 * 10u128.pow(18), 50);
+        context
+            .contract()
+            .create_jars(alice.clone(), "product_3".to_string(), 2 * 10u128.pow(18), 10);
+        context
+            .contract()
+            .create_jars(alice.clone(), "product_4".to_string(), 1 * 10u128.pow(18), 10);
+
+        context.switch_account(alice.clone());
+        let (principal, memo, msg) = context.contract().prepare_migration_params(alice.clone());
+        println!("principal: {principal}");
+        println!("memo: {memo}");
+        println!("msg: {msg}");
+    }
+
+    impl Contract {
+        fn create_jars(
+            &mut self,
+            account_id: AccountId,
+            product_id: ProductId,
+            principal: TokenAmount,
+            number_of_jars: u16,
+        ) {
+            let now = env::block_timestamp_ms();
+
+            for _ in 0..number_of_jars {
+                let id = self.increment_and_get_last_jar_id();
+                let jar = Jar::create(id, account_id.clone(), product_id.clone(), principal, now);
+
+                self.add_new_jar(&account_id, jar);
+            }
+        }
+    }
+}

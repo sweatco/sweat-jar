@@ -24,6 +24,7 @@ pub(crate) struct Context {
 impl Context {
     pub(crate) fn new(manager: AccountId) -> Self {
         let owner: AccountId = "owner".to_string().try_into().unwrap();
+        let owner_v2: AccountId = "owner_v2".to_string().try_into().unwrap();
         let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
         let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();
 
@@ -36,7 +37,7 @@ impl Context {
 
         testing_env!(builder.build());
 
-        let contract = Contract::init(ft_contract_id.clone(), fee_account_id, manager);
+        let contract = Contract::init(ft_contract_id.clone(), fee_account_id, manager, owner_v2);
 
         Self {
             owner,

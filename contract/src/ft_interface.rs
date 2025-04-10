@@ -26,7 +26,7 @@ impl Contract {
 
 pub(crate) trait FungibleTokenInterface {
     fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise;
-    fn ft_transfer_call(&self, receiver_id: &AccountId, amount: u128, memo: &str, msg: &str) -> Promise;
+    fn ft_transfer_call(&self, receiver_id: &AccountId, amount: u128, memo: &str, msg: &str, tgas: u64) -> Promise;
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
@@ -41,12 +41,13 @@ impl FungibleTokenInterface for FungibleTokenContract {
         }
     }
 
-    fn ft_transfer_call(&self, receiver_id: &AccountId, amount: u128, memo: &str, msg: &str) -> Promise {
+    fn ft_transfer_call(&self, receiver_id: &AccountId, amount: u128, memo: &str, msg: &str, tgas: u64) -> Promise {
         Promise::new(self.address.clone()).ft_transfer_call(
             receiver_id,
             amount,
             Some(memo.to_string()),
             msg.to_string(),
+            tgas,
         )
     }
 }
@@ -59,6 +60,7 @@ trait FungibleTokenPromise {
         amount: TokenAmount,
         memo: Option<String>,
         msg: String,
+        tgas: u64,
     ) -> Promise;
 }
 
@@ -86,6 +88,7 @@ impl FungibleTokenPromise for Promise {
         amount: TokenAmount,
         memo: Option<String>,
         msg: String,
+        tgas: u64,
     ) -> Promise {
         let args = serde_json::to_vec(&json!({
             "receiver_id": receiver_id,
@@ -99,7 +102,7 @@ impl FungibleTokenPromise for Promise {
             "ft_transfer_call".to_string(),
             args,
             NearToken::from_yoctonear(1),
-            Gas::from_tgas(15),
+            Gas::from_tgas(tgas),
         )
     }
 }

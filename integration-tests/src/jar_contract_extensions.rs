@@ -37,7 +37,6 @@ impl Internal for SweatJarContract<'_> {
                 None,
                 msg.to_string(),
             )
-            .with_user(user)
             .deposit(NearToken::from_yoctonear(1))
     }
 }
