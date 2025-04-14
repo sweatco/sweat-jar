@@ -34,8 +34,6 @@ pub struct StakeMessage {
 #[near_bindgen]
 impl FungibleTokenReceiver for Contract {
     fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> PromiseOrValue<U128> {
-        log_str("@@ ft_on_transfer");
-
         self.assert_from_ft_contract();
 
         let ft_message: FtMessage = serde_json::from_str(&msg).expect("Unable to deserialize msg");
@@ -46,19 +44,13 @@ impl FungibleTokenReceiver for Contract {
                 self.deposit(receiver_id, message.ticket, amount.0, &message.signature);
             }
             FtMessage::Migrate(account_id, account_bytes) => {
-                log_str("@@ process migration message");
-
-                if sender_id != self.previous_version_account_id {
-                    env::panic_str("Can migrate account only from previous version");
-                }
+                self.assert_migrate_from_previous_version(&sender_id);
 
                 self.store_account_raw(account_id.clone(), account_bytes);
                 require!(
                     self.get_account(&account_id).get_total_principal() == amount.0,
                     "Total principal mismatch"
                 );
-
-                log_str("@@ done migration");
             }
         }
 

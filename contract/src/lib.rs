@@ -14,6 +14,7 @@ use sweat_jar_model::{
     TokenAmount,
 };
 
+mod assertions;
 mod claim;
 mod common;
 mod event;

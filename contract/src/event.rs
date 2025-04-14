@@ -25,6 +25,7 @@ pub enum EventKind {
     RecordScore(Vec<ScoreData>),
     OldScoreWarning((Score, Local)),
     JarsMerge(AccountId),
+    MigrateProducts(Vec<ProductId>),
 }
 
 #[derive(Debug)]

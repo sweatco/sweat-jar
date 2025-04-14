@@ -1,11 +1,33 @@
 use near_sdk::{
     env,
     json_types::Base64VecU8,
+    near,
     store::key::{Identity, ToKey},
     AccountId, IntoStorageKey,
 };
 
-use crate::{Contract, StorageKey};
+use sweat_jar_model::data::product::Product;
+
+use crate::{
+    event::{emit, EventKind},
+    Contract, ContractExt, StorageKey,
+};
+
+#[near]
+impl Contract {
+    pub fn migrate_products(&mut self, products: Vec<Product>) {
+        self.assert_migrate_from_previous_version(&env::predecessor_account_id());
+
+        let mut product_ids = Vec::new();
+
+        for product in products {
+            self.products.insert(&product.id, &product);
+            product_ids.push(product.id);
+        }
+
+        emit(EventKind::MigrateProducts(product_ids));
+    }
+}
 
 impl Contract {
     pub(crate) fn store_account_raw(&mut self, account_id: AccountId, account_bytes: Base64VecU8) {
