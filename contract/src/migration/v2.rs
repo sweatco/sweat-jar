@@ -8,16 +8,17 @@ use crate::{
 };
 use crate::{internal::assert_gas, jar::account::versioned::Account as LegacyAccount};
 use near_sdk::env::log_str;
-use near_sdk::serde_json::json;
+use near_sdk::serde_json::{self, json};
 use near_sdk::{
     borsh::to_vec,
     collections::UnorderedMap,
     env::{self, panic_str},
     json_types::Base64VecU8,
-    near, serde_json,
+    near,
     store::{LookupMap, LookupSet},
     AccountId, Gas, PanicOnDefault, PromiseOrValue,
 };
+use near_sdk::{NearToken, Promise};
 use sweat_jar_model::{
     account::{v1::AccountScore, versioned::AccountVersioned, Account},
     api::MigrationToV2,
@@ -87,6 +88,15 @@ impl MigrationToV2 for Contract {
         ));
         self.transfer_account(&account_id, principal, memo, msg)
     }
+
+    fn migrate_products(&mut self) -> PromiseOrValue<()> {
+        self.assert_manager();
+
+        let products: Vec<product_v2::Product> = self.products.values().map(|product| product.into()).collect();
+        let products_json = serde_json::to_vec(&products).unwrap_or_else(|_| panic_str("Failed to serialize products"));
+
+        self.transfer_products(products_json)
+    }
 }
 
 #[cfg(not(test))]
@@ -113,6 +123,17 @@ impl Contract {
             )
             .into()
     }
+
+    fn transfer_products(&mut self, products_json: Vec<u8>) -> PromiseOrValue<()> {
+        Promise::new(self.migration.new_version_account_id.clone())
+            .function_call(
+                "migrate_products".to_string(),
+                products_json,
+                NearToken::from_yoctonear(0),
+                Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER),
+            )
+            .into()
+    }
 }
 
 #[cfg(test)]
@@ -125,6 +146,10 @@ impl Contract {
         _msg: String,
     ) -> PromiseOrValue<()> {
         self.after_account_transferred(account_id.clone())
+    }
+
+    fn transfer_products(&mut self, _products_json: Vec<u8>) -> PromiseOrValue<()> {
+        PromiseOrValue::Value(())
     }
 }
 
@@ -302,6 +327,87 @@ mod tests {
                 let jar = Jar::create(id, account_id.clone(), product_id.clone(), principal, now);
 
                 self.add_new_jar(&account_id, jar);
+            }
+        }
+    }
+}
+
+mod product_v2 {
+    use crate::product::model::{Apy, Cap, Product as ProductLegacy, Terms as TermsLegacy, WithdrawalFee};
+    use near_sdk::{
+        json_types::{Base64VecU8, U64},
+        near,
+    };
+    use sweat_jar_model::{ProductId, Score};
+
+    #[near(serializers=[borsh, json])]
+    #[derive(Clone, Debug)]
+    pub struct Product {
+        pub id: ProductId,
+        pub cap: Cap,
+        pub terms: Terms,
+        pub withdrawal_fee: Option<WithdrawalFee>,
+        pub public_key: Option<Base64VecU8>,
+        pub is_enabled: bool,
+    }
+
+    #[near(serializers=[borsh, json])]
+    #[derive(Clone, Debug, PartialEq)]
+    #[serde(tag = "type", content = "data", rename_all = "snake_case")]
+    pub enum Terms {
+        Fixed(FixedProductTerms),
+        Flexible(FlexibleProductTerms),
+        ScoreBased(ScoreBasedProductTerms),
+    }
+
+    #[near(serializers=[borsh, json])]
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct FixedProductTerms {
+        pub lockup_term: U64,
+        pub apy: Apy,
+    }
+
+    #[near(serializers=[borsh, json])]
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct FlexibleProductTerms {
+        pub apy: Apy,
+    }
+
+    #[near(serializers=[borsh, json])]
+    #[derive(Clone, Debug, PartialEq)]
+    pub struct ScoreBasedProductTerms {
+        pub score_cap: Score,
+        pub lockup_term: U64,
+    }
+
+    impl From<ProductLegacy> for Product {
+        fn from(value: ProductLegacy) -> Self {
+            let terms: Terms = match value.terms {
+                TermsLegacy::Fixed(terms) => {
+                    if value.score_cap > 0 {
+                        Terms::ScoreBased(ScoreBasedProductTerms {
+                            lockup_term: terms.lockup_term.into(),
+
+                            score_cap: value.score_cap,
+                        })
+                    } else {
+                        Terms::Fixed(FixedProductTerms {
+                            lockup_term: terms.lockup_term.into(),
+                            apy: value.apy,
+                        })
+                    }
+                }
+
+                TermsLegacy::Flexible => Terms::Flexible(FlexibleProductTerms { apy: value.apy }),
+            };
+
+            Self {
+                id: value.id,
+                cap: value.cap,
+                terms,
+                withdrawal_fee: value.withdrawal_fee,
+                public_key: value.public_key.map(Into::into),
+                is_enabled: value.is_enabled,
             }
         }
     }
