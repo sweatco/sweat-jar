@@ -11,7 +11,16 @@ use nitka::near_sdk::json_types::{Base64VecU8, I64, U128};
 use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
 
-use crate::{data::{claim::ClaimedAmountView, deposit::DepositTicket, jar::{AggregatedInterestView, JarView}, product::{Product, ProductId}, withdraw::{BulkWithdrawView, WithdrawView}}, Score, UTC};
+use crate::{
+    data::{
+        claim::ClaimedAmountView,
+        deposit::DepositTicket,
+        jar::{AggregatedInterestView, JarView},
+        product::{Product, ProductId},
+        withdraw::{BulkWithdrawView, WithdrawView},
+    },
+    Score, UTC,
+};
 
 #[cfg(feature = "integration-test")]
 pub struct SweatJarContract<'a> {
@@ -124,21 +133,6 @@ pub trait FeeApi {
 
     /// Transfers collected fee to a dedicated account.
     fn withdraw_fee(&mut self) -> ::near_sdk::PromiseOrValue<U128>;
-}
-
-#[make_integration_version]
-pub trait MigrationToClaimRemainder {
-    fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>);
-}
-
-#[make_integration_version]
-pub trait MigratonToNearSdk5 {
-    fn migrate_state_to_near_sdk_5() -> Self;
-}
-
-#[make_integration_version]
-pub trait StateMigration {
-    fn migrate_state() -> Self;
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.

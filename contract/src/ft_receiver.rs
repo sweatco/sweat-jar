@@ -1,6 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{
-    env::{self, log_str},
     json_types::U128,
     near, require, serde_json, AccountId, PromiseOrValue,
 };
