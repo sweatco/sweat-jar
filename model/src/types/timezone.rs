@@ -2,7 +2,7 @@ use std::ops::{Deref, DerefMut};
 
 use near_sdk::{env::block_timestamp_ms, near, Timestamp};
 
-use crate::{timezone::timestamps::TimeHelper, Day, Local, MS_IN_HOUR, UTC};
+use crate::{Day, Local, TimeHelper, MS_IN_HOUR, UTC};
 
 /// Timezone described as time shift from UTC in ms
 #[repr(transparent)]

@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use near_sdk::{json_types::U64, test_utils::test_env::alice};
-use sweat_jar_model::{jar::DepositTicket, product::Product};
+use sweat_jar_model::data::{deposit::DepositTicket, product::Product};
 
 use crate::{common::tests::Context, test_utils::admin};
 
@@ -29,7 +29,10 @@ mod signature_tests {
         json_types::{Base64VecU8, U64},
         test_utils::test_env::alice,
     };
-    use sweat_jar_model::{jar::DepositTicket, product::Product, signer::test_utils::MessageSigner};
+    use sweat_jar_model::{
+        data::{deposit::DepositTicket, product::Product},
+        signer::test_utils::MessageSigner,
+    };
 
     use crate::{
         common::tests::Context,

@@ -1,54 +1,9 @@
-use std::{
-    fmt::{Display, Formatter},
-    ops::Deref,
-};
-
 use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
 use near_sdk::require;
-#[cfg(not(feature = "integration-test"))]
-use near_sdk::AccountId;
-#[cfg(feature = "integration-test")]
-use nitka::near_sdk::AccountId;
 use sha2::{Digest, Sha256};
-
-use crate::{ProductId, Timestamp, TokenAmount};
-
-pub struct DepositMessage(String);
 
 pub fn sha256(value: &[u8]) -> Vec<u8> {
     Sha256::digest(value).to_vec()
-}
-
-impl DepositMessage {
-    pub fn new(
-        contract_account_id: &AccountId,
-        receiver_account_id: &AccountId,
-        product_id: &ProductId,
-        amount: TokenAmount,
-        valid_until: Timestamp,
-        nonce: u32,
-    ) -> Self {
-        Self(format!(
-            "{contract_account_id},{receiver_account_id},{product_id},{amount},{nonce},{valid_until}"
-        ))
-    }
-
-    pub fn sha256(&self) -> Vec<u8> {
-        sha256(self.0.as_bytes())
-    }
-}
-
-impl Display for DepositMessage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.clone())
-    }
-}
-
-impl Deref for DepositMessage {
-    type Target = String;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
 }
 
 pub struct MessageVerifier {

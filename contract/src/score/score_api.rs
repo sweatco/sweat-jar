@@ -4,7 +4,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::ScoreApi,
-    product::{Product, Terms},
+    data::product::{Product, Terms},
     Score, Timezone, UTC,
 };
 

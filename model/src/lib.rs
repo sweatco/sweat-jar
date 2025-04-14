@@ -1,18 +1,10 @@
 pub mod api;
-pub mod claimed_amount_view;
-pub mod jar;
-pub mod product;
-mod score;
+pub mod data;
 pub mod signer;
-mod timezone;
-mod udecimal;
-pub mod withdraw;
+pub mod types;
 
-pub use score::*;
-pub use timezone::*;
-pub use udecimal::*;
-
-pub type ProductId = String;
+pub use data::score::*;
+pub use types::*;
 
 /// Amount of fungible tokens
 pub type TokenAmount = u128;

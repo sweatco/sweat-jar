@@ -2,18 +2,16 @@ use std::collections::HashMap;
 
 use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, ProductId, TokenAmount,
+    api::ClaimApi,
+    data::{claim::ClaimedAmountView, jar::AggregatedTokenAmountView, product::ProductId},
+    TokenAmount,
 };
 
 use crate::{
-    event::{emit, ClaimData, EventKind},
-    internal::is_promise_success,
-    jar::{
+    event::{emit, ClaimData, EventKind}, internal::is_promise_success, jar::{
         account::v1::AccountV1Companion,
         model::{Jar, JarCompanion},
-    },
-    product::model::v1::InterestCalculator,
-    Contract, ContractExt,
+    }, product::model::v1::InterestCalculator, Contract, ContractExt
 };
 
 #[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.

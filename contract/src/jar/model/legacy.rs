@@ -9,7 +9,10 @@ use near_sdk::{
     serde::{Deserialize, Serialize},
     AccountId,
 };
-use sweat_jar_model::{jar::JarId, ProductId, TokenAmount};
+use sweat_jar_model::{
+    data::{jar::JarId, product::ProductId},
+    TokenAmount,
+};
 
 use crate::{common::Timestamp, jar::model::JarCache, score::AccountScore};
 

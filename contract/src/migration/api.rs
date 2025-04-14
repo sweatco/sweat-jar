@@ -1,5 +1,11 @@
-use near_sdk::{env, env::panic_str, near_bindgen, require};
-use sweat_jar_model::{ProductId, TokenAmount};
+use near_sdk::{
+    env::{self, panic_str},
+    json_types::Base64VecU8,
+    near_bindgen, require,
+    store::key::{Identity, ToKey},
+    AccountId, IntoStorageKey,
+};
+use sweat_jar_model::{data::product::ProductId, TokenAmount};
 
 use crate::{
     event::{emit, EventKind},
@@ -9,7 +15,7 @@ use crate::{
         model::{AccountLegacyV3, JarCache},
     },
     product::model::v1::InterestCalculator,
-    Contract, ContractExt,
+    Contract, ContractExt, StorageKey,
 };
 
 #[near_bindgen]
@@ -31,6 +37,15 @@ impl Contract {
 }
 
 impl Contract {
+    pub(crate) fn store_account_raw(&mut self, account_id: AccountId, account_bytes: Base64VecU8) {
+        let key = Identity::to_key(
+            &StorageKey::Accounts.into_storage_key(),
+            account_id.as_bytes(),
+            &mut Vec::new(),
+        );
+        env::storage_write(&key, &account_bytes.0);
+    }
+
     pub(crate) fn map_legacy_account(&self, legacy_account: &AccountLegacyV3) -> Account {
         let now = env::block_timestamp_ms();
         let (mut account, claimed_balances) = MigratingAccount::from(legacy_account);
@@ -64,7 +79,7 @@ impl Contract {
 mod tests {
     use near_sdk::test_utils::test_env::alice;
     use sweat_jar_model::{
-        product::{Apy, FixedProductTerms, Product, Terms},
+        data::product::{Apy, FixedProductTerms, Product, Terms},
         UDecimal, MS_IN_YEAR,
     };
 

@@ -6,7 +6,11 @@ use near_sdk::{
     BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
-use sweat_jar_model::{api::InitApi, product::Product, ProductId, TokenAmount};
+use sweat_jar_model::{
+    api::InitApi,
+    data::product::{Product, ProductId},
+    TokenAmount,
+};
 
 use crate::jar::{
     account::versioned::AccountVersioned,
@@ -61,6 +65,7 @@ pub struct Contract {
 
     pub fee_amount: TokenAmount,
     pub archive: Archive,
+    pub previous_version_account_id: AccountId,
 }
 
 #[near]
@@ -83,7 +88,12 @@ pub(crate) enum StorageKey {
 impl InitApi for Contract {
     #[init]
     #[private]
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        previous_version_account_id: AccountId,
+    ) -> Self {
         Self {
             token_account_id,
             fee_account_id,
@@ -97,6 +107,7 @@ impl InitApi for Contract {
                 accounts_v2: LookupMap::new(StorageKey::AccountsLegacyV2),
                 accounts_v3: LookupMap::new(StorageKey::AccountsLegacyV3),
             },
+            previous_version_account_id,
         }
     }
 }

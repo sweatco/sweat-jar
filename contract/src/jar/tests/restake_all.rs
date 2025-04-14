@@ -1,9 +1,11 @@
 use near_sdk::test_utils::test_env::alice;
 use sweat_jar_model::{
     api::{ProductApi, RestakeApi},
-    jar::DepositTicket,
-    product::{Apy, FixedProductTerms, Product, Terms},
-    signer::{test_utils::MessageSigner, DepositMessage},
+    data::{
+        deposit::{DepositMessage, DepositTicket},
+        product::{Apy, FixedProductTerms, Product, Terms},
+    },
+    signer::test_utils::MessageSigner,
     UDecimal, MS_IN_YEAR,
 };
 

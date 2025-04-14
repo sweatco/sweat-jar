@@ -8,7 +8,11 @@ use std::{
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, product::Product, ProductId, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use sweat_jar_model::{
+    api::InitApi,
+    data::product::{Product, ProductId},
+    TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
+};
 
 use crate::{
     common::Timestamp,
@@ -24,6 +28,7 @@ pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
     pub owner: AccountId,
     ft_contract_id: AccountId,
+    pub legacy_jar_contract_id: AccountId,
     builder: VMContextBuilder,
 }
 
@@ -32,6 +37,7 @@ impl Context {
         let owner: AccountId = "owner".to_string().try_into().unwrap();
         let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
         let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();
+        let legacy_jar_contract_id: AccountId = "legacy_jar".to_string().try_into().unwrap();
 
         let mut builder = VMContextBuilder::new();
         builder
@@ -42,12 +48,18 @@ impl Context {
 
         testing_env!(builder.build());
 
-        let contract = Contract::init(ft_contract_id.clone(), fee_account_id, manager);
+        let contract = Contract::init(
+            ft_contract_id.clone(),
+            fee_account_id,
+            manager,
+            legacy_jar_contract_id.clone(),
+        );
 
         Self {
             owner,
             ft_contract_id,
             builder,
+            legacy_jar_contract_id,
             contract: Arc::new(Mutex::new(contract)),
         }
     }

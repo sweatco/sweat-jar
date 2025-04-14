@@ -1,7 +1,10 @@
 #![cfg(test)]
 
 use near_sdk::AccountId;
-use sweat_jar_model::{jar::DepositTicket, signer::DepositMessage, TokenAmount};
+use sweat_jar_model::{
+    data::deposit::{DepositMessage, DepositTicket},
+    TokenAmount,
+};
 
 use crate::common::tests::Context;
 

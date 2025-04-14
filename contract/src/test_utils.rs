@@ -4,7 +4,7 @@ use std::panic::{catch_unwind, UnwindSafe};
 
 use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+    data::product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
     signer::test_utils::MessageSigner,
     TokenAmount, UDecimal, MS_IN_YEAR,
 };
@@ -26,10 +26,6 @@ impl Jar {
             is_pending_withdraw: false,
             claim_remainder: 0,
         }
-    }
-
-    pub(crate) fn total_principal(&self) -> TokenAmount {
-        self.deposits.iter().map(|deposit| deposit.principal).sum()
     }
 
     pub(crate) fn with_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Self {

@@ -174,7 +174,7 @@ impl Default for AccountScore {
 mod test {
     use near_sdk::env::block_timestamp_ms;
     use sweat_jar_model::{
-        product::{test_utils::DEFAULT_SCORE_PRODUCT_NAME, Cap, Product, ScoreBasedProductTerms, Terms},
+        data::product::{test_utils::DEFAULT_SCORE_PRODUCT_NAME, Cap, Product, ScoreBasedProductTerms, Terms},
         Day, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
     };
 
@@ -309,7 +309,6 @@ mod test {
             withdrawal_fee: None,
             public_key: None,
             is_enabled: true,
-            is_restakable: true,
         }
     }
 }

@@ -10,13 +10,16 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::WithdrawApi,
-    withdraw::{BulkWithdrawView, WithdrawView},
-    ProductId, TokenAmount,
+    data::{
+        product::ProductId,
+        withdraw::{BulkWithdrawView, WithdrawView},
+    },
+    TokenAmount,
 };
 
 #[cfg(not(test))]
 use crate::internal::assert_gas;
-use crate::{internal::is_promise_success, jar::model::Jar};
+use crate::internal::is_promise_success;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 #[serde(crate = "near_sdk::serde")]

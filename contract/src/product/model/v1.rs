@@ -2,8 +2,10 @@ use std::cmp;
 
 use near_sdk::{json_types::Base64VecU8, require};
 use sweat_jar_model::{
-    product::{FixedProductTerms, FlexibleProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},
-    ProductId, Score, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
+    data::product::{
+        FixedProductTerms, FlexibleProductTerms, Product, ProductId, ScoreBasedProductTerms, Terms, WithdrawalFee,
+    },
+    Score, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
@@ -119,7 +121,7 @@ impl ProductAssertions for Product {
 }
 
 // TODO: add tests
-pub(crate) trait InterestCalculator {
+pub trait InterestCalculator {
     fn get_interest(&self, account: &Account, jar: &Jar, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
         let apy = self.get_apy(account);
@@ -294,8 +296,8 @@ impl Contract {
 
 impl From<ProductLegacy> for Product {
     fn from(value: ProductLegacy) -> Self {
-        let (terms, is_restakable): (Terms, bool) = match value.terms {
-            TermsLegacy::Fixed(terms) => (
+        let terms: Terms = match value.terms {
+            TermsLegacy::Fixed(terms) => {
                 if value.score_cap > 0 {
                     Terms::ScoreBased(ScoreBasedProductTerms {
                         lockup_term: terms.lockup_term.into(),
@@ -306,10 +308,9 @@ impl From<ProductLegacy> for Product {
                         lockup_term: terms.lockup_term.into(),
                         apy: value.apy,
                     })
-                },
-                terms.allows_restaking,
-            ),
-            TermsLegacy::Flexible => (Terms::Flexible(FlexibleProductTerms { apy: value.apy }), true),
+                }
+            }
+            TermsLegacy::Flexible => Terms::Flexible(FlexibleProductTerms { apy: value.apy }),
         };
 
         Self {
@@ -319,7 +320,6 @@ impl From<ProductLegacy> for Product {
             withdrawal_fee: value.withdrawal_fee,
             public_key: value.public_key.map(Into::into),
             is_enabled: value.is_enabled,
-            is_restakable,
         }
     }
 }

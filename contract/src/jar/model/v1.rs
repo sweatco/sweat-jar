@@ -1,5 +1,5 @@
 use near_sdk::near;
-use sweat_jar_model::{product::Terms, TokenAmount};
+use sweat_jar_model::{data::product::Terms, TokenAmount};
 
 use crate::{
     assert::assert_not_locked,
@@ -46,6 +46,10 @@ impl Deposit {
 }
 
 impl Jar {
+    pub(crate) fn total_principal(&self) -> TokenAmount {
+        self.deposits.iter().map(|deposit| deposit.principal).sum()
+    }
+
     pub(crate) fn get_liquid_balance(&self, terms: &Terms) -> (TokenAmount, usize) {
         if terms.allows_early_withdrawal() {
             let sum = self.deposits.iter().map(|deposit| deposit.principal).sum();

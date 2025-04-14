@@ -2,7 +2,10 @@ use near_sdk::{
     json_types::{Base64VecU8, U128},
     log, near, serde_json, AccountId,
 };
-use sweat_jar_model::{product::Product, Local, ProductId, Score, TokenAmount, UTC};
+use sweat_jar_model::{
+    data::product::{Product, ProductId},
+    Local, Score, TokenAmount, UTC,
+};
 
 use crate::{common::Timestamp, env, PACKAGE_NAME, VERSION};
 

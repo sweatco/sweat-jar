@@ -1,7 +1,10 @@
 use std::clone::Clone;
 
 use near_sdk::{assert_one_yocto, near_bindgen, require};
-use sweat_jar_model::{api::ProductApi, product::Product, ProductId};
+use sweat_jar_model::{
+    api::ProductApi,
+    data::product::{Product, ProductId},
+};
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},

@@ -24,6 +24,7 @@ pub trait IntegrationContext {
     async fn alice(&mut self) -> Result<Account>;
     async fn bob(&mut self) -> Result<Account>;
     async fn fee(&mut self) -> Result<Account>;
+    async fn legacy_account(&mut self) -> Result<Account>;
     fn sweat_jar(&self) -> SweatJarContract;
     fn sweat_jar_legacy(&self) -> SweatJarContract;
     fn ft_contract(&self) -> SweatContract;
@@ -44,6 +45,10 @@ impl IntegrationContext for Context {
 
     async fn fee(&mut self) -> Result<Account> {
         self.account("fee_longer_name_to_be_closer_to_real").await
+    }
+
+    async fn legacy_account(&mut self) -> Result<Account> {
+        self.account("legacy_account").await
     }
 
     fn sweat_jar(&self) -> SweatJarContract {
@@ -108,6 +113,7 @@ pub(crate) async fn _prepare_contract(
     let bob = context.bob().await?;
     let manager = context.manager().await?;
     let fee_account = context.fee().await?;
+    let legacy_account = context.legacy_account().await?;
 
     context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
     context
@@ -116,6 +122,7 @@ pub(crate) async fn _prepare_contract(
             context.ft_contract().contract.as_account().to_near(),
             fee_account.to_near(),
             manager.to_near(),
+            legacy_account.to_near(),
         )
         .await?;
 
@@ -136,6 +143,7 @@ pub(crate) async fn _prepare_contract(
                 context.ft_contract().contract.as_account().to_near(),
                 fee_account.to_near(),
                 manager.to_near(),
+                legacy_account.to_near(),
             )
             .await?;
 
@@ -155,6 +163,10 @@ pub(crate) async fn _prepare_contract(
 
     context
         .ft_contract()
+        .storage_deposit(legacy_account.to_near().into(), None)
+        .await?;
+    context
+        .ft_contract()
         .storage_deposit(fee_account.to_near().into(), None)
         .await?;
     context
@@ -168,6 +180,10 @@ pub(crate) async fn _prepare_contract(
     context
         .ft_contract()
         .storage_deposit(bob.to_near().into(), None)
+        .await?;
+    context
+        .ft_contract()
+        .tge_mint(&legacy_account.to_near(), U128(100_000_000_000 * 10u128.pow(18)))
         .await?;
     context.ft_contract().tge_mint(&bob.to_near(), INITIAL_BALANCE).await?;
     context

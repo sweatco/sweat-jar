@@ -1,7 +1,7 @@
 use near_sdk::near;
 use sweat_jar_model::{
-    product::{Apy, Cap, WithdrawalFee},
-    ProductId, Score,
+    data::product::{Apy, Cap, ProductId, WithdrawalFee},
+    Score,
 };
 
 use crate::common::Duration;

@@ -11,13 +11,7 @@ use nitka::near_sdk::json_types::{Base64VecU8, I64, U128};
 use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
 
-use crate::{
-    claimed_amount_view::ClaimedAmountView,
-    jar::{AggregatedInterestView, DepositTicket, JarView},
-    product::Product,
-    withdraw::{BulkWithdrawView, WithdrawView},
-    ProductId, Score, UTC,
-};
+use crate::{data::{claim::ClaimedAmountView, deposit::DepositTicket, jar::{AggregatedInterestView, JarView}, product::{Product, ProductId}, withdraw::{BulkWithdrawView, WithdrawView}}, Score, UTC};
 
 #[cfg(feature = "integration-test")]
 pub struct SweatJarContract<'a> {
@@ -26,7 +20,12 @@ pub struct SweatJarContract<'a> {
 
 #[make_integration_version]
 pub trait InitApi {
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self;
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        previous_version_account_id: AccountId,
+    ) -> Self;
 }
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
@@ -256,7 +255,8 @@ pub trait WithdrawApi {
     fn withdraw(&mut self, product_id: ProductId) -> ::near_sdk::PromiseOrValue<WithdrawView>;
 
     /// Withdraws all jars for user, or only specified list of jars if `jars` argument is `Some`
-    fn withdraw_all(&mut self, product_ids: Option<HashSet<ProductId>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
+    fn withdraw_all(&mut self, product_ids: Option<HashSet<ProductId>>)
+        -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
 #[make_integration_version]

@@ -8,8 +8,10 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
-    jar::AggregatedTokenAmountView,
-    product::{Apy, DowngradableApy, FixedProductTerms, Terms},
+    data::{
+        jar::AggregatedTokenAmountView,
+        product::{Apy, DowngradableApy, FixedProductTerms, Terms},
+    },
     signer::test_utils::MessageSigner,
     TokenAmount, UDecimal, MS_IN_YEAR,
 };

@@ -4,17 +4,16 @@ use std::{
 };
 
 use near_sdk::{env, env::panic_str, near, AccountId};
-use sweat_jar_model::{product::Product, ProductId, Timezone, TokenAmount};
+use sweat_jar_model::{
+    data::product::{Product, ProductId},
+    Timezone, TokenAmount,
+};
 
 use crate::{
-    common::Timestamp,
-    jar::{
+    common::Timestamp, jar::{
         account::Account,
         model::{Deposit, Jar, JarCompanion},
-    },
-    product::model::v1::InterestCalculator,
-    score::AccountScore,
-    Contract,
+    }, product::model::v1::InterestCalculator, score::AccountScore, Contract
 };
 
 #[near]
@@ -37,6 +36,12 @@ pub struct AccountV1Companion {
 }
 
 impl Account {
+    pub(crate) fn get_total_principal(&self) -> TokenAmount {
+        self.jars
+            .iter()
+            .fold(TokenAmount::default(), |acc, (_, jar)| acc + jar.total_principal())
+    }
+
     pub(crate) fn get_jar(&self, product_id: &ProductId) -> &Jar {
         self.jars
             .get(product_id)

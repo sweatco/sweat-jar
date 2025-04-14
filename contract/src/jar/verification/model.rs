@@ -1,7 +1,7 @@
 use near_sdk::{env, env::panic_str, json_types::Base64VecU8, require, AccountId};
 use sweat_jar_model::{
-    jar::DepositTicket,
-    signer::{DepositMessage, MessageVerifier},
+    data::deposit::{DepositMessage, DepositTicket},
+    signer::MessageVerifier,
     TokenAmount,
 };
 

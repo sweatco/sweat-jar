@@ -1,9 +1,8 @@
 use near_sdk::test_utils::test_env::{alice, bob, carol};
 use sweat_jar_model::{
     api::{JarApi, ProductApi, RestakeApi},
-    jar::DepositTicket,
-    product::Product,
-    signer::{test_utils::MessageSigner, DepositMessage},
+    data::{deposit::{DepositTicket, DepositMessage}, product::Product},
+    signer::test_utils::MessageSigner,
     MS_IN_DAY, MS_IN_YEAR,
 };
 

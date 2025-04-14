@@ -159,7 +159,7 @@ async fn testnet_sanity_check() -> Result<()> {
     sleep(Duration::from_secs(5)).await;
 
     let user_balance_before_withdrawal = ctx.token_contract().ft_balance_of(ctx.user.to_near()).await?;
-    ctx.jar_contract().withdraw_all().with_user(&ctx.user).await?;
+    ctx.jar_contract().withdraw_all(None).with_user(&ctx.user).await?;
     let user_balance_after_withdrawal = ctx.token_contract().ft_balance_of(ctx.user.to_near()).await?;
 
     assert_eq!(

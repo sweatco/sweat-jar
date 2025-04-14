@@ -3,8 +3,10 @@
 use near_sdk::{json_types::U128, test_utils::test_env::alice, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, WithdrawApi},
-    claimed_amount_view::ClaimedAmountView,
-    product::{Apy, FixedProductTerms, Product, Terms},
+    data::{
+        claim::ClaimedAmountView,
+        product::{Apy, FixedProductTerms, Product, Terms},
+    },
     UDecimal, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
 };
 

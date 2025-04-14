@@ -3,9 +3,9 @@ use std::{collections::HashMap, convert::Into};
 use near_sdk::{env, json_types::U128, near_bindgen, AccountId};
 use sweat_jar_model::{
     api::JarApi,
-    jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView}
-    ,
-    ProductId, TokenAmount,
+    data::jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
+    data::product::ProductId,
+    TokenAmount,
 };
 
 use crate::{

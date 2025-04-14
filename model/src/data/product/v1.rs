@@ -3,7 +3,9 @@ use near_sdk::{
     near,
 };
 
-use crate::{ProductId, Score, TokenAmount, UDecimal};
+use crate::{Score, TokenAmount, UDecimal};
+
+pub type ProductId = String;
 
 /// The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.
 #[near(serializers=[borsh, json])]
@@ -26,15 +28,6 @@ pub struct Product {
 
     /// Indicates whether it's possible to create a new jar for this product.
     pub is_enabled: bool,
-
-    #[deprecated(note = "It doesn't have any effect and will be removed")]
-    pub is_restakable: bool,
-}
-
-impl Product {
-    pub fn is_protected(&self) -> bool {
-        self.public_key.is_some()
-    }
 }
 
 /// The `Terms` enum describes additional terms specific to either Flexible or Fixed products.
@@ -86,16 +79,6 @@ pub struct ScoreBasedProductTerms {
 #[derive(Clone, Debug)]
 pub struct Cap(U128, U128);
 
-impl Cap {
-    pub fn min(&self) -> TokenAmount {
-        self.0 .0
-    }
-
-    pub fn max(&self) -> TokenAmount {
-        self.1 .0
-    }
-}
-
 /// The `WithdrawalFee` enum describes withdrawal fee details, which can be either a fixed amount or a percentage of the withdrawal.
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
@@ -130,6 +113,12 @@ pub struct DowngradableApy {
     pub fallback: UDecimal,
 }
 
+impl Product {
+    pub fn is_protected(&self) -> bool {
+        self.public_key.is_some()
+    }
+}
+
 impl Apy {
     pub fn get_effective(&self, is_penalty_applied: bool) -> UDecimal {
         match self {
@@ -145,12 +134,20 @@ impl Apy {
     }
 }
 
+impl Cap {
+    pub fn min(&self) -> TokenAmount {
+        self.0 .0
+    }
+
+    pub fn max(&self) -> TokenAmount {
+        self.1 .0
+    }
+}
+
 // TODO: move to test cfg
 pub mod test_utils {
-    use crate::{
-        product::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee},
-        TokenAmount, UDecimal, MS_IN_YEAR,
-    };
+    use super::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee};
+    use crate::{TokenAmount, UDecimal, MS_IN_YEAR};
 
     /// Default product name. If product name wasn't specified it will have this name.
     pub const DEFAULT_PRODUCT_NAME: &str = "product";
@@ -168,7 +165,6 @@ pub mod test_utils {
                 withdrawal_fee: None,
                 public_key: None,
                 is_enabled: true,
-                is_restakable: true,
             }
         }
     }
@@ -253,10 +249,8 @@ pub mod serde_utils {
         serde::{Deserialize, Deserializer, Serialize, Serializer},
     };
 
-    use crate::{
-        product::{Apy, DowngradableApy},
-        UDecimal,
-    };
+    use super::{Apy, DowngradableApy};
+    use crate::UDecimal;
 
     #[near(serializers=[json])]
     struct ApyHelper {

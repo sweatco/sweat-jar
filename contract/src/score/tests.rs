@@ -9,10 +9,12 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
-    jar::DepositTicket,
-    product::{Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
-    withdraw::WithdrawView,
-    ProductId, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+    data::{
+        deposit::DepositTicket,
+        product::{Apy, FixedProductTerms, Product, ProductId, ScoreBasedProductTerms, Terms},
+        withdraw::WithdrawView,
+    },
+    Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
 };
 
 use crate::{

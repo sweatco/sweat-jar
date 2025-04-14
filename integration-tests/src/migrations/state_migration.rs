@@ -1,5 +1,5 @@
 use anyhow::Result;
-use near_workspaces::{network::Sandbox, types::NearToken, Account, Contract, Worker};
+use near_workspaces::{network::Sandbox, types::NearToken, Account, AccountId, Contract, Worker};
 use nitka::{build::build_contract, json, misc::ToNear, near_sdk::serde_json::Value};
 use sweat_jar_model::{
     api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, StateMigrationIntegration, SweatJarContract},
@@ -48,6 +48,7 @@ async fn prepare_legacy_jar_contract(
             accounts.ft.to_near(),
             accounts.fee.to_near(),
             accounts.manager.to_near(),
+            accounts.legacy_account.to_near(),
         )
         .await?;
 
@@ -151,6 +152,7 @@ struct Accounts {
     manager: Account,
     fee: Account,
     alice: Account,
+    legacy_account: Account,
 }
 
 impl Accounts {
@@ -161,6 +163,7 @@ impl Accounts {
             manager: worker.dev_create_account().await?,
             fee: worker.dev_create_account().await?,
             alice: worker.dev_create_account().await?,
+            legacy_account: worker.dev_create_account().await?,
         };
 
         Ok(instance)

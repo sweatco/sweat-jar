@@ -5,7 +5,7 @@ use fake::Fake;
 use itertools::Itertools;
 use near_sdk::test_utils::test_env::{alice, bob};
 use sweat_jar_model::{
-    product::{
+    data::product::{
         test_utils::{DEFAULT_PRODUCT_NAME, DEFAULT_SCORE_PRODUCT_NAME},
         Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms,
     },

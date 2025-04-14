@@ -7,7 +7,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::ProductApi,
-    product::{
+    data::product::{
         Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ScoreBasedProductTerms, Terms,
         WithdrawalFee,
     },
@@ -310,7 +310,6 @@ fn register_score_based_product_with_signature() {
         withdrawal_fee: None,
         public_key: Base64VecU8::from(signer.public_key()).into(),
         is_enabled: true,
-        is_restakable: true,
     };
 
     context.switch_account(admin);
@@ -335,7 +334,6 @@ fn register_score_based_product_without_signature() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
-        is_restakable: true,
     };
 
     context.switch_account(admin);
@@ -358,7 +356,6 @@ fn register_product_with_inverted_cap() {
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
-        is_restakable: true,
     };
 
     context.switch_account(admin);

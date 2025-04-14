@@ -57,7 +57,7 @@ async fn claim_many_jars() -> Result<()> {
         context.sweat_jar().get_jars_for_account(alice.to_near()).await?.len(),
     );
 
-    let withdrawn = context.sweat_jar().withdraw_all().with_user(&alice).await?;
+    let withdrawn = context.sweat_jar().withdraw_all(None).with_user(&alice).await?;
     assert_eq!(1, withdrawn.withdrawals.len());
     assert_eq!(DEPOSITS_COUNT as u128 * DEPOSIT_PRINCIPAL, withdrawn.total_amount.0);
 

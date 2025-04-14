@@ -1,5 +1,8 @@
 use near_sdk::{json_types::Base64VecU8, near, AccountId};
-use sweat_jar_model::{jar::DepositTicket, product::Terms, TokenAmount};
+use sweat_jar_model::{
+    data::{deposit::DepositTicket, product::Terms},
+    TokenAmount,
+};
 
 use crate::{
     common::Timestamp,

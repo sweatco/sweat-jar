@@ -6,9 +6,11 @@ use itertools::Itertools;
 use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, WithdrawApi},
-    product::{Apy, FixedProductTerms, FlexibleProductTerms, Product, Terms, WithdrawalFee},
-    withdraw::BulkWithdrawView,
-    ProductId, TokenAmount, UDecimal, MS_IN_DAY,
+    data::{
+        product::{Apy, FixedProductTerms, FlexibleProductTerms, Product, ProductId, Terms, WithdrawalFee},
+        withdraw::BulkWithdrawView,
+    },
+    TokenAmount, UDecimal, MS_IN_DAY,
 };
 
 use crate::{
@@ -467,7 +469,11 @@ fn batch_withdraw_partially() {
         .with_products(&[product_1.clone(), product_2.clone(), product_3.clone()])
         .with_jars(
             &alice(),
-            &[(product_1.id.clone(), jar_1), (product_2.id.clone(), jar_2), (product_3.id.clone(), jar_3)],
+            &[
+                (product_1.id.clone(), jar_1),
+                (product_2.id.clone(), jar_2),
+                (product_3.id.clone(), jar_3),
+            ],
         );
 
     // One day after last deposit unlock

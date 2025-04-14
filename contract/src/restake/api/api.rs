@@ -4,7 +4,11 @@ use near_sdk::{
     near, require, AccountId, PromiseOrValue,
     PromiseOrValue::Value,
 };
-use sweat_jar_model::{api::RestakeApi, jar::DepositTicket, ProductId, TokenAmount};
+use sweat_jar_model::{
+    api::RestakeApi,
+    data::{deposit::DepositTicket, product::ProductId},
+    TokenAmount,
+};
 
 use crate::{
     assert::assert_not_locked,
