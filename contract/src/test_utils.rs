@@ -4,22 +4,27 @@ use std::panic::{catch_unwind, UnwindSafe};
 
 use near_sdk::{AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    data::product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+    data::{
+        jar::{Deposit, Jar},
+        product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+    },
     signer::test_utils::MessageSigner,
-    TokenAmount, UDecimal, MS_IN_YEAR,
-};
-
-use crate::{
-    common::Timestamp,
-    jar::model::{Deposit, Jar},
+    Timestamp, TokenAmount, UDecimal, MS_IN_YEAR,
 };
 
 pub fn admin() -> AccountId {
     "admin".parse().unwrap()
 }
 
-impl Jar {
-    pub(crate) fn new() -> Self {
+pub trait JarBuilder {
+    fn new() -> Jar;
+    fn with_deposit(self, created_at: Timestamp, principal: TokenAmount) -> Self;
+    fn with_deposits(self, deposits: Vec<(Timestamp, TokenAmount)>) -> Self;
+    fn with_pending_withdraw(self) -> Self;
+}
+
+impl JarBuilder for Jar {
+    fn new() -> Self {
         Jar {
             deposits: vec![],
             cache: None,
@@ -28,12 +33,12 @@ impl Jar {
         }
     }
 
-    pub(crate) fn with_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Self {
+    fn with_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Self {
         self.deposits.push(Deposit::new(created_at, principal));
         self
     }
 
-    pub(crate) fn with_deposits(mut self, deposits: Vec<(Timestamp, TokenAmount)>) -> Self {
+    fn with_deposits(mut self, deposits: Vec<(Timestamp, TokenAmount)>) -> Self {
         self.deposits.extend(
             deposits
                 .into_iter()
@@ -42,7 +47,7 @@ impl Jar {
         self
     }
 
-    pub(crate) fn with_pending_withdraw(mut self) -> Self {
+    fn with_pending_withdraw(mut self) -> Self {
         self.is_pending_withdraw = true;
         self
     }

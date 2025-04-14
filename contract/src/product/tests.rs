@@ -7,22 +7,21 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::ProductApi,
-    data::product::{
-        Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ScoreBasedProductTerms, Terms,
-        WithdrawalFee,
+    data::{
+        account::Account,
+        jar::Jar,
+        product::{
+            Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ProductAssertions, ProductModelApi, ScoreBasedProductTerms, Terms, WithdrawalFee
+        },
     },
+    interest::InterestCalculator,
     signer::test_utils::MessageSigner,
-    UDecimal, MS_IN_YEAR,
+    Timestamp, UDecimal, MS_IN_YEAR,
 };
 
 use crate::{
-    common::{
-        tests::{Context, TokenUtils},
-        Timestamp,
-    },
-    jar::{account::Account, model::Jar},
-    product::model::v1::{InterestCalculator, ProductAssertions, ProductModelApi},
-    test_utils::admin,
+    common::tests::{Context, TokenUtils},
+    test_utils::{admin, JarBuilder},
 };
 
 pub(crate) fn get_testing_product() -> Product {

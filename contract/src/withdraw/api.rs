@@ -11,7 +11,7 @@ use near_sdk::{
 use sweat_jar_model::{
     api::WithdrawApi,
     data::{
-        product::ProductId,
+        product::{ProductId, ProductModelApi},
         withdraw::{BulkWithdrawView, WithdrawView},
     },
     TokenAmount,
@@ -70,7 +70,6 @@ use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     common, env,
     event::{emit, EventKind, WithdrawData},
-    product::model::v1::ProductModelApi,
     AccountId, Contract, ContractExt,
 };
 
@@ -84,10 +83,8 @@ pub(super) trait WithdrawCallbacks {
 
 #[near_bindgen]
 impl WithdrawApi for Contract {
-    // TODO: doc change
     fn withdraw(&mut self, product_id: ProductId) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.assert_migrated(&account_id);
 
         self.get_account_mut(&account_id).get_jar_mut(&product_id).try_lock();
         self.update_jar_cache(&account_id, &product_id);
@@ -108,7 +105,6 @@ impl WithdrawApi for Contract {
 
     fn withdraw_all(&mut self, product_ids: Option<HashSet<ProductId>>) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
-        self.assert_migrated(&account_id);
 
         self.update_account_cache(&account_id, None);
 

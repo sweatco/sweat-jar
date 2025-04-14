@@ -3,13 +3,17 @@ use sweat_jar_model::{
     api::{ProductApi, RestakeApi},
     data::{
         deposit::{DepositMessage, DepositTicket},
+        jar::Jar,
         product::{Apy, FixedProductTerms, Product, Terms},
     },
     signer::test_utils::MessageSigner,
     UDecimal, MS_IN_YEAR,
 };
 
-use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
+use crate::{
+    common::tests::Context,
+    test_utils::{admin, JarBuilder},
+};
 
 #[test]
 fn restake_all_for_single_product() {

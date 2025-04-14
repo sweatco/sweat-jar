@@ -1,5 +1,6 @@
 pub mod api;
 pub mod data;
+pub mod interest;
 pub mod signer;
 pub mod types;
 

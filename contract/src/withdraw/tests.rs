@@ -5,22 +5,17 @@ use std::collections::HashSet;
 use itertools::Itertools;
 use near_sdk::{test_utils::test_env::alice, AccountId, PromiseOrValue};
 use sweat_jar_model::{
-    api::{ClaimApi, JarApi, WithdrawApi},
-    data::{
-        product::{Apy, FixedProductTerms, FlexibleProductTerms, Product, ProductId, Terms, WithdrawalFee},
-        withdraw::BulkWithdrawView,
-    },
-    TokenAmount, UDecimal, MS_IN_DAY,
+    api::{ClaimApi, JarApi, WithdrawApi}, data::{
+        jar::{Deposit, Jar}, product::{Apy, FixedProductTerms, FlexibleProductTerms, Product, ProductId, Terms, WithdrawalFee}, withdraw::BulkWithdrawView
+    }, Timestamp, TokenAmount, UDecimal, MS_IN_DAY
 };
 
 use crate::{
     common::{
         test_data::set_test_future_success,
         tests::{Context, TokenUtils},
-        Timestamp,
     },
-    jar::model::{Deposit, Jar},
-    test_utils::{admin, expect_panic, UnwrapPromise},
+    test_utils::{admin, expect_panic, JarBuilder, UnwrapPromise},
     withdraw::api::{BulkWithdrawalRequest, WithdrawalDto, WithdrawalRequest},
 };
 

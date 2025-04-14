@@ -8,13 +8,9 @@ use near_sdk::{
     AccountId, PromiseOrValue, Timestamp,
 };
 use sweat_jar_model::{
-    api::{ClaimApi, JarApi, ScoreApi, WithdrawApi},
-    data::{
-        deposit::DepositTicket,
-        product::{Apy, FixedProductTerms, Product, ProductId, ScoreBasedProductTerms, Terms},
-        withdraw::WithdrawView,
-    },
-    Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+    api::{ClaimApi, JarApi, ScoreApi, WithdrawApi}, data::{
+        deposit::DepositTicket, jar::Jar, product::{Apy, FixedProductTerms, Product, ProductId, ScoreBasedProductTerms, Terms}, withdraw::WithdrawView
+    }, interest::InterestCalculator, AccountScore, Score, Timezone, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC
 };
 
 use crate::{
@@ -22,10 +18,7 @@ use crate::{
         test_data::{set_test_future_success, set_test_log_events},
         tests::{Context, TokenUtils},
     },
-    jar::model::Jar,
-    product::model::v1::InterestCalculator,
-    score::AccountScore,
-    test_utils::admin,
+    test_utils::{admin, JarBuilder},
     StorageKey,
 };
 

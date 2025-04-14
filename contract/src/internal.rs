@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use near_sdk::require;
 
-use crate::{env, AccountId, Contract};
+use crate::{env, Contract};
 
 impl Contract {
     pub(crate) fn assert_manager(&self) {
@@ -21,10 +21,6 @@ impl Contract {
 
     pub(crate) fn assert_account_can_update(&self) {
         self.assert_manager();
-    }
-
-    pub(crate) fn assert_migrated(&self, account_id: &AccountId) {
-        require!(!self.archive.contains_account(account_id), "Must migrate account first");
     }
 }
 

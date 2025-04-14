@@ -3,15 +3,20 @@ use std::collections::HashMap;
 use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi,
-    data::{claim::ClaimedAmountView, jar::AggregatedTokenAmountView, product::ProductId},
+    data::{
+        account::v1::AccountV1Companion,
+        claim::ClaimedAmountView,
+        jar::AggregatedTokenAmountView,
+        product::ProductId,
+    },
+    interest::InterestCalculator,
     TokenAmount,
 };
 
 use crate::{
-    event::{emit, ClaimData, EventKind}, internal::is_promise_success, jar::{
-        account::v1::AccountV1Companion,
-        model::{Jar, JarCompanion},
-    }, product::model::v1::InterestCalculator, Contract, ContractExt
+    event::{emit, ClaimData, EventKind},
+    internal::is_promise_success,
+    Contract, ContractExt,
 };
 
 #[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
@@ -30,7 +35,6 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
-        self.assert_migrated(&account_id);
 
         let account = self.get_account(&account_id);
         let mut accumulator = ClaimedAmountView::new(detailed);
@@ -202,15 +206,4 @@ fn after_claim_call(
     ext_self::ext(env::current_account_id())
         .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_CLAIM)
         .after_claim(account_id, claimed_amount, account_rollback, event)
-}
-
-impl Jar {
-    fn to_rollback(&self) -> JarCompanion {
-        JarCompanion {
-            is_pending_withdraw: Some(false),
-            claim_remainder: Some(self.claim_remainder),
-            cache: Some(self.cache),
-            ..JarCompanion::default()
-        }
-    }
 }

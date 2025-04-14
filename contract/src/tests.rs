@@ -9,17 +9,17 @@ use near_sdk::{
 use sweat_jar_model::{
     api::{ClaimApi, JarApi, PenaltyApi, ProductApi, WithdrawApi},
     data::{
-        jar::AggregatedTokenAmountView,
+        jar::{AggregatedTokenAmountView, Jar},
         product::{Apy, DowngradableApy, FixedProductTerms, Terms},
     },
     signer::test_utils::MessageSigner,
     TokenAmount, UDecimal, MS_IN_YEAR,
 };
+use test_utils::JarBuilder;
 
 use super::*;
 use crate::{
     common::test_data::set_test_log_events,
-    jar::model::Jar,
     product::tests::get_testing_product,
     test_utils::{admin, UnwrapPromise},
 };

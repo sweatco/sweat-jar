@@ -6,15 +6,13 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::RestakeApi,
-    data::{deposit::DepositTicket, product::ProductId},
+    data::{deposit::DepositTicket, jar::Assertions, product::{ProductAssertions, ProductId, ProductModelApi}},
     TokenAmount,
 };
 
 use crate::{
-    assert::assert_not_locked,
     event::{emit, EventKind, EventKind::Restake, RestakeData},
     internal::is_promise_success,
-    product::model::v1::{ProductAssertions, ProductModelApi},
     withdraw::api::WithdrawalDto,
     Contract, ContractExt,
 };
@@ -177,7 +175,7 @@ struct RestakeRequestBuilder {
 impl RequestBuilder for RestakeRequestBuilder {
     fn build(&self, contract: &Contract) -> Request {
         let jar = contract.get_account(&self.account_id).get_jar(&self.from);
-        assert_not_locked(jar);
+        jar.assert_not_locked();
 
         let product = contract.get_product(&self.from);
         let (mature_balance, partition_index) = jar.get_liquid_balance(&product.terms);

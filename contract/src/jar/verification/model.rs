@@ -1,11 +1,14 @@
 use near_sdk::{env, env::panic_str, json_types::Base64VecU8, require, AccountId};
 use sweat_jar_model::{
-    data::deposit::{DepositMessage, DepositTicket},
+    data::{
+        deposit::{DepositMessage, DepositTicket},
+        product::ProductModelApi,
+    },
     signer::MessageVerifier,
     TokenAmount,
 };
 
-use crate::{product::model::v1::ProductModelApi, Contract};
+use crate::Contract;
 
 impl Contract {
     pub(crate) fn verify(

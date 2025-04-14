@@ -1,15 +1,14 @@
 use near_sdk::test_utils::test_env::{alice, bob, carol};
 use sweat_jar_model::{
     api::{JarApi, ProductApi, RestakeApi},
-    data::{deposit::{DepositTicket, DepositMessage}, product::Product},
+    data::{deposit::{DepositMessage, DepositTicket}, jar::Jar, product::Product},
     signer::test_utils::MessageSigner,
     MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
     common::tests::Context,
-    jar::model::Jar,
-    test_utils::{admin, expect_panic},
+    test_utils::{admin, expect_panic, JarBuilder},
 };
 
 #[test]

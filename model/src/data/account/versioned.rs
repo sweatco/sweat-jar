@@ -5,7 +5,7 @@ use std::{
 
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::jar::account::{v1::AccountV1, Account};
+use crate::data::account::v1::AccountV1;
 
 #[derive(BorshSerialize, Debug, PartialEq, Clone)]
 #[borsh(crate = "near_sdk::borsh")]
@@ -14,7 +14,7 @@ pub enum AccountVersioned {
 }
 
 impl AccountVersioned {
-    pub(crate) fn new(account: Account) -> Self {
+    pub fn new(account: AccountV1) -> Self {
         AccountVersioned::V1(account)
     }
 }
@@ -37,12 +37,12 @@ impl BorshDeserialize for AccountVersioned {
 
 impl Default for AccountVersioned {
     fn default() -> Self {
-        Self::V1(Account::default())
+        Self::V1(AccountV1::default())
     }
 }
 
 impl Deref for AccountVersioned {
-    type Target = Account;
+    type Target = AccountV1;
     fn deref(&self) -> &Self::Target {
         match self {
             Self::V1(account) => account,

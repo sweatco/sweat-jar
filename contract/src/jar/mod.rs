@@ -1,6 +1,5 @@
-pub mod account;
 pub mod api;
-pub mod model;
+pub mod common;
 mod tests;
 mod verification;
 pub mod view;

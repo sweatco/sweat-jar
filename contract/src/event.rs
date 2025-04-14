@@ -3,11 +3,10 @@ use near_sdk::{
     log, near, serde_json, AccountId,
 };
 use sweat_jar_model::{
-    data::product::{Product, ProductId},
-    Local, Score, TokenAmount, UTC,
+    data::product::{Product, ProductId}, Local, Score, Timestamp, TokenAmount, UTC
 };
 
-use crate::{common::Timestamp, env, PACKAGE_NAME, VERSION};
+use crate::{env, PACKAGE_NAME, VERSION};
 
 #[derive(Debug)]
 #[near(serializers=[json])]

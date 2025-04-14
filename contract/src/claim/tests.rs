@@ -5,15 +5,16 @@ use sweat_jar_model::{
     api::{ClaimApi, WithdrawApi},
     data::{
         claim::ClaimedAmountView,
+        jar::Jar,
         product::{Apy, FixedProductTerms, Product, Terms},
     },
+    interest::InterestCalculator,
     UDecimal, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
 };
 
+use crate::test_utils::JarBuilder;
 use crate::{
     common::{test_data::set_test_future_success, tests::Context},
-    jar::model::Jar,
-    product::model::v1::InterestCalculator,
     test_utils::{admin, UnwrapPromise},
 };
 

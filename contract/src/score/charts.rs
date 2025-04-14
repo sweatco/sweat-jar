@@ -5,17 +5,16 @@ use fake::Fake;
 use itertools::Itertools;
 use near_sdk::test_utils::test_env::{alice, bob};
 use sweat_jar_model::{
-    data::product::{
+    data::{jar::Jar, product::{
         test_utils::{DEFAULT_PRODUCT_NAME, DEFAULT_SCORE_PRODUCT_NAME},
         Apy, FixedProductTerms, Product, ScoreBasedProductTerms, Terms,
-    },
+    }},
     Score, Timezone, UDecimal, MS_IN_DAY, MS_IN_YEAR, UTC,
 };
 
 use crate::{
     common::{test_data::set_test_log_events, tests::Context},
-    jar::model::Jar,
-    test_utils::admin,
+    test_utils::{admin, JarBuilder},
 };
 
 fn generate_regular_product() -> Product {

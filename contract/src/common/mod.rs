@@ -1,12 +1,6 @@
 pub(crate) mod test_data;
 pub(crate) mod tests;
 
-/// Milliseconds since the Unix epoch (January 1, 1970 (midnight UTC/GMT))
-pub type Timestamp = u64;
-
-/// Duration in milliseconds
-pub type Duration = u64;
-
 pub mod gas_data {
     use near_sdk::Gas;
 

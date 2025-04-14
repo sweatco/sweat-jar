@@ -5,23 +5,20 @@ use near_sdk::{
 use sweat_jar_model::{
     api::ScoreApi,
     data::product::{Product, Terms},
-    Score, Timezone, UTC,
+    Chain, Score, Timezone, UTC,
 };
 
 use crate::{
     event::{emit, EventKind, ScoreData},
-    score::Chain,
     Contract, ContractExt,
 };
+
+use super::AccountScoreUpdate;
 
 #[near_bindgen]
 impl ScoreApi for Contract {
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
         self.assert_manager();
-
-        for (account_id, _) in &batch {
-            self.assert_migrated(account_id);
-        }
 
         let mut event = vec![];
 

@@ -1,37 +1,15 @@
-use near_sdk::json_types::{U128, U64};
-use sweat_jar_model::data::{jar::JarView, product::ProductId};
-
-use crate::{
-    common::Timestamp,
-    jar::model::{Jar, JarVersionedLegacy},
+use sweat_jar_model::{
+    data::{
+        jar::{Jar, JarView},
+        product::ProductId,
+    },
+    Timestamp,
 };
 
-impl From<JarVersionedLegacy> for JarView {
-    fn from(value: JarVersionedLegacy) -> Self {
-        Self {
-            id: value.id.to_string(),
-            product_id: value.product_id.clone(),
-            created_at: U64(value.created_at),
-            principal: U128(value.principal),
-        }
-    }
-}
+pub(crate) struct DetailedJar(pub(crate) ProductId, pub(crate) Jar);
 
-impl From<&JarVersionedLegacy> for JarView {
-    fn from(value: &JarVersionedLegacy) -> Self {
-        Self {
-            id: value.id.to_string(),
-            product_id: value.product_id.clone(),
-            created_at: U64(value.created_at),
-            principal: U128(value.principal),
-        }
-    }
-}
-
-pub(crate) struct DetailedJarV2(pub(crate) ProductId, pub(crate) Jar);
-
-impl From<&DetailedJarV2> for Vec<JarView> {
-    fn from(value: &DetailedJarV2) -> Self {
+impl From<&DetailedJar> for Vec<JarView> {
+    fn from(value: &DetailedJar) -> Self {
         let product_id = value.0.clone();
         value
             .1

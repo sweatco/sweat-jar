@@ -3,12 +3,11 @@ use std::clone::Clone;
 use near_sdk::{assert_one_yocto, near_bindgen, require};
 use sweat_jar_model::{
     api::ProductApi,
-    data::product::{Product, ProductId},
+    data::product::{Product, ProductAssertions, ProductId, ProductModelApi},
 };
 
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    product::model::v1::{ProductAssertions, ProductModelApi},
     Base64VecU8, Contract, ContractExt,
 };
 

@@ -1,190 +1,67 @@
-use std::convert::TryInto;
-
-use near_sdk::{
-    env::{block_timestamp_ms, panic_str},
-    near,
-};
-use sweat_jar_model::{Day, Local, Score, ScoreRecord, TimeHelper, Timezone, UTC};
+use near_sdk::env::{block_timestamp_ms, panic_str};
+use sweat_jar_model::{AccountScore, Chain, Day, TimeHelper, DAYS_STORED};
 
 use crate::event::{emit, EventKind};
 
-const DAYS_STORED: usize = 2;
-
-pub(crate) type Chain = Vec<(Score, Local)>;
-
-#[near(serializers=[borsh, json])]
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AccountScore {
-    pub updated: UTC,
-    pub timezone: Timezone,
-    /// Scores buffer used for interest calculation. Can be invalidated on claim.
-    pub scores: [Score; DAYS_STORED],
-    /// Score history values used for displaying it in application. Will not be invalidated during claim.
-    pub scores_history: [Score; DAYS_STORED],
+pub trait AccountScoreUpdate {
+    fn update(&mut self, chain: Chain);
 }
 
-impl AccountScore {
-    pub fn is_valid(&self) -> bool {
-        self.timezone.is_valid()
-    }
-
-    pub fn new(timezone: Timezone) -> Self {
-        Self {
-            updated: block_timestamp_ms().into(),
-            timezone,
-            scores: [0; DAYS_STORED],
-            scores_history: [0; DAYS_STORED],
-        }
-    }
-
-    pub fn scores(&self) -> (Score, Score) {
-        (self.scores[0], self.scores[1])
-    }
-
-    pub fn claimable_score(&self) -> ScoreRecord {
-        let score = if self.update_day() == self.timezone.today() {
-            vec![self.scores[1]]
-        } else {
-            vec![self.scores[0], self.scores[1]]
-        };
-
-        ScoreRecord {
-            score,
-            updated: self.updated,
-        }
-    }
-
-    pub fn active_score(&self) -> Score {
-        let update_day = self.update_day();
+impl AccountScoreUpdate for AccountScore {
+    fn update(&mut self, chain: Chain) {
         let today = self.timezone.today();
 
-        if update_day == today {
-            self.scores_history[1]
-        } else if update_day == Local(today.0 - 1) {
-            self.scores_history[0]
-        } else {
-            0
-        }
-    }
-
-    pub fn try_reset_score(&mut self) {
-        if self.is_valid() {
-            self.reset_score();
-        }
-    }
-
-    /// On claim we need to clear active scores so they aren't claimed twice or more.
-    pub fn reset_score(&mut self) -> ScoreRecord {
-        let today = self.timezone.today();
-        let update_day = self.update_day();
-
-        let score = if today == update_day {
-            let score = self.scores[1];
-            self.scores[1] = 0;
-            vec![score]
-        } else {
-            let score = vec![self.scores[0], self.scores[1]];
-            self.scores[0] = 0;
-            self.scores[1] = 0;
-
-            // If scores were updated yesterday we shift history by 1 day
-            // If older that yesterday then we wipe it
-            if update_day == Local(today.0 - 1) {
-                self.scores_history[1] = self.scores_history[0];
-                self.scores_history[0] = 0;
-            } else {
-                self.scores_history = [0; DAYS_STORED];
-            }
-
-            score
-        };
-
-        let updated = self.updated;
-
-        self.updated = block_timestamp_ms().into();
-
-        ScoreRecord { score, updated }
-    }
-
-    pub fn update(&mut self, chain: Chain) {
-        let today = self.timezone.today();
-
-        let chain = self.convert_chain(today, chain);
+        let chain = convert_chain(self, today, chain);
 
         assert_eq!((today - self.update_day()).0, 0, "Updating scores before claiming them");
 
         self.update_today(chain);
         self.updated = block_timestamp_ms().into();
     }
-
-    /// Update on the same day - just add values
-    fn update_today(&mut self, chain: Chain) -> Vec<Score> {
-        for (score, day) in chain {
-            let day_index: usize = day.0.try_into().unwrap();
-            self.scores[day_index] = self.scores[day_index].checked_add(score).unwrap_or(u16::MAX);
-            self.scores_history[day_index] = self.scores_history[day_index].checked_add(score).unwrap_or(u16::MAX);
-        }
-        vec![]
-    }
-
-    fn update_day(&self) -> Day {
-        self.timezone.adjust(self.updated).day()
-    }
-
-    /// Convert walkchain timestamps to days
-    fn convert_chain(&self, today: Day, walkchain: Chain) -> Chain {
-        let now = self.timezone.now();
-        walkchain
-            .into_iter()
-            .filter_map(|(score, timestamp)| {
-                if timestamp > now {
-                    panic_str(&format!(
-                        "Walk data from future: {:?}. Now: {:?}",
-                        (score, timestamp),
-                        now
-                    ));
-                }
-
-                let days_ago = today - timestamp.day();
-
-                if days_ago >= DAYS_STORED.into() {
-                    emit(EventKind::OldScoreWarning((score, timestamp)));
-
-                    return None;
-                }
-
-                (score, days_ago).into()
-            })
-            .collect()
-    }
 }
 
-impl Default for AccountScore {
-    fn default() -> Self {
-        Self {
-            updated: block_timestamp_ms().into(),
-            timezone: Timezone::invalid(),
-            scores: [0, 0],
-            scores_history: [0, 0],
-        }
-    }
+/// Convert walkchain timestamps to days
+fn convert_chain(score: &AccountScore, today: Day, walkchain: Chain) -> Chain {
+    let now = score.timezone.now();
+    walkchain
+        .into_iter()
+        .filter_map(|(score, timestamp)| {
+            if timestamp > now {
+                panic_str(&format!(
+                    "Walk data from future: {:?}. Now: {:?}",
+                    (score, timestamp),
+                    now
+                ));
+            }
+
+            let days_ago = today - timestamp.day();
+
+            if days_ago >= DAYS_STORED.into() {
+                emit(EventKind::OldScoreWarning((score, timestamp)));
+
+                return None;
+            }
+
+            (score, days_ago).into()
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod test {
     use near_sdk::env::block_timestamp_ms;
     use sweat_jar_model::{
-        data::product::{test_utils::DEFAULT_SCORE_PRODUCT_NAME, Cap, Product, ScoreBasedProductTerms, Terms},
-        Day, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+        data::{
+            account::Account,
+            product::{test_utils::DEFAULT_SCORE_PRODUCT_NAME, Cap, Product, ScoreBasedProductTerms, Terms},
+        },
+        interest::InterestCalculator,
+        AccountScore, Day, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
     };
 
-    use crate::{
-        common::tests::Context,
-        jar::account::Account,
-        product::model::v1::InterestCalculator,
-        score::{account_score::Chain, AccountScore},
-        test_utils::admin,
-    };
+    use crate::{common::tests::Context, score::account_score::Chain, test_utils::admin};
+
+    use super::AccountScoreUpdate;
 
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
     const TODAY: u64 = 1722234632000;

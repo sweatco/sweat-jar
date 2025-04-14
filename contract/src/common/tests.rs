@@ -10,19 +10,15 @@ use near_contract_standards::fungible_token::Balance;
 use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
 use sweat_jar_model::{
     api::InitApi,
-    data::product::{Product, ProductId},
-    TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
+    data::{
+        account::{versioned::AccountVersioned, Account},
+        jar::Jar,
+        product::{Product, ProductId},
+    },
+    Timestamp, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
 };
 
-use crate::{
-    common::Timestamp,
-    jar::{
-        account::{versioned::AccountVersioned, Account},
-        model::Jar,
-    },
-    test_utils::AfterCatchUnwind,
-    Contract,
-};
+use crate::{test_utils::AfterCatchUnwind, Contract};
 
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
