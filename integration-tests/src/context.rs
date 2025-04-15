@@ -6,8 +6,7 @@ use sweat_jar_model::{
         InitApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, ProductApiIntegration,
         SweatJarContract,
     },
-    jar::JarView,
-    ProductId,
+    data::{jar::JarView, product::ProductId},
 };
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 

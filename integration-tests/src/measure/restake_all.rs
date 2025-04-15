@@ -2,7 +2,7 @@ use anyhow::Result;
 use nitka::{measure::utils::pretty_gas_string, set_integration_logs_enabled};
 use sweat_jar_model::{
     api::{ClaimApiIntegration, RestakeApiIntegration},
-    jar::DepositTicket,
+    data::deposit::DepositTicket,
 };
 
 use crate::{

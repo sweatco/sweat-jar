@@ -1,8 +1,8 @@
 use anyhow::Result;
-use near_workspaces::{network::Sandbox, types::NearToken, Account, AccountId, Contract, Worker};
+use near_workspaces::{network::Sandbox, types::NearToken, Account, Contract, Worker};
 use nitka::{build::build_contract, json, misc::ToNear, near_sdk::serde_json::Value};
 use sweat_jar_model::{
-    api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, StateMigrationIntegration, SweatJarContract},
+    api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract},
     Timezone, TokenAmount,
 };
 use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
@@ -14,6 +14,7 @@ use crate::{
 };
 
 #[tokio::test]
+#[ignore = "This test is ignored since there's no state migrations at the moment"]
 async fn migrate_state() -> Result<()> {
     build_contract("build-integration".into())?;
 
@@ -230,7 +231,7 @@ impl Client {
 
     async fn migrate_jar_contract(&mut self, binaries: &Binaries, accounts: &Accounts) -> Result<()> {
         self.contracts = Contracts::new_migrated(accounts, binaries).await?;
-        self.jar().migrate_state().with_user(&accounts.manager).await?;
+        // self.jar().migrate_state().with_user(&accounts.manager).await?;
 
         Ok(())
     }

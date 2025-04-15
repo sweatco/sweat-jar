@@ -2,10 +2,7 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use near_workspaces::types::Gas;
-use sweat_jar_model::{
-    api::RestakeApiIntegration,
-    jar::DepositTicket,
-};
+use sweat_jar_model::{api::RestakeApiIntegration, data::deposit::DepositTicket};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

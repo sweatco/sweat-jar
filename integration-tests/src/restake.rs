@@ -4,7 +4,7 @@ use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, RestakeApiIntegration},
-    jar::DepositTicket,
+    data::deposit::DepositTicket,
     TokenAmount,
 };
 

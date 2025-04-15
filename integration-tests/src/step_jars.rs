@@ -1,9 +1,7 @@
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
-    api::{IntegrationTestMethodsIntegration, ProductApiIntegration, ScoreApiIntegration},
-    signer::{test_utils::MessageSigner, DepositMessage},
-    Timezone,
+    api::{IntegrationTestMethodsIntegration, ProductApiIntegration, ScoreApiIntegration}, data::deposit::DepositMessage, signer::test_utils::MessageSigner, Timezone
 };
 
 use crate::{

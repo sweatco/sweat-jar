@@ -1,7 +1,8 @@
 use nitka::misc::ToNear;
 use sweat_jar_model::{
     api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration},
-    signer::{test_utils::MessageSigner, DepositMessage},
+    data::deposit::DepositMessage,
+    signer::test_utils::MessageSigner,
     TokenAmount,
 };
 

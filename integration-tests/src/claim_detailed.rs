@@ -1,7 +1,7 @@
 use nitka::misc::ToNear;
 use sweat_jar_model::{
     api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration},
-    claimed_amount_view::ClaimedAmountView,
+    data::claim::ClaimedAmountView,
 };
 
 use crate::{

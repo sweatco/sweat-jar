@@ -1,6 +1,6 @@
 use nitka::near_sdk::serde_json::{from_value, json, Value};
 use serde::Serialize;
-use sweat_jar_model::product::Product;
+use sweat_jar_model::data::product::Product;
 
 #[derive(Serialize, Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub(crate) enum RegisterProductCommand {

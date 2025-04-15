@@ -1,7 +1,7 @@
 #![cfg(feature = "integration-test")]
 
 use near_sdk::{env, near_bindgen, AccountId, Timestamp};
-use sweat_jar_model::{api::IntegrationTestMethods, ProductId};
+use sweat_jar_model::{api::IntegrationTestMethods, data::product::ProductId};
 
 use crate::{Contract, ContractExt};
 

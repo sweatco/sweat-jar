@@ -7,10 +7,7 @@ use nitka::{
     near_sdk::{serde_json, serde_json::Value},
 };
 use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration},
-    claimed_amount_view::ClaimedAmountView,
-    product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},
-    UDecimal, MS_IN_DAY, MS_IN_SECOND,
+    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration}, data::{claim::ClaimedAmountView, product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee}}, UDecimal, MS_IN_DAY, MS_IN_SECOND
 };
 use sweat_model::FungibleTokenCoreIntegration;
 use tokio::time::sleep;
@@ -64,7 +61,6 @@ fn _get_products() -> Vec<Product> {
             withdrawal_fee,
             public_key: Some(pk.into()),
             is_enabled,
-            is_restakable: true,
         })
     }
 
@@ -82,7 +78,6 @@ async fn register_test_product(manager: &Account, jar: &SweatJarContract<'_>) ->
         withdrawal_fee: None,
         public_key: None,
         is_enabled: true,
-        is_restakable: true,
     })
     .with_user(manager)
     .await?;

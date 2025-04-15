@@ -5,8 +5,7 @@ use sweat_jar_model::{
         ClaimApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, RestakeApiIntegration,
         WithdrawApiIntegration,
     },
-    claimed_amount_view::ClaimedAmountView,
-    jar::DepositTicket,
+    data::{claim::ClaimedAmountView, deposit::DepositTicket},
 };
 use sweat_model::SweatApiIntegration;
 

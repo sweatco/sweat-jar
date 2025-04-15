@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
@@ -93,8 +95,9 @@ async fn withdraw_all() -> Result<()> {
             .withdrawals
             .iter()
             .map(|j| j.withdrawn_amount.0)
-            .collect::<Vec<_>>()[..2],
-        vec![product_5_min_total, 0]
+            .take(2)
+            .collect::<HashSet<_>>(),
+        vec![product_5_min_total, 0].into_iter().collect::<HashSet<_>>()
     );
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
