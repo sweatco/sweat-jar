@@ -9,7 +9,7 @@ use near_sdk::{
 use sweat_jar_model::data::product::Product;
 
 use crate::{
-    event::{emit, EventKind},
+    common::event::{emit, EventKind},
     Contract, ContractExt, StorageKey,
 };
 

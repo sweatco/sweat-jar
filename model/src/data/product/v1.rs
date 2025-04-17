@@ -3,7 +3,7 @@ use near_sdk::{
     near,
 };
 
-use crate::{Score, TokenAmount, UDecimal};
+use crate::{Duration, Score, TokenAmount, UDecimal};
 
 pub type ProductId = String;
 
@@ -135,6 +135,10 @@ impl Apy {
 }
 
 impl Cap {
+    pub fn new(min: TokenAmount, max: TokenAmount) -> Self {
+        Self(min.into(), max.into())
+    }
+
     pub fn min(&self) -> TokenAmount {
         self.0 .0
     }
@@ -144,101 +148,12 @@ impl Cap {
     }
 }
 
-// TODO: move to test cfg
-pub mod test_utils {
-    use super::{Apy, Cap, DowngradableApy, FixedProductTerms, Product, Terms, WithdrawalFee};
-    use crate::{TokenAmount, UDecimal, MS_IN_YEAR};
-
-    /// Default product name. If product name wasn't specified it will have this name.
-    pub const DEFAULT_PRODUCT_NAME: &str = "product";
-    pub const DEFAULT_SCORE_PRODUCT_NAME: &str = "score_product";
-
-    impl Default for Product {
-        fn default() -> Self {
-            Self {
-                id: DEFAULT_PRODUCT_NAME.to_string(),
-                cap: Cap::default(),
-                terms: Terms::Fixed(FixedProductTerms {
-                    lockup_term: MS_IN_YEAR.into(),
-                    apy: Apy::new_downgradable(),
-                }),
-                withdrawal_fee: None,
-                public_key: None,
-                is_enabled: true,
-            }
-        }
-    }
-
-    impl Default for Cap {
-        fn default() -> Self {
-            Self::new(0, 1_000_000_000 * 10u128.pow(18))
-        }
-    }
-
-    impl Product {
-        pub fn get_base_apy(&self) -> &Apy {
-            match &self.terms {
-                Terms::Fixed(value) => &value.apy,
-                Terms::Flexible(value) => &value.apy,
-                Terms::ScoreBased(_) => panic!("No APY for a score based product"),
-            }
-        }
-
-        #[must_use]
-        pub fn with_id(mut self, id: &str) -> Self {
-            self.id = id.to_string();
-            self
-        }
-
-        #[must_use]
-        pub fn with_enabled(mut self, enabled: bool) -> Self {
-            self.is_enabled = enabled;
-            self
-        }
-
-        #[must_use]
-        pub fn with_terms(mut self, terms: Terms) -> Self {
-            self.terms = terms;
-            self
-        }
-
-        #[must_use]
-        pub fn with_public_key(mut self, public_key: Option<Vec<u8>>) -> Self {
-            self.public_key = public_key.map(Into::into);
-            self
-        }
-
-        #[must_use]
-        pub fn with_withdrawal_fee(mut self, fee: WithdrawalFee) -> Self {
-            self.withdrawal_fee = Some(fee);
-            self
-        }
-
-        #[must_use]
-        pub fn with_cap(mut self, min: TokenAmount, max: TokenAmount) -> Self {
-            self.cap = Cap::new(min, max);
-            self
-        }
-    }
-
-    impl Default for Apy {
-        fn default() -> Self {
-            Self::Constant(UDecimal::new(12, 2))
-        }
-    }
-
-    impl Cap {
-        pub fn new(min: TokenAmount, max: TokenAmount) -> Self {
-            Self(min.into(), max.into())
-        }
-    }
-
-    impl Apy {
-        pub fn new_downgradable() -> Self {
-            Apy::Downgradable(DowngradableApy {
-                default: UDecimal::new(20, 2),
-                fallback: UDecimal::new(10, 2),
-            })
+impl Terms {
+    pub fn get_lockup_term(&self) -> Option<Duration> {
+        match self {
+            Terms::Fixed(terms) => Some(terms.lockup_term.0),
+            Terms::Flexible(_) => None,
+            Terms::ScoreBased(terms) => Some(terms.lockup_term.0),
         }
     }
 }

@@ -14,24 +14,10 @@ use sweat_jar_model::{
     TokenAmount,
 };
 
-mod assertions;
-mod claim;
 mod common;
-mod event;
-mod fee;
-mod ft_interface;
-mod ft_receiver;
-mod integration_test;
-mod internal;
-mod jar;
+mod doc;
+mod feature;
 mod migration;
-mod penalty;
-mod product;
-mod restake;
-mod score;
-mod test_utils;
-mod tests;
-mod withdraw;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

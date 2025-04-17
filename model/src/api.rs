@@ -58,7 +58,7 @@ pub trait ClaimApi {
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
 #[make_integration_version]
-pub trait JarApi {
+pub trait AccountApi {
     /// Retrieves information about all deposit jars associated with a given account.
     ///
     /// # Arguments
@@ -83,6 +83,29 @@ pub trait JarApi {
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView;
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId);
+
+    /// Records the score for a batch of accounts and updates their jars score accordingly.
+    ///
+    /// This method processes a batch of new scores for multiple accounts, updates their
+    /// respective jars score, calculates interest based on the current timestamp, and emits
+    /// an event with the recorded scores.
+    ///
+    /// # Arguments
+    ///
+    /// * `batch` - A vector of tuples, where each tuple contains an `AccountId` and a vector
+    ///   of tuples representing the new scores and their associated timestamps (in UTC).
+    ///
+    /// # Panics
+    ///
+    /// - This function will panic if an account does not have score jars.
+    /// - This function will panic if a product associated with a jar does not exist.
+    fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
+
+    /// Return users timezone if user has any score based jars
+    fn get_timezone(&self, account_id: AccountId) -> Option<I64>;
+
+    /// Returns current active score if user has any score based jars
+    fn get_score(&self, account_id: AccountId) -> Option<U128>;
 }
 
 #[make_integration_version]
@@ -251,32 +274,6 @@ pub trait WithdrawApi {
     /// Withdraws all jars for user, or only specified list of jars if `jars` argument is `Some`
     fn withdraw_all(&mut self, product_ids: Option<HashSet<ProductId>>)
         -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
-}
-
-#[make_integration_version]
-pub trait ScoreApi {
-    /// Records the score for a batch of accounts and updates their jars score accordingly.
-    ///
-    /// This method processes a batch of new scores for multiple accounts, updates their
-    /// respective jars score, calculates interest based on the current timestamp, and emits
-    /// an event with the recorded scores.
-    ///
-    /// # Arguments
-    ///
-    /// * `batch` - A vector of tuples, where each tuple contains an `AccountId` and a vector
-    ///   of tuples representing the new scores and their associated timestamps (in UTC).
-    ///
-    /// # Panics
-    ///
-    /// - This function will panic if an account does not have score jars.
-    /// - This function will panic if a product associated with a jar does not exist.
-    fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
-
-    /// Return users timezone if user has any score based jars
-    fn get_timezone(&self, account_id: AccountId) -> Option<I64>;
-
-    /// Returns current active score if user has any score based jars
-    fn get_score(&self, account_id: AccountId) -> Option<U128>;
 }
 
 #[cfg(feature = "integration-methods")]
