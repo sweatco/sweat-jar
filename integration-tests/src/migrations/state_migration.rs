@@ -1,10 +1,7 @@
 use anyhow::Result;
 use near_workspaces::{network::Sandbox, types::NearToken, Account, Contract, Worker};
 use nitka::{build::build_contract, json, misc::ToNear, near_sdk::serde_json::Value};
-use sweat_jar_model::{
-    api::{InitApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract},
-    Timezone, TokenAmount,
-};
+use sweat_jar_model::{api::*, Timezone, TokenAmount};
 use sweat_model::{StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
 use crate::{

@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
-use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
+use sweat_jar_model::api::*;
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{

@@ -2,11 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
-use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration, RestakeApiIntegration},
-    data::deposit::DepositTicket,
-    TokenAmount,
-};
+use sweat_jar_model::{api::*, data::deposit::DepositTicket, TokenAmount};
 
 use crate::{
     common::total_principal,

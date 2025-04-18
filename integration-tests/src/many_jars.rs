@@ -1,10 +1,7 @@
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
-    api::{
-        ClaimApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, RestakeApiIntegration,
-        WithdrawApiIntegration,
-    },
+    api::*,
     data::{claim::ClaimedAmountView, deposit::DepositTicket},
 };
 use sweat_model::SweatApiIntegration;

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
-    api::{IntegrationTestMethodsIntegration, ProductApiIntegration, ScoreApiIntegration},
-    data::deposit::DepositMessage,
+    api::*,
+    data::{deposit::DepositMessage, product::Product},
     signer::test_utils::MessageSigner,
     Timezone,
 };
@@ -20,9 +20,10 @@ async fn record_score_dos() -> Result<()> {
     println!("👷🏽 Run record score DOS test");
 
     let signer = MessageSigner::new();
-    let product = RegisterProductCommand::Locked10Minutes20000ScoreCap
-        .get()
-        .with_public_key(Some(signer.public_key()));
+    let product = Product {
+        public_key: Some(signer.public_key().into()),
+        ..RegisterProductCommand::Locked10Minutes20000ScoreCap.get()
+    };
 
     set_integration_logs_enabled(false);
 

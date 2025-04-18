@@ -7,7 +7,7 @@ use nitka::{
     near_sdk::{serde_json, serde_json::Value},
 };
 use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration, SweatJarContract, WithdrawApiIntegration},
+    api::*,
     data::{
         claim::ClaimedAmountView,
         product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},

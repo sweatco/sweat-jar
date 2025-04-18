@@ -1,8 +1,5 @@
 use nitka::misc::ToNear;
-use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration},
-    data::claim::ClaimedAmountView,
-};
+use sweat_jar_model::{api::*, data::claim::ClaimedAmountView};
 
 use crate::{
     common::total_principal,

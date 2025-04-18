@@ -1,7 +1,7 @@
 use nitka::misc::ToNear;
 use sweat_jar_model::{
-    api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration},
-    data::deposit::DepositMessage,
+    api::*,
+    data::{deposit::DepositMessage, product::Product},
     signer::test_utils::MessageSigner,
     TokenAmount,
 };
@@ -24,9 +24,10 @@ async fn premium_product() -> anyhow::Result<()> {
     let manager = context.manager().await?;
     let alice = context.alice().await?;
 
-    let product = RegisterProductCommand::Flexible6Months6Percents
-        .get()
-        .with_public_key(Some(signer.public_key()));
+    let product = Product {
+        public_key: Some(signer.public_key().into()),
+        ..RegisterProductCommand::Flexible6Months6Percents.get()
+    };
 
     context
         .sweat_jar()

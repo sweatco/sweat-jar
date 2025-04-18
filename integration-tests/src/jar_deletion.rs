@@ -1,5 +1,5 @@
 use nitka::misc::ToNear;
-use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
+use sweat_jar_model::api::*;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},

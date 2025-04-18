@@ -2,10 +2,7 @@ use anyhow::Result;
 use near_workspaces::{types::NearToken, Account};
 use nitka::{json, misc::ToNear, near_sdk::json_types::U128};
 use sweat_jar_model::{
-    api::{
-        InitApiIntegration, IntegrationTestMethodsIntegration, JarApiIntegration, ProductApiIntegration,
-        SweatJarContract,
-    },
+    api::*,
     data::{jar::JarView, product::ProductId},
 };
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};

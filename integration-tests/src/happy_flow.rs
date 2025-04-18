@@ -1,8 +1,5 @@
-use nitka::{misc::ToNear, near_sdk::serde_json};
-use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration},
-    TokenAmount,
-};
+use nitka::misc::ToNear;
+use sweat_jar_model::{api::*, TokenAmount};
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{
