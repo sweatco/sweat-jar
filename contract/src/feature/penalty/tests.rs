@@ -4,12 +4,8 @@ use near_sdk::AccountId;
 use rstest::rstest;
 use sweat_jar_model::{
     api::{AccountApi, PenaltyApi},
-    data::{
-        jar::Jar,
-        product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
-    },
-    signer::test_utils::MessageSigner,
-    UDecimal, MS_IN_YEAR,
+    data::jar::Jar,
+    MS_IN_YEAR,
 };
 
 use crate::{

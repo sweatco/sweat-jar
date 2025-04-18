@@ -1,6 +1,13 @@
 use std::cmp;
 
-use crate::{data::{account::Account, jar::{Deposit, Jar}, product::{FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms}}, Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR};
+use crate::{
+    data::{
+        account::Account,
+        jar::{Deposit, Jar},
+        product::{FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms},
+    },
+    Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
+};
 
 // TODO: add tests
 pub trait InterestCalculator {

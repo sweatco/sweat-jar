@@ -2,7 +2,7 @@ use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
 use sweat_jar_model::data::deposit::DepositTicket;
 
-use crate::{near_bindgen, Base64VecU8, Contract, ContractExt};
+use crate::{migration::api::store_account_raw, near_bindgen, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -42,7 +42,7 @@ impl FungibleTokenReceiver for Contract {
             FtMessage::Migrate(account_id, account_bytes) => {
                 self.assert_migrate_from_previous_version(&sender_id);
 
-                self.store_account_raw(account_id.clone(), account_bytes);
+                store_account_raw(account_id.clone(), account_bytes);
                 require!(
                     self.get_account(&account_id).get_total_principal() == amount.0,
                     "Total principal mismatch"
@@ -61,7 +61,10 @@ mod tests {
     use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
     use near_sdk::{json_types::U128, serde_json::json, AccountId};
     use rstest::{fixture, rstest};
-    use sweat_jar_model::{data::deposit::DepositMessage, data::product::Product, signer::test_utils::Base64String};
+    use sweat_jar_model::{
+        data::{deposit::DepositMessage, product::Product},
+        signer::test_utils::Base64String,
+    };
 
     use crate::{
         common::testing::{
@@ -185,13 +188,13 @@ mod tests {
         context.switch_account_to_ft_contract_account();
         context.contract().ft_on_transfer(
             context.legacy_jar_contract_id.clone(),
-            U128(1630000000000000000000),
+            U128(1_630_000_000_000_000_000_000),
             alice_migration_message,
         );
 
         let contract = context.contract();
         let alice_account = contract.get_account(&alice);
         assert_eq!(4, alice_account.jars.len());
-        assert_eq!(1630000000000000000000, alice_account.get_total_principal());
+        assert_eq!(1_630_000_000_000_000_000_000, alice_account.get_total_principal());
     }
 }

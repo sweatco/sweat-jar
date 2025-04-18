@@ -15,7 +15,14 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::{env::env_ext, event::{emit, EventKind::{self, Restake}, RestakeData}},
+    common::{
+        env::env_ext,
+        event::{
+            emit,
+            EventKind::{self, Restake},
+            RestakeData,
+        },
+    },
     feature::withdraw::api::WithdrawalDto,
     Contract, ContractExt,
 };
@@ -111,7 +118,7 @@ impl Contract {
         let request = self.prepare_request_safely(ticket, signature, builder);
         let event = Restake(request.account_id.clone(), RestakeData::from(&request));
 
-        for (product_id, _) in request.partitions.iter() {
+        for (product_id, _) in &request.partitions {
             self.update_jar_cache(&request.account_id, product_id);
         }
 
@@ -143,7 +150,7 @@ impl Contract {
         if request.deposit.amount == 0 {
             env::panic_str("Nothing to restake");
         }
-        self.verify(&request.account_id, request.deposit.amount, &ticket, &signature);
+        self.verify(&request.account_id, request.deposit.amount, ticket, signature);
 
         request
     }
@@ -221,7 +228,7 @@ impl RequestBuilder for RestakeAllRequestBuilder {
                 continue;
             }
 
-            let product = contract.get_product(&product_id);
+            let product = contract.get_product(product_id);
             let (balance, partition_index) = jar.get_liquid_balance(&product.terms);
 
             if balance > 0 {

@@ -2,7 +2,6 @@ use near_sdk::near;
 
 use crate::{Timestamp, TokenAmount};
 
-
 /// The `Jar` struct represents a deposit jar within the smart contract.
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]

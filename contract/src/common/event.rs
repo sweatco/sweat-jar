@@ -9,7 +9,6 @@ use sweat_jar_model::{
 
 #[cfg(test)]
 use super::env::test_env_ext;
-
 use crate::{env, PACKAGE_NAME, VERSION};
 
 #[derive(Debug)]
@@ -214,7 +213,10 @@ mod test {
     use rstest::rstest;
     use sweat_jar_model::Local;
 
-    use crate::common::{event::{ClaimData, EventKind, SweatJarEvent}, testing::{accounts::admin, Context, WhitespaceTrimmer}};
+    use crate::common::{
+        event::{ClaimData, EventKind, SweatJarEvent},
+        testing::{accounts::admin, Context, WhitespaceTrimmer},
+    };
 
     #[rstest]
     fn test_contract_version(admin: AccountId) {
@@ -227,7 +229,7 @@ mod test {
         let event = SweatJarEvent::from(EventKind::Claim(
             AccountId::from_str("someone.near").unwrap(),
             ClaimData {
-                timestamp: 1234567,
+                timestamp: 1_234_567,
                 items: vec![
                     ("product_0".to_string(), U128(50)),
                     ("product_1".to_string(), U128(200)),

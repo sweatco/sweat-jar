@@ -6,16 +6,14 @@ use near_sdk::{
     json_types::{U128, U64},
     AccountId,
 };
-use rstest::{fixture, rstest};
+use rstest::rstest;
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, PenaltyApi, ProductApi, WithdrawApi},
     data::{
         deposit::DepositTicket,
         jar::{AggregatedTokenAmountView, Jar},
-        product::{Apy, DowngradableApy, FixedProductTerms, Product, Terms},
+        product::{Apy, Product},
     },
-    signer::test_utils::MessageSigner,
-    UDecimal, MS_IN_YEAR,
 };
 
 use crate::{
@@ -61,7 +59,7 @@ fn get_total_interest_with_single_jar_after_30_minutes(
     assert_eq!(
         interest.amount.detailed,
         HashMap::from([(product.id.clone(), U128(684))])
-    )
+    );
 }
 
 #[rstest]
@@ -85,7 +83,7 @@ fn get_total_interest_with_single_jar_on_maturity(
             detailed: [(product.id.clone(), U128(12_000_000))].into(),
             total: U128(12_000_000)
         }
-    )
+    );
 }
 
 #[rstest]
@@ -283,9 +281,8 @@ mod signature_tests {
     use near_sdk::json_types::Base64VecU8;
     use sweat_jar_model::{data::deposit::DepositMessage, TokenAmount};
 
-    use crate::feature::product::model::test_utils::{product_1_year_apy_7_percent_protected, protected_product};
-
     use super::*;
+    use crate::feature::product::model::test_utils::{product_1_year_apy_7_percent_protected, protected_product};
 
     #[rstest]
     fn verify_ticket_with_valid_signature_and_date(
@@ -297,7 +294,7 @@ mod signature_tests {
         let amount = 14_000_000;
         let ticket = DepositTicket {
             product_id: product.id,
-            valid_until: U64(123000000),
+            valid_until: U64(123_000_000),
             timezone: None,
         };
 
@@ -320,7 +317,7 @@ mod signature_tests {
         let amount = 1_000_000;
         let ticket = DepositTicket {
             product_id: product.id,
-            valid_until: U64(100000000),
+            valid_until: U64(100_000_000),
             timezone: None,
         };
 
@@ -346,7 +343,7 @@ mod signature_tests {
         let amount = 15_000_000;
         let ticket_for_another_product = DepositTicket {
             product_id: another_product.id,
-            valid_until: U64(100000000),
+            valid_until: U64(100_000_000),
             timezone: None,
         };
 
@@ -379,7 +376,7 @@ mod signature_tests {
         let amount = 5_000_000;
         let ticket = DepositTicket {
             product_id: product.id,
-            valid_until: U64(100000000),
+            valid_until: U64(100_000_000),
             timezone: None,
         };
 
@@ -408,7 +405,7 @@ mod signature_tests {
         let amount = 500_000;
         let ticket = DepositTicket {
             product_id: not_existing_product.id,
-            valid_until: U64(100000000),
+            valid_until: U64(100_000_000),
             timezone: None,
         };
 
@@ -430,7 +427,7 @@ mod signature_tests {
         let amount = 3_000_000;
         let ticket = DepositTicket {
             product_id: product.id,
-            valid_until: U64(100000000),
+            valid_until: U64(100_000_000),
             timezone: None,
         };
 

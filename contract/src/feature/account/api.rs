@@ -17,9 +17,12 @@ use sweat_jar_model::{
     TokenAmount, UTC,
 };
 
-use crate::{common::event::{emit, EventKind, ScoreData}, feature::account::view::DetailedJar, Contract, ContractExt};
-
 use super::model::{AccountScoreUpdate, ScoreConverter};
+use crate::{
+    common::event::{emit, EventKind, ScoreData},
+    feature::account::view::DetailedJar,
+    Contract, ContractExt,
+};
 
 impl Contract {
     fn get_total_interest_for_account(&self, account: &Account) -> AggregatedInterestView {

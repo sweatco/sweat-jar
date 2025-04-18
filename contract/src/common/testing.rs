@@ -108,7 +108,7 @@ impl Context {
         }
 
         let mut account = Account::default();
-        for (product_id, jar) in jars.iter() {
+        for (product_id, jar) in jars {
             account.jars.insert(product_id.clone(), jar.clone());
         }
         self.contract()
@@ -228,7 +228,7 @@ pub fn expect_panic(ctx: &impl AfterCatchUnwind, msg: &str, action: impl FnOnce(
     }
 
     let panic_msg = if let Some(msg) = panic_msg.downcast_ref::<&str>() {
-        msg.to_string()
+        (*msg).to_string()
     } else if let Some(msg) = panic_msg.downcast_ref::<String>() {
         msg.clone()
     } else {
@@ -261,9 +261,8 @@ mod tests {
     use near_sdk::AccountId;
     use rstest::rstest;
 
-    use crate::common::testing::{expect_panic, AfterCatchUnwind};
-
     use super::{accounts::admin, Context};
+    use crate::common::testing::{expect_panic, AfterCatchUnwind};
 
     #[test]
     #[should_panic(expected = "Contract didn't panic when expected to.\nExpected message: Something went wrong")]

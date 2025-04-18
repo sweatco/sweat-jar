@@ -1,14 +1,13 @@
 use near_sdk::{test_utils::test_env::alice, AccountId};
-use rstest::{fixture, rstest};
+use rstest::rstest;
 use sweat_jar_model::{
     api::{ProductApi, RestakeApi},
     data::{
         deposit::{DepositMessage, DepositTicket},
         jar::Jar,
-        product::{Apy, Product},
+        product::Product,
     },
-    signer::test_utils::MessageSigner,
-    UDecimal, MS_IN_YEAR,
+    MS_IN_YEAR,
 };
 
 use crate::{
@@ -165,8 +164,7 @@ fn restake_all_to_not_existing_product(
 #[should_panic(expected = "It's not possible to create new jars for this product")]
 fn restake_all_to_disabled_product(
     admin: AccountId,
-    #[from(product_1_year_apy_7_percent_protected)]
-    ProtectedProduct { product, signer }: ProtectedProduct,
+    #[from(product_1_year_apy_7_percent_protected)] ProtectedProduct { product, signer }: ProtectedProduct,
     #[with(vec![(0, 150_000), (MS_IN_YEAR / 3, 770_000)])] jar: Jar,
 ) {
     let mut context = Context::new(admin.clone())

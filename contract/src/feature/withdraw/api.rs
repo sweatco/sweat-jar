@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-#[cfg(test)]
-use crate::common::env::test_env_ext;
 use near_sdk::{
     env::panic_str,
     ext_contract, near, near_bindgen,
@@ -20,6 +18,8 @@ use sweat_jar_model::{
 #[cfg(not(test))]
 use crate::common::assertions::assert_gas;
 use crate::common::env::env_ext;
+#[cfg(test)]
+use crate::common::env::test_env_ext;
 
 #[cfg(not(test))]
 pub(crate) mod gas {

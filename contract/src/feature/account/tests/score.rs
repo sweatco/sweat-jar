@@ -19,7 +19,6 @@ use sweat_jar_model::{
     AccountScore, Score, Timezone, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
 };
 
-use crate::feature::{account::model::test_utils::jar, product::model::test_utils::*};
 use crate::{
     common::{
         env::test_env_ext,
@@ -28,6 +27,7 @@ use crate::{
             Context, TokenUtils,
         },
     },
+    feature::{account::model::test_utils::jar, product::model::test_utils::*},
     StorageKey,
 };
 
@@ -62,7 +62,7 @@ mod score_tests {
         context.deposit(&alice, &regular_product.id, 100.to_otto());
         context.deposit_with_timezone(&alice, &score_product.id, 100.to_otto(), Timezone::hour_shift(3));
 
-        assert_eq!(context.contract().get_timezone(alice.clone()), Some(I64(10800000)));
+        assert_eq!(context.contract().get_timezone(alice.clone()), Some(I64(10_800_000)));
 
         // Difference of 1 is okay because the missing otto-sweat is stored in claim remainder
         // and will eventually be added to total claimed balance
@@ -143,8 +143,8 @@ mod score_tests {
                 context.record_score(bob, UTC((day - 1) * MS_IN_DAY), score);
             }
 
-            *total_claimed_bob += context.claim_total(&bob);
-            assert_eq!(context.interest(&alice, product_id), *total_claimed_bob, "{day}");
+            *total_claimed_bob += context.claim_total(bob);
+            assert_eq!(context.interest(alice, product_id), *total_claimed_bob, "{day}");
         }
 
         let mut total_claimed_bob: u128 = 0;
@@ -323,8 +323,8 @@ mod score_tests {
 
     #[rstest]
     fn timestamps(admin: AccountId, alice: AccountId, #[from(product_10_days_20_cap_score_based)] product: Product) {
-        const BASE_TIME: Timestamp = 1729692817027;
-        const TEST_TIME: Timestamp = 1729694971000;
+        const BASE_TIME: Timestamp = 1_729_692_817_027;
+        const TEST_TIME: Timestamp = 1_729_694_971_000;
 
         test_env_ext::set_test_log_events(false);
 
@@ -344,10 +344,10 @@ mod score_tests {
         ); // Wed Oct 23 2024 14:13:37
 
         ctx.set_block_timestamp_in_ms(TEST_TIME);
-        ctx.record_score(&alice, UTC(1729592064000), 8245);
+        ctx.record_score(&alice, UTC(1_729_592_064_000), 8245);
 
         assert_eq!(
-            22589041095890410958904,
+            22_589_041_095_890_410_958_904,
             ctx.contract().get_total_interest(alice.clone()).amount.total.0
         );
 
@@ -355,7 +355,7 @@ mod score_tests {
             ctx.set_block_timestamp_in_ms(TEST_TIME + MS_IN_HOUR * i);
 
             assert_eq!(
-                22589041095890410958904,
+                22_589_041_095_890_410_958_904,
                 ctx.contract().get_total_interest(alice.clone()).amount.total.0
             );
         }
@@ -365,7 +365,7 @@ mod score_tests {
     fn test_steps_history(
         admin: AccountId,
         alice: AccountId,
-        #[values(1729692817027)] base_time: Timestamp,
+        #[values(1_729_692_817_027)] base_time: Timestamp,
         #[from(product_10_days_20_cap_score_based)] product: Product,
         #[with(vec![(base_time, 100)])] jar: Jar,
     ) {
@@ -447,35 +447,35 @@ mod score_tests {
         let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         ctx.switch_account(admin.clone());
-        ctx.set_block_timestamp_in_ms(1732653318018 - MS_IN_DAY);
+        ctx.set_block_timestamp_in_ms(1_732_653_318_018 - MS_IN_DAY);
         ctx.contract().deposit(
             alice.clone(),
             DepositTicket {
                 product_id: product.id.clone(),
-                valid_until: (1733139450015 + MS_IN_YEAR).into(),
+                valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
                 timezone: Some(Timezone::hour_shift(0)),
             },
             0,
             &None,
         );
 
-        ctx.set_block_timestamp_in_ms(1732653318018);
+        ctx.set_block_timestamp_in_ms(1_732_653_318_018);
         ctx.contract()
-            .record_score(vec![(alice.clone(), vec![(15100, 1732653318018.into())])]);
+            .record_score(vec![(alice.clone(), vec![(15100, 1_732_653_318_018.into())])]);
 
-        ctx.set_block_timestamp_in_ms(1733139450015);
+        ctx.set_block_timestamp_in_ms(1_733_139_450_015);
         ctx.contract().deposit(
             alice.clone(),
             DepositTicket {
                 product_id: product.id.clone(),
-                valid_until: (1733139450015 + MS_IN_YEAR).into(),
+                valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
                 timezone: None,
             },
             100_000_000.to_otto(),
             &None,
         );
 
-        ctx.set_block_timestamp_in_ms(1733140384365); // Mon Dec 02 2024 11:53:04
+        ctx.set_block_timestamp_in_ms(1_733_140_384_365); // Mon Dec 02 2024 11:53:04
 
         assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
     }
@@ -485,12 +485,11 @@ mod account_score_tests {
     use near_sdk::env::block_timestamp_ms;
     use sweat_jar_model::{data::account::Account, Chain, Day};
 
+    use super::*;
     use crate::feature::account::model::AccountScoreUpdate;
 
-    use super::*;
-
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
-    const TODAY: u64 = 1722234632000;
+    const TODAY: u64 = 1_722_234_632_000;
 
     #[fixture]
     fn chain() -> Chain {

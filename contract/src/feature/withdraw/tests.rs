@@ -8,11 +8,11 @@ use rstest::{fixture, rstest};
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{
-        jar::{Deposit, Jar},
-        product::{Apy, FixedProductTerms, FlexibleProductTerms, Product, ProductId, Terms, WithdrawalFee},
+        jar::Jar,
+        product::{Apy, FixedProductTerms, Product, ProductId, Terms},
         withdraw::BulkWithdrawView,
     },
-    Timestamp, TokenAmount, UDecimal, MS_IN_DAY,
+    TokenAmount, UDecimal, MS_IN_DAY,
 };
 
 use crate::{
@@ -419,7 +419,7 @@ fn withdraw_all(
     let target_principal: Vec<TokenAmount> = [illegal_jar.total_principal(), long_term_jar.total_principal()]
         .iter()
         .sorted()
-        .cloned()
+        .copied()
         .collect();
     assert_eq!(jars_principal, target_principal);
 }

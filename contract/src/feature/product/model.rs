@@ -1,6 +1,7 @@
 #[cfg(test)]
 pub mod test_utils {
     use near_sdk::json_types::U128;
+    use rstest::fixture;
     use sweat_jar_model::{
         data::product::{
             Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ProductId,
@@ -11,7 +12,6 @@ pub mod test_utils {
     };
 
     use crate::common::testing::TokenUtils;
-    use rstest::fixture;
 
     /// Default product name. If product name wasn't specified it will have this name.
     pub const DEFAULT_PRODUCT_NAME: &str = "product";

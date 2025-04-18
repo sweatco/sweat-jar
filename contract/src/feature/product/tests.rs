@@ -1,10 +1,7 @@
 #![cfg(test)]
 
 use fake::Fake;
-use near_sdk::{
-    json_types::{Base64VecU8, U128, U64},
-    AccountId,
-};
+use near_sdk::{json_types::Base64VecU8, AccountId};
 use rstest::rstest;
 use sweat_jar_model::{
     api::ProductApi,
@@ -12,8 +9,7 @@ use sweat_jar_model::{
         account::Account,
         jar::Jar,
         product::{
-            Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ProductAssertions,
-            ProductModelApi, ScoreBasedProductTerms, Terms, WithdrawalFee,
+            Apy, DowngradableApy, FixedProductTerms, Product, ProductAssertions, ProductModelApi, Terms, WithdrawalFee,
         },
     },
     interest::InterestCalculator,
@@ -65,7 +61,7 @@ fn disable_product_when_enabled(admin: AccountId, product: Product) {
 
     context.switch_account_to_manager();
     context.with_deposit_yocto(1, |context| {
-        context.contract().set_enabled(product.id.to_string(), false)
+        context.contract().set_enabled(product.id.to_string(), false);
     });
 
     context.contract().products_cache.borrow_mut().clear();
@@ -84,7 +80,7 @@ fn enable_product_when_enabled(admin: AccountId, product: Product) {
 
     context.switch_account_to_manager();
     context.with_deposit_yocto(1, |context| {
-        context.contract().set_enabled(product.id.to_string(), true)
+        context.contract().set_enabled(product.id.to_string(), true);
     });
 }
 
@@ -168,7 +164,7 @@ fn register_product_with_fee(
 
     context.switch_account_to_manager();
     context.with_deposit_yocto(1, |context| {
-        context.contract().register_product(product_with_percent_fee)
+        context.contract().register_product(product_with_percent_fee);
     });
 
     let product = context.contract().get_products().first().unwrap().clone();
@@ -204,7 +200,7 @@ fn set_public_key(
     context.with_deposit_yocto(1, |context| {
         context
             .contract()
-            .set_public_key(product.id.clone(), Base64VecU8(new_pk.clone()))
+            .set_public_key(product.id.clone(), Base64VecU8(new_pk.clone()));
     });
 
     let product = context.contract().products.get(&product.id).unwrap();
@@ -225,7 +221,7 @@ fn set_public_key_by_not_admin(
 
     context.switch_account(&alice);
     context.with_deposit_yocto(1, |context| {
-        context.contract().set_public_key(product.id, Base64VecU8(new_pk))
+        context.contract().set_public_key(product.id, Base64VecU8(new_pk));
     });
 }
 
@@ -292,8 +288,8 @@ fn interest_precision(#[with(vec![(0, u128::from(MS_IN_YEAR))])] jar: Jar) {
     });
     let account = Account::default();
 
-    assert_eq!(terms.get_interest(&account, &jar, 10000000000).0, 10000000000);
-    assert_eq!(terms.get_interest(&account, &jar, 10000000001).0, 10000000001);
+    assert_eq!(terms.get_interest(&account, &jar, 10_000_000_000).0, 10_000_000_000);
+    assert_eq!(terms.get_interest(&account, &jar, 10_000_000_001).0, 10_000_000_001);
 
     for _ in 0..100 {
         let time: Timestamp = (10..MS_IN_YEAR).fake();

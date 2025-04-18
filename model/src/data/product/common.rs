@@ -1,8 +1,7 @@
 use near_sdk::{env, json_types::Base64VecU8, require};
 
-use crate::{data::jar::Deposit, TokenAmount};
-
 use super::{Product, Terms, WithdrawalFee};
+use crate::{data::jar::Deposit, TokenAmount};
 
 pub trait TermsApi {
     fn allows_early_withdrawal(&self) -> bool;

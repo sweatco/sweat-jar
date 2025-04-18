@@ -55,7 +55,7 @@ mod test {
 
     #[test]
     fn test_assert_gas() {
-        const GAS_FOR_ASSERT_CALL: u64 = 529536222;
+        const GAS_FOR_ASSERT_CALL: u64 = 529_536_222;
 
         expect_panic(
             &(),

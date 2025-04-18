@@ -1,11 +1,10 @@
 use near_sdk::require;
 
+use super::{Deposit, Jar, JarCache, JarCompanion};
 use crate::{
     data::product::{Terms, TermsApi},
     Duration, Timestamp, TokenAmount,
 };
-
-use super::{Deposit, Jar, JarCache, JarCompanion};
 
 pub trait Assertions {
     fn assert_not_locked(&self);

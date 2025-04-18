@@ -1,29 +1,24 @@
 #![cfg(test)]
 
 use fake::Fake;
-use near_sdk::{json_types::U128, test_utils::test_env::alice, AccountId, PromiseOrValue};
+use near_sdk::{json_types::U128, AccountId, PromiseOrValue};
 use rstest::rstest;
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
-    data::{
-        claim::ClaimedAmountView,
-        jar::Jar,
-        product::{Apy, FixedProductTerms, Product, Terms},
-    },
+    data::{claim::ClaimedAmountView, jar::Jar, product::Product},
     interest::InterestCalculator,
-    TokenAmount, UDecimal, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
+    TokenAmount, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
 };
 
 use crate::{
-    common::testing::Context,
-    feature::{account::model::test_utils::jar, product::model::test_utils::*},
-};
-use crate::{
     common::{
         env::test_env_ext,
-        testing::{accounts::*, UnwrapPromise},
+        testing::{accounts::*, Context, UnwrapPromise},
     },
-    feature::account::model::test_utils::JarBuilder,
+    feature::{
+        account::model::test_utils::{jar, JarBuilder},
+        product::model::test_utils::*,
+    },
 };
 
 #[rstest]

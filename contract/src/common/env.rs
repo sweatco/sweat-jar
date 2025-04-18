@@ -23,7 +23,7 @@ pub(crate) mod env_ext {
             test_env_ext::set_test_future_success(false);
             assert!(!env_ext::is_promise_success());
             test_env_ext::set_test_future_success(true);
-            assert!(env_ext::is_promise_success())
+            assert!(env_ext::is_promise_success());
         }
     }
 }

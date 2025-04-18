@@ -1,8 +1,7 @@
 use near_sdk::env::block_timestamp_ms;
 
-use crate::{AccountScore, Chain, Day, Local, Score, ScoreRecord, TimeHelper, Timezone};
-
 use super::DAYS_STORED;
+use crate::{AccountScore, Chain, Day, Local, Score, ScoreRecord, TimeHelper, Timezone};
 
 impl AccountScore {
     pub fn is_valid(&self) -> bool {

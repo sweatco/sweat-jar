@@ -7,7 +7,9 @@ use crate::{
         jar::{Deposit, Jar, JarCompanion},
         product::{Product, ProductId},
         score::AccountScore,
-    }, interest::InterestCalculator, Timestamp, Timezone, TokenAmount
+    },
+    interest::InterestCalculator,
+    Timestamp, Timezone, TokenAmount,
 };
 
 #[near]

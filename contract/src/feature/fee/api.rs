@@ -5,9 +5,9 @@ use near_sdk::env;
 use near_sdk::{ext_contract, json_types::U128, near, PromiseOrValue};
 use sweat_jar_model::{api::FeeApi, TokenAmount};
 
-use crate::{common::env::env_ext, Contract, ContractExt};
 #[cfg(not(test))]
 use crate::feature::{ft_interface::FungibleTokenInterface, withdraw::api::gas::GAS_FOR_AFTER_FEE_WITHDRAW};
+use crate::{common::env::env_ext, Contract, ContractExt};
 
 #[near]
 impl FeeApi for Contract {
