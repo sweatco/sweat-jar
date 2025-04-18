@@ -1,6 +1,6 @@
 [package]
 name = "sweat_jar"
-version = "3.4.1"
+version = "4.0.0"
 authors = ["Sweat Economy"]
 edition = "2021"
 
@@ -17,7 +17,6 @@ integration-test = [
 integration-api = ["sweat-jar-model/integration-api"]
 
 [dependencies]
-ed25519-dalek = { workspace = true }
 mutants = { workspace = true }
 
 near-sdk = { workspace = true, features = ["unit-testing"] }
@@ -27,11 +26,8 @@ near-contract-standards = { workspace = true }
 sweat-jar-model = { workspace = true }
 
 [dev-dependencies]
-visu = { workspace = true }
 fake = { workspace = true }
-rand = { workspace = true }
-sha256 = { workspace = true }
-base64 = { workspace = true }
 anyhow = { workspace = true }
-crypto-hash = { workspace = true }
 itertools = { workspace = true }
+sweat-jar-model = { workspace = true, features = ["testing"] }
+rstest = "0.25.0"
