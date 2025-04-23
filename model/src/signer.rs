@@ -1,5 +1,5 @@
 use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
-use near_sdk::require;
+use near_sdk::env::panic_str;
 use sha2::{Digest, Sha256};
 
 pub fn sha256(value: &[u8]) -> Vec<u8> {
@@ -20,7 +20,7 @@ impl MessageVerifier {
         Self { verifying_key }
     }
 
-    pub fn verify(&self, message_sha256: &[u8], signature: &[u8]) {
+    pub fn verify(&self, material: &str, message_sha256: &[u8], signature: &[u8]) {
         let signature = Signature::from_bytes(
             signature
                 .try_into()
@@ -28,7 +28,9 @@ impl MessageVerifier {
         );
         let is_signature_valid = self.verifying_key.verify_strict(message_sha256, &signature).is_ok();
 
-        require!(is_signature_valid, "Not matching signature");
+        if !is_signature_valid {
+            panic_str(&format!("Not matching signature. Contract material: {material}"));
+        }
     }
 }
 

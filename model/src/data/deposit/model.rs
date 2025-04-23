@@ -51,6 +51,10 @@ impl DepositMessage {
         ))
     }
 
+    pub fn material(&self) -> &str {
+        &self.0
+    }
+
     pub fn sha256(&self) -> Vec<u8> {
         sha256(self.0.as_bytes())
     }

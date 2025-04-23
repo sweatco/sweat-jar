@@ -37,7 +37,7 @@ impl Contract {
                 nonce,
             );
 
-            MessageVerifier::new(pk).verify(&message.sha256(), &signature.0);
+            MessageVerifier::new(pk).verify(message.material(), &message.sha256(), &signature.0);
         }
     }
 }
