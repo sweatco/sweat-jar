@@ -95,4 +95,8 @@ impl AccountV1 {
         let (interest, remainder) = product.terms.get_interest(self, jar, now);
         self.get_jar_mut(&product.id).update_cache(interest, remainder, now);
     }
+
+    pub fn has_score_jars(&self) -> bool {
+        self.score.is_valid()
+    }
 }

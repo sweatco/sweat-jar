@@ -88,6 +88,11 @@ impl AccountApi for Contract {
         let mut event = vec![];
 
         for (account_id, new_score) in batch {
+            assert!(
+                self.get_account(&account_id).has_score_jars(),
+                "Account '{account_id}' doesn't have score jars"
+            );
+
             self.update_account_cache(
                 &account_id,
                 Some(|product: &Product| matches!(product.terms, Terms::ScoreBased(_))),
