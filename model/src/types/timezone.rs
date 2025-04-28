@@ -1,6 +1,9 @@
 use std::ops::{Deref, DerefMut};
 
-use near_sdk::{env::block_timestamp_ms, near, Timestamp};
+use near_sdk::{
+    env::{block_timestamp_ms, panic_str},
+    near, Timestamp,
+};
 
 use crate::{Day, Local, TimeHelper, MS_IN_HOUR, UTC};
 
@@ -28,7 +31,12 @@ impl Timezone {
     pub fn adjust(&self, timestamp: UTC) -> Local {
         let timestamp: Timestamp = (i128::from(self.0) + i128::from(timestamp.0))
             .try_into()
-            .expect("Failed to adjust timestamp");
+            .unwrap_or_else(|_| {
+                panic_str(&format!(
+                    "Failed to adjust timestamp: {timestamp:?} for timezone: {}",
+                    self.0
+                ))
+            });
         timestamp.into()
     }
 
