@@ -167,8 +167,10 @@ pub trait MigrationToStepJars {
 #[make_integration_version]
 pub trait MigrationToV2 {
     fn migrate_state_to_v2_ready(new_version_account_id: ::near_sdk::AccountId) -> Self;
-    fn migrate_account(&mut self) -> ::near_sdk::PromiseOrValue<()>;
+    fn migrate_account(&mut self) -> ::near_sdk::PromiseOrValue<(::near_sdk::AccountId, bool)>;
     fn migrate_products(&mut self) -> ::near_sdk::PromiseOrValue<()>;
+    fn is_account_locked(&self, account_id: ::near_sdk::AccountId) -> bool;
+    fn unlock_account(&mut self, account_id: ::near_sdk::AccountId);
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.

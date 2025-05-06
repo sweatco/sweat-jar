@@ -31,6 +31,7 @@ pub enum EventKind {
     TopUp(TopUpData),
     RecordScore(Vec<ScoreData>),
     OldScoreWarning((Score, Local)),
+    JarsMerge(AccountId),
 }
 
 #[derive(Debug)]

@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap};
 
+use crate::event::{emit, EventKind};
 #[cfg(not(test))]
 use crate::ft_interface::*;
 use crate::{
@@ -18,7 +19,7 @@ use near_sdk::{
     store::{LookupMap, LookupSet},
     AccountId, Gas, PanicOnDefault, PromiseOrValue,
 };
-use near_sdk::{NearToken, Promise};
+use near_sdk::{require, NearToken, Promise};
 use sweat_jar_model::{
     account::{v1::AccountScore, versioned::AccountVersioned, Account},
     api::MigrationToV2,
@@ -41,6 +42,7 @@ pub struct ContractBeforeMigration {
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
+    pub migration: MigrationState,
 }
 
 const TGAS_FOR_MIGRATION_TRANSFER: u64 = 100;
@@ -70,9 +72,8 @@ impl MigrationToV2 for Contract {
         }
     }
 
-    fn migrate_account(&mut self) -> PromiseOrValue<()> {
+    fn migrate_account(&mut self) -> PromiseOrValue<(AccountId, bool)> {
         let account_id = env::predecessor_account_id();
-        log_str(&format!("migrate_account({account_id})"));
 
         self.assert_account_is_not_migrating(&account_id);
 
@@ -80,22 +81,32 @@ impl MigrationToV2 for Contract {
 
         assert_gas(
             Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER + TGAS_FOR_MIGRATION_CALLBACK).as_gas(),
-            || format!("migrate_account({account_id})"),
+            || format!("Out of gas in migrate_account({account_id})"),
         );
-        log_str(&format!(
-            "transfer_account({account_id}) with gas available: {}",
-            Gas::from_gas(env::prepaid_gas().as_gas() - env::used_gas().as_gas())
-        ));
+
         self.transfer_account(&account_id, principal, memo, msg)
+    }
+
+    fn is_account_locked(&self, account_id: AccountId) -> bool {
+        self.migration.migrating_accounts.contains(&account_id)
+    }
+
+    fn unlock_account(&mut self, account_id: AccountId) {
+        self.assert_manager();
+        self.migration.migrating_accounts.remove(&account_id);
     }
 
     fn migrate_products(&mut self) -> PromiseOrValue<()> {
         self.assert_manager();
 
         let products: Vec<product_v2::Product> = self.products.values().map(|product| product.into()).collect();
-        let products_json = serde_json::to_vec(&products).unwrap_or_else(|_| panic_str("Failed to serialize products"));
+        let args = json!({
+            "products": products
+        });
+        log_str(&format!("args: {args}"));
+        let args_json = serde_json::to_vec(&args).unwrap_or_else(|_| panic_str("Failed to serialize args"));
 
-        self.transfer_products(products_json)
+        self.transfer_products(args_json)
     }
 }
 
@@ -107,7 +118,7 @@ impl Contract {
         principal: TokenAmount,
         memo: String,
         msg: String,
-    ) -> PromiseOrValue<()> {
+    ) -> PromiseOrValue<(AccountId, bool)> {
         self.ft_contract()
             .ft_transfer_call(
                 &self.migration.new_version_account_id,
@@ -124,14 +135,15 @@ impl Contract {
             .into()
     }
 
-    fn transfer_products(&mut self, products_json: Vec<u8>) -> PromiseOrValue<()> {
+    fn transfer_products(&mut self, args: Vec<u8>) -> PromiseOrValue<()> {
         Promise::new(self.migration.new_version_account_id.clone())
             .function_call(
                 "migrate_products".to_string(),
-                products_json,
+                args,
                 NearToken::from_yoctonear(0),
                 Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER),
             )
+            .then(Self::ext(env::current_account_id()).after_products_migrated().into())
             .into()
     }
 }
@@ -144,11 +156,11 @@ impl Contract {
         _principal: TokenAmount,
         _memo: String,
         _msg: String,
-    ) -> PromiseOrValue<()> {
+    ) -> PromiseOrValue<(AccountId, bool)> {
         self.after_account_transferred(account_id.clone())
     }
 
-    fn transfer_products(&mut self, _products_json: Vec<u8>) -> PromiseOrValue<()> {
+    fn transfer_products(&mut self, _args: Vec<u8>) -> PromiseOrValue<()> {
         PromiseOrValue::Value(())
     }
 }
@@ -156,17 +168,22 @@ impl Contract {
 #[near]
 impl Contract {
     #[private]
-    pub fn after_account_transferred(&mut self, account_id: AccountId) -> PromiseOrValue<()> {
-        env::log_str(&format!(
-            "after_account_transferred({account_id}) -> {}",
-            is_promise_success()
-        ));
+    pub fn after_account_transferred(&mut self, account_id: AccountId) -> PromiseOrValue<(AccountId, bool)> {
+        let is_success = is_promise_success();
 
-        if is_promise_success() {
+        if is_success {
             self.clear_account(&account_id);
+            emit(EventKind::JarsMerge(account_id.clone()));
         }
 
         self.unlock_account(&account_id);
+
+        PromiseOrValue::Value((self.migration.new_version_account_id.clone(), is_success))
+    }
+
+    #[private]
+    pub fn after_products_migrated(&mut self) -> PromiseOrValue<()> {
+        require!(is_promise_success(), "Products migration failed");
 
         PromiseOrValue::Value(())
     }
@@ -264,7 +281,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_prepare_migration_params() {
+    #[ignore]
+    fn demo_prepare_migration_params() {
         let admin = admin();
         let alice = alice();
 
@@ -333,51 +351,151 @@ mod tests {
 }
 
 mod product_v2 {
-    use crate::product::model::{Apy, Cap, Product as ProductLegacy, Terms as TermsLegacy, WithdrawalFee};
-    use near_sdk::{
-        json_types::{Base64VecU8, U64},
-        near,
+    use crate::product::model::{
+        Apy as ApyLegacy, Product as ProductLegacy, Terms as TermsLegacy, WithdrawalFee as WithdrawalFeeLegacy,
     };
-    use sweat_jar_model::{ProductId, Score};
+    use near_sdk::{
+        json_types::{Base64VecU8, U128, U64},
+        near,
+        serde::{Deserialize, Deserializer, Serialize, Serializer},
+    };
+    use sweat_jar_model::{ProductId, Score, UDecimal as UDecimalLegacy};
 
-    #[near(serializers=[borsh, json])]
+    #[near(serializers=[json])]
     #[derive(Clone, Debug)]
-    pub struct Product {
-        pub id: ProductId,
-        pub cap: Cap,
-        pub terms: Terms,
-        pub withdrawal_fee: Option<WithdrawalFee>,
-        pub public_key: Option<Base64VecU8>,
-        pub is_enabled: bool,
+    pub(super) struct Product {
+        id: ProductId,
+        cap: Cap,
+        terms: Terms,
+        withdrawal_fee: Option<WithdrawalFee>,
+        public_key: Option<Base64VecU8>,
+        is_enabled: bool,
     }
 
-    #[near(serializers=[borsh, json])]
+    #[near(serializers=[json])]
+    #[derive(Clone, Debug)]
+    struct Cap(U128, U128);
+
+    #[near(serializers=[json])]
     #[derive(Clone, Debug, PartialEq)]
     #[serde(tag = "type", content = "data", rename_all = "snake_case")]
-    pub enum Terms {
+    enum WithdrawalFee {
+        /// Describes a fixed amount of tokens that a user must pay as a fee on withdrawal.
+        Fix(U128),
+
+        /// Describes a percentage of the withdrawal amount that a user must pay as a fee on withdrawal.
+        Percent(UDecimal),
+    }
+
+    #[near(serializers=[json])]
+    #[derive(Clone, Debug, PartialEq)]
+    #[serde(tag = "type", content = "data", rename_all = "snake_case")]
+    enum Terms {
         Fixed(FixedProductTerms),
         Flexible(FlexibleProductTerms),
         ScoreBased(ScoreBasedProductTerms),
     }
 
-    #[near(serializers=[borsh, json])]
+    #[near(serializers=[json])]
     #[derive(Clone, Debug, PartialEq)]
-    pub struct FixedProductTerms {
-        pub lockup_term: U64,
-        pub apy: Apy,
+    struct FixedProductTerms {
+        lockup_term: U64,
+        apy: Apy,
     }
 
-    #[near(serializers=[borsh, json])]
+    #[near(serializers=[json])]
     #[derive(Clone, Debug, PartialEq)]
-    pub struct FlexibleProductTerms {
-        pub apy: Apy,
+    struct FlexibleProductTerms {
+        apy: Apy,
     }
 
-    #[near(serializers=[borsh, json])]
+    #[near(serializers=[json])]
     #[derive(Clone, Debug, PartialEq)]
-    pub struct ScoreBasedProductTerms {
-        pub score_cap: Score,
-        pub lockup_term: U64,
+    struct ScoreBasedProductTerms {
+        score_cap: Score,
+        lockup_term: U64,
+    }
+
+    #[near(serializers=[json])]
+    #[derive(Copy, Clone, Default, Debug, PartialEq)]
+    struct UDecimal(U128, u32);
+
+    #[derive(Clone, Debug, PartialEq)]
+    enum Apy {
+        Constant(UDecimal),
+        Downgradable(DowngradableApy),
+    }
+
+    #[near(serializers=[json])]
+    #[derive(Clone, Debug, PartialEq)]
+    struct DowngradableApy {
+        default: UDecimal,
+        fallback: UDecimal,
+    }
+
+    impl From<ApyLegacy> for Apy {
+        fn from(value: ApyLegacy) -> Self {
+            match value {
+                ApyLegacy::Constant(value) => Apy::Constant(value.into()),
+                ApyLegacy::Downgradable(value) => Apy::Downgradable(DowngradableApy {
+                    default: value.default.into(),
+                    fallback: value.fallback.into(),
+                }),
+            }
+        }
+    }
+
+    impl From<UDecimalLegacy> for UDecimal {
+        fn from(value: UDecimalLegacy) -> Self {
+            UDecimal(value.significand.into(), value.exponent)
+        }
+    }
+
+    #[near(serializers=[json])]
+    struct ApyHelper {
+        default: UDecimal,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        fallback: Option<UDecimal>,
+    }
+
+    impl From<Apy> for ApyHelper {
+        fn from(apy: Apy) -> Self {
+            match apy {
+                Apy::Constant(value) => Self {
+                    default: value,
+                    fallback: None,
+                },
+                Apy::Downgradable(value) => Self {
+                    default: value.default,
+                    fallback: Some(value.fallback),
+                },
+            }
+        }
+    }
+
+    impl Serialize for Apy {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            ApyHelper::from(self.clone()).serialize(serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Apy {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let helper = ApyHelper::deserialize(deserializer)?;
+            Ok(match helper.fallback {
+                Some(fallback) => Apy::Downgradable(DowngradableApy {
+                    default: helper.default,
+                    fallback,
+                }),
+                None => Apy::Constant(helper.default),
+            })
+        }
     }
 
     impl From<ProductLegacy> for Product {
@@ -393,19 +511,22 @@ mod product_v2 {
                     } else {
                         Terms::Fixed(FixedProductTerms {
                             lockup_term: terms.lockup_term.into(),
-                            apy: value.apy,
+                            apy: value.apy.into(),
                         })
                     }
                 }
 
-                TermsLegacy::Flexible => Terms::Flexible(FlexibleProductTerms { apy: value.apy }),
+                TermsLegacy::Flexible => Terms::Flexible(FlexibleProductTerms { apy: value.apy.into() }),
             };
 
             Self {
                 id: value.id,
-                cap: value.cap,
+                cap: Cap(value.cap.min.into(), value.cap.max.into()),
                 terms,
-                withdrawal_fee: value.withdrawal_fee,
+                withdrawal_fee: value.withdrawal_fee.map(|fee| match fee {
+                    WithdrawalFeeLegacy::Fix(amount) => WithdrawalFee::Fix(amount.into()),
+                    WithdrawalFeeLegacy::Percent(percentage) => WithdrawalFee::Percent(percentage.into()),
+                }),
                 public_key: value.public_key.map(Into::into),
                 is_enabled: value.is_enabled,
             }

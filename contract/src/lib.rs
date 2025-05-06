@@ -75,7 +75,7 @@ pub struct Contract {
 }
 
 #[near]
-struct MigrationState {
+pub struct MigrationState {
     pub new_version_account_id: AccountId,
     pub migrating_accounts: LookupSet<AccountId>,
 }
@@ -92,6 +92,7 @@ pub(crate) enum StorageKey {
     /// Products migrated to step jars
     Products,
     Accounts,
+    _UselessKey,
     Migration,
 }
 
