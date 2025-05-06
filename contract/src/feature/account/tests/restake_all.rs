@@ -322,7 +322,7 @@ fn restake_all_for_multiple_products_with_withdrawal_and_fee(
 
     let principal = &jar.total_principal() + &another_jar.total_principal();
     let total_fee =
-        product.calculate_fee(*&jar.total_principal()) + another_product.calculate_fee(*&another_jar.total_principal());
+        product.calculate_fee(jar.total_principal()) + another_product.calculate_fee(another_jar.total_principal());
     let withdrawal_amount = 100_000;
     let target_fee = (total_fee * withdrawal_amount).div_ceil(principal);
     context.switch_account(&alice);

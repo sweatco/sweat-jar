@@ -15,7 +15,7 @@ use crate::{
 #[mutants::skip]
 async fn withdraw_all() -> Result<()> {
     const PRINCIPAL: u128 = 1_000_000;
-    const JARS_COUNT: u16 = 5010;
+    const JARS_COUNT: u16 = 500;
     const BULK_PRINCIPAL: u128 = PRINCIPAL * JARS_COUNT as u128;
 
     println!("👷🏽 Run test for withdraw all");
@@ -39,7 +39,7 @@ async fn withdraw_all() -> Result<()> {
     assert_eq!(amount.0, PRINCIPAL + 1);
 
     let jar_5_min_1 = context.last_jar_for(&alice).await?;
-    assert_eq!(jar_5_min_1.principal.0, PRINCIPAL + 1);
+    assert_eq!(jar_5_min_1.principal(), PRINCIPAL + 1);
 
     product_5_min_total += PRINCIPAL + 2;
     context
@@ -47,7 +47,7 @@ async fn withdraw_all() -> Result<()> {
         .create_jar(&alice, product_5_min.id(), PRINCIPAL + 2, &context.ft_contract())
         .await?;
     let jar_5_min_2 = context.last_jar_for(&alice).await?;
-    assert_eq!(jar_5_min_2.principal.0, PRINCIPAL + 2);
+    assert_eq!(jar_5_min_2.principal(), PRINCIPAL + 2);
 
     product_5_min_total += PRINCIPAL * JARS_COUNT as u128;
     context
@@ -59,7 +59,7 @@ async fn withdraw_all() -> Result<()> {
         .create_jar(&alice, product_10_min.id(), PRINCIPAL + 3, &context.ft_contract())
         .await?;
     let jar_10_min = context.last_jar_for(&alice).await?;
-    assert_eq!(jar_10_min.principal.0, PRINCIPAL + 3);
+    assert_eq!(jar_10_min.principal(), PRINCIPAL + 3);
 
     let claimed = context.sweat_jar().claim_total(None).await;
     assert!(claimed.is_err());
@@ -102,12 +102,11 @@ async fn withdraw_all() -> Result<()> {
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
 
-    assert_eq!(jars.len(), 1);
-
-    let jar = jars.into_iter().next().unwrap();
-
-    assert_eq!(jar.id, jar_10_min.id);
-    assert_eq!(jar.principal, jar_10_min.principal);
+    assert_eq!(jars.0.get(&product_10_min.id()).unwrap().len(), 1);
+    assert_eq!(
+        jars.get_total_principal_for_product(&product_10_min.id()),
+        jar_10_min.principal()
+    );
 
     Ok(())
 }

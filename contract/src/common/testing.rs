@@ -19,9 +19,8 @@ use sweat_jar_model::{
     Timestamp, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
 };
 
-use crate::Contract;
-
 use super::{env::test_env_ext, event::EventKind};
+use crate::Contract;
 
 pub mod accounts {
     use near_sdk::AccountId;

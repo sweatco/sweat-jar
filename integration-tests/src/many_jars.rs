@@ -38,7 +38,11 @@ async fn claim_many_jars() -> Result<()> {
         .await?;
 
     assert_eq!(
-        context.sweat_jar().get_jars_for_account(alice.to_near()).await?.len(),
+        context
+            .sweat_jar()
+            .get_jars_for_account(alice.to_near())
+            .await?
+            .get_total_deposits_number(),
         DEPOSITS_COUNT
     );
 
@@ -50,7 +54,11 @@ async fn claim_many_jars() -> Result<()> {
 
     assert_eq!(
         DEPOSITS_COUNT,
-        context.sweat_jar().get_jars_for_account(alice.to_near()).await?.len(),
+        context
+            .sweat_jar()
+            .get_jars_for_account(alice.to_near())
+            .await?
+            .get_total_deposits_number(),
     );
 
     let withdrawn = context.sweat_jar().withdraw_all(None).with_user(&alice).await?;
@@ -58,7 +66,11 @@ async fn claim_many_jars() -> Result<()> {
     assert_eq!(DEPOSITS_COUNT as u128 * DEPOSIT_PRINCIPAL, withdrawn.total_amount.0);
 
     assert_eq!(
-        context.sweat_jar().get_jars_for_account(alice.to_near()).await?.len(),
+        context
+            .sweat_jar()
+            .get_jars_for_account(alice.to_near())
+            .await?
+            .get_total_deposits_number(),
         0
     );
 
@@ -97,9 +109,14 @@ async fn restake_many_jars() -> Result<()> {
         .await?;
 
     let original_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    assert_eq!(original_jars.len(), DEPOSITS_COUNT);
+    assert_eq!(original_jars.get_total_deposits_number(), DEPOSITS_COUNT);
 
-    let mut original_dates: Vec<u64> = original_jars.iter().map(|jar| jar.created_at.0).collect();
+    let mut original_dates: Vec<u64> = original_jars
+        .0
+        .values()
+        .flat_map(|deposits| deposits.iter().map(|(timestamp, _)| timestamp))
+        .cloned()
+        .collect();
     original_dates.sort();
     let original_date_latest = original_dates.last().unwrap();
 
@@ -124,8 +141,8 @@ async fn restake_many_jars() -> Result<()> {
         .await?;
 
     let restaked_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    assert_eq!(1, restaked_jars.len());
-    let restake_date = restaked_jars.first().unwrap().created_at.0;
+    assert_eq!(1, restaked_jars.get_total_deposits_number());
+    let restake_date = restaked_jars.0.get(&product_id).unwrap().first().unwrap().0;
 
     assert!(*original_date_latest < restake_date);
 

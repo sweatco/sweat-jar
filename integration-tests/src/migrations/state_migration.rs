@@ -103,7 +103,7 @@ async fn prepare_legacy_jar_contract(
         .await?;
 
     let alice_jars = client.jar().get_jars_for_account(accounts.alice.to_near()).await?;
-    assert_eq!(3, alice_jars.len());
+    assert_eq!(3, alice_jars.get_total_deposits_number());
 
     let result = client.jar().get_total_interest(accounts.alice.to_near()).await?;
     *alice_interest = result.amount.total.0;
@@ -120,7 +120,7 @@ async fn check_jar_contract_after_migration(
     assert_eq!(RegisterProductCommand::all().len(), products.len());
 
     let alice_jars = client.jar().get_jars_for_account(accounts.alice.to_near()).await?;
-    assert_eq!(3, alice_jars.len());
+    assert_eq!(3, alice_jars.get_total_deposits_number());
 
     let current_alice_interest = client.jar().get_total_interest(accounts.alice.to_near()).await?;
     assert!(current_alice_interest.amount.total.0 > *alice_interest);

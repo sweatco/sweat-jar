@@ -102,86 +102,88 @@ async fn register_product() -> Result<()> {
 #[ignore]
 #[tokio::test]
 async fn create_many_jars() -> Result<()> {
-    let ctx = TestnetContext::new().await?;
+    todo!("Update for JarsView");
+    // let ctx = TestnetContext::new().await?;
 
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
+    // let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
-    dbg!(&jars.len());
+    // dbg!(&jars.len());
 
-    for _ in 0..1000 {
-        ctx.jar_contract()
-            .create_jar(
-                &ctx.user,
-                "5min_50apy_restakable_no_signature".to_string(),
-                1000000000000000000,
-                &ctx.token_contract(),
-            )
-            .await?
-            .0;
-    }
+    // for _ in 0..1000 {
+    //     ctx.jar_contract()
+    //         .create_jar(
+    //             &ctx.user,
+    //             "5min_50apy_restakable_no_signature".to_string(),
+    //             1000000000000000000,
+    //             &ctx.token_contract(),
+    //         )
+    //         .await?
+    //         .0;
+    // }
 
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
+    // let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
-    dbg!(&jars.len());
+    // dbg!(&jars.len());
 
-    Ok(())
+    // Ok(())
 }
 
 #[ignore]
 #[tokio::test]
 /// Run this after testnet migration to check that everything runs as expected
 async fn testnet_sanity_check() -> Result<()> {
-    const PRODUCT_ID: &str = "testnet_migration_test_product";
-    const PRINCIPAL: u128 = 1222333334567778000;
+    todo!("Update for JarsView");
+    // const PRODUCT_ID: &str = "testnet_migration_test_product";
+    // const PRINCIPAL: u128 = 1222333334567778000;
 
-    let ctx = TestnetContext::new().await?;
+    // let ctx = TestnetContext::new().await?;
 
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
+    // let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
-    ctx.jar_contract()
-        .create_jar(&ctx.user, PRODUCT_ID.to_string(), PRINCIPAL, &ctx.token_contract())
-        .await?
-        .0;
+    // ctx.jar_contract()
+    //     .create_jar(&ctx.user, PRODUCT_ID.to_string(), PRINCIPAL, &ctx.token_contract())
+    //     .await?
+    //     .0;
 
-    let jars_after = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
+    // let jars_after = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
-    assert_eq!(jars.len() + 1, jars_after.len());
+    // assert_eq!(jars.get_total_deposits_number() + 1, jars_after.get_total_deposits_number());
 
-    let new_jar = jars_after
-        .into_iter()
-        .filter(|item| !jars.contains(&item))
-        .next()
-        .unwrap();
+    // let new_jar = jars_after
+    //     .into_iter()
+    //     .filter(|item| !jars.contains(&item))
+    //     .next()
+    //     .unwrap();
 
-    assert_eq!(new_jar.product_id, "testnet_migration_test_product");
-    assert_eq!(new_jar.principal, PRINCIPAL.into());
+    // assert_eq!(new_jar.product_id, "testnet_migration_test_product");
+    // assert_eq!(new_jar.principal, PRINCIPAL.into());
 
-    sleep(Duration::from_secs(5)).await;
+    // sleep(Duration::from_secs(5)).await;
 
-    let user_balance_before_withdrawal = ctx.token_contract().ft_balance_of(ctx.user.to_near()).await?;
-    ctx.jar_contract().withdraw_all(None).with_user(&ctx.user).await?;
-    let user_balance_after_withdrawal = ctx.token_contract().ft_balance_of(ctx.user.to_near()).await?;
+    // let user_balance_before_withdrawal = ctx.token_contract().ft_balance_of(ctx.user.to_near()).await?;
+    // ctx.jar_contract().withdraw_all(None).with_user(&ctx.user).await?;
+    // let user_balance_after_withdrawal = ctx.token_contract().ft_balance_of(ctx.user.to_near()).await?;
 
-    assert_eq!(
-        PRINCIPAL,
-        user_balance_after_withdrawal.0 - user_balance_before_withdrawal.0
-    );
+    // assert_eq!(
+    //     PRINCIPAL,
+    //     user_balance_after_withdrawal.0 - user_balance_before_withdrawal.0
+    // );
 
-    let ClaimedAmountView::Detailed(claimed) = ctx.jar_contract().claim_total(Some(true)).with_user(&ctx.user).await?
-    else {
-        panic!()
-    };
+    // let ClaimedAmountView::Detailed(claimed) = ctx.jar_contract().claim_total(Some(true)).with_user(&ctx.user).await?
+    // else {
+    //     panic!()
+    // };
 
-    let claimed_jar = claimed.detailed.get(&new_jar.id).expect("New jar not found");
+    // let claimed_jar = claimed.detailed.get(&new_jar.id).expect("New jar not found");
 
-    assert_eq!(claimed_jar.0, 193799678869);
+    // assert_eq!(claimed_jar.0, 193799678869);
 
-    let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
+    // let jars = ctx.jar_contract().get_jars_for_account(ctx.user.to_near()).await?;
 
-    // Jar is deleted after full claim and withdraw
-    assert!(!jars.into_iter().any(|j| j.id == new_jar.id));
+    // // Jar is deleted after full claim and withdraw
+    // assert!(!jars.into_iter().any(|j| j.id == new_jar.id));
 
-    Ok(())
+    // Ok(())
 }
 
 #[ignore]

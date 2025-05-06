@@ -119,7 +119,7 @@ pub(crate) mod test_env_ext {
     #[mutants::skip]
     pub(crate) fn get_events() -> Vec<EventKind> {
         let data = data();
-        
+
         let Some(map) = data.get(&thread_name()) else {
             return vec![];
         };

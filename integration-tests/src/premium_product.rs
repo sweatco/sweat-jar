@@ -7,7 +7,6 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::total_principal,
     context::{prepare_contract, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
@@ -63,7 +62,7 @@ async fn premium_product() -> anyhow::Result<()> {
     assert_eq!(result.0, amount);
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    assert_eq!(jars.first().unwrap().principal.0, amount);
+    assert_eq!(jars.get_first_deposit().unwrap().principal(), amount);
 
     let is_penalty_applied = context.sweat_jar().is_penalty_applied(alice.to_near()).await?;
     assert!(!is_penalty_applied);
@@ -86,7 +85,7 @@ async fn premium_product() -> anyhow::Result<()> {
     assert!(unauthorized_penalty_change.is_err());
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    let total_principal: TokenAmount = total_principal(&jars);
+    let total_principal: TokenAmount = jars.get_total_principal();
     assert_eq!(total_principal, amount);
 
     let interest_result = context.sweat_jar().get_total_interest(alice.to_near()).await;

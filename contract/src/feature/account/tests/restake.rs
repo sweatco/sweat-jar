@@ -371,9 +371,8 @@ fn deposit_with_outdated_nonce_after_restake(
 
     // Create signature for restake
     let nonce = 0;
-    let signature = signer.sign(
-        DepositMessage::new(&context.owner, &alice, &product.id, principal, valid_until, nonce).as_str()
-    );
+    let signature =
+        signer.sign(DepositMessage::new(&context.owner, &alice, &product.id, principal, valid_until, nonce).as_str());
 
     // Perform restake which should increment nonce
     context
@@ -387,13 +386,12 @@ fn deposit_with_outdated_nonce_after_restake(
         valid_until: valid_until.into(),
         timezone: None,
     };
-    let signature = signer.sign(
-        DepositMessage::new(&context.owner, &alice, &product.id, principal, valid_until, nonce).as_str()
-    );
+    let signature =
+        signer.sign(DepositMessage::new(&context.owner, &alice, &product.id, principal, valid_until, nonce).as_str());
 
     context
         .contract()
-        .deposit(alice, ticket, principal.into(), &Some(signature.into()));
+        .deposit(alice, ticket, principal, &Some(signature.into()));
 }
 
 #[rstest]
@@ -436,7 +434,7 @@ fn restake_with_withdrawal(
     // Check emitted event
     let events = context.get_events();
     assert_eq!(events.len(), 1);
-    
+
     let EventKind::Restake(_, data) = events.last().unwrap() else {
         panic!("Expected Restake event");
     };

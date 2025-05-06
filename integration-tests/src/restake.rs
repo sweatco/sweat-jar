@@ -5,7 +5,6 @@ use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{api::*, data::deposit::DepositTicket, TokenAmount};
 
 use crate::{
-    common::total_principal,
     context::{prepare_contract, ContextHelpers, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
@@ -29,10 +28,10 @@ async fn restake() -> Result<()> {
         .await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    assert_eq!(1, jars.len());
-    assert_eq!(amount, total_principal(&jars));
+    assert_eq!(1, jars.get_total_deposits_number());
+    assert_eq!(amount, jars.get_total_principal());
 
-    let first_jar_timestamp = jars.first().unwrap().created_at.0;
+    let first_jar_timestamp = jars.0.get(&product.id()).unwrap().first().unwrap().0;
 
     context.fast_forward_hours(1).await?;
     let ticket = DepositTicket {
@@ -47,16 +46,16 @@ async fn restake() -> Result<()> {
         .await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    assert_eq!(1, jars.len());
-    assert_eq!(amount, total_principal(&jars));
+    assert_eq!(1, jars.get_total_deposits_number());
+    assert_eq!(amount, jars.get_total_principal());
 
-    let second_jar_timestamp = jars.first().unwrap().created_at.0;
+    let second_jar_timestamp = jars.0.get(&product.id()).unwrap().first().unwrap().0;
     assert!(second_jar_timestamp > first_jar_timestamp);
 
     context.sweat_jar().claim_total(None).with_user(&alice).await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    assert_eq!(jars.len(), 1);
+    assert_eq!(jars.get_total_deposits_number(), 1);
 
     Ok(())
 }
@@ -89,7 +88,7 @@ async fn restake_all() -> Result<()> {
     assert_eq!(amount.0, PRINCIPAL + 1);
 
     let jar_5_min_1 = context.last_jar_for(&alice).await?;
-    assert_eq!(jar_5_min_1.principal.0, PRINCIPAL + 1);
+    assert_eq!(jar_5_min_1.principal(), PRINCIPAL + 1);
 
     product_5_min_total += PRINCIPAL + 2;
     context
@@ -97,7 +96,7 @@ async fn restake_all() -> Result<()> {
         .create_jar(&alice, product_5_min.id(), PRINCIPAL + 2, &context.ft_contract())
         .await?;
     let jar_5_min_2 = context.last_jar_for(&alice).await?;
-    assert_eq!(jar_5_min_2.principal.0, PRINCIPAL + 2);
+    assert_eq!(jar_5_min_2.principal(), PRINCIPAL + 2);
 
     product_10_min_total += PRINCIPAL + 3;
     context
@@ -105,7 +104,7 @@ async fn restake_all() -> Result<()> {
         .create_jar(&alice, product_10_min.id(), PRINCIPAL + 3, &context.ft_contract())
         .await?;
     let jar_10_min = context.last_jar_for(&alice).await?;
-    assert_eq!(jar_10_min.principal.0, PRINCIPAL + 3);
+    assert_eq!(jar_10_min.principal(), PRINCIPAL + 3);
 
     product_5_min_total += JARS_COUNT as u128 * PRINCIPAL;
     context
@@ -132,7 +131,11 @@ async fn restake_all() -> Result<()> {
         .await?;
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    let principals_set: HashSet<TokenAmount> = HashSet::from_iter(jars.iter().map(|j| j.principal.0));
+    let principals_set: HashSet<TokenAmount> = HashSet::from_iter(
+        jars.0
+            .values()
+            .flat_map(|deposits| deposits.iter().map(|(_, principal)| principal.0)),
+    );
 
     assert_eq!(
         HashSet::from_iter([product_5_min_total, product_10_min_total]),
