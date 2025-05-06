@@ -9,7 +9,7 @@ use sweat_jar_model::{
     api::AccountApi,
     data::{
         account::Account,
-        jar::{AggregatedInterestView, AggregatedTokenAmountView, JarView},
+        jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
         score::Score,
     },
@@ -20,7 +20,6 @@ use sweat_jar_model::{
 use super::model::{AccountScoreUpdate, ScoreConverter};
 use crate::{
     common::event::{emit, EventKind, ScoreData},
-    feature::account::view::DetailedJar,
     Contract, ContractExt,
 };
 
@@ -49,20 +48,12 @@ impl Contract {
 
 #[near_bindgen]
 impl AccountApi for Contract {
-    fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {
+    fn get_jars_for_account(&self, account_id: AccountId) -> JarsView {
         if let Some(account) = self.try_get_account(&account_id) {
-            return account
-                .jars
-                .iter()
-                .flat_map(|(product_id, jar)| {
-                    let detailed_jar = &DetailedJar(product_id.clone(), jar.clone());
-                    let views: Vec<JarView> = detailed_jar.into();
-                    views
-                })
-                .collect();
+            return account.into();
         }
 
-        vec![]
+        JarsView::default()
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {

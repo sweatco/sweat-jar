@@ -15,7 +15,7 @@ use crate::{
     data::{
         claim::ClaimedAmountView,
         deposit::DepositTicket,
-        jar::{AggregatedInterestView, JarView},
+        jar::{AggregatedInterestView, JarsView},
         product::{Product, ProductId},
         withdraw::{BulkWithdrawView, WithdrawView},
     },
@@ -68,7 +68,7 @@ pub trait AccountApi {
     /// # Returns
     ///
     /// A `Vec<JarView>` containing details about all deposit jars belonging to the specified account.
-    fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView>;
+    fn get_jars_for_account(&self, account_id: AccountId) -> JarsView;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///

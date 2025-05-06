@@ -3,4 +3,3 @@ pub mod common;
 pub(crate) mod model;
 mod tests;
 mod verification;
-pub mod view;
