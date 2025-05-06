@@ -40,6 +40,9 @@ fn apply_penalty_in_batch(
     let interest = context.contract().get_total_interest(bob.clone()).amount.total.0;
     assert_eq!(interest, 500_000_000);
 
+    assert!(!context.contract().is_penalty_applied(alice.clone()));
+    assert!(!context.contract().is_penalty_applied(bob.clone()));
+
     context.switch_account(&admin);
 
     context

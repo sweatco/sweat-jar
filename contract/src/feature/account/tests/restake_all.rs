@@ -5,13 +5,16 @@ use sweat_jar_model::{
     data::{
         deposit::{DepositMessage, DepositTicket},
         jar::Jar,
-        product::Product,
+        product::{Product, ProductModelApi},
     },
-    MS_IN_YEAR,
+    MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
-    common::testing::{accounts::admin, Context},
+    common::{
+        event::EventKind,
+        testing::{accounts::*, Context},
+    },
     feature::{account::model::test_utils::jar, product::model::test_utils::*},
 };
 
@@ -227,4 +230,113 @@ fn restake_all_with_withdrawal(
     assert_eq!(100_000, jar.deposits.last().unwrap().principal);
     assert_eq!(test_time, jar.cache.unwrap().updated_at);
     assert_eq!(100_000, jar.cache.unwrap().interest);
+}
+
+#[rstest]
+fn restake_all_for_multiple_products_with_withdrawal(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_apy_10_percent)] product: Product,
+    #[from(product_1_year_apy_20_percent)] another_product: Product,
+    #[with(vec![(0, 200_000), (MS_IN_YEAR / 4, 300_000)])]
+    #[from(jar)]
+    jar: Jar,
+    #[with(vec![(0, 400_000), (MS_IN_YEAR / 4, 500_000)])]
+    #[from(jar)]
+    another_jar: Jar,
+) {
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone(), another_product.clone()])
+        .with_jars(
+            &alice,
+            &[
+                (product.id.clone(), jar.clone()),
+                (another_product.id.clone(), another_jar.clone()),
+            ],
+        );
+
+    // Wait until maturity
+    let restake_time = 2 * MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    // Create restake ticket
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+
+    let principal = &jar.total_principal() + &another_jar.total_principal();
+    let withdrawal_amount = 200_000;
+    context.switch_account(&alice);
+    context
+        .contract()
+        .restake_all(ticket, None, Some((principal - withdrawal_amount).into()));
+
+    // Check emitted event
+    let events = context.get_events();
+    assert_eq!(events.len(), 1);
+
+    let EventKind::Restake(_, data) = events.last().unwrap() else {
+        panic!("Expected Restake event");
+    };
+    assert_eq!(data.restaked.0, principal - withdrawal_amount);
+    assert_eq!(data.withdrawn.0, withdrawal_amount);
+}
+
+#[rstest]
+fn restake_all_for_multiple_products_with_withdrawal_and_fee(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_12_percent_with_fixed_fee)] product: Product,
+    #[from(product_1_year_12_percent_with_percent_fee)] another_product: Product,
+    #[with(vec![(0, 200_000), (MS_IN_YEAR / 4, 300_000)])]
+    #[from(jar)]
+    jar: Jar,
+    #[with(vec![(0, 400_000), (MS_IN_YEAR / 4, 500_000)])]
+    #[from(jar)]
+    another_jar: Jar,
+) {
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone(), another_product.clone()])
+        .with_jars(
+            &alice,
+            &[
+                (product.id.clone(), jar.clone()),
+                (another_product.id.clone(), another_jar.clone()),
+            ],
+        );
+
+    // Wait until maturity
+    let restake_time = 2 * MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    // Create restake ticket
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+
+    let principal = &jar.total_principal() + &another_jar.total_principal();
+    let total_fee =
+        product.calculate_fee(*&jar.total_principal()) + another_product.calculate_fee(*&another_jar.total_principal());
+    let withdrawal_amount = 100_000;
+    let target_fee = (total_fee * withdrawal_amount).div_ceil(principal);
+    context.switch_account(&alice);
+    context
+        .contract()
+        .restake_all(ticket, None, Some((principal - withdrawal_amount).into()));
+
+    // Check emitted event
+    let events = context.get_events();
+    assert_eq!(events.len(), 1);
+
+    let EventKind::Restake(_, data) = events.last().unwrap() else {
+        panic!("Expected Restake event");
+    };
+    assert_eq!(data.restaked.0, principal - withdrawal_amount);
+    assert_eq!(data.withdrawn.0, withdrawal_amount - target_fee);
 }

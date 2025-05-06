@@ -27,6 +27,7 @@ impl FeeApi for Contract {
 
 #[cfg(not(test))]
 impl Contract {
+    #[mutants::skip] // Covered by integration tests
     fn withdraw_fee_internal(&mut self, amount: TokenAmount) -> PromiseOrValue<U128> {
         self.ft_contract()
             .ft_transfer(&self.fee_account_id, amount, "withdraw_fee")

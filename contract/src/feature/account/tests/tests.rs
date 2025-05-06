@@ -420,7 +420,7 @@ mod signature_tests {
     #[should_panic(expected = "Signature is required")]
     fn verify_ticket_without_signature_when_required(
         admin: AccountId,
-        #[from(product_1_year_apy_7_percent_protected)] ProtectedProduct { product, signer }: ProtectedProduct,
+        #[from(product_1_year_apy_7_percent_protected)] ProtectedProduct { product, signer: _ }: ProtectedProduct,
     ) {
         let context = Context::new(admin.clone()).with_products(&[product.clone()]);
 

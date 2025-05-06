@@ -12,6 +12,7 @@ use crate::{
 };
 
 impl RemainderTransfer for Contract {
+    #[mutants::skip] // Covered by integration tests
     fn transfer_remainder(&mut self, request: Request, event: EventKind) -> PromiseOrValue<()> {
         let amount = request
             .withdrawal

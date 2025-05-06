@@ -11,7 +11,7 @@ use sweat_jar_model::{
 use super::env::test_env_ext;
 use crate::{env, PACKAGE_NAME, VERSION};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 #[serde(tag = "event", content = "data", rename_all = "snake_case")]
 pub enum EventKind {
@@ -53,7 +53,7 @@ pub type ClaimEventItem = (ProductId, U128);
 /// Batched claiming interest from a User's account
 /// `timestamp` – Unix timestamp of a block where interest was calculated and `ft_transfer` was initiated.
 /// `items`     – information about interest claimed from Jars for each Product.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 pub struct ClaimData {
     timestamp: Timestamp,
@@ -88,7 +88,7 @@ pub type WithdrawData = (ProductId, U128, U128);
 /// `restaked`  – amount of tokens being restaked. It's sum of principals of mature deposits
 ///              for `from` Product IDs minus `withdrawn` amount.
 /// `withdrawn` – amount of withdrawn tokens.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 pub struct RestakeData {
     pub timestamp: Timestamp,
@@ -120,7 +120,7 @@ impl RestakeData {
 /// `account_id` – ID of an Account that is subject to the penalty.
 /// `is_applied` – the penalty is applied or cancelled.
 /// `timestamp`  – Unix timestamp of the operation.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 pub struct PenaltyData {
     pub account_id: AccountId,
@@ -132,7 +132,7 @@ pub struct PenaltyData {
 /// `account_ids` – IDs of Accounts that are subjects to the penalty.
 /// `is_applied`  – the penalty is applied or cancelled.
 /// `timestamp`   – Unix timestamp of the operation.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 pub struct BatchPenaltyData {
     pub account_ids: Vec<AccountId>,
@@ -143,7 +143,7 @@ pub struct BatchPenaltyData {
 /// Enabling or disabling a Product.
 /// `product_id` – ID of affected Product.
 /// `is_enabled` – whether the Product became enabled or disabled.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 pub struct EnableProductData {
     pub product_id: ProductId,
@@ -153,7 +153,7 @@ pub struct EnableProductData {
 /// Change public key for a Product.
 /// `product_id` – ID of affected Product.
 /// `pk`         – a public key that was set.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 pub struct ChangeProductPublicKeyData {
     pub product_id: ProductId,
@@ -163,7 +163,7 @@ pub struct ChangeProductPublicKeyData {
 /// Update of User's score.
 /// `account_id` – ID of an Account that is subject to Score update.
 /// `score` – a new Score.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[near(serializers=[json])]
 pub struct ScoreData {
     pub account_id: AccountId,
@@ -189,6 +189,9 @@ pub(crate) fn emit(event: EventKind) {
 #[mutants::skip]
 #[cfg(test)]
 pub(crate) fn emit(event: EventKind) {
+    #[cfg(test)]
+    test_env_ext::store_event(&event);
+
     if test_env_ext::should_log_events() {
         log!("{}", SweatJarEvent::from(event).to_json_event_string());
     }

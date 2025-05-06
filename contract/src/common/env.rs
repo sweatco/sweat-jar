@@ -34,6 +34,10 @@ pub(crate) mod test_env_ext {
         collections::BTreeMap,
         sync::{Mutex, MutexGuard},
     };
+
+    use near_sdk::serde_json;
+
+    use crate::common::event::EventKind;
     type ThreadId = String;
     type ValueKey = String;
     type Value = String;
@@ -50,8 +54,9 @@ pub(crate) mod test_env_ext {
         data: Mutex::new(BTreeMap::new()),
     };
 
-    const FUTURE_SUCCESS_KEY: &str = "FUTURE_SUCCESS_KEY";
-    const LOG_EVENTS_KEY: &str = "LOG_EVENTS_KEY";
+    const FUTURE_SUCCESS_KEY: &str = "FUTURE_SUCCESS";
+    const LOG_EVENTS_KEY: &str = "LOG_EVENTS";
+    const EVENTS_KEY: &str = "EVENTS";
 
     fn data() -> MutexGuard<'static, Map> {
         DATA.data.lock().unwrap()
@@ -97,6 +102,33 @@ pub(crate) mod test_env_ext {
         };
 
         value.parse().unwrap()
+    }
+
+    #[mutants::skip]
+    pub(crate) fn store_event(event: &EventKind) {
+        let mut data = data();
+        let map = data.entry(thread_name()).or_default();
+
+        let events = map.entry(EVENTS_KEY.to_owned()).or_default();
+        let mut events: Vec<EventKind> = serde_json::from_str(events).unwrap_or_default();
+        events.push(event.clone());
+
+        map.insert(EVENTS_KEY.to_owned(), serde_json::to_string(&events).unwrap());
+    }
+
+    #[mutants::skip]
+    pub(crate) fn get_events() -> Vec<EventKind> {
+        let data = data();
+        
+        let Some(map) = data.get(&thread_name()) else {
+            return vec![];
+        };
+
+        let Some(events) = map.get(EVENTS_KEY) else {
+            return vec![];
+        };
+
+        serde_json::from_str(events).unwrap_or_default()
     }
 
     fn thread_name() -> String {

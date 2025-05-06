@@ -21,6 +21,7 @@ use crate::{
 };
 
 #[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
 mod gas {
     use near_sdk::Gas;
 

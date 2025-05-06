@@ -21,6 +21,8 @@ use sweat_jar_model::{
 
 use crate::Contract;
 
+use super::{env::test_env_ext, event::EventKind};
+
 pub mod accounts {
     use near_sdk::AccountId;
     use rstest::fixture;
@@ -167,6 +169,10 @@ impl Context {
     pub(crate) fn set_deposit_yocto(&mut self, amount: Balance) {
         self.builder.attached_deposit(NearToken::from_yoctonear(amount));
         testing_env!(self.builder.build());
+    }
+
+    pub(crate) fn get_events(&self) -> Vec<EventKind> {
+        test_env_ext::get_events()
     }
 }
 

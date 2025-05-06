@@ -6,9 +6,9 @@ use itertools::Itertools;
 use near_sdk::{AccountId, PromiseOrValue};
 use rstest::{fixture, rstest};
 use sweat_jar_model::{
-    api::{AccountApi, ClaimApi, WithdrawApi},
+    api::{AccountApi, ClaimApi, FeeApi, WithdrawApi},
     data::{
-        jar::Jar,
+        jar::*,
         product::{Apy, FixedProductTerms, Product, ProductId, Terms},
         withdraw::BulkWithdrawView,
     },
@@ -159,7 +159,7 @@ fn withdraw_flexible_jar_by_owner_full(
 
     assert_ne!(0, claimed.get_total().0);
     assert_eq!(interest.amount.total, claimed.get_total());
-    assert!(context.contract().get_jars_for_account(alice).is_empty());
+    assert!(context.contract().get_jars_for_account(alice).0.is_empty());
 }
 
 #[rstest]
@@ -208,6 +208,7 @@ fn product_with_fixed_fee(
     let withdraw = context.withdraw(&alice, &product.id);
     assert_eq!(withdraw.withdrawn_amount.0, principal - fee);
     assert_eq!(withdraw.fee.0, fee);
+    assert_eq!(context.contract().get_fee_amount().0, fee);
 }
 
 #[rstest]
@@ -230,6 +231,7 @@ fn text_product_with_percent_fee(
     let reference_fee = fee * principal;
     assert_eq!(withdraw.withdrawn_amount.0, principal - reference_fee);
     assert_eq!(withdraw.fee.0, reference_fee);
+    assert_eq!(context.contract().get_fee_amount().0, reference_fee);
 }
 
 #[rstest]
@@ -415,7 +417,7 @@ fn withdraw_all(
     assert_eq!(regular_jar.total_principal(), withdrawn.total_amount.0);
 
     let jars = context.contract().get_jars_for_account(alice.clone());
-    let jars_principal: Vec<TokenAmount> = jars.into_iter().map(|j| j.principal.0).sorted().collect();
+    let jars_principal: Vec<TokenAmount> = jars.get_principal_per_product().iter().sorted().copied().collect();
     let target_principal: Vec<TokenAmount> = [illegal_jar.total_principal(), long_term_jar.total_principal()]
         .iter()
         .sorted()
@@ -553,10 +555,10 @@ fn batch_withdraw_partially(
     assert_eq!(total_target_deposits_principal, withdrawn.total_amount.0);
 
     let jars = context.contract().get_jars_for_account(alice.clone());
-    assert_eq!(1, jars.len());
+    assert_eq!(1, jars.0.get(&product_3.id).unwrap().len());
     assert_eq!(
         jar_3.deposits.first().unwrap().principal,
-        jars.first().unwrap().principal.0
+        jars.get_total_principal_for_product(&product_3.id)
     );
 }
 

@@ -25,6 +25,7 @@ impl Contract {
     // UnorderedMap doesn't have cache and deserializes `Product` on each get
     // This cached getter significantly reduces gas usage
     #[cfg(not(test))]
+    #[mutants::skip]
     pub(crate) fn get_product(&self, product_id: &ProductId) -> Product {
         self.products_cache
             .borrow_mut()

@@ -69,6 +69,7 @@ pub(super) struct BulkWithdrawalRequest {
 }
 
 #[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
 impl BulkWithdrawalRequest {
     fn total_net_amount(&self) -> TokenAmount {
         self.requests

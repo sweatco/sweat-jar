@@ -272,7 +272,7 @@ impl From<&Request> for RestakeData {
             from,
             into: value.deposit.product_id.clone(),
             restaked: value.deposit.amount.into(),
-            withdrawn: value.withdrawal.map_or(0.into(), |w| w.amount.into()),
+            withdrawn: value.withdrawal.map_or(0.into(), |w| (w.amount - w.fee).into()),
         }
     }
 }
