@@ -13,6 +13,7 @@ use sweat_jar_model::{
 use crate::{
     common::{
         env::test_env_ext,
+        event::EventKind,
         testing::{accounts::*, Context, UnwrapPromise},
     },
     feature::{
@@ -137,6 +138,11 @@ fn claim_all_withdraw_all_and_delete_jar(
     let claimed = context.contract().claim_total(None).unwrap();
 
     assert_eq!(300_000, claimed.get_total().0);
+    let events = context.get_events();
+    let EventKind::Claim(_, claim_data) = events.last().unwrap() else {
+        panic!("Expected Claim event");
+    };
+    assert_eq!(1, claim_data.items.len());
 
     let jar = context.contract().get_account(&alice).get_jar(&product.id).clone();
     let Some(ref cache) = jar.cache else { panic!() };

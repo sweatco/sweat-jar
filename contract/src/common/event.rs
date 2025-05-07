@@ -57,7 +57,7 @@ pub type ClaimEventItem = (ProductId, U128);
 #[near(serializers=[json])]
 pub struct ClaimData {
     timestamp: Timestamp,
-    items: Vec<ClaimEventItem>,
+    pub items: Vec<ClaimEventItem>,
 }
 
 impl ClaimData {

@@ -339,4 +339,5 @@ fn restake_all_for_multiple_products_with_withdrawal_and_fee(
     };
     assert_eq!(data.restaked.0, principal - withdrawal_amount);
     assert_eq!(data.withdrawn.0, withdrawal_amount - target_fee);
+    assert_eq!(context.contract().fee_amount, target_fee);
 }

@@ -298,11 +298,67 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount, 0).as_str());
 
         context
             .contract()
             .verify(&admin, amount, &ticket, &Some(Base64VecU8(signature)));
+    }
+
+    #[rstest]
+    fn sequential_deposits_with_tickets_with_valid_nonce(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_1_year_apy_7_percent_protected)] ProtectedProduct { product, signer }: ProtectedProduct,
+    ) {
+        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let amount = 14_000_000;
+        let ticket = DepositTicket {
+            product_id: product.id,
+            valid_until: U64(123_000_000),
+            timezone: None,
+        };
+
+        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
+        context
+            .contract()
+            .deposit(alice.clone(), ticket.clone(), amount, &Base64VecU8(signature).into());
+
+        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 1).as_str());
+        context
+            .contract()
+            .deposit(alice.clone(), ticket, amount, &Base64VecU8(signature).into());
+
+        let jars = context.contract().get_jars_for_account(alice);
+        assert_eq!(2, jars.get_total_deposits_number());
+    }
+
+    #[rstest]
+    #[should_panic(expected = "Not matching signature")]
+    fn sequential_deposits_with_tickets_with_invalid_nonce(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_1_year_apy_7_percent_protected)] ProtectedProduct { product, signer }: ProtectedProduct,
+    ) {
+        let context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let amount = 14_000_000;
+        let ticket = DepositTicket {
+            product_id: product.id,
+            valid_until: U64(123_000_000),
+            timezone: None,
+        };
+
+        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
+        context
+            .contract()
+            .deposit(alice.clone(), ticket.clone(), amount, &Base64VecU8(signature).into());
+
+        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
+        context
+            .contract()
+            .deposit(alice.clone(), ticket, amount, &Base64VecU8(signature).into());
     }
 
     #[rstest]
@@ -350,7 +406,7 @@ mod signature_tests {
         // signature made for wrong product
         let signature = signer.sign(
             context
-                .get_deposit_message(&admin, &ticket_for_another_product, amount)
+                .get_deposit_message(&admin, &ticket_for_another_product, amount, 0)
                 .as_str(),
         );
 
@@ -380,7 +436,7 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
 
         context
             .contract()
@@ -409,7 +465,7 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount).as_str());
+        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount, 0).as_str());
 
         context
             .contract()
@@ -452,14 +508,20 @@ mod signature_tests {
     }
 
     impl Context {
-        fn get_deposit_message(&self, receiver_id: &AccountId, ticket: &DepositTicket, amount: TokenAmount) -> String {
+        fn get_deposit_message(
+            &self,
+            receiver_id: &AccountId,
+            ticket: &DepositTicket,
+            amount: TokenAmount,
+            nonce: u32,
+        ) -> String {
             DepositMessage::new(
                 &self.owner,
                 receiver_id,
                 &ticket.product_id,
                 amount,
                 ticket.valid_until.0,
-                0,
+                nonce,
             )
             .to_string()
         }

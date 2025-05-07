@@ -57,6 +57,7 @@ impl WithdrawalDto {
     }
 
     #[cfg(not(test))]
+    #[mutants::skip] // Covered by integration tests
     pub fn net_amount(&self) -> TokenAmount {
         self.amount - self.fee
     }
@@ -199,7 +200,9 @@ impl Contract {
         is_promise_success: bool,
     ) -> BulkWithdrawView {
         if !is_promise_success {
-            return self.process_bulk_withdrawal_error(&account_id, request);
+            self.process_bulk_withdrawal_error(&account_id, request);
+
+            return BulkWithdrawView::default();
         }
 
         let result = self.process_bulk_withdrawal_success(&account_id, request);
@@ -208,18 +211,12 @@ impl Contract {
         result
     }
 
-    fn process_bulk_withdrawal_error(
-        &mut self,
-        account_id: &AccountId,
-        request: BulkWithdrawalRequest,
-    ) -> BulkWithdrawView {
+    fn process_bulk_withdrawal_error(&mut self, account_id: &AccountId, request: BulkWithdrawalRequest) {
         let account = self.get_account_mut(account_id);
         for request in request.requests {
             let jar = account.get_jar_mut(&request.product_id);
             jar.unlock();
         }
-
-        BulkWithdrawView::default()
     }
 
     fn process_bulk_withdrawal_success(

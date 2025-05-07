@@ -204,6 +204,64 @@ fn restake_for_protected_product_success(
 }
 
 #[rstest]
+fn sequential_restake_for_protected_product_success(
+    alice: AccountId,
+    admin: AccountId,
+    #[from(protected_product)] ProtectedProduct { product, signer }: ProtectedProduct,
+    #[values(100, 100_000, 2_500_000)] principal: TokenAmount,
+    #[from(jar)]
+    #[with(vec![(0, principal)])]
+    alice_jar: Jar,
+) {
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+
+    let restake_time = MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    context.switch_account(&alice);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+
+    let signature = signer
+        .sign(DepositMessage::new(&context.owner, &alice, &product.id.clone(), principal, valid_until, 0).as_str());
+    context
+        .contract()
+        .restake(product.id.clone(), ticket.clone(), Some(signature.into()), None);
+
+    let alice_jars = context.contract().get_jars_for_account(alice.clone());
+    assert_eq!(1, alice_jars.0.len());
+    assert_eq!(1, alice_jars.0.get(&product.id.clone()).unwrap().len());
+
+    let jar = alice_jars.0.get(&product.id.clone()).unwrap().first().unwrap();
+    assert_eq!(principal, jar.1.into());
+    assert_eq!(restake_time, jar.0);
+
+    let restake_time = restake_time + MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    let signature = signer
+        .sign(DepositMessage::new(&context.owner, &alice, &product.id.clone(), principal, valid_until, 1).as_str());
+    context
+        .contract()
+        .restake(product.id.clone(), ticket.clone(), Some(signature.into()), None);
+
+    let alice_jars = context.contract().get_jars_for_account(alice.clone());
+    let alice_jars = context.contract().get_jars_for_account(alice.clone());
+    assert_eq!(1, alice_jars.0.len());
+    assert_eq!(1, alice_jars.0.get(&product.id.clone()).unwrap().len());
+
+    let jar = alice_jars.0.get(&product.id.clone()).unwrap().first().unwrap();
+    assert_eq!(principal, jar.1.into());
+    assert_eq!(restake_time, jar.0);
+}
+
+#[rstest]
 #[should_panic(expected = "Not matching signature")]
 fn restake_for_protected_product_invalid_signature(
     alice: AccountId,

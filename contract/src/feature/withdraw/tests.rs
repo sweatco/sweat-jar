@@ -261,12 +261,10 @@ fn test_failed_withdraw_promise(
     let withdrawn = context.withdraw(&alice, &product.id);
     assert_eq!(withdrawn.withdrawn_amount.0, 0);
 
-    let total_principal_after_withdrawal = context
-        .contract()
-        .get_account(&alice)
-        .get_jar(&product.id)
-        .total_principal();
-    assert_eq!(total_principal_before_withdrawal, total_principal_after_withdrawal);
+    let contract = context.contract();
+    let jar = contract.get_account(&alice).get_jar(&product.id);
+    assert_eq!(total_principal_before_withdrawal, jar.total_principal());
+    assert!(!jar.is_pending_withdraw);
 }
 
 #[rstest]
@@ -502,6 +500,50 @@ fn batch_withdraw_all(
 
     let jars = context.contract().get_jars_for_account(alice.clone());
     assert!(jars.is_empty());
+}
+
+#[rstest]
+fn batch_withdraw_all_with_failed_transfer_promise(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_fixed)]
+    #[with(180)]
+    product: Product,
+    #[from(product_1_year_12_percent)] another_product: Product,
+    #[from(jar)]
+    #[with(vec![(0, 7_000_000), (MS_IN_DAY, 300_000), (2 * MS_IN_DAY, 20_000)])]
+    jar: Jar,
+) {
+    test_env_ext::set_test_future_success(false);
+
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone(), another_product.clone()])
+        .with_jars(
+            &alice,
+            &[
+                (product.id.clone(), jar.clone()),
+                (another_product.id.clone(), jar.clone()),
+            ],
+        );
+
+    // One day after last deposit unlock
+    context.set_block_timestamp_in_ms(
+        product.terms.get_lockup_term().unwrap() + jar.deposits.last().unwrap().created_at + MS_IN_DAY,
+    );
+
+    context.switch_account(alice.clone());
+    context.contract().claim_total(None);
+    let withdrawn = context.withdraw_all(&alice);
+
+    assert!(withdrawn.withdrawals.is_empty());
+    assert_eq!(0, withdrawn.total_amount.0);
+
+    let jars = context.contract().get_jars_for_account(alice.clone());
+    assert_eq!(jar.total_principal() * 2, jars.get_total_principal());
+
+    let account = context.contract().get_account(&alice).clone();
+    assert!(!account.get_jar(&product.id).is_pending_withdraw);
+    assert!(!account.get_jar(&another_product.id).is_pending_withdraw);
 }
 
 #[rstest]
