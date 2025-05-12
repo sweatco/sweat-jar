@@ -252,4 +252,22 @@ mod signature_tests {
         };
         context.contract().create_jar(alice, ticket, U128(1_000_000), None);
     }
+
+    #[test]
+    #[should_panic(expected = "Account is migrating")]
+    fn create_jar_while_migrating() {
+        let alice = alice();
+        let admin = admin();
+
+        let product = Product::new();
+        let context = Context::new(admin).with_products(&[product.clone()]);
+        context.contract().migration.migrating_accounts.insert(alice.clone());
+
+        let ticket = JarTicket {
+            product_id: product.id,
+            valid_until: U64(0),
+            timezone: None,
+        };
+        context.contract().create_jar(alice, ticket, U128(1_000_000), None);
+    }
 }
