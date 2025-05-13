@@ -35,10 +35,7 @@ impl Contract {
         self.verify(&account_id, amount, &ticket, signature);
 
         let account = self.get_or_create_account_mut(&account_id);
-
-        if signature.is_some() {
-            account.nonce += 1;
-        }
+        account.nonce += 1;
 
         if matches!(product.terms, Terms::ScoreBased(_)) {
             account.try_set_timezone(ticket.timezone);

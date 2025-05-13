@@ -170,9 +170,7 @@ impl Contract {
         self.get_account_mut(&request.account_id)
             .deposit(&request.deposit.product_id, request.deposit.amount, None);
 
-        if self.get_product(&request.deposit.product_id).is_protected() {
-            self.get_account_mut(&request.account_id).nonce += 1;
-        }
+        self.get_account_mut(&request.account_id).nonce += 1;
     }
 }
 
