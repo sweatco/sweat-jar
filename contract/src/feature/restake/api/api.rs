@@ -102,7 +102,7 @@ impl RemainderTransferCallback for Contract {
             self.get_account_mut(&account_id).get_jar_mut(product_id).unlock();
         }
 
-        if env_ext::is_promise_success() {
+        if is_success {
             self.fee_amount += request.withdrawal.map_or(0, |w| w.fee);
             self.clean_up_and_deposit(request);
         }
