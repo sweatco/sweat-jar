@@ -3,7 +3,7 @@ use rstest::rstest;
 use sweat_jar_model::{
     api::{AccountApi, ProductApi, RestakeApi},
     data::{
-        deposit::{DepositMessage, DepositTicket},
+        deposit::{DepositMessage, DepositTicket, Purpose},
         jar::Jar,
         product::Product,
     },
@@ -188,8 +188,18 @@ fn restake_for_protected_product_success(
         valid_until: valid_until.into(),
         timezone: None,
     };
-    let signature = signer
-        .sign(DepositMessage::new(&context.owner, &alice, &product.id.clone(), principal, valid_until, 0).as_str());
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product.id.clone(),
+            principal,
+            valid_until,
+            0,
+        )
+        .as_str(),
+    );
     context
         .contract()
         .restake(product.id.clone(), ticket, Some(signature.into()), None);
@@ -228,8 +238,18 @@ fn sequential_restake_for_protected_product_success(
         timezone: None,
     };
 
-    let signature = signer
-        .sign(DepositMessage::new(&context.owner, &alice, &product.id.clone(), principal, valid_until, 0).as_str());
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product.id.clone(),
+            principal,
+            valid_until,
+            0,
+        )
+        .as_str(),
+    );
     context
         .contract()
         .restake(product.id.clone(), ticket.clone(), Some(signature.into()), None);
@@ -245,8 +265,18 @@ fn sequential_restake_for_protected_product_success(
     let restake_time = restake_time + MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
 
-    let signature = signer
-        .sign(DepositMessage::new(&context.owner, &alice, &product.id.clone(), principal, valid_until, 1).as_str());
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product.id.clone(),
+            principal,
+            valid_until,
+            1,
+        )
+        .as_str(),
+    );
     context
         .contract()
         .restake(product.id.clone(), ticket.clone(), Some(signature.into()), None);
@@ -288,8 +318,62 @@ fn restake_for_protected_product_invalid_signature(
     };
 
     // invalid signature – wrong amount
-    let signature =
-        signer.sign(DepositMessage::new(&context.owner, &alice, &product.id, principal + 100, valid_until, 0).as_str());
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product.id,
+            principal + 100,
+            valid_until,
+            0,
+        )
+        .as_str(),
+    );
+    context
+        .contract()
+        .restake(product.id, ticket, Some(signature.into()), None);
+}
+
+#[rstest]
+#[should_panic(expected = "Not matching signature")]
+fn restake_with_deposit_signature(
+    alice: AccountId,
+    admin: AccountId,
+    #[from(protected_product)] ProtectedProduct { product, signer }: ProtectedProduct,
+    #[values(100, 100_000, 2_500_000)] principal: TokenAmount,
+    #[from(jar)]
+    #[with(vec![(0, principal)])]
+    alice_jar: Jar,
+) {
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+
+    let restake_time = MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    context.switch_account(&alice);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+
+    // invalid signature – wrong amount
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Deposit,
+            &context.owner,
+            &alice,
+            &product.id,
+            principal + 100,
+            valid_until,
+            0,
+        )
+        .as_str(),
+    );
     context
         .contract()
         .restake(product.id, ticket, Some(signature.into()), None);
@@ -338,15 +422,35 @@ fn restake_for_protected_product_repeated_nonce(
         timezone: None,
     };
 
-    let signature =
-        signer_1.sign(DepositMessage::new(&context.owner, &alice, &product_1.id, principal, valid_until, 0).as_str());
+    let signature = signer_1.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product_1.id,
+            principal,
+            valid_until,
+            0,
+        )
+        .as_str(),
+    );
     context
         .contract()
         .restake(product_1.id, ticket.clone(), Some(signature.into()), None);
 
     // invalid signature – repeated nonce
-    let signature =
-        signer_2.sign(DepositMessage::new(&context.owner, &alice, &product_2.id, principal, valid_until, 1).as_str());
+    let signature = signer_2.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product_2.id,
+            principal,
+            valid_until,
+            1,
+        )
+        .as_str(),
+    );
     context
         .contract()
         .restake(product_2.id, ticket, Some(signature.into()), None);
@@ -388,8 +492,18 @@ fn restake_for_protected_product_maturity_mistiming(
     };
 
     // create signature for principal of first deposit only
-    let signature =
-        signer.sign(DepositMessage::new(&context.owner, &alice, &product.id, principal_1, valid_until, 0).as_str());
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product.id,
+            principal_1,
+            valid_until,
+            0,
+        )
+        .as_str(),
+    );
 
     // at this point both deposits are mature
     let restake_time = restake_time + 2 * MS_IN_DAY;
@@ -429,8 +543,18 @@ fn deposit_with_outdated_nonce_after_restake(
 
     // Create signature for restake
     let nonce = 0;
-    let signature =
-        signer.sign(DepositMessage::new(&context.owner, &alice, &product.id, principal, valid_until, nonce).as_str());
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Restake,
+            &context.owner,
+            &alice,
+            &product.id,
+            principal,
+            valid_until,
+            nonce,
+        )
+        .as_str(),
+    );
 
     // Perform restake which should increment nonce
     context
@@ -444,8 +568,18 @@ fn deposit_with_outdated_nonce_after_restake(
         valid_until: valid_until.into(),
         timezone: None,
     };
-    let signature =
-        signer.sign(DepositMessage::new(&context.owner, &alice, &product.id, principal, valid_until, nonce).as_str());
+    let signature = signer.sign(
+        DepositMessage::new(
+            Purpose::Deposit,
+            &context.owner,
+            &alice,
+            &product.id,
+            principal,
+            valid_until,
+            nonce,
+        )
+        .as_str(),
+    );
 
     context
         .contract()

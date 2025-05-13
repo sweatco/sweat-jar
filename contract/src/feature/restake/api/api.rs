@@ -7,7 +7,7 @@ use near_sdk::{
 use sweat_jar_model::{
     api::RestakeApi,
     data::{
-        deposit::DepositTicket,
+        deposit::{DepositTicket, Purpose},
         jar::Assertions,
         product::{ProductAssertions, ProductId, ProductModelApi},
     },
@@ -155,7 +155,13 @@ impl Contract {
         if request.deposit.amount == 0 {
             env::panic_str("Nothing to restake");
         }
-        self.verify(&request.account_id, request.deposit.amount, ticket, signature);
+        self.verify(
+            Purpose::Restake,
+            &request.account_id,
+            request.deposit.amount,
+            ticket,
+            signature,
+        );
 
         request
     }

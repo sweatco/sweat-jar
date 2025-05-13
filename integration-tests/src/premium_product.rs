@@ -1,7 +1,10 @@
 use nitka::misc::ToNear;
 use sweat_jar_model::{
     api::*,
-    data::{deposit::DepositMessage, product::Product},
+    data::{
+        deposit::{DepositMessage, Purpose},
+        product::Product,
+    },
     signer::test_utils::MessageSigner,
     TokenAmount,
 };
@@ -38,6 +41,7 @@ async fn premium_product() -> anyhow::Result<()> {
     let valid_until = 55_012_170_000_000;
     let amount = 3_000_000;
     let deposit_message = DepositMessage::new(
+        Purpose::Deposit,
         context.sweat_jar().contract.as_account().id(),
         alice.id(),
         product_id,

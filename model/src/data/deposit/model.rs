@@ -35,10 +35,26 @@ pub struct DepositTicket {
     pub timezone: Option<Timezone>,
 }
 
+#[derive(Clone, Debug)]
+pub enum Purpose {
+    Deposit,
+    Restake,
+}
+
+impl Display for Purpose {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Purpose::Deposit => write!(f, "deposit"),
+            Purpose::Restake => write!(f, "restake"),
+        }
+    }
+}
+
 pub struct DepositMessage(String);
 
 impl DepositMessage {
     pub fn new(
+        purpose: Purpose,
         contract_account_id: &AccountId,
         receiver_account_id: &AccountId,
         product_id: &ProductId,
@@ -47,7 +63,7 @@ impl DepositMessage {
         nonce: u32,
     ) -> Self {
         Self(format!(
-            "{contract_account_id},{receiver_account_id},{product_id},{amount},{nonce},{valid_until}"
+            "{purpose},{contract_account_id},{receiver_account_id},{product_id},{amount},{nonce},{valid_until}"
         ))
     }
 

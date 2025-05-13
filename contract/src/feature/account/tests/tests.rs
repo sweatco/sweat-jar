@@ -279,7 +279,10 @@ fn unlock_by_manager(
 
 mod signature_tests {
     use near_sdk::json_types::Base64VecU8;
-    use sweat_jar_model::{data::deposit::DepositMessage, TokenAmount};
+    use sweat_jar_model::{
+        data::deposit::{DepositMessage, Purpose},
+        TokenAmount,
+    };
 
     use super::*;
     use crate::feature::product::model::test_utils::{product_1_year_apy_7_percent_protected, protected_product};
@@ -298,11 +301,15 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount, 0).as_str());
+        let signature = signer.sign(
+            context
+                .get_deposit_message(Purpose::Deposit, &admin, &ticket, amount, 0)
+                .as_str(),
+        );
 
         context
             .contract()
-            .verify(&admin, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &admin, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -320,12 +327,20 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
+        let signature = signer.sign(
+            context
+                .get_deposit_message(Purpose::Deposit, &alice, &ticket, amount, 0)
+                .as_str(),
+        );
         context
             .contract()
             .deposit(alice.clone(), ticket.clone(), amount, &Base64VecU8(signature).into());
 
-        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 1).as_str());
+        let signature = signer.sign(
+            context
+                .get_deposit_message(Purpose::Deposit, &alice, &ticket, amount, 1)
+                .as_str(),
+        );
         context
             .contract()
             .deposit(alice.clone(), ticket, amount, &Base64VecU8(signature).into());
@@ -350,12 +365,20 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
+        let signature = signer.sign(
+            context
+                .get_deposit_message(Purpose::Deposit, &alice, &ticket, amount, 0)
+                .as_str(),
+        );
         context
             .contract()
             .deposit(alice.clone(), ticket.clone(), amount, &Base64VecU8(signature).into());
 
-        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
+        let signature = signer.sign(
+            context
+                .get_deposit_message(Purpose::Deposit, &alice, &ticket, amount, 0)
+                .as_str(),
+        );
         context
             .contract()
             .deposit(alice.clone(), ticket, amount, &Base64VecU8(signature).into());
@@ -381,7 +404,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(&alice, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &alice, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -406,11 +429,12 @@ mod signature_tests {
         // signature made for wrong product
         let signature = signer.sign(
             context
-                .get_deposit_message(&admin, &ticket_for_another_product, amount, 0)
+                .get_deposit_message(Purpose::Deposit, &admin, &ticket_for_another_product, amount, 0)
                 .as_str(),
         );
 
         context.contract().verify(
+            Purpose::Deposit,
             &admin,
             amount,
             &ticket_for_another_product,
@@ -436,11 +460,15 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&alice, &ticket, amount, 0).as_str());
+        let signature = signer.sign(
+            context
+                .get_deposit_message(Purpose::Deposit, &alice, &ticket, amount, 0)
+                .as_str(),
+        );
 
         context
             .contract()
-            .verify(&alice, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &alice, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -465,11 +493,15 @@ mod signature_tests {
             timezone: None,
         };
 
-        let signature = signer.sign(context.get_deposit_message(&admin, &ticket, amount, 0).as_str());
+        let signature = signer.sign(
+            context
+                .get_deposit_message(Purpose::Deposit, &admin, &ticket, amount, 0)
+                .as_str(),
+        );
 
         context
             .contract()
-            .verify(&admin, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &admin, amount, &ticket, &Some(Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -487,7 +519,9 @@ mod signature_tests {
             timezone: None,
         };
 
-        context.contract().verify(&admin, amount, &ticket, &None);
+        context
+            .contract()
+            .verify(Purpose::Deposit, &admin, amount, &ticket, &None);
     }
 
     #[rstest]
@@ -504,18 +538,22 @@ mod signature_tests {
             timezone: None,
         };
 
-        context.contract().verify(&admin, amount, &ticket, &None);
+        context
+            .contract()
+            .verify(Purpose::Deposit, &admin, amount, &ticket, &None);
     }
 
     impl Context {
         fn get_deposit_message(
             &self,
+            purpose: Purpose,
             receiver_id: &AccountId,
             ticket: &DepositTicket,
             amount: TokenAmount,
             nonce: u32,
         ) -> String {
             DepositMessage::new(
+                purpose,
                 &self.owner,
                 receiver_id,
                 &ticket.product_id,

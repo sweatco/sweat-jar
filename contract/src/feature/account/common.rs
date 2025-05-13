@@ -8,7 +8,7 @@ use near_sdk::{
 use sweat_jar_model::{
     data::{
         account::Account,
-        deposit::DepositTicket,
+        deposit::{DepositTicket, Purpose},
         product::{Product, ProductAssertions, ProductId, Terms},
     },
     TokenAmount,
@@ -32,7 +32,7 @@ impl Contract {
 
         product.assert_enabled();
         product.assert_cap(amount);
-        self.verify(&account_id, amount, &ticket, signature);
+        self.verify(Purpose::Deposit, &account_id, amount, &ticket, signature);
 
         let account = self.get_or_create_account_mut(&account_id);
         account.nonce += 1;

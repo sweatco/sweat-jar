@@ -2,7 +2,10 @@ use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
     api::*,
-    data::{deposit::DepositMessage, product::Product},
+    data::{
+        deposit::{DepositMessage, Purpose},
+        product::Product,
+    },
     signer::test_utils::MessageSigner,
     Timezone,
 };
@@ -41,6 +44,7 @@ async fn record_score_dos() -> Result<()> {
     let deposit_amount = 100000;
     let valid_until = 49_012_505_000_000;
     let deposit_message = DepositMessage::new(
+        Purpose::Deposit,
         context.sweat_jar().contract.as_account().id(),
         alice.id(),
         &product.id,

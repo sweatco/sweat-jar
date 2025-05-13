@@ -3,7 +3,7 @@ use rstest::rstest;
 use sweat_jar_model::{
     api::{ProductApi, RestakeApi},
     data::{
-        deposit::{DepositMessage, DepositTicket},
+        deposit::{DepositMessage, DepositTicket, Purpose},
         jar::Jar,
         product::{Product, ProductModelApi},
     },
@@ -188,6 +188,7 @@ fn restake_all_to_disabled_product(
         timezone: None,
     };
     let message = DepositMessage::new(
+        Purpose::Restake,
         &context.owner,
         &alice(),
         &product.id,

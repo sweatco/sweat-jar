@@ -62,7 +62,10 @@ mod tests {
     use near_sdk::{json_types::U128, serde_json::json, AccountId};
     use rstest::{fixture, rstest};
     use sweat_jar_model::{
-        data::{deposit::DepositMessage, product::Product},
+        data::{
+            deposit::{DepositMessage, Purpose},
+            product::Product,
+        },
         signer::test_utils::Base64String,
     };
 
@@ -118,6 +121,7 @@ mod tests {
         let ticket_amount = 1_000_000u128;
         let ticket_valid_until = 100_000_000u64;
         let message = DepositMessage::new(
+            Purpose::Deposit,
             &context.owner,
             &alice,
             &product.id,
