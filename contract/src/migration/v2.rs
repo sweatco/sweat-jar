@@ -1,25 +1,15 @@
 use std::{cell::RefCell, collections::HashMap};
 
-use crate::event::{emit, EventKind};
-#[cfg(not(test))]
-use crate::ft_interface::*;
-use crate::{
-    assert::assert_not_locked, internal::is_promise_success, jar::model::AccountJarsLegacy, product::model::Product,
-    Contract, ContractExt, MigrationState, StorageKey,
-};
-use crate::{internal::assert_gas, jar::account::versioned::Account as LegacyAccount};
-use near_sdk::env::log_str;
-use near_sdk::serde_json::{self, json};
 use near_sdk::{
     borsh::to_vec,
     collections::UnorderedMap,
-    env::{self, panic_str},
+    env::{self, log_str, panic_str},
     json_types::Base64VecU8,
-    near,
+    near, require,
+    serde_json::{self, json},
     store::{LookupMap, LookupSet},
-    AccountId, Gas, PanicOnDefault, PromiseOrValue,
+    AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue,
 };
-use near_sdk::{require, NearToken, Promise};
 use sweat_jar_model::{
     account::{v1::AccountScore, versioned::AccountVersioned, Account},
     api::MigrationToV2,
@@ -28,6 +18,16 @@ use sweat_jar_model::{
 };
 
 use super::account_jars_non_versioned::AccountJarsNonVersioned;
+#[cfg(not(test))]
+use crate::ft_interface::*;
+use crate::{
+    assert::assert_not_locked,
+    event::{emit, EventKind},
+    internal::{assert_gas, is_promise_success},
+    jar::{account::versioned::Account as LegacyAccount, model::AccountJarsLegacy},
+    product::model::Product,
+    Contract, ContractExt, MigrationState, StorageKey,
+};
 
 #[near]
 #[derive(PanicOnDefault)]
@@ -247,10 +247,6 @@ impl Contract {
                 account.is_penalty_applied = jar.is_penalty_applied;
             }
 
-            if jar.id > account.nonce {
-                account.nonce = jar.id;
-            }
-
             total_principal += jar.principal;
         }
 
@@ -276,9 +272,8 @@ impl Contract {
 mod tests {
     use near_sdk::test_utils::test_env::alice;
 
-    use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
-
     use super::*;
+    use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
 
     #[test]
     #[ignore]
@@ -351,15 +346,16 @@ mod tests {
 }
 
 mod product_v2 {
-    use crate::product::model::{
-        Apy as ApyLegacy, Product as ProductLegacy, Terms as TermsLegacy, WithdrawalFee as WithdrawalFeeLegacy,
-    };
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         near,
         serde::{Deserialize, Deserializer, Serialize, Serializer},
     };
     use sweat_jar_model::{ProductId, Score, UDecimal as UDecimalLegacy};
+
+    use crate::product::model::{
+        Apy as ApyLegacy, Product as ProductLegacy, Terms as TermsLegacy, WithdrawalFee as WithdrawalFeeLegacy,
+    };
 
     #[near(serializers=[json])]
     #[derive(Clone, Debug)]
