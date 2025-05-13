@@ -1,11 +1,15 @@
-use base64::{engine::general_purpose::STANDARD, Engine};
-use ed25519_dalek::Signer;
-use nitka::{misc::ToNear, near_sdk::serde_json::from_value};
-use sha2::{Digest, Sha256};
-use sweat_jar_model::api::{JarApiIntegration, PenaltyApiIntegration, ProductApiIntegration};
+use nitka::misc::ToNear;
+use sweat_jar_model::{
+    api::*,
+    data::{
+        deposit::{DepositMessage, Purpose},
+        product::Product,
+    },
+    signer::test_utils::MessageSigner,
+    TokenAmount,
+};
 
 use crate::{
-    common::generate_keypair,
     context::{prepare_contract, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
@@ -16,35 +20,36 @@ use crate::{
 async fn premium_product() -> anyhow::Result<()> {
     println!("👷🏽 Run test for premium product");
 
-    let (signing_key, verifying_key) = generate_keypair();
-    let pk_base64 = STANDARD.encode(verifying_key.as_bytes());
-
+    let signer = MessageSigner::new();
     let mut context = prepare_contract(None, []).await?;
 
     let manager = context.manager().await?;
     let alice = context.alice().await?;
 
-    let register_product_command = RegisterProductCommand::Flexible6Months6Percents;
-    let command_json = register_product_command.json_for_premium(pk_base64);
+    let product = Product {
+        public_key: Some(signer.public_key().into()),
+        ..RegisterProductCommand::Flexible6Months6Percents.get()
+    };
 
     context
         .sweat_jar()
-        .register_product(from_value(command_json).unwrap())
+        .register_product(product.clone())
         .with_user(&manager)
         .await?;
 
-    let product_id = register_product_command.id();
-    let valid_until = 43_012_170_000_000;
+    let product_id = &product.id;
+    let valid_until = 55_012_170_000_000;
     let amount = 3_000_000;
-
-    let hash = Sha256::digest(
-        context
-            .sweat_jar()
-            .get_signature_material(&alice, &product_id, valid_until, amount, None)
-            .as_bytes(),
+    let deposit_message = DepositMessage::new(
+        Purpose::Deposit,
+        context.sweat_jar().contract.as_account().id(),
+        alice.id(),
+        product_id,
+        amount,
+        valid_until,
+        0,
     );
-
-    let signature = STANDARD.encode(signing_key.sign(hash.as_slice()).to_bytes());
+    let signature = signer.sign(deposit_message.as_str());
 
     let result = context
         .sweat_jar()
@@ -52,7 +57,7 @@ async fn premium_product() -> anyhow::Result<()> {
             &alice,
             product_id.clone(),
             amount,
-            signature.to_string(),
+            signature.into(),
             valid_until,
             &context.ft_contract(),
         )
@@ -61,35 +66,33 @@ async fn premium_product() -> anyhow::Result<()> {
     assert_eq!(result.0, amount);
 
     let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
-    let jar_id = jars.first().unwrap().id;
+    assert_eq!(jars.get_first_deposit().unwrap().principal(), amount);
 
-    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id.clone()).await?;
-
-    assert_eq!(jar.principal.0, amount);
-    assert!(!jar.is_penalty_applied);
+    let is_penalty_applied = context.sweat_jar().is_penalty_applied(alice.to_near()).await?;
+    assert!(!is_penalty_applied);
 
     context
         .sweat_jar()
-        .set_penalty(alice.to_near(), jar_id, true)
+        .set_penalty(alice.to_near(), true)
         .with_user(&manager)
         .await?;
 
-    let jar = context.sweat_jar().get_jar(alice.to_near(), jar_id).await?;
-
-    assert!(jar.is_penalty_applied);
+    let is_penalty_applied = context.sweat_jar().is_penalty_applied(alice.to_near()).await?;
+    assert!(is_penalty_applied);
 
     let unauthorized_penalty_change = context
         .sweat_jar()
-        .set_penalty(alice.to_near(), jar_id, true)
+        .set_penalty(alice.to_near(), true)
         .with_user(&alice)
         .await;
 
     assert!(unauthorized_penalty_change.is_err());
 
-    let principal_result = context.sweat_jar().get_principal(vec![jar_id], alice.to_near()).await?;
-    assert_eq!(principal_result.total.0, amount);
+    let jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let total_principal: TokenAmount = jars.get_total_principal();
+    assert_eq!(total_principal, amount);
 
-    let interest_result = context.sweat_jar().get_interest(vec![jar_id], alice.to_near()).await;
+    let interest_result = context.sweat_jar().get_total_interest(alice.to_near()).await;
     assert!(interest_result.is_ok());
 
     Ok(())
