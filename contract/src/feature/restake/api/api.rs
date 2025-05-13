@@ -17,11 +17,7 @@ use sweat_jar_model::{
 use crate::{
     common::{
         env::env_ext,
-        event::{
-            emit,
-            EventKind::{self, Restake},
-            RestakeData,
-        },
+        event::{emit, EventKind::Restake, RestakeData},
     },
     feature::withdraw::api::WithdrawalDto,
     Contract, ContractExt,
@@ -79,30 +75,39 @@ impl RestakeApi for Contract {
 }
 
 pub(super) trait RemainderTransfer {
-    fn transfer_remainder(&mut self, request: Request, event: EventKind) -> PromiseOrValue<()>;
+    fn transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
 }
 
 #[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub(super) trait RemainderTransferCallback {
-    fn after_transfer_remainder(&mut self, request: Request, event: EventKind) -> PromiseOrValue<()>;
+    fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
 }
 
 #[near]
 impl RemainderTransferCallback for Contract {
     #[private]
-    fn after_transfer_remainder(&mut self, request: Request, event: EventKind) -> PromiseOrValue<()> {
+    fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()> {
+        let account_id = request.account_id.clone();
+        let is_success = env_ext::is_promise_success();
+        let event = Restake(
+            account_id.clone(),
+            RestakeData {
+                is_success,
+                ..RestakeData::from(&request)
+            },
+        );
+
         for (product_id, _) in &request.partitions {
-            self.get_account_mut(&request.account_id)
-                .get_jar_mut(product_id)
-                .unlock();
+            self.get_account_mut(&account_id).get_jar_mut(product_id).unlock();
         }
 
         if env_ext::is_promise_success() {
             self.fee_amount += request.withdrawal.map_or(0, |w| w.fee);
             self.clean_up_and_deposit(request);
-            emit(event);
         }
+
+        emit(event);
 
         Value(())
     }
@@ -133,7 +138,7 @@ impl Contract {
             self.get_account_mut(&request.account_id).get_jar_mut(product_id).lock();
         }
 
-        self.transfer_remainder(request, event)
+        self.transfer_remainder(request)
     }
 
     fn prepare_request_safely(
@@ -273,6 +278,7 @@ impl From<&Request> for RestakeData {
             into: value.deposit.product_id.clone(),
             restaked: value.deposit.amount.into(),
             withdrawn: value.withdrawal.map_or(0.into(), |w| (w.amount - w.fee).into()),
+            is_success: true,
         }
     }
 }

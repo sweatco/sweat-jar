@@ -96,6 +96,7 @@ pub struct RestakeData {
     pub into: ProductId,
     pub restaked: U128,
     pub withdrawn: U128,
+    pub is_success: bool,
 }
 
 impl RestakeData {
@@ -105,6 +106,7 @@ impl RestakeData {
         into: ProductId,
         restaked: TokenAmount,
         withdrawn: TokenAmount,
+        is_success: bool,
     ) -> Self {
         Self {
             timestamp,
@@ -112,6 +114,7 @@ impl RestakeData {
             into,
             restaked: restaked.into(),
             withdrawn: withdrawn.into(),
+            is_success,
         }
     }
 }
