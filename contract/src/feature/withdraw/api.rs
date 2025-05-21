@@ -1,11 +1,6 @@
 use std::collections::HashSet;
 
-use near_sdk::{
-    env::panic_str,
-    ext_contract, near, near_bindgen,
-    serde::{Deserialize, Serialize},
-    PromiseOrValue,
-};
+use near_sdk::{env::panic_str, ext_contract, near, PromiseOrValue};
 use sweat_jar_model::{
     api::WithdrawApi,
     data::{
@@ -36,16 +31,16 @@ pub(crate) mod gas {
     pub(super) const GAS_FOR_BULK_AFTER_WITHDRAW: Gas = Gas::from_tgas(15);
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[json])]
+#[derive(Debug, Default)]
 pub(crate) struct WithdrawalRequest {
     pub product_id: ProductId,
     pub withdrawal: WithdrawalDto,
     pub partition_index: usize,
 }
 
-#[derive(Debug, Default, Copy, Clone)]
 #[near(serializers=[json])]
+#[derive(Debug, Default, Copy, Clone)]
 pub(crate) struct WithdrawalDto {
     pub amount: TokenAmount,
     pub fee: TokenAmount,
@@ -63,8 +58,8 @@ impl WithdrawalDto {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[json])]
+#[derive(Debug, Default)]
 pub(super) struct BulkWithdrawalRequest {
     pub requests: Vec<WithdrawalRequest>,
 }
@@ -95,7 +90,7 @@ pub(super) trait WithdrawCallbacks {
     fn after_bulk_withdraw(&mut self, account_id: AccountId, request: BulkWithdrawalRequest) -> BulkWithdrawView;
 }
 
-#[near_bindgen]
+#[near]
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, product_id: ProductId) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
@@ -343,7 +338,7 @@ impl Contract {
     }
 }
 
-#[near_bindgen]
+#[near]
 #[mutants::skip] // Covered by integration tests
 impl WithdrawCallbacks for Contract {
     #[private]

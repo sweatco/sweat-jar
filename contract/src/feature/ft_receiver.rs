@@ -2,7 +2,7 @@ use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
 use sweat_jar_model::data::deposit::DepositTicket;
 
-use crate::{migration::api::store_account_raw, near_bindgen, Base64VecU8, Contract, ContractExt};
+use crate::{migration::api::store_account_raw, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -27,7 +27,7 @@ pub struct StakeMessage {
     receiver_id: Option<AccountId>,
 }
 
-#[near_bindgen]
+#[near]
 impl FungibleTokenReceiver for Contract {
     fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> PromiseOrValue<U128> {
         self.assert_from_ft_contract();

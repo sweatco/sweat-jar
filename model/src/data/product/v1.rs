@@ -92,7 +92,8 @@ pub enum WithdrawalFee {
 }
 
 /// The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.
-#[near(serializers=[borsh])]
+#[near(serializers=[borsh, json])]
+#[serde(into = "serde_helpers::ApyHelper", from = "serde_helpers::ApyHelper")]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Apy {
     /// Describes a constant APY, where the interest remains the same throughout the product's term.
@@ -158,17 +159,14 @@ impl Terms {
     }
 }
 
-pub mod serde_utils {
-    use near_sdk::{
-        near,
-        serde::{Deserialize, Deserializer, Serialize, Serializer},
-    };
+pub mod serde_helpers {
+    use near_sdk::near;
 
     use super::{Apy, DowngradableApy};
     use crate::UDecimal;
 
     #[near(serializers=[json])]
-    struct ApyHelper {
+    pub struct ApyHelper {
         default: UDecimal,
         #[serde(skip_serializing_if = "Option::is_none")]
         fallback: Option<UDecimal>,
@@ -189,28 +187,15 @@ pub mod serde_utils {
         }
     }
 
-    impl Serialize for Apy {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            ApyHelper::from(self.clone()).serialize(serializer)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Apy {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let helper = ApyHelper::deserialize(deserializer)?;
-            Ok(match helper.fallback {
+    impl From<ApyHelper> for Apy {
+        fn from(helper: ApyHelper) -> Self {
+            match helper.fallback {
                 Some(fallback) => Apy::Downgradable(DowngradableApy {
                     default: helper.default,
                     fallback,
                 }),
                 None => Apy::Constant(helper.default),
-            })
+            }
         }
     }
 }

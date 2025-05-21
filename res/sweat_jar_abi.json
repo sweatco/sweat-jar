@@ -1,0 +1,2130 @@
+{
+  "schema_version": "0.4.0",
+  "metadata": {
+    "name": "sweat_jar",
+    "version": "4.0.3",
+    "authors": [
+      "Sweat Economy"
+    ],
+    "build": {
+      "compiler": "rustc 1.86.0",
+      "builder": "cargo-near cargo-near-build 0.4.4"
+    },
+    "wasm_hash": "BFkVkatgiD3ThBM7byWmVDaEJWryNRThc3sJhkctdiju"
+  },
+  "body": {
+    "functions": [
+      {
+        "name": "after_bulk_withdraw",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "request",
+              "type_schema": {
+                "$ref": "#/definitions/BulkWithdrawalRequest"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/BulkWithdrawView"
+          }
+        }
+      },
+      {
+        "name": "after_claim",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "claimed_amount",
+              "type_schema": {
+                "$ref": "#/definitions/ClaimedAmountView"
+              }
+            },
+            {
+              "name": "account_rollback",
+              "type_schema": {
+                "$ref": "#/definitions/AccountV1Companion"
+              }
+            },
+            {
+              "name": "event",
+              "type_schema": {
+                "$ref": "#/definitions/EventKind"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/ClaimedAmountView"
+          }
+        }
+      },
+      {
+        "name": "after_fee_withdrawn",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "amount",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "name": "after_transfer_remainder",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "request",
+              "type_schema": {
+                "$ref": "#/definitions/Request"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueNull"
+          }
+        }
+      },
+      {
+        "name": "after_withdraw",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "request",
+              "type_schema": {
+                "$ref": "#/definitions/WithdrawalRequest"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/WithdrawView"
+          }
+        }
+      },
+      {
+        "name": "batch_set_penalty",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AccountId"
+                }
+              }
+            },
+            {
+              "name": "value",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "claim_total",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "detailed",
+              "type_schema": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueClaimedAmountView"
+          }
+        }
+      },
+      {
+        "name": "contract_source_metadata",
+        "kind": "view"
+      },
+      {
+        "name": "contract_version",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "name": "ft_on_transfer",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "sender_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "amount",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "msg",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueString"
+          }
+        }
+      },
+      {
+        "name": "get_fee_amount",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "name": "get_jars_for_account",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/JarsView"
+          }
+        }
+      },
+      {
+        "name": "get_products",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/Product"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_score",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_timezone",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_total_interest",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/AggregatedInterestView"
+          }
+        }
+      },
+      {
+        "name": "init",
+        "kind": "call",
+        "modifiers": [
+          "init"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "token_account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "fee_account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "manager",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "previous_version_account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "is_penalty_applied",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "boolean"
+          }
+        }
+      },
+      {
+        "name": "migrate_products",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "products",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Product"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "record_score",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "batch",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": [
+                          {
+                            "type": "integer",
+                            "format": "uint16",
+                            "minimum": 0.0
+                          },
+                          {
+                            "$ref": "#/definitions/UTC"
+                          }
+                        ],
+                        "maxItems": 2,
+                        "minItems": 2
+                      }
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "register_product",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "product",
+              "type_schema": {
+                "$ref": "#/definitions/Product"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "restake",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "from",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "ticket",
+              "type_schema": {
+                "$ref": "#/definitions/DepositTicket"
+              }
+            },
+            {
+              "name": "signature",
+              "type_schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Base64VecU8"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "type_schema": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueNull"
+          }
+        }
+      },
+      {
+        "name": "restake_all",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "ticket",
+              "type_schema": {
+                "$ref": "#/definitions/DepositTicket"
+              }
+            },
+            {
+              "name": "signature",
+              "type_schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Base64VecU8"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "amount",
+              "type_schema": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueNull"
+          }
+        }
+      },
+      {
+        "name": "set_enabled",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "is_enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "set_penalty",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "value",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "set_public_key",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "public_key",
+              "type_schema": {
+                "$ref": "#/definitions/Base64VecU8"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "unlock_jars_for_account",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "update_contract",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "code",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            },
+            {
+              "name": "callback",
+              "type_schema": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/Promise"
+          }
+        }
+      },
+      {
+        "name": "withdraw",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueWithdrawView"
+          }
+        }
+      },
+      {
+        "name": "withdraw_all",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "product_ids",
+              "type_schema": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueBulkWithdrawView"
+          }
+        }
+      },
+      {
+        "name": "withdraw_fee",
+        "kind": "call",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueString"
+          }
+        }
+      }
+    ],
+    "root_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string",
+      "definitions": {
+        "AccountId": {
+          "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+          "type": "string"
+        },
+        "AccountScore": {
+          "type": "object",
+          "required": [
+            "scores",
+            "scores_history",
+            "timezone",
+            "updated"
+          ],
+          "properties": {
+            "scores": {
+              "description": "Scores buffer used for interest calculation. Can be invalidated on claim.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              },
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "scores_history": {
+              "description": "Score history values used for displaying it in application. Will not be invalidated during claim.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              },
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "timezone": {
+              "$ref": "#/definitions/Timezone"
+            },
+            "updated": {
+              "$ref": "#/definitions/UTC"
+            }
+          }
+        },
+        "AccountV1Companion": {
+          "type": "object",
+          "properties": {
+            "is_penalty_applied": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "jars": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "additionalProperties": {
+                "$ref": "#/definitions/JarCompanion"
+              }
+            },
+            "nonce": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "score": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/AccountScore"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "AggregatedInterestView": {
+          "type": "object",
+          "required": [
+            "amount",
+            "timestamp"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/AggregatedTokenAmountView"
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "AggregatedTokenAmountView": {
+          "type": "object",
+          "required": [
+            "detailed",
+            "total"
+          ],
+          "properties": {
+            "detailed": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "total": {
+              "type": "string"
+            }
+          }
+        },
+        "Apy": {
+          "description": "The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.",
+          "oneOf": [
+            {
+              "description": "Describes a constant APY, where the interest remains the same throughout the product's term.",
+              "type": "object",
+              "required": [
+                "Constant"
+              ],
+              "properties": {
+                "Constant": {
+                  "$ref": "#/definitions/UDecimal"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "description": "Describes a downgradable APY, where an oracle can set a penalty if a user violates the product's terms.",
+              "type": "object",
+              "required": [
+                "Downgradable"
+              ],
+              "properties": {
+                "Downgradable": {
+                  "$ref": "#/definitions/DowngradableApy"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Base64VecU8": {
+          "description": "Helper class to serialize/deserialize `Vec<u8>` to base64 string.\n\n# Example ```rust use near_sdk::{json_types::Base64VecU8, near};\n\n#[near(serializers=[json])] struct NewStruct { field: Base64VecU8, } ```",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "BatchPenaltyData": {
+          "description": "Batched applying a penalty to several User. `account_ids` – IDs of Accounts that are subjects to the penalty. `is_applied`  – the penalty is applied or cancelled. `timestamp`   – Unix timestamp of the operation.",
+          "type": "object",
+          "required": [
+            "account_ids",
+            "is_applied",
+            "timestamp"
+          ],
+          "properties": {
+            "account_ids": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            "is_applied": {
+              "type": "boolean"
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "BulkWithdrawView": {
+          "type": "object",
+          "required": [
+            "total_amount",
+            "withdrawals"
+          ],
+          "properties": {
+            "total_amount": {
+              "type": "string"
+            },
+            "withdrawals": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/WithdrawView"
+              }
+            }
+          }
+        },
+        "BulkWithdrawalRequest": {
+          "type": "object",
+          "required": [
+            "requests"
+          ],
+          "properties": {
+            "requests": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/WithdrawalRequest"
+              }
+            }
+          }
+        },
+        "Cap": {
+          "description": "The `Cap` struct defines the capacity of a deposit jar in terms of the minimum and maximum allowed principal amounts. - `.0` – The minimum amount of tokens that can be stored in the jar. - `.1` – The maximum amount of tokens that can be stored in the jar.",
+          "type": "array",
+          "items": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        },
+        "ChangeProductPublicKeyData": {
+          "description": "Change public key for a Product. `product_id` – ID of affected Product. `pk`         – a public key that was set.",
+          "type": "object",
+          "required": [
+            "pk",
+            "product_id"
+          ],
+          "properties": {
+            "pk": {
+              "$ref": "#/definitions/Base64VecU8"
+            },
+            "product_id": {
+              "type": "string"
+            }
+          }
+        },
+        "ClaimData": {
+          "description": "Batched claiming interest from a User's account `timestamp` – Unix timestamp of a block where interest was calculated and `ft_transfer` was initiated. `items`     – information about interest claimed from Jars for each Product.",
+          "type": "object",
+          "required": [
+            "items",
+            "timestamp"
+          ],
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "ClaimedAmountView": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/AggregatedTokenAmountView"
+            }
+          ]
+        },
+        "Deposit": {
+          "type": "object",
+          "required": [
+            "created_at",
+            "principal"
+          ],
+          "properties": {
+            "created_at": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "principal": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            }
+          }
+        },
+        "DepositDto": {
+          "type": "object",
+          "required": [
+            "amount",
+            "product_id"
+          ],
+          "properties": {
+            "amount": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "product_id": {
+              "type": "string"
+            }
+          }
+        },
+        "DepositTicket": {
+          "description": "The `DepositTicket` struct represents a request to create a deposit jar for a corresponding product.\n\nThe data from this `DepositTicket` is later combined with additional data, including the contract account address, the recipient's account ID, the desired amount of tokens to deposit, and the ID of the last jar created for the recipient. The concatenation of this data forms a message that is then hashed using the SHA-256 algorithm. This resulting hash is used to verify the authenticity of the data against an Ed25519 signature provided in the `ft_transfer_call` data.",
+          "type": "object",
+          "required": [
+            "product_id",
+            "valid_until"
+          ],
+          "properties": {
+            "product_id": {
+              "description": "The unique identifier of the product for which the jar is intended to be created. This `product_id` links the request to the specific terms and conditions of the product that will govern the behavior of the jar.",
+              "type": "string"
+            },
+            "timezone": {
+              "description": "An optional user timezone. Required for creating step jars.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Timezone"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "valid_until": {
+              "description": "Specifies the expiration date of the ticket. The expiration date is measured in milliseconds since the Unix epoch. This property ensures that the request to create a jar is valid only until the specified timestamp. After this timestamp, the ticket becomes invalid and should not be accepted.",
+              "type": "string"
+            }
+          }
+        },
+        "DowngradableApy": {
+          "description": "The `DowngradableApy` struct describes an APY that can be downgraded by an oracle.",
+          "type": "object",
+          "required": [
+            "default",
+            "fallback"
+          ],
+          "properties": {
+            "default": {
+              "description": "The default APY value if the user meets all the terms of the product.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/UDecimal"
+                }
+              ]
+            },
+            "fallback": {
+              "description": "The fallback APY value if the user violates some of the terms of the product.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/UDecimal"
+                }
+              ]
+            }
+          }
+        },
+        "EnableProductData": {
+          "description": "Enabling or disabling a Product. `product_id` – ID of affected Product. `is_enabled` – whether the Product became enabled or disabled.",
+          "type": "object",
+          "required": [
+            "is_enabled",
+            "product_id"
+          ],
+          "properties": {
+            "is_enabled": {
+              "type": "boolean"
+            },
+            "product_id": {
+              "type": "string"
+            }
+          }
+        },
+        "EventKind": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/Product"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "register_product"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "maxItems": 2,
+                      "minItems": 2
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "deposit"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "$ref": "#/definitions/ClaimData"
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "claim"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "maxItems": 3,
+                      "minItems": 3
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "withdraw"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "maxItems": 3,
+                        "minItems": 3
+                      }
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "withdraw_all"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "$ref": "#/definitions/RestakeData"
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "restake"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/PenaltyData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "apply_penalty"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/BatchPenaltyData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "batch_apply_penalty"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/EnableProductData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "enable_product"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/ChangeProductPublicKeyData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "change_product_public_key"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ScoreData"
+                  }
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "record_score"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "integer",
+                      "format": "uint16",
+                      "minimum": 0.0
+                    },
+                    {
+                      "$ref": "#/definitions/Local"
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "old_score_warning"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/AccountId"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "jars_merge"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "migrate_products"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "FixedProductTerms": {
+          "description": "The `FixedProductTerms` struct contains terms specific to Fixed products.",
+          "type": "object",
+          "required": [
+            "apy",
+            "lockup_term"
+          ],
+          "properties": {
+            "apy": {
+              "$ref": "#/definitions/Apy"
+            },
+            "lockup_term": {
+              "description": "The maturity term of the jar in milliseconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
+              "type": "string"
+            }
+          }
+        },
+        "FlexibleProductTerms": {
+          "description": "TODO: doc",
+          "type": "object",
+          "required": [
+            "apy"
+          ],
+          "properties": {
+            "apy": {
+              "$ref": "#/definitions/Apy"
+            }
+          }
+        },
+        "JarCache": {
+          "description": "A cached value that stores calculated interest based on the current state of the jar. This cache is updated whenever properties that impact interest calculation change, allowing for efficient interest calculations between state changes.",
+          "type": "object",
+          "required": [
+            "interest",
+            "updated_at"
+          ],
+          "properties": {
+            "interest": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "updated_at": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "JarCompanion": {
+          "type": "object",
+          "properties": {
+            "cache": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/JarCache"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claim_remainder": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "deposits": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "$ref": "#/definitions/Deposit"
+              }
+            },
+            "is_pending_withdraw": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            }
+          }
+        },
+        "JarsView": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            }
+          }
+        },
+        "Local": {
+          "description": "Timestamp in Local user timezone",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "PenaltyData": {
+          "description": "Applying a penalty to a User. `account_id` – ID of an Account that is subject to the penalty. `is_applied` – the penalty is applied or cancelled. `timestamp`  – Unix timestamp of the operation.",
+          "type": "object",
+          "required": [
+            "account_id",
+            "is_applied",
+            "timestamp"
+          ],
+          "properties": {
+            "account_id": {
+              "$ref": "#/definitions/AccountId"
+            },
+            "is_applied": {
+              "type": "boolean"
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "Product": {
+          "description": "The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.",
+          "type": "object",
+          "required": [
+            "cap",
+            "id",
+            "is_enabled",
+            "terms"
+          ],
+          "properties": {
+            "cap": {
+              "description": "The capacity boundaries of the deposit jar, specifying the minimum and maximum principal amount.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Cap"
+                }
+              ]
+            },
+            "id": {
+              "description": "The unique identifier of the product.",
+              "type": "string"
+            },
+            "is_enabled": {
+              "description": "Indicates whether it's possible to create a new jar for this product.",
+              "type": "boolean"
+            },
+            "public_key": {
+              "description": "An optional ed25519 public key used for authorization to create a jar for this product.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Base64VecU8"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "terms": {
+              "description": "The terms specific to the product, which can be either Flexible or Fixed.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Terms"
+                }
+              ]
+            },
+            "withdrawal_fee": {
+              "description": "Describes whether a withdrawal fee is applicable and, if so, its details.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WithdrawalFee"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "Promise": true,
+        "PromiseOrValueBulkWithdrawView": {
+          "type": "object",
+          "required": [
+            "total_amount",
+            "withdrawals"
+          ],
+          "properties": {
+            "total_amount": {
+              "type": "string"
+            },
+            "withdrawals": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/WithdrawView"
+              }
+            }
+          }
+        },
+        "PromiseOrValueClaimedAmountView": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/AggregatedTokenAmountView"
+            }
+          ]
+        },
+        "PromiseOrValueNull": {
+          "type": "null"
+        },
+        "PromiseOrValueString": {
+          "type": "string"
+        },
+        "PromiseOrValueWithdrawView": {
+          "description": "The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.",
+          "type": "object",
+          "required": [
+            "fee",
+            "product_id",
+            "withdrawn_amount"
+          ],
+          "properties": {
+            "fee": {
+              "description": "The possible fee that a user must pay for withdrawal, if it's defined by the associated Product.",
+              "type": "string"
+            },
+            "product_id": {
+              "type": "string"
+            },
+            "withdrawn_amount": {
+              "description": "The amount of tokens that has been transferred to the user's account as part of the withdrawal.",
+              "type": "string"
+            }
+          }
+        },
+        "Request": {
+          "type": "object",
+          "required": [
+            "account_id",
+            "deposit",
+            "partitions"
+          ],
+          "properties": {
+            "account_id": {
+              "$ref": "#/definitions/AccountId"
+            },
+            "deposit": {
+              "$ref": "#/definitions/DepositDto"
+            },
+            "partitions": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer",
+                    "format": "uint",
+                    "minimum": 0.0
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "withdrawal": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WithdrawalDto"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "RestakeData": {
+          "description": "Batched restaking of all User's mature deposits into a single deposit for a particular Product. `timestamp` – Unix timestamp of the operation. In case of partial withdrawal it's time of the initial call. `from`      – a list of Product IDs of deposits sourcing a principal for a new deposit. `into`      – ID of a Product describing terms of the Jar for the new deposit. `restaked`  – amount of tokens being restaked. It's sum of principals of mature deposits for `from` Product IDs minus `withdrawn` amount. `withdrawn` – amount of withdrawn tokens.",
+          "type": "object",
+          "required": [
+            "from",
+            "into",
+            "is_success",
+            "restaked",
+            "timestamp",
+            "withdrawn"
+          ],
+          "properties": {
+            "from": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "into": {
+              "type": "string"
+            },
+            "is_success": {
+              "type": "boolean"
+            },
+            "restaked": {
+              "type": "string"
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "withdrawn": {
+              "type": "string"
+            }
+          }
+        },
+        "ScoreBasedProductTerms": {
+          "description": "TODO: doc",
+          "type": "object",
+          "required": [
+            "lockup_term",
+            "score_cap"
+          ],
+          "properties": {
+            "lockup_term": {
+              "description": "The maturity term of the jar in milliseconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
+              "type": "string"
+            },
+            "score_cap": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          }
+        },
+        "ScoreData": {
+          "description": "Update of User's score. `account_id` – ID of an Account that is subject to Score update. `score` – a new Score.",
+          "type": "object",
+          "required": [
+            "account_id",
+            "score"
+          ],
+          "properties": {
+            "account_id": {
+              "$ref": "#/definitions/AccountId"
+            },
+            "score": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "integer",
+                    "format": "uint16",
+                    "minimum": 0.0
+                  },
+                  {
+                    "$ref": "#/definitions/UTC"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            }
+          }
+        },
+        "Terms": {
+          "description": "The `Terms` enum describes additional terms specific to either Flexible or Fixed products.",
+          "oneOf": [
+            {
+              "description": "Describes additional terms for Fixed products.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/FixedProductTerms"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fixed"
+                  ]
+                }
+              }
+            },
+            {
+              "description": "Describes additional terms for Flexible products.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/FlexibleProductTerms"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "flexible"
+                  ]
+                }
+              }
+            },
+            {
+              "description": "TODO: doc",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/ScoreBasedProductTerms"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "score_based"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "Timezone": {
+          "description": "Timezone described as time shift from UTC in ms",
+          "type": "integer",
+          "format": "int64"
+        },
+        "UDecimal": {
+          "description": "`UDecimal` represents a scientific representation of decimals.\n\nThe decimal number is represented in the form of `significand` divided by (10 raised to the power of `exponent`). The `significand` and `exponent` are both positive integers. The key components of this structure include:\n\n* `significand`: The parts of the decimal number that holds significant digits, i.e., all digits including and following the leftmost nonzero digit.\n\n* `exponent`: The part of the decimal number that represents the power to which 10 must be raised to yield the original number.",
+          "type": "array",
+          "items": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        },
+        "UTC": {
+          "description": "Timestamp in UTC timezone",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "WithdrawView": {
+          "description": "The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.",
+          "type": "object",
+          "required": [
+            "fee",
+            "product_id",
+            "withdrawn_amount"
+          ],
+          "properties": {
+            "fee": {
+              "description": "The possible fee that a user must pay for withdrawal, if it's defined by the associated Product.",
+              "type": "string"
+            },
+            "product_id": {
+              "type": "string"
+            },
+            "withdrawn_amount": {
+              "description": "The amount of tokens that has been transferred to the user's account as part of the withdrawal.",
+              "type": "string"
+            }
+          }
+        },
+        "WithdrawalDto": {
+          "type": "object",
+          "required": [
+            "amount",
+            "fee"
+          ],
+          "properties": {
+            "amount": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "fee": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            }
+          }
+        },
+        "WithdrawalFee": {
+          "description": "The `WithdrawalFee` enum describes withdrawal fee details, which can be either a fixed amount or a percentage of the withdrawal.",
+          "oneOf": [
+            {
+              "description": "Describes a fixed amount of tokens that a user must pay as a fee on withdrawal.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fix"
+                  ]
+                }
+              }
+            },
+            {
+              "description": "Describes a percentage of the withdrawal amount that a user must pay as a fee on withdrawal.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/UDecimal"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "percent"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "WithdrawalRequest": {
+          "type": "object",
+          "required": [
+            "partition_index",
+            "product_id",
+            "withdrawal"
+          ],
+          "properties": {
+            "partition_index": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0.0
+            },
+            "product_id": {
+              "type": "string"
+            },
+            "withdrawal": {
+              "$ref": "#/definitions/WithdrawalDto"
+            }
+          }
+        }
+      }
+    }
+  }
+}
