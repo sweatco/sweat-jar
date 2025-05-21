@@ -197,7 +197,7 @@ fn create_jar_for_disabled_product(admin: AccountId, alice: AccountId, #[from(pr
         timezone: None,
     };
 
-    context.contract().deposit(alice, ticket, 1_000_000, &None);
+    context.contract().deposit(alice, ticket, 1_000_000, None);
 }
 
 #[rstest]
@@ -309,7 +309,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(Purpose::Deposit, &admin, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &admin, amount, &ticket, Some(&Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -334,7 +334,7 @@ mod signature_tests {
         );
         context
             .contract()
-            .deposit(alice.clone(), ticket.clone(), amount, &Base64VecU8(signature).into());
+            .deposit(alice.clone(), ticket.clone(), amount, Some(&Base64VecU8(signature)));
 
         let signature = signer.sign(
             context
@@ -343,7 +343,7 @@ mod signature_tests {
         );
         context
             .contract()
-            .deposit(alice.clone(), ticket, amount, &Base64VecU8(signature).into());
+            .deposit(alice.clone(), ticket, amount, Some(&Base64VecU8(signature)));
 
         let jars = context.contract().get_jars_for_account(alice);
         assert_eq!(2, jars.get_total_deposits_number());
@@ -372,7 +372,7 @@ mod signature_tests {
         );
         context
             .contract()
-            .deposit(alice.clone(), ticket.clone(), amount, &Base64VecU8(signature).into());
+            .deposit(alice.clone(), ticket.clone(), amount, Some(&Base64VecU8(signature)));
 
         let signature = signer.sign(
             context
@@ -381,7 +381,7 @@ mod signature_tests {
         );
         context
             .contract()
-            .deposit(alice.clone(), ticket, amount, &Base64VecU8(signature).into());
+            .deposit(alice.clone(), ticket, amount, Some(&Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -404,7 +404,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(Purpose::Deposit, &alice, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &alice, amount, &ticket, Some(&Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -438,7 +438,7 @@ mod signature_tests {
             &admin,
             amount,
             &ticket_for_another_product,
-            &Some(Base64VecU8(signature)),
+            Some(&Base64VecU8(signature)),
         );
     }
 
@@ -468,7 +468,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(Purpose::Deposit, &alice, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &alice, amount, &ticket, Some(&Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -501,7 +501,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(Purpose::Deposit, &admin, amount, &ticket, &Some(Base64VecU8(signature)));
+            .verify(Purpose::Deposit, &admin, amount, &ticket, Some(&Base64VecU8(signature)));
     }
 
     #[rstest]
@@ -521,7 +521,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(Purpose::Deposit, &admin, amount, &ticket, &None);
+            .verify(Purpose::Deposit, &admin, amount, &ticket, None);
     }
 
     #[rstest]
@@ -540,7 +540,7 @@ mod signature_tests {
 
         context
             .contract()
-            .verify(Purpose::Deposit, &admin, amount, &ticket, &None);
+            .verify(Purpose::Deposit, &admin, amount, &ticket, None);
     }
 
     impl Context {

@@ -582,7 +582,7 @@ fn deposit_with_outdated_nonce_after_restake(
 
     context
         .contract()
-        .deposit(alice, ticket, principal, &Some(signature.into()));
+        .deposit(alice, ticket, principal, Some(&signature.into()));
 }
 
 #[rstest]

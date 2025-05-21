@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.4.4"
     },
-    "wasm_hash": "BFkVkatgiD3ThBM7byWmVDaEJWryNRThc3sJhkctdiju"
+    "wasm_hash": "ALBtSNysoL9WCZDsYnbR2mEC6uoD1rJM94LAiE5TfcpB"
   },
   "body": {
     "functions": [
@@ -183,6 +183,55 @@
               "name": "value",
               "type_schema": {
                 "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "block_timestamp_ms",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      },
+      {
+        "name": "bulk_create_jars",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "principal",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint128",
+                "minimum": 0.0
+              }
+            },
+            {
+              "name": "number_of_jars",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
               }
             }
           ]

@@ -34,7 +34,7 @@ pub trait InterestCalculator {
 
         let total_remainder = jar.claim_remainder + remainder;
         let remainder: u64 = total_remainder % MS_IN_YEAR;
-        let extra_interest = (total_remainder / MS_IN_YEAR) as u128;
+        let extra_interest = u128::from(total_remainder / MS_IN_YEAR);
 
         (cached_interest + interest + extra_interest, remainder)
     }

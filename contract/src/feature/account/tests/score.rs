@@ -340,7 +340,7 @@ mod score_tests {
                 timezone: Some(Timezone::hour_shift(4)),
             },
             100_000_000.to_otto(),
-            &None,
+            None,
         ); // Wed Oct 23 2024 14:13:37
 
         ctx.set_block_timestamp_in_ms(TEST_TIME);
@@ -456,7 +456,7 @@ mod score_tests {
                 timezone: Some(Timezone::hour_shift(0)),
             },
             0,
-            &None,
+            None,
         );
 
         ctx.set_block_timestamp_in_ms(1_732_653_318_018);
@@ -472,7 +472,7 @@ mod score_tests {
                 timezone: None,
             },
             100_000_000.to_otto(),
-            &None,
+            None,
         );
 
         ctx.set_block_timestamp_in_ms(1_733_140_384_365); // Mon Dec 02 2024 11:53:04
@@ -680,7 +680,7 @@ impl Context {
                 timezone,
             },
             amount,
-            &None,
+            None,
         );
     }
 }

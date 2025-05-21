@@ -17,7 +17,7 @@ impl Contract {
         account_id: &AccountId,
         amount: TokenAmount,
         ticket: &DepositTicket,
-        signature: &Option<Base64VecU8>,
+        signature: Option<&Base64VecU8>,
     ) {
         let product = self.get_product(&ticket.product_id);
 
