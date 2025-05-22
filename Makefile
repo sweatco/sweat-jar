@@ -24,8 +24,6 @@ build-integration: ##@Build Build the contract for integration tests.
 build-reproducible: ##@Build Build reproducible artifact in Docker.
 	./scripts/build-reproducible.sh
 
-dock: build-in-docker ##@Build Shorthand for `build-in-docker`
-
 deploy: ##@Deploy Deploy the contract to dev account on Testnet.
 	./scripts/deploy.sh
 
