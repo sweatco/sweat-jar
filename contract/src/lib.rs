@@ -57,7 +57,7 @@ pub(crate) enum StorageKey {
     Accounts,
 }
 
-#[near_bindgen]
+#[near]
 impl InitApi for Contract {
     #[init]
     #[private]

@@ -3,7 +3,7 @@ use std::{collections::HashMap, convert::Into};
 use near_sdk::{
     env,
     json_types::{I64, U128},
-    near_bindgen, AccountId,
+    near, AccountId,
 };
 use sweat_jar_model::{
     api::AccountApi,
@@ -46,7 +46,7 @@ impl Contract {
     }
 }
 
-#[near_bindgen]
+#[near]
 impl AccountApi for Contract {
     fn get_jars_for_account(&self, account_id: AccountId) -> JarsView {
         if let Some(account) = self.try_get_account(&account_id) {

@@ -55,7 +55,7 @@ impl RestakeApi for Contract {
             target_amount: amount.map(|amount| amount.0),
         };
 
-        self.restake_internal(&ticket, &signature, builder)
+        self.restake_internal(&ticket, signature.as_ref(), builder)
     }
 
     fn restake_all(
@@ -70,7 +70,7 @@ impl RestakeApi for Contract {
             target_amount: amount.map(|amount| amount.0),
         };
 
-        self.restake_internal(&ticket, &signature, builder)
+        self.restake_internal(&ticket, signature.as_ref(), builder)
     }
 }
 
@@ -117,7 +117,7 @@ impl Contract {
     fn restake_internal(
         &mut self,
         ticket: &DepositTicket,
-        signature: &Option<Base64VecU8>,
+        signature: Option<&Base64VecU8>,
         builder: impl RequestBuilder,
     ) -> PromiseOrValue<()> {
         let request = self.prepare_request_safely(ticket, signature, builder);
@@ -144,7 +144,7 @@ impl Contract {
     fn prepare_request_safely(
         &self,
         ticket: &DepositTicket,
-        signature: &Option<Base64VecU8>,
+        signature: Option<&Base64VecU8>,
         builder: impl RequestBuilder,
     ) -> Request {
         let product_id = ticket.product_id.clone();

@@ -282,7 +282,6 @@ fn sequential_restake_for_protected_product_success(
         .restake(product.id.clone(), ticket.clone(), Some(signature.into()), None);
 
     let alice_jars = context.contract().get_jars_for_account(alice.clone());
-    let alice_jars = context.contract().get_jars_for_account(alice.clone());
     assert_eq!(1, alice_jars.0.len());
     assert_eq!(1, alice_jars.0.get(&product.id.clone()).unwrap().len());
 
@@ -583,7 +582,7 @@ fn deposit_with_outdated_nonce_after_restake(
 
     context
         .contract()
-        .deposit(alice, ticket, principal, &Some(signature.into()));
+        .deposit(alice, ticket, principal, Some(&signature.into()));
 }
 
 #[rstest]

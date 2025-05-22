@@ -35,7 +35,7 @@ impl ProductModelApi for Product {
     }
 
     fn set_public_key(&mut self, public_key: Option<Base64VecU8>) {
-        self.public_key = public_key.map(Into::into);
+        self.public_key = public_key;
     }
 
     fn calculate_fee(&self, principal: TokenAmount) -> TokenAmount {

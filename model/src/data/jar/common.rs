@@ -43,7 +43,7 @@ impl Jar {
     }
 
     pub fn should_close(&self) -> bool {
-        self.deposits.is_empty() && self.cache.map_or(true, |cache| cache.interest == 0)
+        self.deposits.is_empty() && self.cache.is_none_or(|cache| cache.interest == 0)
     }
 
     pub fn lock(&mut self) -> &mut Self {

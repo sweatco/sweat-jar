@@ -1,6 +1,6 @@
 use std::clone::Clone;
 
-use near_sdk::{assert_one_yocto, near_bindgen, require};
+use near_sdk::{assert_one_yocto, near, require};
 use sweat_jar_model::{
     api::ProductApi,
     data::product::{Product, ProductAssertions, ProductId, ProductModelApi},
@@ -11,7 +11,7 @@ use crate::{
     Base64VecU8, Contract, ContractExt,
 };
 
-#[near_bindgen]
+#[near]
 impl ProductApi for Contract {
     #[payable]
     fn register_product(&mut self, product: Product) {
