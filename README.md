@@ -12,7 +12,8 @@ $SWEAT staking smart contract.
 ## 2. Quickstart
 
 1. Make sure you have installed [rust](https://rust.org/).
-2. Install the [`NEAR CLI`](https://github.com/near/near-cli#setup)
+2. Install [`cargo near`](https://github.com/near/cargo-near?tab=readme-ov-file#installation)
+3. Install [`NEAR CLI`](https://github.com/near/near-cli#setup)
 
 If you already have `rustup` installed, you can ensure that the correct version of the compiler and the NEAR CLI is installed as well:
 
@@ -57,7 +58,7 @@ such as the locale, timezone, build path, and numerous other variables.
 To obtain an identical build artifact on any machine, matching the one deployed on NEAR, you can build it using Docker:
 
 ```shell
-make build-in-docker
+make build-reproducible
 ```
 
 ## 3. Measure gas consumption

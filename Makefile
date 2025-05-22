@@ -21,10 +21,8 @@ build: ##@Build Build the contract locally.
 build-integration: ##@Build Build the contract for integration tests.
 	./scripts/build-integration.sh
 
-build-in-docker: ##@Build Build reproducible artifact in Docker.
-	./scripts/build-in-docker.sh
-
-dock: build-in-docker ##@Build Shorthand for `build-in-docker`
+build-reproducible: ##@Build Build reproducible artifact in Docker.
+	./scripts/build-reproducible.sh
 
 deploy: ##@Deploy Deploy the contract to dev account on Testnet.
 	./scripts/deploy.sh
@@ -37,8 +35,7 @@ cov: ##@Testing Run unit tests with coverage.
 	cargo llvm-cov --hide-instantiations --open --ignore-filename-regex tests.rs
 
 test: ##@Testing Run unit tests.
-	cargo test --package sweat-jar-model --features=release-api --release && \
-	cargo test --package sweat_jar --release
+	cargo test
 
 integration: ##@Testing Run integration tests.
 	cargo test --package integration-tests

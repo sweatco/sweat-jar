@@ -8,7 +8,6 @@ mod register_product;
 mod restake;
 mod restake_all;
 mod stake;
-mod top_up;
 pub(crate) mod utils;
 mod withdraw;
 mod withdraw_all;

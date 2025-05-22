@@ -1,3 +1,4 @@
-mod defi;
 pub mod helpers;
-mod score_jars;
+mod legacy_account_migration;
+mod product_legacy;
+mod state_migration;

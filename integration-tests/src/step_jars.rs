@@ -1,7 +1,12 @@
 use anyhow::Result;
 use nitka::{misc::ToNear, set_integration_logs_enabled};
 use sweat_jar_model::{
-    api::{IntegrationTestMethodsIntegration, ScoreApiIntegration},
+    api::*,
+    data::{
+        deposit::{DepositMessage, Purpose},
+        product::Product,
+    },
+    signer::test_utils::MessageSigner,
     Timezone,
 };
 
@@ -17,21 +22,44 @@ use crate::{
 async fn record_score_dos() -> Result<()> {
     println!("👷🏽 Run record score DOS test");
 
-    let product = RegisterProductCommand::Locked10Minutes20000ScoreCap;
+    let signer = MessageSigner::new();
+    let product = Product {
+        public_key: Some(signer.public_key().into()),
+        ..RegisterProductCommand::Locked10Minutes20000ScoreCap.get()
+    };
 
     set_integration_logs_enabled(false);
 
-    let mut context = prepare_contract(None, [product]).await?;
+    let mut context = prepare_contract(None, []).await?;
 
     let alice = context.alice().await?;
     let manager = context.manager().await?;
 
     context
         .sweat_jar()
+        .register_product(product.clone())
+        .with_user(&manager)
+        .await?;
+
+    let deposit_amount = 100000;
+    let valid_until = 49_012_505_000_000;
+    let deposit_message = DepositMessage::new(
+        Purpose::Deposit,
+        context.sweat_jar().contract.as_account().id(),
+        alice.id(),
+        &product.id,
+        deposit_amount,
+        valid_until,
+        0,
+    );
+    context
+        .sweat_jar()
         .create_step_jar(
             &alice,
             Locked10Minutes20000ScoreCap.id(),
-            100000,
+            deposit_amount,
+            signer.sign(deposit_message.as_str()).into(),
+            valid_until,
             Timezone::hour_shift(0),
             &context.ft_contract(),
         )

@@ -1,8 +1,6 @@
-use base64::{engine::general_purpose::STANDARD, Engine};
-use sweat_jar_model::api::ProductApiIntegration;
+use sweat_jar_model::{api::ProductApiIntegration, signer::test_utils::MessageSigner};
 
 use crate::{
-    common::generate_keypair,
     context::{prepare_contract, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     product::RegisterProductCommand,
@@ -48,14 +46,12 @@ async fn product_actions() -> anyhow::Result<()> {
         .with_user(&manager)
         .await?;
 
-    let (_, verifying_key) = generate_keypair();
-    let pk_base64 = STANDARD.encode(verifying_key.as_bytes());
-
+    let signer = MessageSigner::new();
     context
         .sweat_jar()
         .set_public_key(
             RegisterProductCommand::Locked12Months12Percents.id(),
-            pk_base64.as_bytes().into_iter().copied().collect::<Vec<_>>().into(),
+            signer.public_key().into(),
         )
         .with_user(&manager)
         .await?;

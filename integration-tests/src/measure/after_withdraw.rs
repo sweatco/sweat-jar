@@ -1,6 +1,6 @@
 use anyhow::Result;
 use near_workspaces::types::Gas;
-use sweat_jar_model::{api::WithdrawApiIntegration, U32};
+use sweat_jar_model::api::WithdrawApiIntegration;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -67,7 +67,7 @@ async fn measure_one_withdraw(data: (RegisterProductCommand, u128)) -> Result<Ga
 
     Ok(context
         .sweat_jar()
-        .withdraw(U32(0), None)
+        .withdraw(product.id())
         .with_user(&alice)
         .result()
         .await?
