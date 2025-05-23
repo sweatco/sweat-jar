@@ -34,9 +34,19 @@ impl Contract {
         );
     }
 
+    pub(crate) fn assert_account_exists(&self, account_id: &AccountId) {
+        require!(self.has_account(account_id), "Account doesn't exist");
+    }
+
     pub(crate) fn increment_and_get_last_jar_id(&mut self) -> JarId {
         self.last_jar_id += 1;
         self.last_jar_id
+    }
+
+    pub(crate) fn has_account(&self, account_id: &AccountId) -> bool {
+        self.accounts.contains_key(account_id)
+            || self.account_jars_v1.contains_key(account_id)
+            || self.account_jars_non_versioned.contains_key(account_id)
     }
 
     pub(crate) fn account_jars(&self, account_id: &AccountId) -> Vec<Jar> {

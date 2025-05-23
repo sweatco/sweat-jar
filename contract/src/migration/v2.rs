@@ -74,10 +74,12 @@ impl MigrationToV2 for Contract {
 
     fn migrate_account(&mut self) -> PromiseOrValue<(AccountId, bool)> {
         let account_id = env::predecessor_account_id();
-
+        self.assert_account_exists(&account_id);
         self.assert_account_is_not_migrating(&account_id);
 
-        let (principal, memo, msg) = self.prepare_migration_params(account_id.clone());
+        let Some((principal, memo, msg)) = self.prepare_migration_params(account_id.clone()) else {
+            return self.finalize_migration(account_id, true);
+        };
 
         assert_gas(
             Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER + TGAS_FOR_MIGRATION_CALLBACK).as_gas(),
@@ -169,16 +171,7 @@ impl Contract {
 impl Contract {
     #[private]
     pub fn after_account_transferred(&mut self, account_id: AccountId) -> PromiseOrValue<(AccountId, bool)> {
-        let is_success = is_promise_success();
-
-        if is_success {
-            self.clear_account(&account_id);
-            emit(EventKind::JarsMerge(account_id.clone()));
-        }
-
-        self.unlock_account(&account_id);
-
-        PromiseOrValue::Value((self.migration.new_version_account_id.clone(), is_success))
+        self.finalize_migration(account_id, is_promise_success())
     }
 
     #[private]
@@ -190,10 +183,10 @@ impl Contract {
 }
 
 impl Contract {
-    fn prepare_migration_params(&mut self, account_id: AccountId) -> (TokenAmount, String, String) {
+    fn prepare_migration_params(&mut self, account_id: AccountId) -> Option<(TokenAmount, String, String)> {
         let (account, principal) = self.map_legacy_account(account_id.clone());
         if account.jars.is_empty() {
-            panic_str("Nothing to migrate");
+            return None;
         }
         self.lock_account(&account_id);
 
@@ -211,7 +204,18 @@ impl Contract {
         })
         .to_string();
 
-        (principal, memo, msg)
+        Some((principal, memo, msg))
+    }
+
+    fn finalize_migration(&mut self, account_id: AccountId, is_success: bool) -> PromiseOrValue<(AccountId, bool)> {
+        if is_success {
+            self.clear_account(&account_id);
+            emit(EventKind::JarsMerge(account_id.clone()));
+        }
+
+        self.unlock_account(&account_id);
+
+        PromiseOrValue::Value((self.migration.new_version_account_id.clone(), is_success))
     }
 
     fn map_legacy_account(&self, account_id: AccountId) -> (Account, TokenAmount) {
@@ -319,7 +323,7 @@ mod tests {
             .create_jars(alice.clone(), "product_4".to_string(), 1 * 10u128.pow(18), 10);
 
         context.switch_account(alice.clone());
-        let (principal, memo, msg) = context.contract().prepare_migration_params(alice.clone());
+        let (principal, memo, msg) = context.contract().prepare_migration_params(alice.clone()).unwrap();
         println!("principal: {principal}");
         println!("memo: {memo}");
         println!("msg: {msg}");
