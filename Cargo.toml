@@ -35,5 +35,7 @@ near-self-update-proc = "0.1.2"
 near-sdk = "5.14.0"
 near-contract-standards = "5.14.0"
 
+rstest = "0.25.0"
+
 #[patch.crates-io]
 #nitka = { path = "../nitka/nitka" }

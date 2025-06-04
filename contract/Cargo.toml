@@ -43,4 +43,4 @@ fake = { workspace = true }
 anyhow = { workspace = true }
 itertools = { workspace = true }
 sweat-jar-model = { workspace = true, features = ["testing"] }
-rstest = "0.25.0"
+rstest = { workspace = true }
