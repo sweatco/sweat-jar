@@ -222,6 +222,8 @@ impl Contract {
         amount: U128,
         signature: Option<Base64VecU8>,
     ) -> JarView {
+        self.assert_account_is_not_migrating(&account_id);
+
         let amount = amount.0;
         let product_id = &ticket.product_id;
         let product = self.get_product(product_id);
@@ -230,6 +232,8 @@ impl Contract {
         product.assert_cap(amount);
 
         self.migrate_account_if_needed(&account_id);
+
+        self.verify(&account_id, amount, &ticket, signature);
 
         if product.is_score_product() {
             match (ticket.timezone, self.get_score_mut(&account_id)) {
@@ -245,8 +249,6 @@ impl Contract {
                 }
             }
         }
-
-        self.verify(&account_id, amount, &ticket, signature);
 
         let id = self.increment_and_get_last_jar_id();
         let now = env::block_timestamp_ms();
@@ -362,30 +364,28 @@ impl Contract {
             let is_time_valid = env::block_timestamp_ms() <= ticket.valid_until.0;
             require!(is_time_valid, "Ticket is outdated");
 
-            let hash = Self::get_ticket_hash(account_id, amount, ticket, last_jar_id);
-            let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
-
-            require!(is_signature_valid, "Not matching signature");
-        }
-    }
-
-    fn get_ticket_hash(
-        account_id: &AccountId,
-        amount: TokenAmount,
-        ticket: &JarTicket,
-        last_jar_id: Option<JarId>,
-    ) -> Vec<u8> {
-        sha256(
-            Self::get_signature_material(
+            let signature_material = Self::get_signature_material(
                 &env::current_account_id(),
                 account_id,
                 &ticket.product_id,
                 amount,
-                ticket.valid_until.0,
                 last_jar_id,
-            )
-            .as_bytes(),
-        )
+                ticket.valid_until.0,
+            );
+
+            let hash = Self::get_ticket_hash(&signature_material);
+            let is_signature_valid = Self::verify_signature(&signature.0, pk, &hash);
+
+            if !is_signature_valid {
+                panic_str(&format!(
+                    "Not matching signature. Signature material: {signature_material}"
+                ));
+            }
+        }
+    }
+
+    fn get_ticket_hash(signature_material: &str) -> Vec<u8> {
+        sha256(signature_material.as_bytes())
     }
 
     pub(crate) fn get_signature_material(
@@ -393,8 +393,8 @@ impl Contract {
         receiver_account_id: &AccountId,
         product_id: &ProductId,
         amount: TokenAmount,
-        valid_until: Timestamp,
         last_jar_id: Option<JarId>,
+        valid_until: Timestamp,
     ) -> String {
         format!(
             "{},{},{},{},{},{}",

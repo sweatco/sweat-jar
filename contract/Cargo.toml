@@ -1,6 +1,6 @@
 [package]
 name = "sweat_jar"
-version = "3.4.1"
+version = "3.5.0"
 authors = ["Sweat Economy"]
 edition = "2021"
 
@@ -27,7 +27,6 @@ near-contract-standards = { workspace = true }
 sweat-jar-model = { workspace = true }
 
 [dev-dependencies]
-visu = { workspace = true }
 fake = { workspace = true }
 rand = { workspace = true }
 sha256 = { workspace = true }

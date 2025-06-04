@@ -89,6 +89,30 @@ fn withdraw_locked_jar_after_maturity_by_owner() {
 }
 
 #[test]
+#[should_panic(expected = "Account is migrating")]
+fn withdraw_while_migrating() {
+    let product = Product::new();
+    let (alice, jar, mut context) = prepare_jar(&product);
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+    context.switch_account(&alice);
+    let _ = context.contract().withdraw(U32(jar.id), None);
+}
+
+#[test]
+#[should_panic(expected = "Account is migrating")]
+fn withdraw_all_while_migrating() {
+    let product = Product::new();
+    let (alice, _, mut context) = prepare_jar(&product);
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+    context.switch_account(&alice);
+    let _ = context.contract().withdraw_all(None);
+}
+
+#[test]
 #[should_panic(expected = "Account 'owner' doesn't exist")]
 fn withdraw_flexible_jar_by_not_owner() {
     let product = Product::new().flexible();

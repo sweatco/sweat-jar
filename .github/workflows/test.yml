@@ -21,7 +21,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check for unused dependencies
         run: |
-          cargo install cargo-machete --locked
+          rustup install nightly
+          cargo +nightly install cargo-machete --locked
           cargo machete
 
   lint:

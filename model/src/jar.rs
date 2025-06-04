@@ -5,7 +5,7 @@ use near_sdk::{
     near, AccountId, Timestamp,
 };
 
-use crate::{numbers::U32, ProductId};
+use crate::{numbers::U32, ProductId, TokenAmount};
 
 pub type JarId = u32;
 
@@ -55,4 +55,39 @@ pub struct CeFiJar {
     pub product_id: ProductId,
     pub principal: U128,
     pub created_at: U64,
+}
+
+// v2
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]
+pub struct Jar {
+    pub deposits: Vec<Deposit>,
+    pub cache: Option<JarCache>,
+    pub is_pending_withdraw: bool,
+    pub claim_remainder: u64,
+}
+
+impl Jar {
+    pub fn add_to_cache(&mut self, now: Timestamp, amount: TokenAmount, remainder: u64) {
+        let mut cache = self.cache.unwrap_or_default();
+        cache.interest += amount;
+        cache.updated_at = now;
+
+        self.cache = cache.into();
+        self.claim_remainder += remainder;
+    }
+}
+
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct Deposit {
+    pub created_at: Timestamp,
+    pub principal: u128,
+}
+
+#[near(serializers=[borsh, json])]
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct JarCache {
+    pub updated_at: Timestamp,
+    pub interest: u128,
 }

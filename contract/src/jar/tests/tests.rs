@@ -114,7 +114,9 @@ mod signature_tests {
     }
 
     #[test]
-    #[should_panic(expected = "Not matching signature")]
+    #[should_panic(
+        expected = "Not matching signature. Signature material: owner,admin,another_premium_product,15000000,,100000000"
+    )]
     fn verify_ticket_with_not_matching_signature() {
         let admin = admin();
 
@@ -242,6 +244,24 @@ mod signature_tests {
 
         let product = Product::new().enabled(false);
         let context = Context::new(admin).with_products(&[product.clone()]);
+
+        let ticket = JarTicket {
+            product_id: product.id,
+            valid_until: U64(0),
+            timezone: None,
+        };
+        context.contract().create_jar(alice, ticket, U128(1_000_000), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "Account is migrating")]
+    fn create_jar_while_migrating() {
+        let alice = alice();
+        let admin = admin();
+
+        let product = Product::new();
+        let context = Context::new(admin).with_products(&[product.clone()]);
+        context.contract().migration.migrating_accounts.insert(alice.clone());
 
         let ticket = JarTicket {
             product_id: product.id,

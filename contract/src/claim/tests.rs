@@ -30,6 +30,21 @@ fn claim_total_when_nothing_to_claim() {
 }
 
 #[test]
+#[should_panic(expected = "Account is migrating")]
+fn claim_total_while_migrating() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::new();
+    let jar = Jar::new(0).principal(100_000_000);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar]);
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.switch_account(alice);
+    let _ = context.contract().claim_total(None).unwrap();
+}
+
+#[test]
 fn claim_total_detailed_when_having_tokens() {
     let alice = alice();
     let admin = admin();

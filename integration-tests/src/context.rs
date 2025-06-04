@@ -17,12 +17,14 @@ pub type Context = nitka::context::Context<near_workspaces::network::Sandbox>;
 
 pub const FT_CONTRACT: &str = "sweat";
 pub const SWEAT_JAR: &str = "sweat_jar";
+pub const SWEAT_JAR_V2: &str = "sweat_jar_v2";
 
 pub trait IntegrationContext {
     async fn manager(&mut self) -> Result<Account>;
     async fn alice(&mut self) -> Result<Account>;
     async fn bob(&mut self) -> Result<Account>;
     async fn fee(&mut self) -> Result<Account>;
+    async fn v2_account(&mut self) -> Result<Account>;
     fn sweat_jar(&self) -> SweatJarContract;
     fn ft_contract(&self) -> SweatContract;
 }
@@ -44,6 +46,10 @@ impl IntegrationContext for Context {
         self.account("fee_longer_name_to_be_closer_to_real").await
     }
 
+    async fn v2_account(&mut self) -> Result<Account> {
+        self.account(SWEAT_JAR_V2).await
+    }
+
     fn sweat_jar(&self) -> SweatJarContract {
         SweatJarContract {
             contract: &self.contracts[SWEAT_JAR],
@@ -61,7 +67,7 @@ pub(crate) async fn prepare_contract(
     custom_jar_contract: Option<Vec<u8>>,
     products: impl IntoIterator<Item = RegisterProductCommand>,
 ) -> Result<Context> {
-    let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR], true, "build-integration".into()).await?;
+    let mut context = Context::new(&[FT_CONTRACT, SWEAT_JAR, SWEAT_JAR_V2], true, "build-integration".into()).await?;
 
     if let Some(custom_jar) = custom_jar_contract {
         let contract = context
@@ -78,7 +84,7 @@ pub(crate) async fn prepare_contract(
     let bob = context.bob().await?;
     let manager = context.manager().await?;
     let fee_account = context.fee().await?;
-
+    let v2_account = context.v2_account().await?;
     context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
     context
         .sweat_jar()
@@ -86,6 +92,7 @@ pub(crate) async fn prepare_contract(
             context.ft_contract().contract.as_account().to_near(),
             fee_account.to_near(),
             manager.to_near(),
+            v2_account.to_near(),
         )
         .await?;
 
@@ -93,12 +100,10 @@ pub(crate) async fn prepare_contract(
         .ft_contract()
         .storage_deposit(context.sweat_jar().contract.as_account().to_near().into(), None)
         .await?;
-
     context
         .ft_contract()
-        .tge_mint(&context.sweat_jar().contract.as_account().to_near(), U128(100_000_000))
+        .storage_deposit(v2_account.to_near().into(), None)
         .await?;
-
     context
         .ft_contract()
         .storage_deposit(fee_account.to_near().into(), None)
@@ -109,11 +114,16 @@ pub(crate) async fn prepare_contract(
         .await?;
     context
         .ft_contract()
+        .storage_deposit(bob.to_near().into(), None)
+        .await?;
+
+    context
+        .ft_contract()
         .tge_mint(&alice.to_near(), U128(100_000_000))
         .await?;
     context
         .ft_contract()
-        .storage_deposit(bob.to_near().into(), None)
+        .tge_mint(&context.sweat_jar().contract.as_account().to_near(), U128(100_000_000 * 10u128.pow(18)))
         .await?;
     context
         .ft_contract()

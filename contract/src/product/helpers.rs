@@ -161,8 +161,8 @@ impl Context {
             receiver_id,
             &ticket.product_id,
             amount,
-            ticket.valid_until.0,
             None,
+            ticket.valid_until.0,
         )
     }
 }
