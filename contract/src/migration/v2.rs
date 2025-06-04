@@ -19,7 +19,7 @@ use sweat_jar_model::{
 
 use super::account_jars_non_versioned::AccountJarsNonVersioned;
 #[cfg(not(test))]
-use crate::ft_interface::*;
+use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     assert::assert_not_locked,
     event::{emit, EventKind},
@@ -101,7 +101,7 @@ impl MigrationToV2 for Contract {
     fn migrate_products(&mut self) -> PromiseOrValue<()> {
         self.assert_manager();
 
-        let products: Vec<product_v2::Product> = self.products.values().map(|product| product.into()).collect();
+        let products: Vec<product_v2::Product> = self.products.values().map(Into::into).collect();
         let args = json!({
             "products": products
         });
@@ -131,8 +131,7 @@ impl Contract {
             )
             .then(
                 Self::ext(env::current_account_id())
-                    .after_account_transferred(account_id.clone())
-                    .into(),
+                    .after_account_transferred(account_id.clone()),
             )
             .into()
     }
@@ -145,7 +144,7 @@ impl Contract {
                 NearToken::from_yoctonear(0),
                 Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER),
             )
-            .then(Self::ext(env::current_account_id()).after_products_migrated().into())
+            .then(Self::ext(env::current_account_id()).after_products_migrated())
             .into()
     }
 }
@@ -223,7 +222,7 @@ impl Contract {
 
         let score = self
             .get_score(&account_id)
-            .map_or_else(ScoreRecord::default, |score| score.claimable_score());
+            .map_or_else(ScoreRecord::default, crate::score::AccountScore::claimable_score);
 
         let mut account = Account {
             nonce: 0,
@@ -240,7 +239,7 @@ impl Contract {
         let mut total_principal = 0;
 
         let jars = self.account_jars(&account_id);
-        for jar in jars.iter() {
+        for jar in &jars {
             assert_not_locked(jar);
 
             let updated_jar = account.deposit(&jar.product_id, jar.principal, jar.created_at.into());
