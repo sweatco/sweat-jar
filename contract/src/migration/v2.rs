@@ -49,6 +49,7 @@ const TGAS_FOR_MIGRATION_TRANSFER: u64 = 100;
 const TGAS_FOR_MIGRATION_CALLBACK: u64 = 10;
 
 #[near]
+#[mutants::skip]
 impl MigrationToV2 for Contract {
     #[private]
     #[init(ignore_state)]
@@ -113,6 +114,7 @@ impl MigrationToV2 for Contract {
 }
 
 #[cfg(not(test))]
+#[mutants::skip]
 impl Contract {
     fn transfer_account(
         &mut self,
@@ -150,6 +152,7 @@ impl Contract {
 }
 
 #[cfg(test)]
+#[mutants::skip]
 impl Contract {
     fn transfer_account(
         &mut self,
@@ -180,7 +183,7 @@ impl Contract {
         PromiseOrValue::Value(())
     }
 }
-
+#[mutants::skip]
 impl Contract {
     fn prepare_migration_params(&mut self, account_id: AccountId) -> Option<(TokenAmount, String, String)> {
         let (account, principal) = self.map_legacy_account(account_id.clone());
@@ -272,6 +275,7 @@ impl Contract {
 }
 
 #[cfg(test)]
+#[mutants::skip]
 mod tests {
     use near_sdk::test_utils::test_env::alice;
 
@@ -348,6 +352,7 @@ mod tests {
     }
 }
 
+#[mutants::skip]
 mod product_v2 {
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},

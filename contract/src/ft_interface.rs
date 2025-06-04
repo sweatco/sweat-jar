@@ -41,6 +41,7 @@ impl FungibleTokenInterface for FungibleTokenContract {
         }
     }
 
+    #[mutants::skip] // Covered by integration tests
     fn ft_transfer_call(&self, receiver_id: &AccountId, amount: u128, memo: &str, msg: &str, tgas: u64) -> Promise {
         Promise::new(self.address.clone()).ft_transfer_call(
             receiver_id,
@@ -82,6 +83,7 @@ impl FungibleTokenPromise for Promise {
         )
     }
 
+    #[mutants::skip] // Covered by integration tests
     fn ft_transfer_call(
         self,
         receiver_id: &AccountId,

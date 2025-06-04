@@ -34,6 +34,7 @@ impl Contract {
         );
     }
 
+    #[mutants::skip] // Covered by integration tests
     pub(crate) fn assert_account_exists(&self, account_id: &AccountId) {
         require!(self.has_account(account_id), "Account doesn't exist");
     }
@@ -43,6 +44,7 @@ impl Contract {
         self.last_jar_id
     }
 
+    #[mutants::skip] // Covered by integration tests
     pub(crate) fn has_account(&self, account_id: &AccountId) -> bool {
         self.accounts.contains_key(account_id)
             || self.account_jars_v1.contains_key(account_id)
