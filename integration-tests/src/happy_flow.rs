@@ -1,5 +1,5 @@
 use nitka::misc::ToNear;
-use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration};
+use sweat_jar_model::{api::*, TokenAmount};
 use sweat_model::FungibleTokenCoreIntegration;
 
 use crate::{
@@ -38,9 +38,11 @@ async fn happy_flow() -> anyhow::Result<()> {
         )
         .await?;
 
-    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).await?;
+    let alice_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    let alice_principal: TokenAmount = *&alice_jars.get_total_principal();
+    assert_eq!(1_000_000, alice_principal);
+
     let mut alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).await?;
-    assert_eq!(1_000_000, alice_principal.total.0);
     assert_eq!(0, alice_interest.amount.total.0);
 
     context.fast_forward_hours(1).await?;
@@ -58,7 +60,7 @@ async fn happy_flow() -> anyhow::Result<()> {
     assert!(15 < claimed_amount && claimed_amount < 20);
 
     let alice_balance = context.ft_contract().ft_balance_of(alice.to_near()).await?.0;
-    assert_eq!(99_000_000 + claimed_amount, alice_balance);
+    assert_eq!(99_999_999_999_999_999_999_000_000 + claimed_amount, alice_balance);
 
     Ok(())
 }

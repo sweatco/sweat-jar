@@ -1,8 +1,5 @@
 use nitka::misc::ToNear;
-use sweat_jar_model::{
-    api::{ClaimApiIntegration, JarApiIntegration, ProductApiIntegration},
-    claimed_amount_view::ClaimedAmountView,
-};
+use sweat_jar_model::{api::*, data::claim::ClaimedAmountView};
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -25,6 +22,7 @@ async fn claim_detailed() -> anyhow::Result<()> {
     .await?;
 
     let alice = context.alice().await?;
+    let target_principal = 1_000_000;
 
     let products = context.sweat_jar().get_products().await?;
     assert_eq!(3, products.len());
@@ -34,14 +32,18 @@ async fn claim_detailed() -> anyhow::Result<()> {
         .create_jar(
             &alice,
             RegisterProductCommand::Locked12Months12Percents.id(),
-            1_000_000,
+            target_principal,
             &context.ft_contract(),
         )
         .await?;
 
-    let alice_principal = context.sweat_jar().get_total_principal(alice.to_near()).await?;
+    let alice_principal = *&context
+        .sweat_jar()
+        .get_jars_for_account(alice.to_near())
+        .await?
+        .get_total_principal();
     let alice_interest = context.sweat_jar().get_total_interest(alice.to_near()).await?;
-    assert_eq!(1_000_000, alice_principal.total.0);
+    assert_eq!(target_principal, alice_principal);
     assert_eq!(0, alice_interest.amount.total.0);
 
     context.fast_forward_hours(1).await?;

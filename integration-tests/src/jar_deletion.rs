@@ -1,5 +1,5 @@
 use nitka::misc::ToNear;
-use sweat_jar_model::api::{ClaimApiIntegration, JarApiIntegration, WithdrawApiIntegration};
+use sweat_jar_model::api::*;
 
 use crate::{
     context::{prepare_contract, IntegrationContext},
@@ -15,30 +15,18 @@ async fn jar_deletion() -> anyhow::Result<()> {
     let mut context = prepare_contract(None, [RegisterProductCommand::Locked10Minutes60000Percents]).await?;
 
     let alice = context.alice().await?;
+    let product_id = RegisterProductCommand::Locked10Minutes60000Percents.id();
 
     context
         .sweat_jar()
-        .create_jar(
-            &alice,
-            RegisterProductCommand::Locked10Minutes60000Percents.id(),
-            1_000_000,
-            &context.ft_contract(),
-        )
+        .create_jar(&alice, product_id.clone(), 1_000_000, &context.ft_contract())
         .await?;
-
-    let jar_view = context
-        .sweat_jar()
-        .get_jars_for_account(alice.to_near())
-        .await?
-        .into_iter()
-        .next()
-        .unwrap();
 
     context.fast_forward_minutes(11).await?;
 
     let withdrawn_amount = context
         .sweat_jar()
-        .withdraw(jar_view.id, None)
+        .withdraw(product_id.clone())
         .with_user(&alice)
         .await?;
     assert_eq!(withdrawn_amount.withdrawn_amount.0, 1_000_000);
