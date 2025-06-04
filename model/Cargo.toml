@@ -23,7 +23,6 @@ nitka-proc = { workspace = true }
 nitka = { workspace = true, optional = true }
 
 near-workspaces = { workspace = true, optional = true }
-base64 = { workspace = true }
 
 [dev-dependencies]
 fake = { workspace = true }
