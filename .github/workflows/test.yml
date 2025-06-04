@@ -76,18 +76,3 @@ jobs:
 
       - name: Mutation tests
         run: make mutation
-
-  check-binary-hash:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install cargo-near CLI
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.15.0/cargo-near-installer.sh | sh
-
-      - name: Hash
-        run: make hash
-
-      - name: Commit Hash
-        run: echo ${{ github.event.pull_request.head.sha }}
-
