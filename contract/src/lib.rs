@@ -92,7 +92,7 @@ pub(crate) enum StorageKey {
     /// Products migrated to step jars
     Products,
     Accounts,
-    _UselessKey,
+    _SkippedKey, // This was used in one of the migrations, but is not needed anymore
     Migration,
 }
 

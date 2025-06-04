@@ -100,12 +100,6 @@ pub(crate) async fn prepare_contract(
         .ft_contract()
         .storage_deposit(context.sweat_jar().contract.as_account().to_near().into(), None)
         .await?;
-
-    context
-        .ft_contract()
-        .tge_mint(&context.sweat_jar().contract.as_account().to_near(), U128(100_000_000 * 10u128.pow(18)))
-        .await?;
-
     context
         .ft_contract()
         .storage_deposit(v2_account.to_near().into(), None)
@@ -120,11 +114,16 @@ pub(crate) async fn prepare_contract(
         .await?;
     context
         .ft_contract()
+        .storage_deposit(bob.to_near().into(), None)
+        .await?;
+
+    context
+        .ft_contract()
         .tge_mint(&alice.to_near(), U128(100_000_000))
         .await?;
     context
         .ft_contract()
-        .storage_deposit(bob.to_near().into(), None)
+        .tge_mint(&context.sweat_jar().contract.as_account().to_near(), U128(100_000_000 * 10u128.pow(18)))
         .await?;
     context
         .ft_contract()
