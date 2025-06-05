@@ -5,34 +5,19 @@ use near_sdk::{
     BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
-use product::model::{Apy, Product};
-use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
-
-use crate::{
-    jar::{
-        account::versioned::Account,
-        model::{AccountJarsLegacy, Jar},
+use sweat_jar_model::{
+    api::InitApi,
+    data::{
+        account::versioned::AccountVersioned,
+        product::{Product, ProductId},
     },
-    migration::account_jars_non_versioned::AccountJarsNonVersioned,
+    TokenAmount,
 };
 
-mod assert;
-mod claim;
 mod common;
-mod event;
-mod ft_interface;
-mod ft_receiver;
-mod integration_test;
-mod internal;
-mod jar;
+mod doc;
+mod feature;
 mod migration;
-mod penalty;
-mod product;
-mod score;
-mod test_builder;
-mod test_utils;
-mod tests;
-mod withdraw;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -53,69 +38,44 @@ pub struct Contract {
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
 
-    /// The last jar ID. Is used as nonce in `get_ticket_hash` method.
-    pub last_jar_id: JarId,
-
     /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub accounts: LookupMap<AccountId, Account>,
-
-    pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
-    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
+    pub accounts: LookupMap<AccountId, AccountVersioned>,
 
     /// Cache to make access to products faster
     /// Is not stored in contract state so it should be always skipped by borsh
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
+
+    pub fee_amount: TokenAmount,
+    pub previous_version_account_id: AccountId,
 }
 
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
-    _ProductsLegacyV1,
-    AccountsLegacyV1,
-    /// Jars with claim remainder
-    AccountsLegacyV2,
-    /// Products migrated to near_sdk 5
-    _ProductsLegacyV2,
-    /// Products migrated to step jars
     Products,
     Accounts,
 }
 
-#[near_bindgen]
+#[near]
 impl InitApi for Contract {
     #[init]
     #[private]
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        previous_version_account_id: AccountId,
+    ) -> Self {
         Self {
             token_account_id,
             fee_account_id,
             manager,
-            products: UnorderedMap::new(StorageKey::_ProductsLegacyV2),
-            account_jars_non_versioned: LookupMap::new(StorageKey::AccountsLegacyV2),
-            account_jars_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
-            last_jar_id: 0,
-            accounts: LookupMap::new(StorageKey::Accounts),
+            products: UnorderedMap::new(StorageKey::Products),
             products_cache: HashMap::default().into(),
+            accounts: LookupMap::new(StorageKey::Accounts),
+            fee_amount: 0,
+            previous_version_account_id,
         }
-    }
-}
-
-pub(crate) trait JarsStorage<J> {
-    fn get_jar(&self, id: JarId) -> &J;
-    fn get_jar_mut(&mut self, id: JarId) -> &mut J;
-}
-
-impl JarsStorage<Jar> for Vec<Jar> {
-    fn get_jar(&self, id: JarId) -> &Jar {
-        self.iter()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
-    }
-
-    fn get_jar_mut(&mut self, id: JarId) -> &mut Jar {
-        self.iter_mut()
-            .find(|jar| jar.id == id)
-            .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {id} doesn't exist")))
     }
 }

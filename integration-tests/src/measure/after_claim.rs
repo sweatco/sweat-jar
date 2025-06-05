@@ -35,7 +35,7 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
         map.entry(measure.0 .0).or_default().push(measure.1);
     }
 
-    let map: HashMap<RegisterProductCommand, _> = map
+    let _map: HashMap<RegisterProductCommand, _> = map
         .into_iter()
         .map(|(key, gas_cost)| {
             let mut differences: Vec<Gas> = Vec::new();
@@ -47,8 +47,6 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
             (key, (gas_cost, differences))
         })
         .collect();
-
-    dbg!(&map);
 
     Ok(())
 }

@@ -2,15 +2,16 @@ use std::collections::HashMap;
 
 use anyhow::Result;
 use near_workspaces::types::Gas;
+use nitka::set_integration_logs_enabled;
 
 use crate::{
-    context::{prepare_contract, IntegrationContext},
+    context::{prepare_contract, prepare_contract_with_legacy, IntegrationContext},
     jar_contract_extensions::JarContractExtensions,
     measure::{
         measure::scoped_command_measure,
         utils::{add_jar, append_measure, generate_permutations, measure_jars_range, retry_until_ok, MeasureData},
     },
-    product::RegisterProductCommand,
+    product::{RegisterProductCommand, RegisterProductCommand::Locked10Minutes6Percents},
 };
 
 #[ignore]
@@ -91,4 +92,49 @@ pub(crate) async fn measure_stake(input: (RegisterProductCommand, usize)) -> any
         .result()
         .await?
         .total_gas_burnt)
+}
+
+#[ignore]
+#[tokio::test]
+#[mutants::skip]
+async fn measure_storage_on_staking() -> Result<()> {
+    const DEPOSIT: u128 = 2 * 10u128.pow(18);
+
+    set_integration_logs_enabled(false);
+
+    let product = Locked10Minutes6Percents;
+    let mut context = prepare_contract_with_legacy(None, [product]).await?;
+    let alice = context.alice().await?;
+
+    let jars_account = context.sweat_jar().contract.as_account();
+    let jars_initial_storage_usage = jars_account.view_account().await?.storage_usage;
+    dbg!(&jars_initial_storage_usage);
+
+    let legacy_jars_account = context.sweat_jar_legacy().contract.as_account();
+    let legacy_jars_initial_storage_usage = legacy_jars_account.view_account().await?.storage_usage;
+    dbg!(&legacy_jars_initial_storage_usage);
+
+    let mut csv = "count,v1,v2".to_owned();
+    for i in 0..400 {
+        let result = context
+            .sweat_jar()
+            .create_jar(&alice, product.id(), DEPOSIT, &context.ft_contract())
+            .await?;
+        assert_eq!(DEPOSIT, result.0);
+
+        let result = context
+            .sweat_jar_legacy()
+            .create_jar(&alice, product.id(), DEPOSIT, &context.ft_contract())
+            .await?;
+        assert_eq!(DEPOSIT, result.0);
+
+        let v1_storage_usage = legacy_jars_account.view_account().await?.storage_usage;
+        let v2_storage_usage = jars_account.view_account().await?.storage_usage;
+
+        csv.push_str(format!("\n{i},{v1_storage_usage},{v2_storage_usage}").as_str());
+    }
+
+    print!("{}", csv);
+
+    Ok(())
 }
