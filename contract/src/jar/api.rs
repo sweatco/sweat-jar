@@ -171,7 +171,9 @@ impl JarApi for Contract {
     }
 
     fn restake(&mut self, jar_id: JarIdView) -> JarView {
-        self.migrate_account_if_needed(&env::predecessor_account_id());
+        let account_id = env::predecessor_account_id();
+        self.assert_account_is_not_migrating(&account_id);
+        self.migrate_account_if_needed(&account_id);
         let (old_id, jar) = self.restake_internal(jar_id);
 
         emit(EventKind::Restake((old_id, jar.id.0)));
@@ -181,7 +183,7 @@ impl JarApi for Contract {
 
     fn restake_all(&mut self, jars: Option<Vec<JarIdView>>) -> Vec<JarView> {
         let account_id = env::predecessor_account_id();
-
+        self.assert_account_is_not_migrating(&account_id);
         self.migrate_account_if_needed(&account_id);
 
         let now = env::block_timestamp_ms();
@@ -221,6 +223,7 @@ impl JarApi for Contract {
     }
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
+        self.assert_account_is_not_migrating(&account_id);
         self.assert_manager();
         self.migrate_account_if_needed(&account_id);
 

@@ -1,8 +1,12 @@
 use std::{cell::RefCell, collections::HashMap};
 
 use near_sdk::{
-    collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
-    BorshStorageKey, PanicOnDefault,
+    collections::UnorderedMap,
+    env,
+    json_types::Base64VecU8,
+    near, near_bindgen,
+    store::{LookupMap, LookupSet},
+    AccountId, BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
@@ -66,6 +70,14 @@ pub struct Contract {
     /// Is not stored in contract state so it should be always skipped by borsh
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
+
+    pub migration: MigrationState,
+}
+
+#[near]
+pub struct MigrationState {
+    pub new_version_account_id: AccountId,
+    pub migrating_accounts: LookupSet<AccountId>,
 }
 
 #[near]
@@ -80,13 +92,20 @@ pub(crate) enum StorageKey {
     /// Products migrated to step jars
     Products,
     Accounts,
+    _SkippedKey, // This was used in one of the migrations, but is not needed anymore
+    Migration,
 }
 
 #[near_bindgen]
 impl InitApi for Contract {
     #[init]
     #[private]
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, manager: AccountId) -> Self {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        new_version_account_id: AccountId,
+    ) -> Self {
         Self {
             token_account_id,
             fee_account_id,
@@ -97,6 +116,10 @@ impl InitApi for Contract {
             last_jar_id: 0,
             accounts: LookupMap::new(StorageKey::Accounts),
             products_cache: HashMap::default().into(),
+            migration: MigrationState {
+                new_version_account_id,
+                migrating_accounts: LookupSet::new(StorageKey::Migration),
+            },
         }
     }
 }

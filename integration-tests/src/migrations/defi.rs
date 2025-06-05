@@ -19,6 +19,7 @@ async fn defi_migration() -> anyhow::Result<()> {
     let alice = &context.alice().await?;
     let bob = &context.bob().await?;
     let fee_account = &context.fee().await?;
+    let v2_account = &context.v2_account().await?;
 
     context.ft_contract().new(".u.sweat.testnet".to_string().into()).await?;
     context
@@ -27,6 +28,7 @@ async fn defi_migration() -> anyhow::Result<()> {
             context.ft_contract().contract.as_account().to_near(),
             fee_account.to_near(),
             manager.to_near(),
+            v2_account.to_near(),
         )
         .await?;
 

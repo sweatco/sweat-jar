@@ -152,3 +152,41 @@ fn restake_after_maturity_for_not_restakable_product() {
     assert!(context.contract().restake_all(None).is_empty());
     context.contract().restake(U32(jar.id));
 }
+
+#[test]
+#[should_panic(expected = "Account is migrating")]
+fn restake_while_migrating() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::new().with_allows_restaking(false);
+    let jar = Jar::new(0);
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_jars(&[jar.clone()]);
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+    let _ = context.contract().restake(jar.id.into());
+}
+
+#[test]
+#[should_panic(expected = "Account is migrating")]
+fn restake_all_while_migrating() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::new().with_allows_restaking(false);
+    let jar = Jar::new(0);
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_jars(&[jar.clone()]);
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+    let _ = context.contract().restake_all(None);
+}

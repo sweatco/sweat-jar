@@ -222,6 +222,8 @@ impl Contract {
         amount: U128,
         signature: Option<Base64VecU8>,
     ) -> JarView {
+        self.assert_account_is_not_migrating(&account_id);
+
         let amount = amount.0;
         let product_id = &ticket.product_id;
         let product = self.get_product(product_id);

@@ -29,6 +29,7 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
+        self.assert_account_is_not_migrating(&account_id);
         self.migrate_account_if_needed(&account_id);
         self.claim_jars_internal(account_id, detailed)
     }
