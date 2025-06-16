@@ -54,6 +54,23 @@ fn restake_before_maturity() {
 }
 
 #[test]
+#[should_panic(expected = "The jar is not mature yet")]
+fn restake_at_maturity_moment() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::new().with_allows_restaking(true);
+    let product_term = product.get_lockup_term().unwrap();
+    let jar = Jar::new(0);
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
+
+    context.set_block_timestamp_in_ms(product_term);
+    context.switch_account(&alice);
+    assert!(context.contract().restake_all(None).is_empty());
+    context.contract().restake(U32(jar.id));
+}
+
+#[test]
 #[should_panic(expected = "The product doesn't support restaking")]
 fn restake_when_restaking_is_not_supported() {
     let alice = alice();

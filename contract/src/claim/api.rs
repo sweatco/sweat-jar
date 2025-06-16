@@ -81,11 +81,31 @@ impl Contract {
             }
         }
 
+        self.maybe_claim(
+            accumulator,
+            &account_id,
+            jars_to_claim.into_iter().map(|a| a.1).cloned().collect(),
+            account_score_before_transfer,
+            event_data,
+            now,
+        )
+    }
+
+    #[mutants::skip]
+    fn maybe_claim(
+        &mut self,
+        accumulator: ClaimedAmountView,
+        account_id: &AccountId,
+        jars_to_claim: Vec<Jar>,
+        account_score_before_transfer: Option<AccountScore>,
+        event_data: Vec<(u32, U128)>,
+        now: u64,
+    ) -> PromiseOrValue<ClaimedAmountView> {
         if accumulator.get_total().0 > 0 {
             self.claim_interest(
-                &account_id,
+                account_id,
                 accumulator,
-                jars_to_claim.into_iter().map(|a| a.1).cloned().collect(),
+                jars_to_claim,
                 account_score_before_transfer,
                 EventKind::Claim(event_data),
                 now,

@@ -153,6 +153,25 @@ fn register_product_with_too_high_fixed_fee() {
 #[should_panic(
     expected = "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
 )]
+fn register_product_with_fixed_fee_equal_to_cap_min() {
+    let cap_min = 100;
+    register_product(RegisterProductCommand {
+        id: "product_with_fixed_fee".to_string(),
+        cap_min: U128(cap_min),
+        withdrawal_fee: WithdrawalFeeDto::Fix(U128(cap_min)).into(),
+        terms: TermsDto::Fixed(FixedProductTermsDto {
+            lockup_term: U64(MS_IN_YEAR),
+            allows_top_up: false,
+            allows_restaking: false,
+        }),
+        ..Default::default()
+    });
+}
+
+#[test]
+#[should_panic(
+    expected = "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
+)]
 fn register_product_with_too_high_percent_fee() {
     register_product(RegisterProductCommand {
         id: "product_with_fixed_fee".to_string(),
@@ -262,7 +281,10 @@ fn set_public_key_without_deposit() {
 
 #[test]
 fn assert_cap_in_bounds() {
-    generate_product().assert_cap(200);
+    let product = generate_product();
+    product.assert_cap(100);
+    product.assert_cap(200);
+    product.assert_cap(100_000_000_000);
 }
 
 #[test]

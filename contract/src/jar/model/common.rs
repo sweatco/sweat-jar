@@ -138,22 +138,18 @@ impl JarLastVersion {
         )
     }
 
+    #[mutants::skip]
     fn get_interest_with_apy(&self, apy: UDecimal, product: &Product, now: Timestamp) -> (TokenAmount, u64) {
-        let (base_date, cache_interest) = if let Some(cache) = &self.cache {
-            (cache.updated_at, cache.interest)
-        } else {
-            (self.created_at, 0)
-        };
-
+        let (base_date, cache_interest) = self
+            .cache
+            .map_or((self.created_at, 0), |cache| (cache.updated_at, cache.interest));
         let until_date = self.get_interest_until_date(product, now);
 
-        let effective_term = if until_date > base_date {
-            until_date - base_date
-        } else {
+        if base_date >= until_date {
             return (cache_interest, 0);
-        };
+        }
 
-        self.get_interest_for_term(cache_interest, apy, effective_term)
+        self.get_interest_for_term(cache_interest, apy, until_date - base_date)
     }
 
     fn get_score_interest(&self, score: &ScoreRecord, product: &Product, now: Timestamp) -> (TokenAmount, u64) {

@@ -42,7 +42,6 @@ pub struct ContractBeforeMigration {
     pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
     #[borsh(skip)]
     pub products_cache: RefCell<HashMap<ProductId, Product>>,
-    pub migration: MigrationState,
 }
 
 const TGAS_FOR_MIGRATION_TRANSFER: u64 = 100;
