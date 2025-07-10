@@ -81,4 +81,14 @@ impl Contract {
         let account = self.get_account_mut(account_id);
         account.update_jar_cache(product, env::block_timestamp_ms());
     }
+
+    pub(crate) fn sort_deposits(&mut self, account_id: &AccountId) {
+        let product_ids: Vec<ProductId> = self.get_account(account_id).jars.keys().cloned().collect();
+        for product_id in product_ids {
+            self.get_account_mut(account_id)
+                .get_jar_mut(&product_id)
+                .deposits
+                .sort_by(|left, right| left.created_at.cmp(&right.created_at));
+        }
+    }
 }
