@@ -202,7 +202,8 @@ impl RequestBuilder for RestakeRequestBuilder {
         let deposit = DepositDto::new(self.ticket.product_id.clone(), mature_balance, self.target_amount);
 
         let withdrawal_amount = mature_balance - deposit.amount;
-        let withdrawal = if withdrawal_amount > 0 {
+        // TODO: add test for 0 case and replace `gt` with `>`
+        let withdrawal = if withdrawal_amount.gt(&0) {
             Some(WithdrawalDto {
                 amount: withdrawal_amount,
                 fee: product.calculate_fee(withdrawal_amount),
@@ -240,7 +241,8 @@ impl RequestBuilder for RestakeAllRequestBuilder {
             let product = contract.get_product(product_id);
             let (balance, partition_index) = jar.get_liquid_balance(&product.terms);
 
-            if balance > 0 {
+            // TODO: add test for 0 case and replace `gt` with `>`
+            if balance.gt(&0) {
                 total_mature_balance += balance;
                 total_fee += product.calculate_fee(balance);
                 partition_indices.push((product_id.clone(), partition_index));
@@ -250,7 +252,8 @@ impl RequestBuilder for RestakeAllRequestBuilder {
         let deposit = DepositDto::new(self.ticket.product_id.clone(), total_mature_balance, self.target_amount);
 
         let withdrawal_amount = total_mature_balance - deposit.amount;
-        let withdrawal = if withdrawal_amount > 0 {
+        // TODO: add test for 0 case and replace `gt` with `>`
+        let withdrawal = if withdrawal_amount.gt(&0) {
             Some(WithdrawalDto {
                 amount: withdrawal_amount,
                 fee: (total_fee * withdrawal_amount).div_ceil(total_mature_balance),

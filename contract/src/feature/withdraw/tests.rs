@@ -3,13 +3,13 @@
 use std::collections::HashSet;
 
 use itertools::Itertools;
-use near_sdk::{AccountId, PromiseOrValue};
+use near_sdk::{json_types::U64, AccountId, PromiseOrValue};
 use rstest::{fixture, rstest};
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, FeeApi, WithdrawApi},
     data::{
         jar::*,
-        product::{Apy, FixedProductTerms, Product, ProductId, Terms},
+        product::{Apy, Cap, FixedProductTerms, Product, ProductId, Terms},
         withdraw::BulkWithdrawView,
     },
     TokenAmount, UDecimal, MS_IN_DAY,
@@ -35,6 +35,26 @@ fn product_fixed(#[default(365)] term_in_days: u64, #[default("product_fixed")] 
             lockup_term: (term_in_days * MS_IN_DAY).into(),
             apy: Apy::Constant(UDecimal::new(12_000, 5)),
         }))
+}
+
+#[fixture]
+fn product_365d_12apy() -> Product {
+    Product {
+        id: "365d_12apy".to_string(),
+        cap: Cap::new(1_000_000_000_000_000_000, 500_000_000_000_000_000_000_000),
+        terms: Terms::Fixed(FixedProductTerms {
+            lockup_term: U64::from(31536000000),
+            apy: Apy::Constant(UDecimal::new(12, 2)),
+        }),
+        withdrawal_fee: None,
+        public_key: Some(
+            "KlFClUvgnOgruryvkH8/J/Y8DERsf1VY3USK0Y93E/8="
+                .as_bytes()
+                .to_vec()
+                .into(),
+        ),
+        is_enabled: true,
+    }
 }
 
 #[rstest]
@@ -602,6 +622,33 @@ fn batch_withdraw_partially(
         jar_3.deposits.first().unwrap().principal,
         jars.get_total_principal_for_product(&product_3.id)
     );
+}
+
+#[rstest]
+fn withdraw_all_with_not_ordered_deposits(
+    admin: AccountId,
+    alice: AccountId,
+    product_365d_12apy: Product,
+    #[with(vec![
+        (1721116944633, 149000000000000000000),
+        (1721306451909, 87000000000000000000),
+        (1721554990492, 104290000000000000000),
+        (1721397526843, 60440000000000000000),
+        (1720684269369, 104000000000000000000),
+        (1720528438422, 180000000000000000000),
+        (1720187472109, 2672810000000000000000),
+        (1720887994162, 133000000000000000000),
+    ])]
+    jar: Jar,
+) {
+    let mut context = Context::new(admin)
+        .with_products(&[product_365d_12apy.clone()])
+        .with_jars(&alice, &[(product_365d_12apy.id.clone(), jar.clone())]);
+
+    context.set_block_timestamp_in_ms(1752160593000);
+
+    let withdrawal = context.withdraw_all(&alice);
+    assert_eq!(withdrawal.total_amount.0, 2_852_810_000_000_000_000_000);
 }
 
 impl Context {

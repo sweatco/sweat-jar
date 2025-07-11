@@ -8,9 +8,9 @@
     ],
     "build": {
       "compiler": "rustc 1.86.0",
-      "builder": "cargo-near cargo-near-build 0.4.4"
+      "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "ALBtSNysoL9WCZDsYnbR2mEC6uoD1rJM94LAiE5TfcpB"
+    "wasm_hash": "4CWuna3uDD6GLLYGD44fzEndEooFjocTzpRmnVysipSz"
   },
   "body": {
     "functions": [
@@ -273,6 +273,48 @@
           "type_schema": {
             "type": "string"
           }
+        }
+      },
+      {
+        "name": "create_jar_with_deposits",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "deposits",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer",
+                      "format": "uint64",
+                      "minimum": 0.0
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                }
+              }
+            }
+          ]
         }
       },
       {
