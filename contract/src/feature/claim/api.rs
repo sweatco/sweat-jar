@@ -96,7 +96,8 @@ impl ClaimApi for Contract {
 
         account.score.try_reset_score();
 
-        if accumulator.get_total().0 > 0 {
+        // TODO: add test for 0 case and replace `gt` with `>`
+        if accumulator.get_total().0.gt(&0) {
             self.claim_interest(
                 &account_id,
                 accumulator,

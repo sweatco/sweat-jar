@@ -49,7 +49,7 @@ pub enum Terms {
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, PartialEq)]
 pub struct FixedProductTerms {
-    /// The maturity term of the jar in milliseconds, during which it yields interest.
+    /// The maturity term of the jar in seconds, during which it yields interest.
     /// After this period, the user can withdraw principal or potentially restake the jar.
     pub lockup_term: U64,
     pub apy: Apy,
