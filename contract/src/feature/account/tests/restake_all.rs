@@ -1,13 +1,13 @@
 use near_sdk::{test_utils::test_env::alice, AccountId};
 use rstest::rstest;
 use sweat_jar_model::{
-    api::{ProductApi, RestakeApi},
+    api::{ClaimApi, ProductApi, RestakeApi},
     data::{
         deposit::{DepositMessage, DepositTicket, Purpose},
         jar::Jar,
         product::{Product, ProductModelApi},
     },
-    MS_IN_DAY, MS_IN_YEAR,
+    Timezone, MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
@@ -341,4 +341,32 @@ fn restake_all_for_multiple_products_with_withdrawal_and_fee(
     assert_eq!(data.restaked.0, principal - withdrawal_amount);
     assert_eq!(data.withdrawn.0, withdrawal_amount - target_fee);
     assert_eq!(context.contract().fee_amount, target_fee);
+}
+
+#[rstest]
+fn claim_after_restake_all_into_first_score_based_jar(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_apy_20_percent)] fixed_product: Product,
+    #[from(product_1_year_12_cap_score_based)] score_based_product: Product,
+    #[with(vec![(0, 100_000), (MS_IN_YEAR / 4, 100_000)])] jar: Jar,
+) {
+    let mut context = Context::new(admin)
+        .with_products(&[fixed_product.clone(), score_based_product.clone()])
+        .with_jars(&alice, &[(fixed_product.id.clone(), jar.clone())]);
+
+    let test_time = MS_IN_YEAR * 2;
+    context.set_block_timestamp_in_ms(test_time);
+
+    context.switch_account(alice.clone());
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: score_based_product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: Some(Timezone::new(0)),
+    };
+    context.contract().restake_all(ticket, None, None);
+
+    let claim_amount = context.claim_total(&alice);
+    assert_eq!(40_000, claim_amount);
 }
