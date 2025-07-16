@@ -9,7 +9,7 @@ use sweat_jar_model::{
     data::{
         deposit::{DepositTicket, Purpose},
         jar::Assertions,
-        product::{ProductAssertions, ProductId, ProductModelApi},
+        product::{ProductAssertions, ProductId, ProductModelApi, Terms},
     },
     TokenAmount,
 };
@@ -125,6 +125,12 @@ impl Contract {
 
         for (product_id, _) in &request.partitions {
             self.update_jar_cache(&request.account_id, product_id);
+        }
+
+        let product = self.get_product(&ticket.product_id);
+        if matches!(product.terms, Terms::ScoreBased(_)) {
+            self.get_account_mut(&request.account_id)
+                .try_set_timezone(ticket.timezone);
         }
 
         if request.withdrawal.is_none() {

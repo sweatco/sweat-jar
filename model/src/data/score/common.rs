@@ -4,7 +4,7 @@ use super::DAYS_STORED;
 use crate::{AccountScore, Chain, Day, Local, Score, ScoreRecord, TimeHelper, Timezone};
 
 impl AccountScore {
-    pub fn is_valid(&self) -> bool {
+    pub fn is_timezone_set(&self) -> bool {
         self.timezone.is_valid()
     }
 
@@ -48,7 +48,7 @@ impl AccountScore {
     }
 
     pub fn try_reset_score(&mut self) {
-        if self.is_valid() {
+        if self.is_timezone_set() {
             self.reset_score();
         }
     }
