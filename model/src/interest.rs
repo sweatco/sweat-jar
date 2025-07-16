@@ -127,9 +127,13 @@ impl InterestCalculator for ScoreBasedProductTerms {
         &self,
         account: &Account,
         now: Timestamp,
-        _last_cached_at: Option<Timestamp>,
+        last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
     ) -> Timestamp {
+        if account.score.updated.0 < last_cached_at.unwrap_or_default() {
+            return 0;
+        }
+
         if account.score.updated.0 < deposit.created_at {
             return 0;
         }
