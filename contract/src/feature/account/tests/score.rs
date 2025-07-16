@@ -110,7 +110,7 @@ mod score_tests {
         admin: AccountId,
         alice: AccountId,
         bob: AccountId,
-        #[from(product_1_year_20_cap_score_based)] product: Product,
+        #[from(product_steps_365d_20000_score_cap)] product: Product,
         #[with(vec![(0, 100.to_otto())])] jar: Jar,
     ) {
         test_env_ext::set_test_log_events(false);
@@ -192,7 +192,7 @@ mod score_tests {
     fn interest_does_not_increase_with_no_score(
         admin: AccountId,
         alice: AccountId,
-        #[from(product_1_year_20_cap_score_based)] product: Product,
+        #[from(product_steps_365d_20000_score_cap)] product: Product,
         #[with(vec![(0, 100_000_000.to_otto())])] jar: Jar,
     ) {
         test_env_ext::set_test_log_events(false);

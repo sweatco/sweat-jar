@@ -158,9 +158,9 @@ pub mod test_utils {
     }
 
     #[fixture]
-    pub fn product_1_year_20_cap_score_based(product: Product) -> Product {
+    pub fn product_steps_365d_20000_score_cap(product: Product) -> Product {
         product
-            .with_id("product_1_year_20_cap_score_based".to_string())
+            .with_id("steps_365d_20000_score_cap".to_string())
             .with_terms(Terms::ScoreBased(ScoreBasedProductTerms {
                 lockup_term: MS_IN_YEAR.into(),
                 score_cap: 20_000,
