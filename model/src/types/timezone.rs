@@ -14,6 +14,10 @@ use crate::{Day, Local, TimeHelper, MS_IN_HOUR, UTC};
 pub struct Timezone(i64);
 
 impl Timezone {
+    pub const fn new(timezone: i64) -> Self {
+        Self(timezone)
+    }
+
     pub const fn invalid() -> Self {
         Self(i64::MIN)
     }
