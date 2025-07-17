@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "DucdFSRNfRdi6J6FDtf8fqQUSPR1q5JEPmUQtVmXo5Lz"
+    "wasm_hash": "5Usc2E8ac1UkpfpBvD3TS3rwGhHh816e9dQE7z824y7r"
   },
   "body": {
     "functions": [
@@ -664,27 +664,6 @@
               "name": "public_key",
               "type_schema": {
                 "$ref": "#/definitions/Base64VecU8"
-              }
-            }
-          ]
-        }
-      },
-      {
-        "name": "set_timezone",
-        "kind": "call",
-        "params": {
-          "serialization_type": "json",
-          "args": [
-            {
-              "name": "account_id",
-              "type_schema": {
-                "$ref": "#/definitions/AccountId"
-              }
-            },
-            {
-              "name": "timezone",
-              "type_schema": {
-                "type": "string"
               }
             }
           ]

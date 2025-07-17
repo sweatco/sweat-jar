@@ -32,7 +32,7 @@ fn claim_total_when_nothing_to_claim(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.switch_account(alice);
     let value = context.contract().claim_total(None).unwrap();
@@ -49,7 +49,7 @@ fn claim_total_detailed_when_having_tokens(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let test_duration = MS_IN_YEAR + MS_IN_DAY;
 
@@ -82,7 +82,7 @@ fn claim_pending_withdraw_jar(
     let jar = jar.with_pending_withdraw();
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let test_duration = MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(test_duration);
@@ -107,7 +107,7 @@ fn dont_delete_jar_on_all_interest_claim(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(MS_IN_YEAR + 2 * MS_IN_DAY);
 
@@ -131,7 +131,7 @@ fn claim_all_withdraw_all_and_delete_jar(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + MS_IN_DAY);
 
@@ -169,7 +169,7 @@ fn withdraw_all_claim_all_and_delete_jar(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + MS_IN_MINUTE);
 
@@ -200,7 +200,7 @@ fn failed_future_claim(
 
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + MS_IN_DAY);
 
@@ -233,8 +233,8 @@ fn claim_often_vs_claim_once(#[from(product_1_year_12_percent)] product: Product
 
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), alice_jar)])
-            .with_jars(&bob, &[(product.id.clone(), bob_jar)]);
+            .with_latest_account(&alice, &[(product.id.clone(), alice_jar)])
+            .with_latest_account(&bob, &[(product.id.clone(), bob_jar)]);
 
         let mut bobs_claimed = 0;
 

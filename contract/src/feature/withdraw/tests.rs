@@ -28,16 +28,6 @@ use crate::{
 };
 
 #[fixture]
-fn product_fixed(#[default(365)] term_in_days: u64, #[default("product_fixed")] id: &str, product: Product) -> Product {
-    product
-        .with_id(id.to_string())
-        .with_terms(Terms::Fixed(FixedProductTerms {
-            lockup_term: (term_in_days * MS_IN_DAY).into(),
-            apy: Apy::Constant(UDecimal::new(12_000, 5)),
-        }))
-}
-
-#[fixture]
 fn product_365d_12apy() -> Product {
     Product {
         id: "365d_12apy".to_string(),
@@ -68,7 +58,7 @@ fn withdraw_locked_jar_before_maturity_by_not_owner(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.switch_account(context.owner.clone());
     expect_panic(&context, "Account owner is not found", || {
@@ -89,7 +79,7 @@ fn withdraw_locked_jar_before_maturity_by_owner(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_ms(120);
 
@@ -111,7 +101,7 @@ fn withdraw_locked_jar_after_maturity_by_not_owner(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_ms(term_in_days * MS_IN_DAY + 1);
 
@@ -134,7 +124,7 @@ fn withdraw_locked_jar_after_maturity_by_owner(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_ms(term_in_days * MS_IN_DAY + 1);
 
@@ -151,7 +141,7 @@ fn withdraw_flexible_jar_by_not_owner(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_days(1);
     context.contract().withdraw(product.id);
@@ -167,7 +157,7 @@ fn withdraw_flexible_jar_by_owner_full(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_days(1);
 
@@ -196,7 +186,7 @@ fn dont_delete_jar_after_withdraw_with_interest_left(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + 1);
 
@@ -222,7 +212,7 @@ fn product_with_fixed_fee(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + 1);
     let withdraw = context.withdraw(&alice, &product.id);
@@ -232,7 +222,7 @@ fn product_with_fixed_fee(
 }
 
 #[rstest]
-fn text_product_with_percent_fee(
+fn test_product_with_percent_fee(
     admin: AccountId,
     alice: AccountId,
     #[values(UDecimal::new(5, 4), UDecimal::new(10_000, 5), UDecimal::new(1, 1))] fee: UDecimal,
@@ -244,7 +234,7 @@ fn text_product_with_percent_fee(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + 1);
     let withdraw = context.withdraw(&alice, &product.id);
@@ -267,7 +257,7 @@ fn test_failed_withdraw_promise(
 
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + 1);
     context.switch_account(&alice);
@@ -299,7 +289,7 @@ fn test_failed_withdraw_internal(
 ) {
     let context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let request = WithdrawalRequest {
         product_id: product.id.clone(),
@@ -333,7 +323,7 @@ fn test_failed_bulk_withdraw_internal(
 ) {
     let context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let request = BulkWithdrawalRequest {
         requests: vec![WithdrawalRequest {
@@ -369,7 +359,7 @@ fn withdraw_from_locked_jar(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context
         .contract()
@@ -417,7 +407,7 @@ fn withdraw_all(
             long_term_product.clone(),
             illegal_product.clone(),
         ])
-        .with_jars(
+        .with_latest_account(
             &alice,
             &[
                 (regular_product.id, regular_jar.clone()),
@@ -467,7 +457,7 @@ fn withdraw_all_with_fee(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product_with_fixed_fee.clone(), product_with_percent_fee.clone()])
-        .with_jars(
+        .with_latest_account(
             &alice,
             &[
                 (product_with_fixed_fee.id, jar_with_fixed_fee.clone()),
@@ -499,7 +489,7 @@ fn batch_withdraw_all(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id, jar.clone())]);
+        .with_latest_account(&alice, &[(product.id, jar.clone())]);
 
     // One day after last deposit unlock
     context.set_block_timestamp_in_ms(
@@ -538,7 +528,7 @@ fn batch_withdraw_all_with_failed_transfer_promise(
 
     let mut context = Context::new(admin)
         .with_products(&[product.clone(), another_product.clone()])
-        .with_jars(
+        .with_latest_account(
             &alice,
             &[
                 (product.id.clone(), jar.clone()),
@@ -591,7 +581,7 @@ fn batch_withdraw_partially(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product_1.clone(), product_2.clone(), product_3.clone()])
-        .with_jars(
+        .with_latest_account(
             &alice,
             &[
                 (product_1.id.clone(), jar_1.clone()),
@@ -643,7 +633,7 @@ fn withdraw_all_with_not_ordered_deposits(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product_365d_12apy.clone()])
-        .with_jars(&alice, &[(product_365d_12apy.id.clone(), jar.clone())]);
+        .with_v1_account(&alice, &[(product_365d_12apy.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(1752160593000);
 
