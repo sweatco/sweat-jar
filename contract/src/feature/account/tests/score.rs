@@ -110,15 +110,15 @@ mod score_tests {
         admin: AccountId,
         alice: AccountId,
         bob: AccountId,
-        #[from(product_1_year_20_cap_score_based)] product: Product,
+        #[from(product_steps_365d_20000_score_cap)] product: Product,
         #[with(vec![(0, 100.to_otto())])] jar: Jar,
     ) {
         test_env_ext::set_test_log_events(false);
 
         let mut context = Context::new(admin.clone())
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), jar.clone())])
-            .with_jars(&bob, &[(product.id.clone(), jar.clone())]);
+            .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
+            .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
         context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
         context.contract().get_account_mut(&bob).score = AccountScore::new(Timezone::hour_shift(0));
 
@@ -192,14 +192,14 @@ mod score_tests {
     fn interest_does_not_increase_with_no_score(
         admin: AccountId,
         alice: AccountId,
-        #[from(product_1_year_20_cap_score_based)] product: Product,
+        #[from(product_steps_365d_20000_score_cap)] product: Product,
         #[with(vec![(0, 100_000_000.to_otto())])] jar: Jar,
     ) {
         test_env_ext::set_test_log_events(false);
 
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), jar)]);
+            .with_latest_account(&alice, &[(product.id.clone(), jar)]);
         context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
 
         context.set_block_timestamp_in_days(5);
@@ -235,8 +235,8 @@ mod score_tests {
 
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), jar.clone())])
-            .with_jars(&bob, &[(product.id.clone(), jar.clone())]);
+            .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
+            .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
         context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
         context.contract().get_account_mut(&bob).score = AccountScore::new(Timezone::hour_shift(0));
 
@@ -287,7 +287,7 @@ mod score_tests {
 
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), jar)]);
+            .with_latest_account(&alice, &[(product.id.clone(), jar)]);
         context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
 
         for day in 0..=term_in_days {
@@ -373,7 +373,7 @@ mod score_tests {
 
         let mut ctx = Context::new(admin.clone())
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), jar)]);
+            .with_latest_account(&alice, &[(product.id.clone(), jar)]);
         ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(4);
 
         let check_score_interest = |ctx: &Context, val: u128| {
@@ -423,7 +423,7 @@ mod score_tests {
 
         let mut ctx = Context::new(admin.clone())
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), jar)]);
+            .with_latest_account(&alice, &[(product.id.clone(), jar)]);
         ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(4);
 
         ctx.record_score(&alice, UTC(0), 25000);

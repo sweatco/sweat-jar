@@ -2,7 +2,7 @@
   "schema_version": "0.4.0",
   "metadata": {
     "name": "sweat_jar",
-    "version": "4.0.3",
+    "version": "4.0.5",
     "authors": [
       "Sweat Economy"
     ],
@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "4CWuna3uDD6GLLYGD44fzEndEooFjocTzpRmnVysipSz"
+    "wasm_hash": "CSm6T3pHhcAarDnewQQgGoSEBxTMQyeMkaq3cTjrTTVz"
   },
   "body": {
     "functions": [
@@ -189,55 +189,6 @@
         }
       },
       {
-        "name": "block_timestamp_ms",
-        "kind": "view",
-        "result": {
-          "serialization_type": "json",
-          "type_schema": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0.0
-          }
-        }
-      },
-      {
-        "name": "bulk_create_jars",
-        "kind": "call",
-        "params": {
-          "serialization_type": "json",
-          "args": [
-            {
-              "name": "account_id",
-              "type_schema": {
-                "$ref": "#/definitions/AccountId"
-              }
-            },
-            {
-              "name": "product_id",
-              "type_schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "principal",
-              "type_schema": {
-                "type": "integer",
-                "format": "uint128",
-                "minimum": 0.0
-              }
-            },
-            {
-              "name": "number_of_jars",
-              "type_schema": {
-                "type": "integer",
-                "format": "uint16",
-                "minimum": 0.0
-              }
-            }
-          ]
-        }
-      },
-      {
         "name": "claim_total",
         "kind": "call",
         "params": {
@@ -273,48 +224,6 @@
           "type_schema": {
             "type": "string"
           }
-        }
-      },
-      {
-        "name": "create_jar_with_deposits",
-        "kind": "call",
-        "params": {
-          "serialization_type": "json",
-          "args": [
-            {
-              "name": "account_id",
-              "type_schema": {
-                "$ref": "#/definitions/AccountId"
-              }
-            },
-            {
-              "name": "product_id",
-              "type_schema": {
-                "type": "string"
-              }
-            },
-            {
-              "name": "deposits",
-              "type_schema": {
-                "type": "array",
-                "items": {
-                  "type": "array",
-                  "items": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "integer",
-                      "format": "uint64",
-                      "minimum": 0.0
-                    }
-                  ],
-                  "maxItems": 2,
-                  "minItems": 2
-                }
-              }
-            }
-          ]
         }
       },
       {
@@ -755,6 +664,27 @@
               "name": "public_key",
               "type_schema": {
                 "$ref": "#/definitions/Base64VecU8"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "set_timezone",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "timezone",
+              "type_schema": {
+                "type": "string"
               }
             }
           ]
@@ -1644,7 +1574,7 @@
               "$ref": "#/definitions/Apy"
             },
             "lockup_term": {
-              "description": "The maturity term of the jar in milliseconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
+              "description": "The maturity term of the jar in seconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
               "type": "string"
             }
           }

@@ -1,8 +1,9 @@
 #![cfg(test)]
 
 use fake::Fake;
+use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, AccountId, PromiseOrValue};
-use rstest::rstest;
+use rstest::{fixture, rstest};
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{claim::ClaimedAmountView, jar::Jar, product::Product},
@@ -31,7 +32,7 @@ fn claim_total_when_nothing_to_claim(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
     context.switch_account(alice);
     let value = context.contract().claim_total(None).unwrap();
@@ -48,7 +49,7 @@ fn claim_total_detailed_when_having_tokens(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let test_duration = MS_IN_YEAR + MS_IN_DAY;
 
@@ -81,7 +82,7 @@ fn claim_pending_withdraw_jar(
     let jar = jar.with_pending_withdraw();
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let test_duration = MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(test_duration);
@@ -106,7 +107,7 @@ fn dont_delete_jar_on_all_interest_claim(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(MS_IN_YEAR + 2 * MS_IN_DAY);
 
@@ -130,7 +131,7 @@ fn claim_all_withdraw_all_and_delete_jar(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + MS_IN_DAY);
 
@@ -168,7 +169,7 @@ fn withdraw_all_claim_all_and_delete_jar(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + MS_IN_MINUTE);
 
@@ -199,7 +200,7 @@ fn failed_future_claim(
 
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(product.terms.get_lockup_term().unwrap() + MS_IN_DAY);
 
@@ -232,8 +233,8 @@ fn claim_often_vs_claim_once(#[from(product_1_year_12_percent)] product: Product
 
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
-            .with_jars(&alice, &[(product.id.clone(), alice_jar)])
-            .with_jars(&bob, &[(product.id.clone(), bob_jar)]);
+            .with_latest_account(&alice, &[(product.id.clone(), alice_jar)])
+            .with_latest_account(&bob, &[(product.id.clone(), bob_jar)]);
 
         let mut bobs_claimed = 0;
 
@@ -260,4 +261,31 @@ fn claim_often_vs_claim_once(#[from(product_1_year_12_percent)] product: Product
             n,
         );
     }
+}
+
+#[fixture]
+fn alice_migration_message() -> String {
+    r#"{"data":["alice.near","AAAAAAABAAAAGgAAAHN0ZXBzXzM2NWRfMjAwMDBfc2NvcmVfY2FwAQAAAJQAVgmYAQAAAABkp7O24A0AAAAAAAAAAAGdzlgJmAEAAAcO1ZuWfAAAAAAAAAAAAAAAAMy/GQAAAAAnE1YJmAEAAAAAAAAAAAAAiBOIE4gTiBMA"],"type":"migrate"}"#.to_string()
+}
+
+#[rstest]
+fn first_claim_with_booster(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_steps_365d_20000_score_cap)] product: Product,
+    alice_migration_message: String,
+) {
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+    let token_id = context.ft_contract_id.clone();
+    let sender_id = context.legacy_jar_contract_id.clone();
+    context.switch_account(token_id);
+    context
+        .contract()
+        .ft_on_transfer(sender_id, 1000000000000000000.into(), alice_migration_message);
+
+    context.set_block_timestamp_in_ms(1752503478000);
+    let claimed_amount = context.claim_total(&alice);
+
+    assert_eq!(136_986_301_369_863, claimed_amount);
 }

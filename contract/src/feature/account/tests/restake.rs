@@ -25,7 +25,7 @@ use crate::{
 fn restake_by_not_owner(admin: AccountId, bob: AccountId, product: Product, #[from(jar)] alice_jar: Jar) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice(), &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice(), &[(product.id.clone(), alice_jar.clone())]);
 
     context.switch_account(bob);
     expect_panic(&context, "Account bob.near is not found", || {
@@ -75,7 +75,7 @@ fn restake_by_not_owner(admin: AccountId, bob: AccountId, product: Product, #[fr
 fn restake_before_maturity(alice: AccountId, admin: AccountId, product: Product, #[from(jar)] alice_jar: Jar) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     context.switch_account(&alice);
     let valid_until = MS_IN_YEAR * 10;
@@ -92,7 +92,7 @@ fn restake_before_maturity(alice: AccountId, admin: AccountId, product: Product,
 fn restake_with_disabled_product(alice: AccountId, admin: AccountId, product: Product, #[from(jar)] alice_jar: Jar) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     context.switch_account(&admin);
     context.with_deposit_yocto(1, |context| context.contract().set_enabled(product.id.clone(), false));
@@ -116,7 +116,7 @@ fn restake_with_disabled_product(alice: AccountId, admin: AccountId, product: Pr
 fn restake_empty_jar(alice: AccountId, admin: AccountId, product: Product, #[from(jar)] alice_jar: Jar) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     context.set_block_timestamp_in_days(366);
 
@@ -142,7 +142,7 @@ fn restake_after_maturity(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     let restake_time = MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
@@ -176,7 +176,7 @@ fn restake_for_protected_product_success(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     let restake_time = MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
@@ -225,7 +225,7 @@ fn sequential_restake_for_protected_product_success(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     let restake_time = MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
@@ -303,7 +303,7 @@ fn restake_for_protected_product_invalid_signature(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     let restake_time = MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
@@ -347,7 +347,7 @@ fn restake_with_deposit_signature(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     let restake_time = MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
@@ -402,7 +402,7 @@ fn restake_for_protected_product_repeated_nonce(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product_1.clone(), product_2.clone()])
-        .with_jars(
+        .with_latest_account(
             &alice,
             &[
                 (product_1.id.clone(), alice_jar.clone()),
@@ -470,13 +470,15 @@ fn restake_for_protected_product_maturity_mistiming(
     #[with(vec![(MS_IN_DAY * 2, _principal_2)])]
     alice_jar_2: Jar,
 ) {
-    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]).with_jars(
-        &alice,
-        &[
-            (product.id.clone(), alice_jar_1.clone()),
-            (product.id.clone(), alice_jar_2.clone()),
-        ],
-    );
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product.clone()])
+        .with_latest_account(
+            &alice,
+            &[
+                (product.id.clone(), alice_jar_1.clone()),
+                (product.id.clone(), alice_jar_2.clone()),
+            ],
+        );
 
     // at this point the first deposit is mature
     let restake_time = MS_IN_YEAR + MS_IN_DAY;
@@ -526,7 +528,7 @@ fn deposit_with_outdated_nonce_after_restake(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar.clone())]);
 
     // Wait until maturity
     let restake_time = MS_IN_YEAR + MS_IN_DAY;
@@ -599,7 +601,7 @@ fn restake_with_withdrawal(
 
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar)]);
 
     // Wait until maturity
     let restake_time = MS_IN_YEAR + MS_IN_DAY;

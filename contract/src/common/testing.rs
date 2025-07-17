@@ -8,7 +8,10 @@ use std::{
 };
 
 use near_contract_standards::fungible_token::Balance;
-use near_sdk::{test_utils::VMContextBuilder, testing_env, AccountId, NearToken, PromiseOrValue};
+use near_sdk::{
+    borsh::to_vec, json_types::Base64VecU8, test_utils::VMContextBuilder, testing_env, AccountId, NearToken,
+    PromiseOrValue,
+};
 use sweat_jar_model::{
     api::InitApi,
     data::{
@@ -20,7 +23,7 @@ use sweat_jar_model::{
 };
 
 use super::{env::test_env_ext, event::EventKind};
-use crate::Contract;
+use crate::{migration::api::store_account_raw, Contract};
 
 pub mod accounts {
     use near_sdk::AccountId;
@@ -50,7 +53,7 @@ pub mod accounts {
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
     pub owner: AccountId,
-    ft_contract_id: AccountId,
+    pub ft_contract_id: AccountId,
     pub legacy_jar_contract_id: AccountId,
     builder: VMContextBuilder,
 }
@@ -103,7 +106,18 @@ impl Context {
         self
     }
 
-    pub(crate) fn with_jars(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
+    pub(crate) fn with_latest_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
+        self.with_account(account_id, jars, |account| AccountVersioned::new(account))
+    }
+
+    pub(crate) fn with_v1_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
+        self.with_account(account_id, jars, |account| AccountVersioned::V1(account))
+    }
+
+    fn with_account<F>(self, account_id: &AccountId, jars: &[(ProductId, Jar)], account_factory: F) -> Self
+    where
+        F: FnOnce(Account) -> AccountVersioned,
+    {
         if jars.is_empty() {
             return self;
         }
@@ -112,9 +126,11 @@ impl Context {
         for (product_id, jar) in jars {
             account.jars.insert(product_id.clone(), jar.clone());
         }
-        self.contract()
-            .accounts
-            .insert(account_id.clone(), AccountVersioned::new(account));
+
+        store_account_raw(
+            account_id.clone(),
+            Base64VecU8(to_vec(&account_factory(account)).unwrap()),
+        );
 
         self
     }

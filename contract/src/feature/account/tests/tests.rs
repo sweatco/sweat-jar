@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use near_sdk::{
-    json_types::{U128, U64},
+    json_types::{I64, U128, U64},
     AccountId,
 };
 use rstest::rstest;
@@ -13,7 +13,7 @@ use sweat_jar_model::{
         deposit::DepositTicket,
         jar::{AggregatedTokenAmountView, Jar},
         product::{Apy, Product},
-    },
+    }, Timezone,
 };
 
 use crate::{
@@ -49,7 +49,7 @@ fn get_total_interest_with_single_jar_after_30_minutes(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_minutes(30);
 
@@ -71,7 +71,7 @@ fn get_total_interest_with_single_jar_on_maturity(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(365);
 
@@ -95,7 +95,7 @@ fn get_total_interest_with_single_jar_after_maturity(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(400);
 
@@ -112,7 +112,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(182);
 
@@ -138,7 +138,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(15_768_000_000);
 
@@ -164,7 +164,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let products = context.contract().get_products();
     assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Downgradable(_)));
@@ -209,7 +209,7 @@ fn get_interest_after_withdraw(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(400);
 
@@ -230,7 +230,7 @@ fn unlock_not_by_manager(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
     context
         .contract()
         .get_account_mut(&alice)
@@ -250,7 +250,7 @@ fn unlock_by_manager(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
     context
         .contract()
         .get_account_mut(&alice)
@@ -275,6 +275,60 @@ fn unlock_by_manager(
             .get_jar(&product.id)
             .is_pending_withdraw
     );
+}
+
+#[rstest]
+#[should_panic(expected = "Can be performed only by admin")]
+fn set_timezone_by_not_manager(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_12_percent)] product: Product,
+    #[with(vec![(0, 100_000_000)])] jar: Jar,
+) {
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
+
+    context.contract().set_timezone(alice, I64(1));
+}
+
+#[rstest]
+fn set_timezone_by_manager(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_12_percent)] product: Product,
+    #[with(vec![(0, 100_000_000)])] jar: Jar,
+) {
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
+
+    let timezone = 360_000;
+
+    context.switch_account_to_manager();
+    context.contract().set_timezone(alice.clone(), I64(timezone));
+
+    assert_eq!(context.contract().get_timezone(alice).unwrap().0, timezone);
+}
+
+#[rstest]
+fn set_timezone_by_manager_when_timezone_already_set(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_12_percent)] product: Product,
+    #[with(vec![(0, 100_000_000)])] jar: Jar,
+) {
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
+
+    let timezone = 360_000;
+    context.contract().get_account_mut(&alice).score.timezone = Timezone::new(timezone);
+
+    context.switch_account_to_manager();
+    context.contract().set_timezone(alice.clone(), I64(0));
+
+    assert_eq!(context.contract().get_timezone(alice).unwrap().0, timezone);
 }
 
 mod signature_tests {

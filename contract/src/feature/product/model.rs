@@ -23,6 +23,20 @@ pub mod test_utils {
     }
 
     #[fixture]
+    pub fn product_fixed(
+        #[default(365)] term_in_days: u64,
+        #[default("product_fixed")] id: &str,
+        product: Product,
+    ) -> Product {
+        product
+            .with_id(id.to_string())
+            .with_terms(Terms::Fixed(FixedProductTerms {
+                lockup_term: (term_in_days * MS_IN_DAY).into(),
+                apy: Apy::Constant(UDecimal::new(12_000, 5)),
+            }))
+    }
+
+    #[fixture]
     pub fn product_1_year_12_percent(product: Product) -> Product {
         product
             .with_id("product_1_year_12_percent".to_string())
@@ -158,9 +172,9 @@ pub mod test_utils {
     }
 
     #[fixture]
-    pub fn product_1_year_20_cap_score_based(product: Product) -> Product {
+    pub fn product_steps_365d_20000_score_cap(product: Product) -> Product {
         product
-            .with_id("product_1_year_20_cap_score_based".to_string())
+            .with_id("steps_365d_20000_score_cap".to_string())
             .with_terms(Terms::ScoreBased(ScoreBasedProductTerms {
                 lockup_term: MS_IN_YEAR.into(),
                 score_cap: 20_000,

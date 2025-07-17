@@ -95,7 +95,6 @@ impl WithdrawApi for Contract {
     fn withdraw(&mut self, product_id: ProductId) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
 
-        self.sort_deposits(&account_id);
         self.get_account_mut(&account_id).get_jar_mut(&product_id).try_lock();
         self.update_jar_cache(&account_id, &product_id);
 
@@ -116,7 +115,6 @@ impl WithdrawApi for Contract {
     fn withdraw_all(&mut self, product_ids: Option<HashSet<ProductId>>) -> PromiseOrValue<BulkWithdrawView> {
         let account_id = env::predecessor_account_id();
 
-        self.sort_deposits(&account_id);
         self.update_account_cache(&account_id, None);
 
         let mut request = BulkWithdrawalRequest::default();

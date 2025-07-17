@@ -24,7 +24,7 @@ fn plot_year(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] regular_product: Product,
-    #[from(product_1_year_20_cap_score_based)] score_based_product: Product,
+    #[from(product_steps_365d_20000_score_cap)] score_based_product: Product,
     #[from(jar)]
     #[with(vec![(0, 100 * 10u128.to_otto())])]
     regular_jar: Jar,
@@ -39,7 +39,7 @@ fn plot_year(
 
     let mut ctx = Context::new(admin)
         .with_products(&vec![regular_product.clone(), score_based_product.clone()])
-        .with_jars(
+        .with_latest_account(
             &alice,
             &vec![
                 (regular_product.id.clone(), regular_jar),
@@ -87,15 +87,15 @@ fn plot_first_week(
     admin: AccountId,
     alice: AccountId,
     bob: AccountId,
-    #[from(product_1_year_20_cap_score_based)] product: Product,
+    #[from(product_steps_365d_20000_score_cap)] product: Product,
     #[with(vec![(0, 100 * 10u128.to_otto())])] jar: Jar,
 ) -> Result<()> {
     test_env_ext::set_test_log_events(false);
 
     let mut ctx = Context::new(admin)
         .with_products(&vec![product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())])
-        .with_jars(&bob, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
+        .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
 
     ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(0);
     ctx.contract().get_account_mut(&bob).score.timezone = Timezone::hour_shift(0);

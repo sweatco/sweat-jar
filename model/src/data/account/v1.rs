@@ -32,6 +32,17 @@ pub struct AccountV1Companion {
 }
 
 impl AccountV1 {
+    #[must_use]
+    pub fn with_sorted_deposits(&self) -> Self {
+        let mut jars = self.jars.clone();
+        for jar in jars.values_mut() {
+            jar.deposits
+                .sort_by(|left, right| left.created_at.cmp(&right.created_at));
+        }
+
+        Self { jars, ..self.clone() }
+    }
+
     pub fn get_total_principal(&self) -> TokenAmount {
         self.jars
             .iter()
@@ -57,15 +68,14 @@ impl AccountV1 {
     }
 
     pub fn try_set_timezone(&mut self, timezone: Option<Timezone>) {
-        match (timezone, self.score.is_valid()) {
-            // Time zone already set. No actions required.
-            (Some(_) | None, true) => (),
-            (Some(timezone), false) => {
-                self.score = AccountScore::new(timezone);
-            }
-            (None, false) => {
-                panic_str("Trying to create score based jar without providing time zone");
-            }
+        if self.score.is_timezone_set() {
+            return;
+        }
+
+        if let Some(timezone) = timezone {
+            self.score = AccountScore::new(timezone);
+        } else {
+            panic_str("Trying to create score based jar without providing time zone");
         }
     }
 
@@ -97,6 +107,6 @@ impl AccountV1 {
     }
 
     pub fn has_score_jars(&self) -> bool {
-        self.score.is_valid()
+        self.score.is_timezone_set()
     }
 }
