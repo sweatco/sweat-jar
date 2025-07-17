@@ -49,7 +49,7 @@ fn get_total_interest_with_single_jar_after_30_minutes(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_minutes(30);
 
@@ -71,7 +71,7 @@ fn get_total_interest_with_single_jar_on_maturity(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(365);
 
@@ -95,7 +95,7 @@ fn get_total_interest_with_single_jar_after_maturity(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(400);
 
@@ -112,7 +112,7 @@ fn get_total_interest_with_single_jar_after_claim_on_half_term_and_maturity(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(182);
 
@@ -138,7 +138,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_ms(15_768_000_000);
 
@@ -164,7 +164,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let products = context.contract().get_products();
     assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Downgradable(_)));
@@ -209,7 +209,7 @@ fn get_interest_after_withdraw(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     context.set_block_timestamp_in_days(400);
 
@@ -230,7 +230,7 @@ fn unlock_not_by_manager(
 ) {
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
     context
         .contract()
         .get_account_mut(&alice)
@@ -250,7 +250,7 @@ fn unlock_by_manager(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
     context
         .contract()
         .get_account_mut(&alice)

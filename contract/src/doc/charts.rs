@@ -39,7 +39,7 @@ fn plot_year(
 
     let mut ctx = Context::new(admin)
         .with_products(&vec![regular_product.clone(), score_based_product.clone()])
-        .with_jars(
+        .with_latest_account(
             &alice,
             &vec![
                 (regular_product.id.clone(), regular_jar),
@@ -94,8 +94,8 @@ fn plot_first_week(
 
     let mut ctx = Context::new(admin)
         .with_products(&vec![product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), jar.clone())])
-        .with_jars(&bob, &[(product.id.clone(), jar.clone())]);
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
+        .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
 
     ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(0);
     ctx.contract().get_account_mut(&bob).score.timezone = Timezone::hour_shift(0);

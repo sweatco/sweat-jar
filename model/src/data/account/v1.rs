@@ -32,6 +32,17 @@ pub struct AccountV1Companion {
 }
 
 impl AccountV1 {
+    #[must_use]
+    pub fn with_sorted_deposits(&self) -> Self {
+        let mut jars = self.jars.clone();
+        for jar in jars.values_mut() {
+            jar.deposits
+                .sort_by(|left, right| left.created_at.cmp(&right.created_at));
+        }
+
+        Self { jars, ..self.clone() }
+    }
+
     pub fn get_total_principal(&self) -> TokenAmount {
         self.jars
             .iter()

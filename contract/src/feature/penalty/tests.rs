@@ -29,8 +29,8 @@ fn apply_penalty_in_batch(
 ) {
     let mut context = Context::new(admin.clone())
         .with_products(&[product.clone()])
-        .with_jars(&alice, &[(product.id.clone(), alice_jar)])
-        .with_jars(&bob, &[(product.id.clone(), bob_jar)]);
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar)])
+        .with_latest_account(&bob, &[(product.id.clone(), bob_jar)]);
 
     context.set_block_timestamp_in_ms(MS_IN_YEAR / 2);
 
