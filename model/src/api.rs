@@ -106,6 +106,8 @@ pub trait AccountApi {
 
     /// Returns current active score if user has any score based jars
     fn get_score(&self, account_id: AccountId) -> Option<U128>;
+
+    fn set_timezone(&mut self, account_id: AccountId, timezone: I64);
 }
 
 #[make_integration_version]

@@ -6,15 +6,12 @@ use near_sdk::{
     near, AccountId,
 };
 use sweat_jar_model::{
-    api::AccountApi,
-    data::{
+    api::AccountApi, data::{
         account::Account,
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
         score::Score,
-    },
-    interest::InterestCalculator,
-    TokenAmount, UTC,
+    }, interest::InterestCalculator, Timezone, TokenAmount, UTC
 };
 
 use super::model::{AccountScoreUpdate, ScoreConverter};
@@ -112,5 +109,12 @@ impl AccountApi for Contract {
         let account = self.get_account(&account_id);
 
         Some(u128::from(account.score.active_score()).into())
+    }
+
+    fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {
+        self.assert_manager();
+
+        let account = self.get_account_mut(&account_id);
+        account.try_set_timezone(Some(Timezone::new(timezone.0)));
     }
 }
