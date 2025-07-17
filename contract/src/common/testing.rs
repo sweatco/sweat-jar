@@ -53,7 +53,7 @@ pub mod accounts {
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
     pub owner: AccountId,
-    ft_contract_id: AccountId,
+    pub ft_contract_id: AccountId,
     pub legacy_jar_contract_id: AccountId,
     builder: VMContextBuilder,
 }

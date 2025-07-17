@@ -1,8 +1,9 @@
 #![cfg(test)]
 
 use fake::Fake;
+use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, AccountId, PromiseOrValue};
-use rstest::rstest;
+use rstest::{fixture, rstest};
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{claim::ClaimedAmountView, jar::Jar, product::Product},
@@ -260,4 +261,31 @@ fn claim_often_vs_claim_once(#[from(product_1_year_12_percent)] product: Product
             n,
         );
     }
+}
+
+#[fixture]
+fn alice_migration_message() -> String {
+    r#"{"data":["alice.near","AAAAAAABAAAAGgAAAHN0ZXBzXzM2NWRfMjAwMDBfc2NvcmVfY2FwAQAAAJQAVgmYAQAAAABkp7O24A0AAAAAAAAAAAGdzlgJmAEAAAcO1ZuWfAAAAAAAAAAAAAAAAMy/GQAAAAAnE1YJmAEAAAAAAAAAAAAAiBOIE4gTiBMA"],"type":"migrate"}"#.to_string()
+}
+
+#[rstest]
+fn first_claim_with_booster(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_steps_365d_20000_score_cap)] product: Product,
+    alice_migration_message: String,
+) {
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+    let token_id = context.ft_contract_id.clone();
+    let sender_id = context.legacy_jar_contract_id.clone();
+    context.switch_account(token_id);
+    context
+        .contract()
+        .ft_on_transfer(sender_id, 1000000000000000000.into(), alice_migration_message);
+
+    context.set_block_timestamp_in_ms(1752503478000);
+    let claimed_amount = context.claim_total(&alice);
+
+    assert_eq!(136_986_301_369_863, claimed_amount);
 }

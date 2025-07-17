@@ -24,7 +24,7 @@ fn plot_year(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] regular_product: Product,
-    #[from(product_1_year_20_cap_score_based)] score_based_product: Product,
+    #[from(product_steps_365d_20000_score_cap)] score_based_product: Product,
     #[from(jar)]
     #[with(vec![(0, 100 * 10u128.to_otto())])]
     regular_jar: Jar,
@@ -87,7 +87,7 @@ fn plot_first_week(
     admin: AccountId,
     alice: AccountId,
     bob: AccountId,
-    #[from(product_1_year_20_cap_score_based)] product: Product,
+    #[from(product_steps_365d_20000_score_cap)] product: Product,
     #[with(vec![(0, 100 * 10u128.to_otto())])] jar: Jar,
 ) -> Result<()> {
     test_env_ext::set_test_log_events(false);
