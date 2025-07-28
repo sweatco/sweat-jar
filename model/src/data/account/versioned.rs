@@ -12,11 +12,12 @@ use crate::data::account::v1::AccountV1;
 pub enum AccountVersioned {
     V1(AccountV1),
     V1Sorted(AccountV1),
+    V1SortedAndMerged(AccountV1),
 }
 
 impl AccountVersioned {
     pub fn new(account: AccountV1) -> Self {
-        AccountVersioned::V1Sorted(account)
+        AccountVersioned::V1SortedAndMerged(account)
     }
 }
 
@@ -26,23 +27,23 @@ impl BorshDeserialize for AccountVersioned {
     fn deserialize_reader<R: Read>(reader: &mut R) -> Result<Self, Error> {
         let tag: u8 = BorshDeserialize::deserialize_reader(reader)?;
 
-        let result = match tag {
-            0 => {
+        let result: AccountV1 = match tag {
+            0 | 1 => {
                 let account: AccountV1 = BorshDeserialize::deserialize_reader(reader)?;
-                AccountVersioned::V1Sorted(account.with_sorted_deposits())
+                account.with_merged_deposits()
             }
-            1 => AccountVersioned::V1Sorted(BorshDeserialize::deserialize_reader(reader)?),
+            2 => BorshDeserialize::deserialize_reader(reader)?,
             // Add new versions here:
             _ => return Err(Error::new(InvalidData, format!("Unexpected variant tag: {tag:?}"))),
         };
 
-        Ok(result)
+        Ok(AccountVersioned::V1SortedAndMerged(result))
     }
 }
 
 impl Default for AccountVersioned {
     fn default() -> Self {
-        Self::V1Sorted(AccountV1::default())
+        Self::V1SortedAndMerged(AccountV1::default())
     }
 }
 
@@ -50,10 +51,10 @@ impl Deref for AccountVersioned {
     type Target = AccountV1;
     fn deref(&self) -> &Self::Target {
         match self {
-            Self::V1Sorted(account) => account,
+            Self::V1SortedAndMerged(account) => account,
             // Guaranteed by `BorshDeserialize` implementation
             // Self::V2(account) => account, <- Add a new version here
-            Self::V1(_) => panic!("Cannot deref this variant directly; use V1Sorted or convert to sorted first"),
+            _ => panic!("Cannot deref this variant directly. Use V1SortedAndMerged."),
         }
     }
 }
@@ -61,10 +62,10 @@ impl Deref for AccountVersioned {
 impl DerefMut for AccountVersioned {
     fn deref_mut(&mut self) -> &mut Self::Target {
         match self {
-            Self::V1Sorted(account) => account,
+            Self::V1SortedAndMerged(account) => account,
             // Guaranteed by `BorshDeserialize` implementation
             // Self::V2(account) => account, <- Add a new version here
-            Self::V1(_) => panic!("Cannot deref this variant directly; use V1Sorted or convert to sorted first"),
+            _ => panic!("Cannot deref this variant directly. Use V1SortedAndMerged."),
         }
     }
 }
