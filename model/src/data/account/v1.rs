@@ -36,8 +36,18 @@ impl AccountV1 {
     pub fn with_sorted_deposits(&self) -> Self {
         let mut jars = self.jars.clone();
         for jar in jars.values_mut() {
-            jar.deposits
-                .sort_by(|left, right| left.created_at.cmp(&right.created_at));
+            jar.sort_deposits();
+        }
+
+        Self { jars, ..self.clone() }
+    }
+
+    #[must_use]
+    pub fn with_merged_deposits(&self) -> Self {
+        let mut jars = self.jars.clone();
+        for jar in jars.values_mut() {
+            jar.merge_deposits();
+            jar.sort_deposits();
         }
 
         Self { jars, ..self.clone() }

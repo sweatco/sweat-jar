@@ -331,6 +331,39 @@ fn set_timezone_by_manager_when_timezone_already_set(
     assert_eq!(context.contract().get_timezone(alice).unwrap().0, timezone);
 }
 
+#[rstest]
+fn migrate_to_v1_sorted_and_merged_on_storage_retrieval(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_12_percent)] product: Product,
+    #[with(vec![
+        (100, 10_000_000_000_000_000_000),
+        (100, 5_000_000_000_000_000_000),
+        (0, 1_000_000_000_000_000_000),
+        (50, 10_000_000_000_000_000_000),
+        (50, 7_000_000_000_000_000_000),
+        (50, 3_000_000_000_000_000_000),
+    ])]
+    jar: Jar,
+) {
+    let context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_v1_account(&alice, &[(product.id.clone(), jar.clone())]);
+    let contract = context.contract();
+
+    let account = contract.get_account(&alice);
+    let jar = account.jars.get(&product.id).unwrap();
+    assert_eq!(3, jar.deposits.len());
+
+    assert_eq!(0, jar.deposits[0].created_at);
+    assert_eq!(1_000_000_000_000_000_000, jar.deposits[0].principal);
+
+    assert_eq!(50, jar.deposits[1].created_at);
+    assert_eq!(20_000_000_000_000_000_000, jar.deposits[1].principal);
+
+    assert_eq!(100, jar.deposits[2].created_at);
+    assert_eq!(15_000_000_000_000_000_000, jar.deposits[2].principal);
+}
 mod signature_tests {
     use near_sdk::json_types::Base64VecU8;
     use sweat_jar_model::{

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use near_sdk::near;
 
 use crate::{Timestamp, TokenAmount};
@@ -37,4 +39,22 @@ pub struct Deposit {
 pub struct JarCache {
     pub updated_at: Timestamp,
     pub interest: TokenAmount,
+}
+
+impl Jar {
+    pub fn sort_deposits(&mut self) {
+        self.deposits.sort_by_key(|deposit| deposit.created_at);
+    }
+
+    pub fn merge_deposits(&mut self) {
+        let mut merged_deposits: HashMap<Timestamp, TokenAmount> = HashMap::new();
+        for deposit in &self.deposits {
+            *merged_deposits.entry(deposit.created_at).or_insert(0) += deposit.principal;
+        }
+
+        self.deposits = merged_deposits
+            .into_iter()
+            .map(|(created_at, principal)| Deposit::new(created_at, principal))
+            .collect();
+    }
 }
