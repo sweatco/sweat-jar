@@ -225,7 +225,7 @@ fn product_with_fixed_fee() {
 #[test]
 fn product_with_percent_fee() {
     let fee_value = UDecimal::new(5, 4);
-    let fee = WithdrawalFee::Percent(fee_value.clone());
+    let fee = WithdrawalFee::Percent(fee_value);
     let product = Product::new().with_withdrawal_fee(fee);
     let (alice, reference_jar, mut context) = prepare_jar(&product);
 
@@ -240,8 +240,9 @@ fn product_with_percent_fee() {
         .withdraw(U32(0), Some(U128(withdrawn_amount)))
         .unwrap();
 
-    let reference_fee = fee_value * initial_principal;
-    assert_eq!(withdraw.withdrawn_amount, U128(withdrawn_amount - reference_fee));
+    let reference_fee = fee_value * withdrawn_amount;
+    let reference_withdrawn_amount = withdrawn_amount - reference_fee;
+    assert_eq!(withdraw.withdrawn_amount.0, reference_withdrawn_amount);
     assert_eq!(withdraw.fee, U128(reference_fee));
 
     let jar = context.contract().get_jar(alice, U32(reference_jar.id));

@@ -87,7 +87,8 @@ impl WithdrawApi for Contract {
         withdrawn_jar.lock();
         *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
 
-        self.transfer_withdraw(&account_id, amount, &jar, close_jar)
+        let fee = Self::get_fee(&product, amount);
+        self.transfer_withdraw(&account_id, amount, fee, &jar, close_jar)
     }
 
     fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> PromiseOrValue<BulkWithdrawView> {
@@ -234,12 +235,12 @@ impl Contract {
         withdrawal_result
     }
 
-    fn get_fee(product: &Product, jar: &Jar) -> Option<TokenAmount> {
+    fn get_fee(product: &Product, withdrawal_amount: TokenAmount) -> Option<TokenAmount> {
         let fee = product.withdrawal_fee.as_ref()?;
 
         let amount = match fee {
             WithdrawalFee::Fix(amount) => *amount,
-            WithdrawalFee::Percent(percent) => percent * jar.principal,
+            WithdrawalFee::Percent(percent) => percent * withdrawal_amount,
         };
 
         amount.into()
@@ -261,12 +262,10 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         amount: TokenAmount,
+        fee: Option<TokenAmount>,
         jar: &Jar,
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
-        let product = self.get_product(&jar.product_id);
-        let fee = Self::get_fee(&product, jar);
-
         self.ft_contract()
             .ft_transfer(account_id, amount, "withdraw", &self.make_fee(fee))
             .then(Self::after_withdraw_call(
@@ -288,7 +287,7 @@ impl Contract {
             .iter()
             .filter_map(|j| {
                 let product = self.get_product(&j.jar.product_id);
-                Self::get_fee(&product, &j.jar)
+                Self::get_fee(&product, j.jar.principal)
             })
             .sum();
 
@@ -336,12 +335,10 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         amount: TokenAmount,
+        fee: Option<TokenAmount>,
         jar: &Jar,
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
-        let product = self.get_product(&jar.product_id);
-        let fee = Self::get_fee(&product, jar);
-
         let withdrawn = self.after_withdraw_internal(
             account_id.clone(),
             jar.id,
