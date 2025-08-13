@@ -145,7 +145,7 @@ impl WithdrawApi for Contract {
                     jar,
                     should_be_closed,
                     amount,
-                    fee: None,
+                    fee: Self::get_fee(&product, amount),
                 }
             })
             .collect();
@@ -196,7 +196,7 @@ impl Contract {
     pub(crate) fn after_bulk_withdraw_internal(
         &mut self,
         account_id: AccountId,
-        jars: Vec<JarWithdraw>,
+        withdrawals: Vec<JarWithdraw>,
         is_promise_success: bool,
     ) -> BulkWithdrawView {
         let mut withdrawal_result = BulkWithdrawView {
@@ -205,7 +205,7 @@ impl Contract {
         };
 
         if !is_promise_success {
-            for withdraw in jars {
+            for withdraw in withdrawals {
                 let jar = self.get_jar_mut_internal(&account_id, withdraw.jar.id);
                 jar.principal += withdraw.amount;
                 jar.unlock();
@@ -215,16 +215,16 @@ impl Contract {
 
         let mut event_data = vec![];
 
-        for withdraw in jars {
-            if withdraw.should_be_closed {
-                self.delete_jar(&account_id, withdraw.jar.id);
+        for withdrawal in withdrawals {
+            if withdrawal.should_be_closed {
+                self.delete_jar(&account_id, withdrawal.jar.id);
             } else {
-                self.get_jar_mut_internal(&account_id, withdraw.jar.id).unlock();
+                self.get_jar_mut_internal(&account_id, withdrawal.jar.id).unlock();
             }
 
-            let jar_result = WithdrawView::new(withdraw.amount, self.make_fee(withdraw.fee));
+            let jar_result = WithdrawView::new(withdrawal.amount, self.make_fee(withdrawal.fee));
 
-            event_data.push((withdraw.jar.id, jar_result.fee, jar_result.withdrawn_amount));
+            event_data.push((withdrawal.jar.id, jar_result.fee, jar_result.withdrawn_amount));
 
             withdrawal_result.total_amount.0 += jar_result.withdrawn_amount.0;
             withdrawal_result.jars.push(jar_result);
@@ -281,32 +281,25 @@ impl Contract {
     fn transfer_bulk_withdraw(
         &mut self,
         account_id: &AccountId,
-        jars: Vec<JarWithdraw>,
+        withdrawals: Vec<JarWithdraw>,
     ) -> PromiseOrValue<BulkWithdrawView> {
-        let total_fee: TokenAmount = jars
-            .iter()
-            .filter_map(|j| {
-                let product = self.get_product(&j.jar.product_id);
-                Self::get_fee(&product, j.jar.principal)
-            })
-            .sum();
-
+        let total_fee: TokenAmount = withdrawals.iter().filter_map(|j| j.fee).sum();
         let total_fee = match total_fee {
             0 => None,
             _ => self.make_fee(total_fee.into()),
         };
 
-        let total_amount = jars.iter().map(|j| j.amount).sum();
+        let total_amount = withdrawals.iter().map(|j| j.amount).sum();
 
         crate::internal::assert_gas(
             crate::common::gas_data::GAS_FOR_FT_TRANSFER.as_gas()
                 + crate::common::gas_data::GAS_FOR_BULK_AFTER_WITHDRAW.as_gas(),
-            || format!("transfer_bulk_withdraw. Number of jars: {}", jars.len()),
+            || format!("transfer_bulk_withdraw. Number of jars: {}", withdrawals.len()),
         );
 
         self.ft_contract()
             .ft_transfer(account_id, total_amount, "bulk_withdraw", &total_fee)
-            .then(Self::after_bulk_withdraw_call(account_id.clone(), jars))
+            .then(Self::after_bulk_withdraw_call(account_id.clone(), withdrawals))
             .into()
     }
 
@@ -354,11 +347,11 @@ impl Contract {
     fn transfer_bulk_withdraw(
         &mut self,
         account_id: &AccountId,
-        jars: Vec<JarWithdraw>,
+        withdrawals: Vec<JarWithdraw>,
     ) -> PromiseOrValue<BulkWithdrawView> {
         let withdrawn = self.after_bulk_withdraw_internal(
             account_id.clone(),
-            jars,
+            withdrawals,
             crate::common::test_data::get_test_future_success(),
         );
 
