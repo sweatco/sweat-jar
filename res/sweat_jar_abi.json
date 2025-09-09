@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "5XqRGH8UFmqimuy85HEe4TMhkKNeBpVVUtCyG84E5Bnq"
+    "wasm_hash": "7FEzqd4KQ9DA3MXYkcJYPPSeSqDDavUQfYpizj8mAY2g"
   },
   "body": {
     "functions": [
@@ -256,6 +256,34 @@
           "serialization_type": "json",
           "type_schema": {
             "$ref": "#/definitions/PromiseOrValueString"
+          }
+        }
+      },
+      {
+        "name": "get_account",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/AccountV1"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -848,6 +876,34 @@
             },
             "updated": {
               "$ref": "#/definitions/UTC"
+            }
+          }
+        },
+        "AccountV1": {
+          "type": "object",
+          "required": [
+            "is_penalty_applied",
+            "jars",
+            "nonce",
+            "score"
+          ],
+          "properties": {
+            "is_penalty_applied": {
+              "type": "boolean"
+            },
+            "jars": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/Jar"
+              }
+            },
+            "nonce": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "score": {
+              "$ref": "#/definitions/AccountScore"
             }
           }
         },
@@ -1588,6 +1644,41 @@
           "properties": {
             "apy": {
               "$ref": "#/definitions/Apy"
+            }
+          }
+        },
+        "Jar": {
+          "description": "The `Jar` struct represents a deposit jar within the smart contract.",
+          "type": "object",
+          "required": [
+            "claim_remainder",
+            "deposits",
+            "is_pending_withdraw"
+          ],
+          "properties": {
+            "cache": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/JarCache"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claim_remainder": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "deposits": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Deposit"
+              }
+            },
+            "is_pending_withdraw": {
+              "type": "boolean"
             }
           }
         },
