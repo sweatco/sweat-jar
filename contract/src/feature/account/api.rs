@@ -57,7 +57,7 @@ impl AccountApi for Contract {
     }
 
     fn get_account(&self, account_id: AccountId) -> Option<AccountView> {
-        self.try_get_account(&account_id).cloned()
+        self.try_get_account(&account_id).map(|account| account.clone().into())
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {

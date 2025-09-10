@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "7FEzqd4KQ9DA3MXYkcJYPPSeSqDDavUQfYpizj8mAY2g"
+    "wasm_hash": "8YBt1NAf6HyzgevXMLnUUpZA6S9KbQc25GT9ZAUWkRgf"
   },
   "body": {
     "functions": [
@@ -278,7 +278,7 @@
           "type_schema": {
             "anyOf": [
               {
-                "$ref": "#/definitions/AccountV1"
+                "$ref": "#/definitions/AccountView"
               },
               {
                 "type": "null"
@@ -879,34 +879,6 @@
             }
           }
         },
-        "AccountV1": {
-          "type": "object",
-          "required": [
-            "is_penalty_applied",
-            "jars",
-            "nonce",
-            "score"
-          ],
-          "properties": {
-            "is_penalty_applied": {
-              "type": "boolean"
-            },
-            "jars": {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/definitions/Jar"
-              }
-            },
-            "nonce": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "score": {
-              "$ref": "#/definitions/AccountScore"
-            }
-          }
-        },
         "AccountV1Companion": {
           "type": "object",
           "properties": {
@@ -942,6 +914,34 @@
                   "type": "null"
                 }
               ]
+            }
+          }
+        },
+        "AccountView": {
+          "type": "object",
+          "required": [
+            "is_penalty_applied",
+            "jars",
+            "nonce",
+            "score"
+          ],
+          "properties": {
+            "is_penalty_applied": {
+              "type": "boolean"
+            },
+            "jars": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/JarView"
+              }
+            },
+            "nonce": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "score": {
+              "$ref": "#/definitions/AccountScore"
             }
           }
         },
@@ -1647,41 +1647,6 @@
             }
           }
         },
-        "Jar": {
-          "description": "The `Jar` struct represents a deposit jar within the smart contract.",
-          "type": "object",
-          "required": [
-            "claim_remainder",
-            "deposits",
-            "is_pending_withdraw"
-          ],
-          "properties": {
-            "cache": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/JarCache"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "claim_remainder": {
-              "type": "integer",
-              "format": "uint64",
-              "minimum": 0.0
-            },
-            "deposits": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/Deposit"
-              }
-            },
-            "is_pending_withdraw": {
-              "type": "boolean"
-            }
-          }
-        },
         "JarCache": {
           "description": "A cached value that stores calculated interest based on the current state of the jar. This cache is updated whenever properties that impact interest calculation change, allowing for efficient interest calculations between state changes.",
           "type": "object",
@@ -1699,6 +1664,21 @@
               "type": "integer",
               "format": "uint64",
               "minimum": 0.0
+            }
+          }
+        },
+        "JarCacheView": {
+          "type": "object",
+          "required": [
+            "interest",
+            "updated_at"
+          ],
+          "properties": {
+            "interest": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "string"
             }
           }
         },
@@ -1744,6 +1724,50 @@
                 "boolean",
                 "null"
               ]
+            }
+          }
+        },
+        "JarView": {
+          "type": "object",
+          "required": [
+            "claim_remainder",
+            "deposits",
+            "is_pending_withdraw"
+          ],
+          "properties": {
+            "cache": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/JarCacheView"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claim_remainder": {
+              "type": "string"
+            },
+            "deposits": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "integer",
+                    "format": "uint64",
+                    "minimum": 0.0
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "is_pending_withdraw": {
+              "type": "boolean"
             }
           }
         },

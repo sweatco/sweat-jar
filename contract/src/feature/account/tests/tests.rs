@@ -11,9 +11,10 @@ use sweat_jar_model::{
     api::{AccountApi, ClaimApi, PenaltyApi, ProductApi, WithdrawApi},
     data::{
         deposit::DepositTicket,
-        jar::{AggregatedTokenAmountView, Jar},
-        product::{Apy, Product},
-    }, Timezone,
+        jar::{AggregatedTokenAmountView, Jar, JarView},
+        product::{Apy, Product, ProductId},
+    },
+    Timezone,
 };
 
 use crate::{
@@ -28,6 +29,7 @@ use crate::{
             product_1_year_apy_downgradable_20_10_percent_protected, product_disabled, BaseApy, ProtectedProduct,
         },
     },
+    Contract,
 };
 
 #[rstest]
@@ -650,5 +652,13 @@ mod signature_tests {
             )
             .to_string()
         }
+    }
+}
+
+impl Contract {
+    pub fn get_jars_for_account_detailed(&self, account_id: &AccountId) -> HashMap<ProductId, JarView> {
+        <Contract as AccountApi>::get_account(self, account_id.clone())
+            .unwrap()
+            .jars
     }
 }

@@ -13,7 +13,7 @@ use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{
         deposit::DepositTicket,
-        jar::Jar,
+        jar::{Jar, JarView},
         product::{Product, ProductId},
         withdraw::WithdrawView,
     },
@@ -276,8 +276,8 @@ mod score_tests {
         assert!(context.contract().get_jars_for_account(alice.clone()).is_empty());
         assert!(context.contract().get_jars_for_account(bob.clone()).is_empty());
 
-        assert!(context.contract().get_account_jars(&alice).is_empty());
-        assert!(context.contract().get_account_jars(&bob).is_empty());
+        assert!(context.contract().get_jars_for_account_detailed(&alice).is_empty());
+        assert!(context.contract().get_jars_for_account_detailed(&bob).is_empty());
     }
 
     #[rstest]
@@ -484,14 +484,6 @@ mod score_tests {
         ctx.set_block_timestamp_in_ms(1_733_140_384_365); // Mon Dec 02 2024 11:53:04
 
         assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
-    }
-}
-
-impl Contract {
-    fn get_account_jars(&self, account_id: &AccountId) -> HashMap<ProductId, Jar> {
-        <Contract as AccountApi>::get_account(self, account_id.clone())
-            .unwrap()
-            .jars
     }
 }
 

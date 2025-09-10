@@ -3,7 +3,7 @@ use near_workspaces::{types::NearToken, Account};
 use nitka::{json, misc::ToNear, near_sdk::json_types::U128};
 use sweat_jar_model::{
     api::*,
-    data::{jar::DepositView, product::ProductId},
+    data::{jar::CompatDepositView, product::ProductId},
 };
 use sweat_model::{FungibleTokenCoreIntegration, StorageManagementIntegration, SweatApiIntegration, SweatContract};
 
@@ -211,7 +211,7 @@ pub(crate) async fn _prepare_contract(
 }
 
 pub trait ContextHelpers {
-    async fn last_jar_for(&self, account: &Account) -> Result<DepositView>;
+    async fn last_jar_for(&self, account: &Account) -> Result<CompatDepositView>;
     async fn bulk_create_jars(
         &mut self,
         account: &Account,
@@ -223,7 +223,7 @@ pub trait ContextHelpers {
 }
 
 impl ContextHelpers for Context {
-    async fn last_jar_for(&self, account: &Account) -> Result<DepositView> {
+    async fn last_jar_for(&self, account: &Account) -> Result<CompatDepositView> {
         Ok(self
             .sweat_jar()
             .get_jars_for_account(account.to_near())
