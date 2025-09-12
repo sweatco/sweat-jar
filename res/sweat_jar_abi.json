@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "8YBt1NAf6HyzgevXMLnUUpZA6S9KbQc25GT9ZAUWkRgf"
+    "wasm_hash": "GPvkNWfw1Wsd8mPVmepK2QwpQofwB55M631tCV9Fo7V7"
   },
   "body": {
     "functions": [
@@ -1754,9 +1754,7 @@
                 "type": "array",
                 "items": [
                   {
-                    "type": "integer",
-                    "format": "uint64",
-                    "minimum": 0.0
+                    "type": "string"
                   },
                   {
                     "type": "string"
@@ -1779,9 +1777,7 @@
               "type": "array",
               "items": [
                 {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0.0
+                  "type": "string"
                 },
                 {
                   "type": "string"

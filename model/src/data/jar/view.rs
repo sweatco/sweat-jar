@@ -32,7 +32,7 @@ pub struct JarCacheView {
     pub interest: U128,
 }
 
-pub type DepositView = (Timestamp, U128);
+pub type DepositView = (U64, U128); // Timestamp, TokenAmount
 
 pub struct CompatDepositView(ProductId, Timestamp, TokenAmount);
 
@@ -100,7 +100,7 @@ impl JarsView {
             .flat_map(|(product_id, deposits)| {
                 deposits
                     .iter()
-                    .map(move |(timestamp, principal)| CompatDepositView(product_id.clone(), *timestamp, principal.0))
+                    .map(move |(timestamp, principal)| CompatDepositView(product_id.clone(), timestamp.0, principal.0))
             })
             .collect()
     }
@@ -115,10 +115,7 @@ impl From<&Account> for JarsView {
                 .map(|(product_id, jar)| {
                     (
                         product_id.clone(),
-                        jar.deposits
-                            .iter()
-                            .map(|deposit| (deposit.created_at, deposit.principal.into()))
-                            .collect(),
+                        jar.deposits.iter().cloned().map(DepositView::from).collect(),
                     )
                 })
                 .collect(),
@@ -162,7 +159,7 @@ impl From<Jar> for JarView {
 
 impl From<Deposit> for DepositView {
     fn from(value: Deposit) -> Self {
-        (value.created_at, value.principal.into())
+        (value.created_at.into(), value.principal.into())
     }
 }
 
