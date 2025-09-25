@@ -1,4 +1,5 @@
 pub mod account;
+pub mod booster;
 pub mod claim;
 pub mod deposit;
 pub mod jar;
