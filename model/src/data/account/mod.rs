@@ -4,3 +4,4 @@ pub mod v2;
 pub mod versioned;
 
 pub type Account = v1::AccountV1;
+pub type AccountCompanion = v1::AccountV1Companion;
