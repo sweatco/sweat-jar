@@ -8,7 +8,10 @@ use crate::data::{
     score::AccountScore,
 };
 
-use super::features::Features;
+use super::{
+    features::{Feature, Features},
+    v1::AccountV1,
+};
 
 #[near]
 #[derive(Default, Debug, PartialEq, Clone)]
@@ -27,4 +30,18 @@ pub struct AccountV2Companion {
     pub jars: Option<HashMap<ProductId, JarCompanion>>,
     pub score: Option<AccountScore>,
     pub features: Option<Features>,
+}
+
+impl From<AccountV1> for AccountV2 {
+    fn from(value: AccountV1) -> Self {
+        let mut features = Features::new();
+        features.set_feature_enabled(&Feature::IncreasedApy, !value.is_penalty_applied);
+
+        Self {
+            nonce: value.nonce,
+            jars: value.jars,
+            score: value.score,
+            features,
+        }
+    }
 }

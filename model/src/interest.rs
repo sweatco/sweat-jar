@@ -2,7 +2,7 @@ use std::cmp;
 
 use crate::{
     data::{
-        account::Account,
+        account::{common::FeaturesAccess, features::Feature, Account},
         jar::{Deposit, Jar},
         product::{FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms},
     },
@@ -76,7 +76,8 @@ impl InterestCalculator for Terms {
 
 impl InterestCalculator for FixedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        self.apy.get_effective(account.is_penalty_applied)
+        self.apy
+            .get_effective(account.is_feature_enabled(&Feature::IncreasedApy))
     }
 
     fn get_interest_calculation_term(
@@ -97,7 +98,8 @@ impl InterestCalculator for FixedProductTerms {
 
 impl InterestCalculator for FlexibleProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        self.apy.get_effective(account.is_penalty_applied)
+        self.apy
+            .get_effective(account.is_feature_enabled(&Feature::IncreasedApy))
     }
 
     fn get_interest_calculation_term(

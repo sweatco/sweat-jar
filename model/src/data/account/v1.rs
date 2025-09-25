@@ -26,3 +26,26 @@ pub struct AccountV1Companion {
     pub score: Option<AccountScore>,
     pub is_penalty_applied: Option<bool>,
 }
+
+impl AccountV1 {
+    #[must_use]
+    pub fn with_sorted_deposits(&self) -> Self {
+        let mut jars = self.jars.clone();
+        for jar in jars.values_mut() {
+            jar.sort_deposits();
+        }
+
+        Self { jars, ..self.clone() }
+    }
+
+    #[must_use]
+    pub fn with_merged_deposits(&self) -> Self {
+        let mut jars = self.jars.clone();
+        for jar in jars.values_mut() {
+            jar.merge_deposits();
+            jar.sort_deposits();
+        }
+
+        Self { jars, ..self.clone() }
+    }
+}

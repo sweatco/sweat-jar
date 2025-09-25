@@ -13,6 +13,7 @@ use nitka_proc::make_integration_version;
 
 use crate::{
     data::{
+        account::features::Feature,
         claim::ClaimedAmountView,
         deposit::DepositTicket,
         jar::{AggregatedInterestView, JarsView},
@@ -108,6 +109,10 @@ pub trait AccountApi {
     fn get_score(&self, account_id: AccountId) -> Option<U128>;
 
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64);
+
+    fn set_feature_enabled(&mut self, account_id: AccountId, feature: Feature, value: bool);
+
+    fn batch_set_feature_enabled(&mut self, account_ids: Vec<AccountId>, feature: Feature, value: bool);
 }
 
 #[make_integration_version]

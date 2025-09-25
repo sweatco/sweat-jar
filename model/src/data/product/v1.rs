@@ -121,14 +121,14 @@ impl Product {
 }
 
 impl Apy {
-    pub fn get_effective(&self, is_penalty_applied: bool) -> UDecimal {
+    pub fn get_effective(&self, is_increased_apy_enabled: bool) -> UDecimal {
         match self {
             Apy::Constant(apy) => *apy,
             Apy::Downgradable(apy) => {
-                if is_penalty_applied {
-                    apy.fallback
-                } else {
+                if is_increased_apy_enabled {
                     apy.default
+                } else {
+                    apy.fallback
                 }
             }
         }
