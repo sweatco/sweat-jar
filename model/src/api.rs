@@ -166,6 +166,7 @@ pub trait FeeApi {
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
+#[deprecated]
 #[make_integration_version]
 pub trait PenaltyApi {
     /// Sets the penalty status for a specified jar.

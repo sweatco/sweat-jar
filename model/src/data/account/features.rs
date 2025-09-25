@@ -9,7 +9,7 @@ pub enum Feature {
 }
 
 impl Feature {
-    fn get_bit(&self) -> u8 {
+    fn get_bit(self) -> u8 {
         match self {
             Self::IncreasedApy => 0,
             Self::IncreasedScoreCap => 1,
