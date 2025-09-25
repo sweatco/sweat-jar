@@ -2,7 +2,7 @@
   "schema_version": "0.4.0",
   "metadata": {
     "name": "sweat_jar",
-    "version": "4.0.7",
+    "version": "4.0.6",
     "authors": [
       "Sweat Economy"
     ],
@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "ECFe3jGtwP8t93wETpdHzxKWivbutRZBj7Awj4FN1nFB"
+    "wasm_hash": "BWr9D5LjRBNtKbd45qH5fvDto5CEVwDem7iJEKQUFobV"
   },
   "body": {
     "functions": [
@@ -68,7 +68,7 @@
             {
               "name": "account_rollback",
               "type_schema": {
-                "$ref": "#/definitions/AccountV1Companion"
+                "$ref": "#/definitions/AccountV2Companion"
               }
             },
             {
@@ -165,6 +165,36 @@
         }
       },
       {
+        "name": "batch_set_feature_enabled",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AccountId"
+                }
+              }
+            },
+            {
+              "name": "feature",
+              "type_schema": {
+                "$ref": "#/definitions/Feature"
+              }
+            },
+            {
+              "name": "enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
         "name": "batch_set_penalty",
         "kind": "call",
         "params": {
@@ -256,34 +286,6 @@
           "serialization_type": "json",
           "type_schema": {
             "$ref": "#/definitions/PromiseOrValueString"
-          }
-        }
-      },
-      {
-        "name": "get_account",
-        "kind": "view",
-        "params": {
-          "serialization_type": "json",
-          "args": [
-            {
-              "name": "account_id",
-              "type_schema": {
-                "$ref": "#/definitions/AccountId"
-              }
-            }
-          ]
-        },
-        "result": {
-          "serialization_type": "json",
-          "type_schema": {
-            "anyOf": [
-              {
-                "$ref": "#/definitions/AccountView"
-              },
-              {
-                "type": "null"
-              }
-            ]
           }
         }
       },
@@ -653,6 +655,33 @@
         }
       },
       {
+        "name": "set_feature_enabled",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "feature",
+              "type_schema": {
+                "$ref": "#/definitions/Feature"
+              }
+            },
+            {
+              "name": "enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
         "name": "set_penalty",
         "kind": "call",
         "params": {
@@ -879,13 +908,17 @@
             }
           }
         },
-        "AccountV1Companion": {
+        "AccountV2Companion": {
           "type": "object",
           "properties": {
-            "is_penalty_applied": {
-              "type": [
-                "boolean",
-                "null"
+            "features": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Features"
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "jars": {
@@ -914,34 +947,6 @@
                   "type": "null"
                 }
               ]
-            }
-          }
-        },
-        "AccountView": {
-          "type": "object",
-          "required": [
-            "is_penalty_applied",
-            "jars",
-            "nonce",
-            "score"
-          ],
-          "properties": {
-            "is_penalty_applied": {
-              "type": "boolean"
-            },
-            "jars": {
-              "type": "object",
-              "additionalProperties": {
-                "$ref": "#/definitions/JarView"
-              }
-            },
-            "nonce": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "score": {
-              "$ref": "#/definitions/AccountScore"
             }
           }
         },
@@ -1615,8 +1620,85 @@
                   ]
                 }
               }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "$ref": "#/definitions/Feature"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "set_feature_enabled"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/AccountId"
+                      }
+                    },
+                    {
+                      "$ref": "#/definitions/Feature"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "batch_set_feature_enabled"
+                  ]
+                }
+              }
             }
           ]
+        },
+        "Feature": {
+          "type": "string",
+          "enum": [
+            "increased_apy",
+            "increased_score_cap"
+          ]
+        },
+        "Features": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
         },
         "FixedProductTerms": {
           "description": "The `FixedProductTerms` struct contains terms specific to Fixed products.",
@@ -1667,21 +1749,6 @@
             }
           }
         },
-        "JarCacheView": {
-          "type": "object",
-          "required": [
-            "interest",
-            "updated_at"
-          ],
-          "properties": {
-            "interest": {
-              "type": "string"
-            },
-            "updated_at": {
-              "type": "string"
-            }
-          }
-        },
         "JarCompanion": {
           "type": "object",
           "properties": {
@@ -1727,48 +1794,6 @@
             }
           }
         },
-        "JarView": {
-          "type": "object",
-          "required": [
-            "claim_remainder",
-            "deposits",
-            "is_pending_withdraw"
-          ],
-          "properties": {
-            "cache": {
-              "anyOf": [
-                {
-                  "$ref": "#/definitions/JarCacheView"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "claim_remainder": {
-              "type": "string"
-            },
-            "deposits": {
-              "type": "array",
-              "items": {
-                "type": "array",
-                "items": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "string"
-                  }
-                ],
-                "maxItems": 2,
-                "minItems": 2
-              }
-            },
-            "is_pending_withdraw": {
-              "type": "boolean"
-            }
-          }
-        },
         "JarsView": {
           "type": "object",
           "additionalProperties": {
@@ -1777,7 +1802,9 @@
               "type": "array",
               "items": [
                 {
-                  "type": "string"
+                  "type": "integer",
+                  "format": "uint64",
+                  "minimum": 0.0
                 },
                 {
                   "type": "string"

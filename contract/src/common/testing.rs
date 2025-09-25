@@ -15,7 +15,7 @@ use near_sdk::{
 use sweat_jar_model::{
     api::InitApi,
     data::{
-        account::{versioned::AccountVersioned, Account},
+        account::{v1::AccountV1, versioned::AccountVersioned, Account},
         jar::Jar,
         product::{Product, ProductId},
     },
@@ -107,17 +107,6 @@ impl Context {
     }
 
     pub(crate) fn with_latest_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
-        self.with_account(account_id, jars, |account| AccountVersioned::new(account))
-    }
-
-    pub(crate) fn with_v1_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
-        self.with_account(account_id, jars, |account| AccountVersioned::V1(account))
-    }
-
-    fn with_account<F>(self, account_id: &AccountId, jars: &[(ProductId, Jar)], account_factory: F) -> Self
-    where
-        F: FnOnce(Account) -> AccountVersioned,
-    {
         if jars.is_empty() {
             return self;
         }
@@ -129,7 +118,25 @@ impl Context {
 
         store_account_raw(
             account_id.clone(),
-            Base64VecU8(to_vec(&account_factory(account)).unwrap()),
+            Base64VecU8(to_vec(&AccountVersioned::new(account)).unwrap()),
+        );
+
+        self
+    }
+
+    pub(crate) fn with_v1_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
+        if jars.is_empty() {
+            return self;
+        }
+
+        let mut account = AccountV1::default();
+        for (product_id, jar) in jars {
+            account.jars.insert(product_id.clone(), jar.clone());
+        }
+
+        store_account_raw(
+            account_id.clone(),
+            Base64VecU8(to_vec(&AccountVersioned::V1(account)).unwrap()),
         );
 
         self
