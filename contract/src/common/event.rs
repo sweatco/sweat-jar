@@ -3,7 +3,10 @@ use near_sdk::{
     log, near, serde_json, AccountId,
 };
 use sweat_jar_model::{
-    data::product::{Product, ProductId},
+    data::{
+        account::features::Feature,
+        product::{Product, ProductId},
+    },
     Local, Score, Timestamp, TokenAmount, UTC,
 };
 
@@ -29,6 +32,8 @@ pub enum EventKind {
     OldScoreWarning((Score, Local)),
     JarsMerge(AccountId),
     MigrateProducts(Vec<ProductId>),
+    SetFeatureEnabled(AccountId, Feature, bool),
+    BatchSetFeatureEnabled(Vec<AccountId>, Feature, bool),
 }
 
 #[derive(Debug)]

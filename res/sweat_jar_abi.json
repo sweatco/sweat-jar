@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "5XqRGH8UFmqimuy85HEe4TMhkKNeBpVVUtCyG84E5Bnq"
+    "wasm_hash": "BWr9D5LjRBNtKbd45qH5fvDto5CEVwDem7iJEKQUFobV"
   },
   "body": {
     "functions": [
@@ -68,7 +68,7 @@
             {
               "name": "account_rollback",
               "type_schema": {
-                "$ref": "#/definitions/AccountV1Companion"
+                "$ref": "#/definitions/AccountV2Companion"
               }
             },
             {
@@ -162,6 +162,36 @@
           "type_schema": {
             "$ref": "#/definitions/WithdrawView"
           }
+        }
+      },
+      {
+        "name": "batch_set_feature_enabled",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AccountId"
+                }
+              }
+            },
+            {
+              "name": "feature",
+              "type_schema": {
+                "$ref": "#/definitions/Feature"
+              }
+            },
+            {
+              "name": "enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
         }
       },
       {
@@ -625,6 +655,33 @@
         }
       },
       {
+        "name": "set_feature_enabled",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "feature",
+              "type_schema": {
+                "$ref": "#/definitions/Feature"
+              }
+            },
+            {
+              "name": "enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
         "name": "set_penalty",
         "kind": "call",
         "params": {
@@ -851,13 +908,17 @@
             }
           }
         },
-        "AccountV1Companion": {
+        "AccountV2Companion": {
           "type": "object",
           "properties": {
-            "is_penalty_applied": {
-              "type": [
-                "boolean",
-                "null"
+            "features": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Features"
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "jars": {
@@ -1559,8 +1620,85 @@
                   ]
                 }
               }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "$ref": "#/definitions/Feature"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "set_feature_enabled"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/AccountId"
+                      }
+                    },
+                    {
+                      "$ref": "#/definitions/Feature"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "batch_set_feature_enabled"
+                  ]
+                }
+              }
             }
           ]
+        },
+        "Feature": {
+          "type": "string",
+          "enum": [
+            "increased_apy",
+            "increased_score_cap"
+          ]
+        },
+        "Features": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
         },
         "FixedProductTerms": {
           "description": "The `FixedProductTerms` struct contains terms specific to Fixed products.",

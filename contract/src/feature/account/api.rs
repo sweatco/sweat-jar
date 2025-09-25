@@ -6,12 +6,15 @@ use near_sdk::{
     near, AccountId,
 };
 use sweat_jar_model::{
-    api::AccountApi, data::{
-        account::Account,
+    api::AccountApi,
+    data::{
+        account::{common::FeaturesAccess, features::Feature, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
         score::Score,
-    }, interest::InterestCalculator, Timezone, TokenAmount, UTC
+    },
+    interest::InterestCalculator,
+    Timezone, TokenAmount, UTC,
 };
 
 use super::model::{AccountScoreUpdate, ScoreConverter};
@@ -116,5 +119,29 @@ impl AccountApi for Contract {
 
         let account = self.get_account_mut(&account_id);
         account.try_set_timezone(Some(Timezone::new(timezone.0)));
+    }
+
+    fn set_feature_enabled(&mut self, account_id: AccountId, feature: Feature, enabled: bool) {
+        self.assert_manager();
+
+        self.update_account_cache(&account_id, None);
+
+        let account = self.get_account_mut(&account_id);
+        account.set_feature_enabled(&feature, enabled);
+
+        emit(EventKind::SetFeatureEnabled(account_id, feature, enabled));
+    }
+
+    fn batch_set_feature_enabled(&mut self, account_ids: Vec<AccountId>, feature: Feature, enabled: bool) {
+        self.assert_manager();
+
+        for account_id in &account_ids {
+            self.update_account_cache(account_id, None);
+
+            let account = self.get_account_mut(account_id);
+            account.set_feature_enabled(&feature, enabled);
+        }
+
+        emit(EventKind::BatchSetFeatureEnabled(account_ids, feature, enabled));
     }
 }
