@@ -213,6 +213,17 @@ mod model_tests {
         assert_eq!(retrieved_special.score, 500);
         assert_eq!(retrieved_special.duration, 120);
     }
+
+    #[rstest]
+    #[should_panic(expected = "Too many boosters registered")]
+    fn test_boosters_list_overflow_handling() {
+        let mut boosters = create_test_boosters();
+
+        for i in 0..=(u8::MAX as u16 + 1) as usize {
+            let booster = create_booster(&format!("booster_{}", i), i as u16, 30);
+            boosters.add(&booster);
+        }
+    }
 }
 
 mod api_tests {

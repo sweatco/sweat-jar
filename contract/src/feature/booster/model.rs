@@ -22,7 +22,12 @@ impl Boosters {
     }
 
     pub fn add(&mut self, booster: &Booster) {
-        let index: u8 = self.items.len() as _;
+        let index: u8 = self
+            .items
+            .len()
+            .try_into()
+            .unwrap_or_else(|_| panic_str("Too many boosters registered"));
+
         self.index.insert(&booster.id, &index);
         self.items.insert(&index, booster);
     }
