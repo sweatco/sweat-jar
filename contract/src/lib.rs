@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap};
 
+use feature::booster::model::Boosters;
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -48,6 +49,7 @@ pub struct Contract {
 
     pub fee_amount: TokenAmount,
     pub previous_version_account_id: AccountId,
+    pub boosters: Boosters,
 }
 
 #[near]
@@ -55,6 +57,8 @@ pub struct Contract {
 pub(crate) enum StorageKey {
     Products,
     Accounts,
+    BoostersIndex,
+    BoostersItems,
 }
 
 #[near]
@@ -76,6 +80,7 @@ impl InitApi for Contract {
             accounts: LookupMap::new(StorageKey::Accounts),
             fee_amount: 0,
             previous_version_account_id,
+            boosters: Boosters::new(StorageKey::BoostersIndex, StorageKey::BoostersItems),
         }
     }
 }
