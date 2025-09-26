@@ -80,7 +80,11 @@ impl InitApi for Contract {
             accounts: LookupMap::new(StorageKey::Accounts),
             fee_amount: 0,
             previous_version_account_id,
-            boosters: Boosters::new(StorageKey::BoostersIndex, StorageKey::BoostersItems),
+            boosters: Boosters::new(
+                env::block_timestamp_ms(),
+                StorageKey::BoostersIndex,
+                StorageKey::BoostersItems,
+            ),
         }
     }
 }
