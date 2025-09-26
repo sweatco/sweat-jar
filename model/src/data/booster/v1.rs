@@ -1,10 +1,12 @@
-use crate::Score;
+use crate::{DurationDays, Score};
 use near_sdk::near;
 
-#[near]
+pub type BoosterId = String;
+
+#[near(serializers = [borsh, json])]
 #[derive(Clone, Debug)]
 pub struct Booster {
-    pub id: String,
+    pub id: BoosterId,
     pub score: Score,
-    pub duration: u16,
+    pub duration: DurationDays,
 }

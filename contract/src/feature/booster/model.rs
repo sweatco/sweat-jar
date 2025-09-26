@@ -1,24 +1,33 @@
 use near_sdk::{
     collections::{LookupMap, UnorderedMap},
     env::panic_str,
-    near,
+    near, IntoStorageKey,
 };
-use sweat_jar_model::data::booster::Booster;
+use sweat_jar_model::data::booster::{v1::BoosterId, Booster};
+
+pub type BoosterIndex = u8;
 
 #[near]
-struct Boosters {
-    index: LookupMap<String, u8>,
-    items: UnorderedMap<u8, Booster>,
+pub struct Boosters {
+    index: LookupMap<BoosterId, BoosterIndex>,
+    items: UnorderedMap<BoosterIndex, Booster>,
 }
 
 impl Boosters {
-    fn add(&mut self, booster: &Booster) {
+    pub fn new(index_prefix: impl IntoStorageKey, items_prefix: impl IntoStorageKey) -> Self {
+        Self {
+            index: LookupMap::new(index_prefix),
+            items: UnorderedMap::new(items_prefix),
+        }
+    }
+
+    pub fn add(&mut self, booster: &Booster) {
         let index: u8 = self.items.len() as _;
         self.index.insert(&booster.id, &index);
         self.items.insert(&index, booster);
     }
 
-    fn get(&self, id: String) -> Booster {
+    pub fn get(&self, id: BoosterId) -> Booster {
         let index = self
             .index
             .get(&id)
@@ -27,5 +36,13 @@ impl Boosters {
         self.items
             .get(&index)
             .unwrap_or_else(|| panic_str(format!("No Booster with id {id} found.").as_str()))
+    }
+
+    pub fn list(&self) -> Vec<Booster> {
+        self.items.values().collect()
+    }
+
+    pub fn contains(&self, id: &BoosterId) -> bool {
+        self.index.contains_key(id)
     }
 }
