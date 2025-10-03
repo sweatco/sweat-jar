@@ -9,7 +9,7 @@ use crate::{
         product::ProductId,
         score::AccountScore,
     },
-    DurationDays,
+    DurationDays, Timezone,
 };
 
 use super::{
@@ -23,6 +23,7 @@ pub struct AccountV2 {
     /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, Jar>,
+    pub timezone: Timezone,
     pub score: AccountScore,
     pub features: Features,
     pub booster: Option<AppliedBooster>,
@@ -52,6 +53,7 @@ impl From<AccountV1> for AccountV2 {
         Self {
             nonce: value.nonce,
             jars: value.jars,
+            timezone: value.score.timezone,
             score: value.score,
             features,
             booster: None,

@@ -29,6 +29,13 @@ impl Contract {
             "Can migrate data only from previous version"
         );
     }
+
+    pub(crate) fn assert_timezone_is_set(&self, account_id: &AccountId) {
+        assert!(
+            self.get_account(account_id).is_timezone_set(),
+            "Timezone is not set for account '{account_id}'"
+        );
+    }
 }
 
 pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce() -> Message) {

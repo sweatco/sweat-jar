@@ -1,61 +1,42 @@
-use near_sdk::env::{block_timestamp_ms, panic_str};
-use sweat_jar_model::{AccountScore, Chain, Day, Score, TimeHelper, Timezone, DAYS_STORED, UTC};
+use sweat_jar_model::{
+    data::account::Account, AccountScore, Day, Score, ScoreFilter, ScoreIncrements, TimeHelper, Timezone, DAYS_STORED,
+    UTC,
+};
 
 use crate::common::event::{emit, EventKind};
 
 pub trait AccountScoreUpdate {
-    fn update(&mut self, chain: Chain);
+    fn update(&mut self, increments: ScoreIncrements);
 }
 
 pub trait ScoreConverter {
     /// Convert Score to a User's timezone
-    fn adjust(&self, timezone: Timezone) -> Chain;
+    fn adjust(&self, timezone: Timezone) -> ScoreIncrements;
 }
 
 impl ScoreConverter for Vec<(Score, UTC)> {
-    fn adjust(&self, timezone: Timezone) -> Chain {
+    fn adjust(&self, timezone: Timezone) -> ScoreIncrements {
         self.iter().map(|score| (score.0, timezone.adjust(score.1))).collect()
     }
 }
 
-impl AccountScoreUpdate for AccountScore {
-    fn update(&mut self, chain: Chain) {
-        let today = self.timezone.today();
+impl AccountScoreUpdate for Account {
+    fn update(&mut self, increments: ScoreIncrements) {
+        assert_eq!(
+            self.score.get_days_number_since_last_update(self.timezone),
+            0,
+            "Updating scores before settlement"
+        );
 
-        let chain = convert_chain(self, today, chain);
+        todo!("Introdure ScoreIncrement with local and utc timestamps. Filter function should return local values.");
+        let (outdated_increments, valid_increments) = increments.filter(self.timezone);
 
-        assert_eq!((today - self.update_day()).0, 0, "Updating scores before claiming them");
+        for (score, timestamp) in outdated_increments {
+            emit(EventKind::OldScoreWarning((score, timestamp)));
+        }
 
-        self.update_today(chain);
-        self.updated = block_timestamp_ms().into();
+        self.score.update(self.timezone, valid_increments);
     }
-}
-
-/// Convert walkchain timestamps to days
-fn convert_chain(score: &AccountScore, today: Day, walkchain: Chain) -> Chain {
-    let now = score.timezone.now();
-    walkchain
-        .into_iter()
-        .filter_map(|(score, timestamp)| {
-            if timestamp > now {
-                panic_str(&format!(
-                    "Walk data from future: {:?}. Now: {:?}",
-                    (score, timestamp),
-                    now
-                ));
-            }
-
-            let days_ago = today - timestamp.day();
-
-            if days_ago >= DAYS_STORED.into() {
-                emit(EventKind::OldScoreWarning((score, timestamp)));
-
-                return None;
-            }
-
-            (score, days_ago).into()
-        })
-        .collect()
 }
 
 #[cfg(test)]

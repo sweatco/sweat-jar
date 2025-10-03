@@ -92,7 +92,7 @@ impl ClaimApi for Contract {
             ..AccountCompanion::default()
         };
 
-        account.score.try_reset_score();
+        account.score.try_settle_score();
 
         // TODO: add test for 0 case and replace `gt` with `>`
         if accumulator.get_total().0.gt(&0) {

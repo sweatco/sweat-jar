@@ -52,12 +52,13 @@ impl Account {
     }
 
     pub fn try_set_timezone(&mut self, timezone: Option<Timezone>) {
-        if self.score.is_timezone_set() {
+        if self.timezone.is_valid() {
             return;
         }
 
         if let Some(timezone) = timezone {
-            self.score = AccountScore::new(timezone);
+            self.score = AccountScore::default();
+            self.timezone = timezone;
         } else {
             panic_str("Trying to create score based jar without providing time zone");
         }
@@ -90,8 +91,8 @@ impl Account {
         self.get_jar_mut(&product.id).update_cache(interest, remainder, now);
     }
 
-    pub fn has_score_jars(&self) -> bool {
-        self.score.is_timezone_set()
+    pub fn is_timezone_set(&self) -> bool {
+        self.timezone.is_valid()
     }
 }
 

@@ -10,7 +10,7 @@ use crate::{Day, Local, TimeHelper, MS_IN_HOUR, UTC};
 /// Timezone described as time shift from UTC in ms
 #[repr(transparent)]
 #[near(serializers=[json, borsh])]
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct Timezone(i64);
 
 impl Timezone {
@@ -55,6 +55,13 @@ impl Timezone {
 
     pub fn time(&self) -> Local {
         self.now().time()
+    }
+
+    pub fn assert_not_future(&self, timestamp: UTC) {
+        let now = self.now();
+        if self.adjust(timestamp) > now {
+            panic_str(&format!("Timestamp from future: {:?}. Now: {:?}", timestamp, now));
+        }
     }
 }
 

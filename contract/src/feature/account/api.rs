@@ -44,6 +44,13 @@ impl Contract {
             timestamp: env::block_timestamp_ms(),
         }
     }
+
+    fn update_score_based_jars_cache(&mut self, account_id: &AccountId) {
+        self.update_account_cache(
+            &account_id,
+            Some(|product: &Product| matches!(product.terms, Terms::ScoreBased(_))),
+        );
+    }
 }
 
 #[near]
@@ -79,19 +86,14 @@ impl AccountApi for Contract {
         let mut event = vec![];
 
         for (account_id, new_score) in batch {
-            assert!(
-                self.get_account(&account_id).has_score_jars(),
-                "Account '{account_id}' doesn't have score jars"
-            );
-
-            self.update_account_cache(
-                &account_id,
-                Some(|product: &Product| matches!(product.terms, Terms::ScoreBased(_))),
-            );
+            self.assert_timezone_is_set(&account_id);
+            self.update_score_based_jars_cache(&account_id);
 
             let account = self.get_account_mut(&account_id);
-            account.score.try_reset_score();
-            account.score.update(new_score.adjust(account.score.timezone));
+            account.score.settle(account.timezone);
+
+            let increments = new_score.adjust(account.score.timezone);
+            account.score.update(increments);
 
             event.push(ScoreData {
                 account_id,
@@ -111,7 +113,7 @@ impl AccountApi for Contract {
     fn get_score(&self, account_id: AccountId) -> Option<U128> {
         let account = self.get_account(&account_id);
 
-        Some(u128::from(account.score.active_score()).into())
+        Some(u128::from(account.score.history()).into())
     }
 
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {
