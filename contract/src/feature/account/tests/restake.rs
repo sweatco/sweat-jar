@@ -161,7 +161,7 @@ fn restake_after_maturity(
 
     let jar = alice_jars.0.get(&product.id).unwrap().first().unwrap();
     assert_eq!(principal, jar.1.into());
-    assert_eq!(restake_time, jar.0);
+    assert_eq!(restake_time, jar.0 .0);
 }
 
 #[rstest]
@@ -210,7 +210,7 @@ fn restake_for_protected_product_success(
 
     let jar = alice_jars.0.get(&product.id.clone()).unwrap().first().unwrap();
     assert_eq!(principal, jar.1.into());
-    assert_eq!(restake_time, jar.0);
+    assert_eq!(restake_time, jar.0 .0);
 }
 
 #[rstest]
@@ -260,7 +260,7 @@ fn sequential_restake_for_protected_product_success(
 
     let jar = alice_jars.0.get(&product.id.clone()).unwrap().first().unwrap();
     assert_eq!(principal, jar.1.into());
-    assert_eq!(restake_time, jar.0);
+    assert_eq!(restake_time, jar.0 .0);
 
     let restake_time = restake_time + MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
@@ -287,7 +287,7 @@ fn sequential_restake_for_protected_product_success(
 
     let jar = alice_jars.0.get(&product.id.clone()).unwrap().first().unwrap();
     assert_eq!(principal, jar.1.into());
-    assert_eq!(restake_time, jar.0);
+    assert_eq!(restake_time, jar.0 .0);
 }
 
 #[rstest]

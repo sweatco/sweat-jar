@@ -560,7 +560,7 @@ fn restake_all_with_not_ordered_deposits(
         .unwrap()
         .deposits
         .iter()
-        .find(|(created_at, _)| *created_at == target_timestamp)
+        .find(|(created_at, _)| created_at.0 == target_timestamp)
         .expect("Restaked deposit not found");
 
     assert_eq!(last_deposit.1 .0, amount_to_restake);
