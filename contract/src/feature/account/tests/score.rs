@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use std::collections::HashMap;
+
 use fake::Fake;
 use near_sdk::{
     json_types::{I64, U128},
@@ -11,7 +13,7 @@ use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{
         deposit::DepositTicket,
-        jar::Jar,
+        jar::{Jar, JarView},
         product::{Product, ProductId},
         withdraw::WithdrawView,
     },
@@ -28,11 +30,12 @@ use crate::{
         },
     },
     feature::{account::model::test_utils::jar, product::model::test_utils::*},
-    StorageKey,
+    Contract, StorageKey,
 };
 
 mod score_tests {
     use super::*;
+    use crate::Contract;
 
     #[rstest]
     #[should_panic(expected = "Can be performed only by admin")]
@@ -272,6 +275,9 @@ mod score_tests {
         // All jars were closed and deleted after full withdraw and claim
         assert!(context.contract().get_jars_for_account(alice.clone()).is_empty());
         assert!(context.contract().get_jars_for_account(bob.clone()).is_empty());
+
+        assert!(context.contract().get_jars_for_account_detailed(&alice).is_empty());
+        assert!(context.contract().get_jars_for_account_detailed(&bob).is_empty());
     }
 
     #[rstest]

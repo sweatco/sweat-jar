@@ -6,12 +6,15 @@ use near_sdk::{
     near, AccountId,
 };
 use sweat_jar_model::{
-    api::AccountApi, data::{
-        account::Account,
+    api::AccountApi,
+    data::{
+        account::{view::AccountView, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
         score::Score,
-    }, interest::InterestCalculator, Timezone, TokenAmount, UTC
+    },
+    interest::InterestCalculator,
+    Timezone, TokenAmount, UTC,
 };
 
 use super::model::{AccountScoreUpdate, ScoreConverter};
@@ -51,6 +54,10 @@ impl AccountApi for Contract {
         }
 
         JarsView::default()
+    }
+
+    fn get_account(&self, account_id: AccountId) -> Option<AccountView> {
+        self.try_get_account(&account_id).map(|account| account.clone().into())
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {

@@ -554,13 +554,13 @@ fn restake_all_with_not_ordered_deposits(
         .contract()
         .restake_all(ticket, None, Some(amount_to_restake.into()));
 
-    let jars = context.contract().get_jars_for_account(alice.clone());
+    let jars = context.contract().get_jars_for_account_detailed(&alice);
     let last_deposit = jars
-        .0
         .get(&target_product_id)
         .unwrap()
+        .deposits
         .iter()
-        .find(|(created_at, _)| *created_at == target_timestamp)
+        .find(|(created_at, _)| created_at.0 == target_timestamp)
         .expect("Restaked deposit not found");
 
     assert_eq!(last_deposit.1 .0, amount_to_restake);

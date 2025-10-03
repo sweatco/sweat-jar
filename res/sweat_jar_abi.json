@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "5XqRGH8UFmqimuy85HEe4TMhkKNeBpVVUtCyG84E5Bnq"
+    "wasm_hash": "3PWiFPgiYnB9gxQHquYD863vrbT4j2PyR8SdKXM1rJwG"
   },
   "body": {
     "functions": [
@@ -189,6 +189,55 @@
         }
       },
       {
+        "name": "block_timestamp_ms",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      },
+      {
+        "name": "bulk_create_jars",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "principal",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint128",
+                "minimum": 0.0
+              }
+            },
+            {
+              "name": "number_of_jars",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              }
+            }
+          ]
+        }
+      },
+      {
         "name": "claim_total",
         "kind": "call",
         "params": {
@@ -256,6 +305,34 @@
           "serialization_type": "json",
           "type_schema": {
             "$ref": "#/definitions/PromiseOrValueString"
+          }
+        }
+      },
+      {
+        "name": "get_account",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/AccountView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -886,6 +963,34 @@
                   "type": "null"
                 }
               ]
+            }
+          }
+        },
+        "AccountView": {
+          "type": "object",
+          "required": [
+            "is_penalty_applied",
+            "jars",
+            "nonce",
+            "score"
+          ],
+          "properties": {
+            "is_penalty_applied": {
+              "type": "boolean"
+            },
+            "jars": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/JarView"
+              }
+            },
+            "nonce": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "score": {
+              "$ref": "#/definitions/AccountScore"
             }
           }
         },
@@ -1611,6 +1716,21 @@
             }
           }
         },
+        "JarCacheView": {
+          "type": "object",
+          "required": [
+            "interest",
+            "updated_at"
+          ],
+          "properties": {
+            "interest": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "string"
+            }
+          }
+        },
         "JarCompanion": {
           "type": "object",
           "properties": {
@@ -1656,6 +1776,48 @@
             }
           }
         },
+        "JarView": {
+          "type": "object",
+          "required": [
+            "claim_remainder",
+            "deposits",
+            "is_pending_withdraw"
+          ],
+          "properties": {
+            "cache": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/JarCacheView"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claim_remainder": {
+              "type": "string"
+            },
+            "deposits": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "is_pending_withdraw": {
+              "type": "boolean"
+            }
+          }
+        },
         "JarsView": {
           "type": "object",
           "additionalProperties": {
@@ -1664,9 +1826,7 @@
               "type": "array",
               "items": [
                 {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0.0
+                  "type": "string"
                 },
                 {
                   "type": "string"
