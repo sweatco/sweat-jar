@@ -92,7 +92,9 @@ impl ClaimApi for Contract {
             ..AccountCompanion::default()
         };
 
-        account.score.try_settle_score();
+        if account.is_timezone_set() {
+            account.score.settle(account.timezone);
+        }
 
         // TODO: add test for 0 case and replace `gt` with `>`
         if accumulator.get_total().0.gt(&0) {

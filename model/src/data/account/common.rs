@@ -57,7 +57,6 @@ impl Account {
         }
 
         if let Some(timezone) = timezone {
-            self.score = AccountScore::default();
             self.timezone = timezone;
         } else {
             panic_str("Trying to create score based jar without providing time zone");

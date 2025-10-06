@@ -7,6 +7,7 @@ use near_sdk::{
 };
 use sweat_jar_model::{
     api::AccountApi,
+    convert_to_days_offset,
     data::{
         account::{common::FeaturesAccess, features::Feature, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
@@ -14,10 +15,9 @@ use sweat_jar_model::{
         score::Score,
     },
     interest::InterestCalculator,
-    Timezone, TokenAmount, UTC,
+    ScoreIncrementProcessor, Timezone, TokenAmount, UTC,
 };
 
-use super::model::{AccountScoreUpdate, ScoreConverter};
 use crate::{
     common::event::{emit, EventKind, ScoreData},
     Contract, ContractExt,
@@ -85,19 +85,31 @@ impl AccountApi for Contract {
 
         let mut event = vec![];
 
-        for (account_id, new_score) in batch {
+        for (account_id, increments) in batch {
             self.assert_timezone_is_set(&account_id);
             self.update_score_based_jars_cache(&account_id);
 
             let account = self.get_account_mut(&account_id);
             account.score.settle(account.timezone);
 
-            let increments = new_score.adjust(account.score.timezone);
-            account.score.update(increments);
+            assert_eq!(
+                account.score.get_days_number_since_last_update(account.timezone),
+                0,
+                "Updating scores before settlement"
+            );
+
+            let segmented_increments = ScoreIncrementProcessor::new(&increments, account.timezone).process();
+
+            let normalized_increments = convert_to_days_offset(segmented_increments.valid.clone(), account.timezone);
+            account.score.update(normalized_increments);
+
+            for increment in segmented_increments.outdated {
+                emit(EventKind::OldScoreWarning(increment));
+            }
 
             event.push(ScoreData {
                 account_id,
-                score: new_score,
+                score: segmented_increments.valid,
             });
         }
 
@@ -105,15 +117,13 @@ impl AccountApi for Contract {
     }
 
     fn get_timezone(&self, account_id: AccountId) -> Option<I64> {
-        self.accounts
-            .get(&account_id)
-            .map(|account| I64(*account.score.timezone))
+        self.accounts.get(&account_id).map(|account| I64(*account.timezone))
     }
 
     fn get_score(&self, account_id: AccountId) -> Option<U128> {
         let account = self.get_account(&account_id);
 
-        Some(u128::from(account.score.history()).into())
+        Some(u128::from(account.score.get_last_finalized_score(account.timezone)).into())
     }
 
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {

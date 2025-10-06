@@ -129,7 +129,6 @@ mod tests {
             ticket_valid_until,
             0,
         );
-        dbg!(message.to_string());
         let signature: Base64String = signer.sign(message.as_str()).into();
 
         let msg = json!({

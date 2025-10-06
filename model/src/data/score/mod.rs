@@ -36,21 +36,40 @@ pub type ScoreIncrements = Vec<ScoreIncrement>;
 #[near(serializers=[borsh, json])]
 #[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct DailyScore {
-    pub value: Score,
-    pub is_settled: bool,
+    pub pending: Score,
+    pub total: Score,
+}
+
+impl DailyScore {
+    pub fn new(value: Score) -> Self {
+        Self {
+            pending: value,
+            total: value,
+        }
+    }
+}
+
+#[near(serializers=[borsh, json])]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
+pub struct AccountScoreLegacy {
+    pub updated_at: UTC,
+    pub timezone: Timezone,
+    pub scores: [Score; DAYS_STORED],
+    pub scores_history: [Score; DAYS_STORED],
 }
 
 #[near(serializers=[borsh, json])]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AccountScore {
     updated_at: UTC,
-    #[deprecated]
-    pub timezone: Timezone,
-    /// Daily score history with settlement status
     history: [DailyScore; DAYS_STORED],
 }
 
 impl AccountScore {
+    pub fn new(updated_at: UTC, history: [DailyScore; DAYS_STORED]) -> Self {
+        Self { updated_at, history }
+    }
+
     pub fn updated_at(&self) -> Timestamp {
         self.updated_at.0
     }
@@ -71,8 +90,10 @@ impl AccountScore {
     }
 
     fn add(&mut self, days_ago: DaysOffset, increment: Score) {
-        let current_value = self.get(days_ago).value;
-        self.get_mut(days_ago).value = current_value.checked_add(increment).unwrap_or(u16::MAX);
+        let score = self.get_mut(days_ago);
+
+        score.pending = score.pending.checked_add(increment).unwrap_or(u16::MAX);
+        score.total = score.total.checked_add(increment).unwrap_or(u16::MAX);
     }
 
     fn wipe(&mut self) {
@@ -81,12 +102,14 @@ impl AccountScore {
 
     fn shift(&mut self) {
         self.history.copy_within(0..DAYS_STORED - 1, 1);
+        self.history[0] = DailyScore::default();
     }
 
     fn settle_at(&mut self, days_ago: DaysOffset) -> Score {
-        self.get_mut(days_ago).is_settled = true;
+        let result = self.get(days_ago).pending;
+        self.get_mut(days_ago).pending = 0;
 
-        self.get(days_ago).value
+        result
     }
 
     fn assert_in_bounds(&self, index: usize) {
@@ -100,7 +123,7 @@ impl AccountScore {
             score: self
                 .get_finalized_scores(timezone)
                 .iter()
-                .filter_map(|item| if item.is_settled { None } else { Some(item.value) })
+                .filter_map(|item| if item.pending == 0 { None } else { Some(item.pending) })
                 .collect(),
             updated: self.updated_at,
         }
@@ -109,9 +132,9 @@ impl AccountScore {
     pub fn get_last_finalized_score(&self, timezone: Timezone) -> Score {
         match self.get_days_number_since_last_update(timezone) {
             // Updated today => 0 offsetted day's score is still ongoing. Return last finalized value.
-            0 => self.get(1).value,
+            0 => self.get(1).total,
             // Updated earlier than today => 0 offsetted day is finalized.
-            1 => self.get(0).value,
+            1 => self.get(0).total,
             _ => 0,
         }
     }
@@ -127,14 +150,16 @@ impl AccountScore {
 
         if days_since_last_update == 1 {
             self.shift();
-        } else {
+        } else if days_since_last_update > 1 {
             self.wipe();
         }
+
+        self.updated_at = block_timestamp_ms().into();
 
         settled_scores
     }
 
-    pub fn update(&mut self, timezone: Timezone, increments: ScoreIncrements) {
+    pub fn update(&mut self, increments: Vec<(Score, DaysOffset)>) {
         for (increment, days_ago) in increments {
             self.add(days_ago, increment);
         }
@@ -162,25 +187,70 @@ impl AccountScore {
     }
 }
 
-pub trait ScoreFilter {
-    fn filter(&self, timezone: Timezone) -> (Vec<ScoreIncrement>, Vec<ScoreIncrement>);
+pub struct ScoreIncrementProcessor<'a> {
+    scores: &'a Vec<(Score, UTC)>,
+    timezone: Timezone,
 }
 
-impl ScoreFilter for ScoreIncrements {
-    fn filter(&self, timezone: Timezone) -> (Vec<ScoreIncrement>, Vec<ScoreIncrement>) {
-        let mut valid_increments = vec![];
-        let mut outdated_increments = vec![];
-        for increment in self {
-            timezone.assert_not_future(increment.1);
+impl<'a> ScoreIncrementProcessor<'a> {
+    pub fn new(scores: &'a Vec<(Score, UTC)>, timezone: Timezone) -> Self {
+        Self { scores, timezone }
+    }
 
-            let days_ago = timezone.today() - timezone.adjust(increment.1).day();
-            if days_ago >= DAYS_STORED.into() {
-                outdated_increments.push(*increment);
+    pub fn process(&self) -> SegmentedScoreIncrements {
+        let mut result = SegmentedScoreIncrements::default();
+
+        for increment in self.scores {
+            self.verify_timestamp(increment);
+
+            let adjusted_increment = self.adjust_timestamp(increment);
+            if self.is_valid(&adjusted_increment) {
+                result.valid.push(adjusted_increment);
             } else {
-                valid_increments.push(*increment);
+                result.outdated.push(adjusted_increment);
             }
         }
 
-        (outdated_increments, valid_increments)
+        result
+    }
+
+    fn verify_timestamp(&self, increment: &(Score, UTC)) {
+        self.timezone.assert_not_future(increment.1);
+    }
+
+    fn adjust_timestamp(&self, increment: &(Score, UTC)) -> (Score, Local) {
+        (increment.0, self.timezone.adjust(increment.1))
+    }
+
+    fn is_valid(&self, increment: &(Score, Local)) -> bool {
+        self.timezone.today().0 - increment.1.day().0 < DAYS_STORED as _
+    }
+}
+
+#[derive(Default)]
+pub struct SegmentedScoreIncrements {
+    pub outdated: Vec<(Score, Local)>,
+    pub valid: Vec<(Score, Local)>,
+}
+
+pub fn convert_to_days_offset(input: Vec<(Score, Local)>, timezone: Timezone) -> Vec<(Score, DaysOffset)> {
+    input
+        .iter()
+        .map(|increment| (increment.0, (timezone.today().0 - increment.1.day().0) as _))
+        .collect()
+}
+
+impl From<AccountScoreLegacy> for AccountScore {
+    fn from(value: AccountScoreLegacy) -> Self {
+        let mut history = [DailyScore::default(); DAYS_STORED];
+        for i in 0..DAYS_STORED {
+            history[i].pending = value.scores[i];
+            history[i].total = value.scores_history[i];
+        }
+
+        Self {
+            updated_at: value.updated_at,
+            history,
+        }
     }
 }

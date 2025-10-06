@@ -9,7 +9,7 @@ use crate::{
         product::ProductId,
         score::AccountScore,
     },
-    DurationDays, Timezone,
+    DailyScore, DurationDays, Timezone, DAYS_STORED,
 };
 
 use super::{
@@ -54,7 +54,7 @@ impl From<AccountV1> for AccountV2 {
             nonce: value.nonce,
             jars: value.jars,
             timezone: value.score.timezone,
-            score: value.score,
+            score: value.score.into(),
             features,
             booster: None,
         }

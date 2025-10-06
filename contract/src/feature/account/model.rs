@@ -1,43 +1,6 @@
-use sweat_jar_model::{
-    data::account::Account, AccountScore, Day, Score, ScoreFilter, ScoreIncrements, TimeHelper, Timezone, DAYS_STORED,
-    UTC,
-};
+use sweat_jar_model::{convert_to_days_offset, data::account::Account, ScoreIncrementProcessor, ScoreIncrements};
 
 use crate::common::event::{emit, EventKind};
-
-pub trait AccountScoreUpdate {
-    fn update(&mut self, increments: ScoreIncrements);
-}
-
-pub trait ScoreConverter {
-    /// Convert Score to a User's timezone
-    fn adjust(&self, timezone: Timezone) -> ScoreIncrements;
-}
-
-impl ScoreConverter for Vec<(Score, UTC)> {
-    fn adjust(&self, timezone: Timezone) -> ScoreIncrements {
-        self.iter().map(|score| (score.0, timezone.adjust(score.1))).collect()
-    }
-}
-
-impl AccountScoreUpdate for Account {
-    fn update(&mut self, increments: ScoreIncrements) {
-        assert_eq!(
-            self.score.get_days_number_since_last_update(self.timezone),
-            0,
-            "Updating scores before settlement"
-        );
-
-        todo!("Introdure ScoreIncrement with local and utc timestamps. Filter function should return local values.");
-        let (outdated_increments, valid_increments) = increments.filter(self.timezone);
-
-        for (score, timestamp) in outdated_increments {
-            emit(EventKind::OldScoreWarning((score, timestamp)));
-        }
-
-        self.score.update(self.timezone, valid_increments);
-    }
-}
 
 #[cfg(test)]
 pub(crate) mod test_utils {

@@ -332,7 +332,7 @@ fn set_timezone_by_manager_when_timezone_already_set(
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let timezone = 360_000;
-    context.contract().get_account_mut(&alice).score.timezone = Timezone::new(timezone);
+    context.contract().get_account_mut(&alice).timezone = Timezone::new(timezone);
 
     context.switch_account_to_manager();
     context.contract().set_timezone(alice.clone(), I64(0));

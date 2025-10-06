@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "ENkLPXXVmRq38s9pmgTd9peKVzGqujsjy4n38duTU5PU"
+    "wasm_hash": "3SoCCNn9UaoEi254y9TSN8Vvd64EUQBpgHMVDZ8gjaZ8"
   },
   "body": {
     "functions": [
@@ -879,38 +879,19 @@
         "AccountScore": {
           "type": "object",
           "required": [
-            "scores",
-            "scores_history",
-            "timezone",
-            "updated"
+            "history",
+            "updated_at"
           ],
           "properties": {
-            "scores": {
-              "description": "Scores buffer used for interest calculation. Can be invalidated on claim.",
+            "history": {
               "type": "array",
               "items": {
-                "type": "integer",
-                "format": "uint16",
-                "minimum": 0.0
+                "$ref": "#/definitions/DailyScore"
               },
               "maxItems": 2,
               "minItems": 2
             },
-            "scores_history": {
-              "description": "Score history values used for displaying it in application. Will not be invalidated during claim.",
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "format": "uint16",
-                "minimum": 0.0
-              },
-              "maxItems": 2,
-              "minItems": 2
-            },
-            "timezone": {
-              "$ref": "#/definitions/Timezone"
-            },
-            "updated": {
+            "updated_at": {
               "$ref": "#/definitions/UTC"
             }
           }
@@ -1159,6 +1140,25 @@
               "$ref": "#/definitions/AggregatedTokenAmountView"
             }
           ]
+        },
+        "DailyScore": {
+          "type": "object",
+          "required": [
+            "pending",
+            "total"
+          ],
+          "properties": {
+            "pending": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "total": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          }
         },
         "Deposit": {
           "type": "object",
@@ -2087,7 +2087,7 @@
                     "minimum": 0.0
                   },
                   {
-                    "$ref": "#/definitions/UTC"
+                    "$ref": "#/definitions/Local"
                   }
                 ],
                 "maxItems": 2,
