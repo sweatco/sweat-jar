@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "4PePt9d9cPpph4aMd7X9ADWSTVLzwp8gw69MSmCpUkZT"
+    "wasm_hash": "5s8ukxbb5tw3wvTwYkrGZi6HLdr7uaDKJg9nhnVNqmak"
   },
   "body": {
     "functions": [
@@ -1005,37 +1005,6 @@
             }
           }
         },
-        "Apy": {
-          "description": "The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.",
-          "oneOf": [
-            {
-              "description": "Describes a constant APY, where the interest remains the same throughout the product's term.",
-              "type": "object",
-              "required": [
-                "Constant"
-              ],
-              "properties": {
-                "Constant": {
-                  "$ref": "#/definitions/UDecimal"
-                }
-              },
-              "additionalProperties": false
-            },
-            {
-              "description": "Describes a downgradable APY, where an oracle can set a penalty if a user violates the product's terms.",
-              "type": "object",
-              "required": [
-                "Downgradable"
-              ],
-              "properties": {
-                "Downgradable": {
-                  "$ref": "#/definitions/DowngradableApy"
-                }
-              },
-              "additionalProperties": false
-            }
-          ]
-        },
         "Base64VecU8": {
           "description": "Helper class to serialize/deserialize `Vec<u8>` to base64 string.\n\n# Example ```rust use near_sdk::{json_types::Base64VecU8, near};\n\n#[near(serializers=[json])] struct NewStruct { field: Base64VecU8, } ```",
           "type": "array",
@@ -1179,6 +1148,34 @@
             }
           ]
         },
+        "ConfigurableValue_for_UDecimal": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "Constant"
+              ],
+              "properties": {
+                "Constant": {
+                  "$ref": "#/definitions/UDecimal"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "Tier"
+              ],
+              "properties": {
+                "Tier": {
+                  "$ref": "#/definitions/ValueTier_for_UDecimal"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
         "ConfigurableValue_for_uint16": {
           "oneOf": [
             {
@@ -1294,32 +1291,6 @@
             "valid_until": {
               "description": "Specifies the expiration date of the ticket. The expiration date is measured in milliseconds since the Unix epoch. This property ensures that the request to create a jar is valid only until the specified timestamp. After this timestamp, the ticket becomes invalid and should not be accepted.",
               "type": "string"
-            }
-          }
-        },
-        "DowngradableApy": {
-          "description": "The `DowngradableApy` struct describes an APY that can be downgraded by an oracle.",
-          "type": "object",
-          "required": [
-            "default",
-            "fallback"
-          ],
-          "properties": {
-            "default": {
-              "description": "The default APY value if the user meets all the terms of the product.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/UDecimal"
-                }
-              ]
-            },
-            "fallback": {
-              "description": "The fallback APY value if the user violates some of the terms of the product.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/UDecimal"
-                }
-              ]
             }
           }
         },
@@ -1788,7 +1759,7 @@
           ],
           "properties": {
             "apy": {
-              "$ref": "#/definitions/Apy"
+              "$ref": "#/definitions/ConfigurableValue_for_UDecimal"
             },
             "lockup_term": {
               "description": "The maturity term of the jar in seconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
@@ -1804,7 +1775,7 @@
           ],
           "properties": {
             "apy": {
-              "$ref": "#/definitions/Apy"
+              "$ref": "#/definitions/ConfigurableValue_for_UDecimal"
             }
           }
         },
@@ -2292,6 +2263,21 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "ValueTier_for_UDecimal": {
+          "type": "object",
+          "required": [
+            "default",
+            "fallback"
+          ],
+          "properties": {
+            "default": {
+              "$ref": "#/definitions/UDecimal"
+            },
+            "fallback": {
+              "$ref": "#/definitions/UDecimal"
+            }
+          }
         },
         "ValueTier_for_uint16": {
           "type": "object",

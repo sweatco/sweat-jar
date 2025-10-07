@@ -4,11 +4,11 @@ pub mod test_utils {
     use rstest::fixture;
     use sweat_jar_model::{
         data::product::{
-            Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ProductId,
-            ScoreBasedProductTerms, Terms, WithdrawalFee,
+            Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, ProductId, ScoreBasedProductTerms, Terms,
+            WithdrawalFee,
         },
         signer::test_utils::MessageSigner,
-        TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
+        TokenAmount, UDecimal, ValueTier, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
     };
 
     use crate::common::testing::TokenUtils;
@@ -245,7 +245,7 @@ pub mod test_utils {
         ProtectedProduct {
             product: product
                 .with_id("product_1_year_apy_downgradable_20_10_percent_protected".to_string())
-                .with_terms(terms(Apy::Downgradable(DowngradableApy {
+                .with_terms(terms(Apy::Tier(ValueTier {
                     default: UDecimal::new(20_000, 5),
                     fallback: UDecimal::new(10_000, 5),
                 })))
@@ -262,7 +262,7 @@ pub mod test_utils {
             product: product
                 .with_id("product_1_hour_apy_downgradable_23_10_percent_protected".to_string())
                 .with_terms(Terms::Fixed(FixedProductTerms {
-                    apy: Apy::Downgradable(DowngradableApy {
+                    apy: Apy::Tier(ValueTier {
                         default: UDecimal::new(23, 2),
                         fallback: UDecimal::new(10, 2),
                     }),
@@ -306,7 +306,7 @@ pub mod test_utils {
                 .with_public_key(message_signer.public_key().into())
                 .with_cap(0, 100_000_000_000)
                 .with_terms(Terms::Fixed(FixedProductTerms {
-                    apy: Apy::Downgradable(DowngradableApy {
+                    apy: Apy::Tier(ValueTier {
                         default: UDecimal::new(20, 2),
                         fallback: UDecimal::new(10, 2),
                     }),
@@ -341,7 +341,7 @@ pub mod test_utils {
 
     #[fixture]
     pub fn downgradable_apy() -> Apy {
-        Apy::Downgradable(DowngradableApy {
+        Apy::Tier(ValueTier {
             default: UDecimal::new(20, 2),
             fallback: UDecimal::new(10, 2),
         })
