@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "3SoCCNn9UaoEi254y9TSN8Vvd64EUQBpgHMVDZ8gjaZ8"
+    "wasm_hash": "CoxZ3UkS47U1ztit31kLZ3LAZJmA5QtBPEzYpGhpyKAc"
   },
   "body": {
     "functions": [
@@ -162,6 +162,38 @@
           "type_schema": {
             "$ref": "#/definitions/WithdrawView"
           }
+        }
+      },
+      {
+        "name": "apply_booser",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AccountId"
+                }
+              }
+            },
+            {
+              "name": "score",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              }
+            },
+            {
+              "name": "timestamp",
+              "type_schema": {
+                "$ref": "#/definitions/UTC"
+              }
+            }
+          ]
         }
       },
       {
@@ -1038,6 +1070,12 @@
             }
           }
         },
+        "BoostedScore": {
+          "description": "A type describing a boosted score with claim state.\n\nThe underlying `u16` is a bit-packed value where: - The least significant bit (bit 0) represents whether the booster was claimed (1) or not (0) - The remaining 15 bits contain the score value normalized by dividing by 10\n\nThis allows storing both the score and claim state in a single 16-bit value efficiently.",
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 0.0
+        },
         "BulkWithdrawView": {
           "type": "object",
           "required": [
@@ -1144,10 +1182,14 @@
         "DailyScore": {
           "type": "object",
           "required": [
+            "booster",
             "pending",
             "total"
           ],
           "properties": {
+            "booster": {
+              "$ref": "#/definitions/BoostedScore"
+            },
             "pending": {
               "type": "integer",
               "format": "uint16",

@@ -93,6 +93,14 @@ impl Account {
     pub fn is_timezone_set(&self) -> bool {
         self.timezone.is_valid()
     }
+
+    pub fn assert_no_pending_score(&self) {
+        assert_eq!(
+            self.score.get_days_number_since_last_update(self.timezone),
+            0,
+            "Account has pending score"
+        );
+    }
 }
 
 impl FeaturesAccess for Account {

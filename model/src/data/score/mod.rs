@@ -101,6 +101,14 @@ impl AccountScore {
         score.total = score.total.checked_add(increment).unwrap_or(u16::MAX);
     }
 
+    pub fn apply_booster(&mut self, days_ago: DaysOffset, value: Score) {
+        if self.get(days_ago).booster.get_value() > 0 {
+            return;
+        }
+
+        self.get_mut(days_ago).booster = BoostedScore::new(value, false);
+    }
+
     fn wipe(&mut self) {
         self.history = [DailyScore::default(); DAYS_STORED];
     }

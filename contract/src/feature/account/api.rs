@@ -1,7 +1,7 @@
 use std::{collections::HashMap, convert::Into};
 
 use near_sdk::{
-    env,
+    env::{self, panic_str},
     json_types::{I64, U128},
     near, AccountId,
 };
@@ -15,7 +15,7 @@ use sweat_jar_model::{
         score::Score,
     },
     interest::InterestCalculator,
-    ScoreIncrementProcessor, Timezone, TokenAmount, UTC,
+    DaysOffset, ScoreIncrementProcessor, TimeHelper, Timezone, TokenAmount, UTC,
 };
 
 use crate::{
@@ -91,15 +91,9 @@ impl AccountApi for Contract {
 
             let account = self.get_account_mut(&account_id);
             account.score.settle(account.timezone);
-
-            assert_eq!(
-                account.score.get_days_number_since_last_update(account.timezone),
-                0,
-                "Updating scores before settlement"
-            );
+            account.assert_no_pending_score();
 
             let segmented_increments = ScoreIncrementProcessor::new(&increments, account.timezone).process();
-
             let normalized_increments = convert_to_days_offset(segmented_increments.valid.clone(), account.timezone);
             account.score.update(normalized_increments);
 
@@ -114,6 +108,26 @@ impl AccountApi for Contract {
         }
 
         emit(EventKind::RecordScore(event));
+    }
+
+    fn apply_booser(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC) {
+        self.assert_manager();
+
+        for account_id in account_ids {
+            self.assert_timezone_is_set(&account_id);
+            self.get_account(&account_id).timezone.assert_not_future(timestamp);
+
+            self.update_score_based_jars_cache(&account_id);
+
+            let account = self.get_account_mut(&account_id);
+            account.score.settle(account.timezone);
+            account.assert_no_pending_score();
+
+            let adjusted_timestamp = account.timezone.adjust(timestamp);
+            let days_offset = (account.timezone.today().0 - adjusted_timestamp.day().0) as DaysOffset;
+
+            account.score.apply_booster(days_offset, score);
+        }
     }
 
     fn get_timezone(&self, account_id: AccountId) -> Option<I64> {
