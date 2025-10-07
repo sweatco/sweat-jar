@@ -4,7 +4,9 @@ use crate::{
     data::{
         account::{common::FeaturesAccess, features::Feature, Account},
         jar::{Deposit, Jar},
-        product::{FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms},
+        product::{
+            FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
+        },
     },
     Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
 };
@@ -56,6 +58,7 @@ impl InterestCalculator for Terms {
             Terms::Fixed(terms) => terms.get_apy(account),
             Terms::Flexible(terms) => terms.get_apy(account),
             Terms::ScoreBased(terms) => terms.get_apy(account),
+            Terms::TieredScoreBased(terms) => terms.get_apy(account),
         }
     }
 
@@ -70,6 +73,9 @@ impl InterestCalculator for Terms {
             Terms::Fixed(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
             Terms::Flexible(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
             Terms::ScoreBased(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
+            Terms::TieredScoreBased(terms) => {
+                terms.get_interest_calculation_term(account, now, last_cached_at, deposit)
+            }
         }
     }
 }
@@ -146,6 +152,22 @@ impl InterestCalculator for ScoreBasedProductTerms {
         }
 
         MS_IN_DAY
+    }
+}
+
+impl InterestCalculator for TieredScoreBasedProductTerms {
+    fn get_apy(&self, account: &Account) -> UDecimal {
+        todo!()
+    }
+
+    fn get_interest_calculation_term(
+        &self,
+        account: &Account,
+        now: Timestamp,
+        last_cached_at: Option<Timestamp>,
+        deposit: &Deposit,
+    ) -> Duration {
+        todo!()
     }
 }
 

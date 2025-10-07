@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "CoxZ3UkS47U1ztit31kLZ3LAZJmA5QtBPEzYpGhpyKAc"
+    "wasm_hash": "EsQsTkQXh3ZsUZP4anDmE9aoNBLYkb5h44YCYGMFvziK"
   },
   "body": {
     "functions": [
@@ -1179,6 +1179,36 @@
             }
           ]
         },
+        "ConfigurableValue_for_uint16": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "Constant"
+              ],
+              "properties": {
+                "Constant": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "Tier"
+              ],
+              "properties": {
+                "Tier": {
+                  "$ref": "#/definitions/ValueTier_for_uint16"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
         "DailyScore": {
           "type": "object",
           "required": [
@@ -2197,8 +2227,44 @@
                   ]
                 }
               }
+            },
+            {
+              "description": "TODO: doc",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/TieredScoreBasedProductTerms"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "tiered_score_based"
+                  ]
+                }
+              }
             }
           ]
+        },
+        "TieredScoreBasedProductTerms": {
+          "description": "TODO: doc",
+          "type": "object",
+          "required": [
+            "lockup_term",
+            "score_cap"
+          ],
+          "properties": {
+            "lockup_term": {
+              "description": "The maturity term of the jar in milliseconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
+              "type": "string"
+            },
+            "score_cap": {
+              "$ref": "#/definitions/ConfigurableValue_for_uint16"
+            }
+          }
         },
         "Timezone": {
           "description": "Timezone described as time shift from UTC in ms",
@@ -2226,6 +2292,25 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "ValueTier_for_uint16": {
+          "type": "object",
+          "required": [
+            "default",
+            "fallback"
+          ],
+          "properties": {
+            "default": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "fallback": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          }
         },
         "WithdrawView": {
           "description": "The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.",

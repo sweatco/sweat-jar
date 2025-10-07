@@ -3,7 +3,7 @@ use near_sdk::{
     near,
 };
 
-use crate::{Duration, Score, TokenAmount, UDecimal};
+use crate::{ConfigurableValue, Duration, Score, TokenAmount, UDecimal};
 
 pub type ProductId = String;
 
@@ -43,6 +43,9 @@ pub enum Terms {
 
     /// TODO: doc
     ScoreBased(ScoreBasedProductTerms),
+
+    /// TODO: doc
+    TieredScoreBased(TieredScoreBasedProductTerms),
 }
 
 /// The `FixedProductTerms` struct contains terms specific to Fixed products.
@@ -67,6 +70,16 @@ pub struct FlexibleProductTerms {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ScoreBasedProductTerms {
     pub score_cap: Score,
+    /// The maturity term of the jar in milliseconds, during which it yields interest.
+    /// After this period, the user can withdraw principal or potentially restake the jar.
+    pub lockup_term: U64,
+}
+
+/// TODO: doc
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct TieredScoreBasedProductTerms {
+    pub score_cap: ConfigurableValue<Score>,
     /// The maturity term of the jar in milliseconds, during which it yields interest.
     /// After this period, the user can withdraw principal or potentially restake the jar.
     pub lockup_term: U64,
@@ -155,6 +168,7 @@ impl Terms {
             Terms::Fixed(terms) => Some(terms.lockup_term.0),
             Terms::Flexible(_) => None,
             Terms::ScoreBased(terms) => Some(terms.lockup_term.0),
+            Terms::TieredScoreBased(terms) => Some(terms.lockup_term.0),
         }
     }
 }
