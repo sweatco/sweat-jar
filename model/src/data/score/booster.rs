@@ -1,3 +1,5 @@
+use near_sdk::near;
+
 use super::Score;
 
 /// A type describing a boosted score with claim state.
@@ -7,6 +9,8 @@ use super::Score;
 /// - The remaining 15 bits contain the score value normalized by dividing by 10
 ///
 /// This allows storing both the score and claim state in a single 16-bit value efficiently.
+#[near(serializers=[borsh, json])]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct BoostedScore(u16);
 
 impl BoostedScore {

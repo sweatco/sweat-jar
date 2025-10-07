@@ -41,6 +41,7 @@ pub type ScoreIncrements = Vec<ScoreIncrement>;
 pub struct DailyScore {
     pub pending: Score,
     pub total: Score,
+    pub booster: BoostedScore,
 }
 
 impl DailyScore {
@@ -48,6 +49,7 @@ impl DailyScore {
         Self {
             pending: value,
             total: value,
+            booster: BoostedScore::default(),
         }
     }
 }
