@@ -404,6 +404,7 @@ pub mod test_utils {
                 Terms::Fixed(value) => &value.apy,
                 Terms::Flexible(value) => &value.apy,
                 Terms::ScoreBased(_) => panic!("No APY for a score based product"),
+                Terms::TieredScoreBased(_) => panic!("No APY for a score based product"),
             }
         }
     }

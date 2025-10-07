@@ -142,6 +142,19 @@ impl AccountScore {
         }
     }
 
+    pub fn get_pending_boosters(&self) -> Score {
+        self.history
+            .iter()
+            .map(|item| {
+                if item.booster.is_claimed() {
+                    0
+                } else {
+                    item.booster.get_value()
+                }
+            })
+            .sum()
+    }
+
     pub fn get_last_finalized_score(&self, timezone: Timezone) -> Score {
         match self.get_days_number_since_last_update(timezone) {
             // Updated today => 0 offsetted day's score is still ongoing. Return last finalized value.

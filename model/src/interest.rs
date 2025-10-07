@@ -8,7 +8,7 @@ use crate::{
             FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
         },
     },
-    Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
+    ConfigurableValue, Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
 };
 
 // TODO: add tests
@@ -157,7 +157,20 @@ impl InterestCalculator for ScoreBasedProductTerms {
 
 impl InterestCalculator for TieredScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        todo!()
+        let score = account.score.get_pending_scores(account.timezone).score;
+        let cap = match self.score_cap {
+            ConfigurableValue::Constant(value) => value,
+            ConfigurableValue::Tier(value) => {
+                if account.features.is_feature_enabled(&Feature::IncreasedScoreCap) {
+                    value.default
+                } else {
+                    value.fallback
+                }
+            }
+        };
+        let total_score: Score = score.iter().map(|score| score.min(&cap)).sum();
+
+        (total_score + account.score.get_pending_boosters()).min(100).to_apy()
     }
 
     fn get_interest_calculation_term(
@@ -167,7 +180,20 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
     ) -> Duration {
-        todo!()
+        if account.score.updated_at() < last_cached_at.unwrap_or_default() {
+            return 0;
+        }
+
+        if account.score.updated_at() < deposit.created_at {
+            return 0;
+        }
+
+        let term_end = cmp::max(now, deposit.created_at + self.lockup_term.0);
+        if now >= term_end {
+            return 0;
+        }
+
+        MS_IN_DAY
     }
 }
 
