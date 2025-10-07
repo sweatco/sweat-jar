@@ -175,7 +175,7 @@ pub struct ChangeProductPublicKeyData {
 #[near(serializers=[json])]
 pub struct ScoreData {
     pub account_id: AccountId,
-    pub score: Vec<(Score, UTC)>,
+    pub score: Vec<(Score, Local)>,
 }
 
 impl From<EventKind> for SweatJarEvent {

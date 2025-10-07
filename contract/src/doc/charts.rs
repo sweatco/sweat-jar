@@ -46,7 +46,7 @@ fn plot_year(
                 (score_based_product.id.clone(), score_based_jar),
             ],
         );
-    ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(3);
+    ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(3);
 
     ctx.switch_account_to_manager();
 
@@ -97,8 +97,8 @@ fn plot_first_week(
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
         .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
 
-    ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(0);
-    ctx.contract().get_account_mut(&bob).score.timezone = Timezone::hour_shift(0);
+    ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
+    ctx.contract().get_account_mut(&bob).timezone = Timezone::hour_shift(0);
 
     let mut result = vec![];
     let mut score_walked: u128;

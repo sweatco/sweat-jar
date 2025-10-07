@@ -13,6 +13,12 @@ use crate::{Day, Local, TimeHelper, MS_IN_HOUR, UTC};
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Timezone(i64);
 
+impl Default for Timezone {
+    fn default() -> Self {
+        Timezone::invalid()
+    }
+}
+
 impl Timezone {
     pub const fn new(timezone: i64) -> Self {
         Self(timezone)
@@ -55,6 +61,18 @@ impl Timezone {
 
     pub fn time(&self) -> Local {
         self.now().time()
+    }
+
+    pub fn assert_not_future(&self, timestamp: UTC) {
+        let now = self.now();
+        let adjusted_timestamp = self.adjust(timestamp);
+
+        if adjusted_timestamp > now {
+            panic_str(&format!(
+                "Timestamp from future: {:?}. Now: {:?}",
+                adjusted_timestamp, now
+            ));
+        }
     }
 }
 

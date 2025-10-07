@@ -2,10 +2,13 @@ use std::collections::HashMap;
 
 use near_sdk::near;
 
-use crate::data::{
-    jar::{Jar, JarCompanion},
-    product::ProductId,
-    score::AccountScore,
+use crate::{
+    data::{
+        jar::{Jar, JarCompanion},
+        product::ProductId,
+        score::AccountScore,
+    },
+    AccountScoreLegacy,
 };
 
 #[near(serializers=[borsh, json])]
@@ -13,7 +16,7 @@ use crate::data::{
 pub struct AccountV1 {
     pub nonce: u32,
     pub jars: HashMap<ProductId, Jar>,
-    pub score: AccountScore,
+    pub score: AccountScoreLegacy,
     pub is_penalty_applied: bool,
 }
 

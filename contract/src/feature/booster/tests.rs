@@ -18,7 +18,7 @@ fn create_booster(id: &str, score: u16, duration: u16) -> Booster {
 }
 
 fn create_test_boosters() -> Boosters {
-    Boosters::new(StorageKey::BoostersIndex, StorageKey::BoostersItems)
+    Boosters::new(0, StorageKey::BoostersIndex, StorageKey::BoostersItems)
 }
 
 mod model_tests {

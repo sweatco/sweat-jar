@@ -1,12 +1,13 @@
 use std::{collections::HashMap, convert::Into};
 
 use near_sdk::{
-    env,
+    env::{self, panic_str},
     json_types::{I64, U128},
     near, AccountId,
 };
 use sweat_jar_model::{
     api::AccountApi,
+    convert_to_days_offset,
     data::{
         account::{common::FeaturesAccess, features::Feature, view::AccountView, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
@@ -14,10 +15,9 @@ use sweat_jar_model::{
         score::Score,
     },
     interest::InterestCalculator,
-    Timezone, TokenAmount, UTC,
+    DaysOffset, ScoreIncrementProcessor, TimeHelper, Timezone, TokenAmount, UTC,
 };
 
-use super::model::{AccountScoreUpdate, ScoreConverter};
 use crate::{
     common::event::{emit, EventKind, ScoreData},
     Contract, ContractExt,
@@ -43,6 +43,13 @@ impl Contract {
             },
             timestamp: env::block_timestamp_ms(),
         }
+    }
+
+    fn update_score_based_jars_cache(&mut self, account_id: &AccountId) {
+        self.update_account_cache(
+            &account_id,
+            Some(|product: &Product| matches!(product.terms, Terms::ScoreBased(_))),
+        );
     }
 }
 
@@ -82,40 +89,59 @@ impl AccountApi for Contract {
 
         let mut event = vec![];
 
-        for (account_id, new_score) in batch {
-            assert!(
-                self.get_account(&account_id).has_score_jars(),
-                "Account '{account_id}' doesn't have score jars"
-            );
-
-            self.update_account_cache(
-                &account_id,
-                Some(|product: &Product| matches!(product.terms, Terms::ScoreBased(_))),
-            );
+        for (account_id, increments) in batch {
+            self.assert_timezone_is_set(&account_id);
+            self.update_score_based_jars_cache(&account_id);
 
             let account = self.get_account_mut(&account_id);
-            account.score.try_reset_score();
-            account.score.update(new_score.adjust(account.score.timezone));
+            account.score.settle(account.timezone);
+            account.assert_no_pending_score();
+
+            let segmented_increments = ScoreIncrementProcessor::new(&increments, account.timezone).process();
+            let normalized_increments = convert_to_days_offset(segmented_increments.valid.clone(), account.timezone);
+            account.score.update(normalized_increments);
+
+            for increment in segmented_increments.outdated {
+                emit(EventKind::OldScoreWarning(increment));
+            }
 
             event.push(ScoreData {
                 account_id,
-                score: new_score,
+                score: segmented_increments.valid,
             });
         }
 
         emit(EventKind::RecordScore(event));
     }
 
+    fn apply_booser(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC) {
+        self.assert_manager();
+
+        for account_id in account_ids {
+            self.assert_timezone_is_set(&account_id);
+            self.get_account(&account_id).timezone.assert_not_future(timestamp);
+
+            self.update_score_based_jars_cache(&account_id);
+
+            let account = self.get_account_mut(&account_id);
+            account.score.settle(account.timezone);
+            account.assert_no_pending_score();
+
+            let adjusted_timestamp = account.timezone.adjust(timestamp);
+            let days_offset = (account.timezone.today().0 - adjusted_timestamp.day().0) as DaysOffset;
+
+            account.score.apply_booster(days_offset, score);
+        }
+    }
+
     fn get_timezone(&self, account_id: AccountId) -> Option<I64> {
-        self.accounts
-            .get(&account_id)
-            .map(|account| I64(*account.score.timezone))
+        self.accounts.get(&account_id).map(|account| I64(*account.timezone))
     }
 
     fn get_score(&self, account_id: AccountId) -> Option<U128> {
         let account = self.get_account(&account_id);
 
-        Some(u128::from(account.score.active_score()).into())
+        Some(u128::from(account.score.get_last_finalized_score(account.timezone)).into())
     }
 
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {

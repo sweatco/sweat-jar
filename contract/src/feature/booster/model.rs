@@ -3,19 +3,26 @@ use near_sdk::{
     env::panic_str,
     near, IntoStorageKey,
 };
-use sweat_jar_model::data::booster::{v1::BoosterId, Booster};
-
-pub type BoosterIndex = u8;
+use sweat_jar_model::{
+    data::booster::{Booster, BoosterId, BoosterIndex},
+    Timestamp,
+};
 
 #[near]
 pub struct Boosters {
+    genesis_timestamp: Timestamp,
     index: LookupMap<BoosterId, BoosterIndex>,
     items: UnorderedMap<BoosterIndex, Booster>,
 }
 
 impl Boosters {
-    pub fn new(index_prefix: impl IntoStorageKey, items_prefix: impl IntoStorageKey) -> Self {
+    pub fn new(
+        genesis_timestamp: Timestamp,
+        index_prefix: impl IntoStorageKey,
+        items_prefix: impl IntoStorageKey,
+    ) -> Self {
         Self {
+            genesis_timestamp,
             index: LookupMap::new(index_prefix),
             items: UnorderedMap::new(items_prefix),
         }
