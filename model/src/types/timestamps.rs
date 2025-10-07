@@ -6,6 +6,8 @@ use crate::MS_IN_DAY;
 
 pub type Day = Local;
 
+pub type DaysOffset = u16;
+
 /// Timestamp in UTC timezone
 #[repr(transparent)]
 #[near(serializers=[json, borsh])]

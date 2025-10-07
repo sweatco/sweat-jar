@@ -2,10 +2,13 @@ use std::collections::HashMap;
 
 use near_sdk::near;
 
-use crate::data::{
-    jar::{Jar, JarCompanion},
-    product::ProductId,
-    score::AccountScore,
+use crate::{
+    data::{
+        jar::{Jar, JarCompanion},
+        product::ProductId,
+        score::AccountScore,
+    },
+    AccountScoreLegacy,
 };
 
 #[near]
@@ -14,7 +17,7 @@ pub struct AccountV1 {
     /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, Jar>,
-    pub score: AccountScore,
+    pub score: AccountScoreLegacy,
     pub is_penalty_applied: bool,
 }
 

@@ -119,8 +119,10 @@ mod score_tests {
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
             .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
-        context.contract().get_account_mut(&bob).score = AccountScore::new(Timezone::hour_shift(0));
+        context.contract().get_account_mut(&alice).score = AccountScore::default();
+        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
+        context.contract().get_account_mut(&bob).score = AccountScore::default();
+        context.contract().get_account_mut(&bob).timezone = Timezone::hour_shift(0);
 
         fn update_and_check(
             day: u64,
@@ -200,7 +202,8 @@ mod score_tests {
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
+        context.contract().get_account_mut(&alice).score = AccountScore::default();
+        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
 
         context.set_block_timestamp_in_days(5);
 
@@ -237,8 +240,10 @@ mod score_tests {
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
             .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
-        context.contract().get_account_mut(&bob).score = AccountScore::new(Timezone::hour_shift(0));
+        context.contract().get_account_mut(&alice).score = AccountScore::default();
+        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
+        context.contract().get_account_mut(&bob).score = AccountScore::default();
+        context.contract().get_account_mut(&bob).timezone = Timezone::hour_shift(0);
 
         for i in 0..=10 {
             context.set_block_timestamp_in_days(i);
@@ -288,7 +293,8 @@ mod score_tests {
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
+        context.contract().get_account_mut(&alice).score = AccountScore::default();
+        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
 
         for day in 0..=term_in_days {
             context.set_block_timestamp_in_days(day);
@@ -374,7 +380,7 @@ mod score_tests {
         let mut ctx = Context::new(admin.clone())
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(4);
+        ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(4);
 
         let check_score_interest = |ctx: &Context, val: u128| {
             assert_eq!(ctx.contract().get_score(alice.clone()), Some(U128(val)));
@@ -424,7 +430,7 @@ mod score_tests {
         let mut ctx = Context::new(admin.clone())
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(4);
+        ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(4);
 
         ctx.record_score(&alice, UTC(0), 25000);
         ctx.record_score(&alice, UTC(0), 25000);
@@ -483,29 +489,30 @@ mod score_tests {
 
 mod account_score_tests {
     use near_sdk::env::block_timestamp_ms;
-    use sweat_jar_model::{data::account::Account, Chain, Day};
+    use sweat_jar_model::{
+        convert_to_days_offset, data::account::Account, DailyScore, Day, ScoreIncrementProcessor, ScoreIncrements,
+    };
 
     use super::*;
-    use crate::feature::account::model::AccountScoreUpdate;
 
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
     const TODAY: u64 = 1_722_234_632_000;
 
     #[fixture]
-    fn chain() -> Chain {
-        let today: Day = TODAY.into();
+    fn increments() -> ScoreIncrements {
+        let today: UTC = TODAY.into();
 
         vec![
             (1_000, today),
-            (1_000, today - (MS_IN_HOUR * 3).into()),
-            (1_000, today - (MS_IN_HOUR * 12).into()),
-            (1_000, today - (MS_IN_HOUR * 25).into()),
-            (1_000, today - (MS_IN_HOUR * 28).into()),
-            (1_000, today - (MS_IN_HOUR * 40).into()),
-            (1_000, today - (MS_IN_HOUR * 45).into()),
-            (1_000, today - (MS_IN_HOUR * 48).into()),
-            (1_000, today - (MS_IN_HOUR * 55).into()),
-            (1_000, today - (MS_IN_HOUR * 550).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 3)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 12)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 25)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 28)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 40)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 45)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 48)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 55)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 550)).into()),
         ]
     }
     #[fixture]
@@ -517,15 +524,19 @@ mod account_score_tests {
     fn test_account_score(
         mut context: Context,
         #[from(product_10_days_20_cap_score_based)] product: Product,
-        chain: Chain,
+        increments: ScoreIncrements,
     ) {
         let mut now = TODAY;
         context.set_block_timestamp_in_ms(now);
 
-        let mut score = AccountScore::new(TIMEZONE);
-        score.update(chain);
+        let segmented_increments = ScoreIncrementProcessor::new(&increments, TIMEZONE).process();
+        let normalized_increments = convert_to_days_offset(segmented_increments.valid, TIMEZONE);
+
+        let mut score = AccountScore::default();
+        score.update(normalized_increments);
         let mut account = Account {
             score,
+            timezone: TIMEZONE,
             ..Account::default()
         };
 
@@ -539,66 +550,65 @@ mod account_score_tests {
         context.set_block_timestamp_in_ms(now);
         assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
 
-        assert_eq!(vec![2000, 3000], account.score.reset_score().score);
+        assert_eq!(vec![2000, 3000], account.score.settle(TIMEZONE));
         assert_eq!(0.00, product.terms.get_apy(&account).to_f32());
     }
 
     #[rstest]
-    #[should_panic(expected = "Walk data from future")]
+    #[should_panic(expected = "Timestamp from future: Local(1722331832000). Now: Local(1722245432000)")]
     fn steps_from_future(mut context: Context) {
         context.set_block_timestamp_in_ms(TODAY);
 
-        let mut account_score = AccountScore::new(TIMEZONE);
-        account_score.update(vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())]);
+        let increments = vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())];
+        let segmented_increments = ScoreIncrementProcessor::new(&increments, TIMEZONE).process();
+        let normalized_increments = convert_to_days_offset(segmented_increments.valid, TIMEZONE);
+
+        let mut account_score = AccountScore::default();
+        account_score.update(normalized_increments);
     }
 
     #[rstest]
     fn updated_on_different_days(mut context: Context) {
-        let mut score = AccountScore {
-            updated: UTC(MS_IN_DAY * 10),
-            timezone: Timezone::hour_shift(0),
-            scores: [1000, 2000],
-            scores_history: [1000, 2000],
-        };
+        let timezone = Timezone::hour_shift(0);
+        let mut score = AccountScore::new(UTC(MS_IN_DAY * 10), [DailyScore::new(1000), DailyScore::new(2000)]);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
-        score.update(vec![(6, (MS_IN_DAY * 10).into()), (5, (MS_IN_DAY * 9).into())]);
+        let increments = vec![(6, (MS_IN_DAY * 10).into()), (5, (MS_IN_DAY * 9).into())];
+        let segmented_increments = ScoreIncrementProcessor::new(&increments, timezone).process();
+        let normalized_increments = convert_to_days_offset(segmented_increments.valid.clone(), timezone);
+        score.update(normalized_increments);
 
-        assert_eq!(score.updated, (MS_IN_DAY * 10).into());
+        assert_eq!(score.updated_at(), MS_IN_DAY * 10);
         assert_eq!(score.scores(), (1006, 2005));
-        assert_eq!(score.reset_score().score, vec![2005]);
-        assert_eq!(score.active_score(), 2005);
+        assert_eq!(score.settle(timezone), vec![2005]);
+        assert_eq!(score.get_last_finalized_score(timezone), 2005);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 11);
-        assert_eq!(score.reset_score().score, vec![1006, 0]);
-        assert_eq!(score.active_score(), 1006);
+        assert_eq!(score.settle(timezone), vec![1006, 0]);
+        assert_eq!(score.get_last_finalized_score(timezone), 1006);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 12);
-        assert_eq!(score.reset_score().score, vec![0, 0]);
-        assert_eq!(score.active_score(), 0);
+        assert_eq!(score.settle(timezone), vec![0, 0]);
+        assert_eq!(score.get_last_finalized_score(timezone), 0);
     }
 
     #[rstest]
     fn active_score(mut context: Context) {
-        let score = AccountScore {
-            updated: UTC(MS_IN_DAY * 10),
-            timezone: Timezone::hour_shift(0),
-            scores: [1000, 2000],
-            scores_history: [1000, 2000],
-        };
+        let timezone = Timezone::hour_shift(0);
+        let score = AccountScore::new(UTC(MS_IN_DAY * 10), [DailyScore::new(1000), DailyScore::new(2000)]);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
-        assert_eq!(score.active_score(), 2000);
+        assert_eq!(score.get_last_finalized_score(timezone), 2000);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 11);
 
-        assert_eq!(score.active_score(), 1000);
+        assert_eq!(score.get_last_finalized_score(timezone), 1000);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 12);
 
-        assert_eq!(score.active_score(), 0);
+        assert_eq!(score.get_last_finalized_score(timezone), 0);
     }
 }
 

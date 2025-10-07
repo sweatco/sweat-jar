@@ -2,10 +2,14 @@ use std::collections::HashMap;
 
 use near_sdk::near;
 
-use crate::data::{
-    jar::{Jar, JarCompanion},
-    product::ProductId,
-    score::AccountScore,
+use crate::{
+    data::{
+        booster::BoosterIndex,
+        jar::{Jar, JarCompanion},
+        product::ProductId,
+        score::AccountScore,
+    },
+    DailyScore, DurationDays, Timezone, DAYS_STORED,
 };
 
 use super::{
@@ -19,8 +23,17 @@ pub struct AccountV2 {
     /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, Jar>,
+    pub timezone: Timezone,
     pub score: AccountScore,
     pub features: Features,
+    pub booster: Option<AppliedBooster>,
+}
+
+#[near]
+#[derive(Default, Debug, PartialEq, Clone)]
+pub struct AppliedBooster {
+    pub index: BoosterIndex,
+    pub applied_at: DurationDays,
 }
 
 #[near(serializers=[json])]
@@ -40,8 +53,10 @@ impl From<AccountV1> for AccountV2 {
         Self {
             nonce: value.nonce,
             jars: value.jars,
-            score: value.score,
+            timezone: value.score.timezone,
+            score: value.score.into(),
             features,
+            booster: None,
         }
     }
 }

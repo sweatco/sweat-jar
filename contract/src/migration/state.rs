@@ -1,4 +1,4 @@
-use near_sdk::{collections::UnorderedMap, near, store::LookupMap, AccountId};
+use near_sdk::{collections::UnorderedMap, env, near, store::LookupMap, AccountId};
 use std::collections::HashMap;
 use sweat_jar_model::{
     data::{
@@ -37,7 +37,11 @@ impl Contract {
             products_cache: HashMap::default().into(),
             fee_amount: old_state.fee_amount,
             previous_version_account_id: old_state.previous_version_account_id,
-            boosters: Boosters::new(StorageKey::BoostersIndex, StorageKey::BoostersItems),
+            boosters: Boosters::new(
+                env::block_timestamp_ms(),
+                StorageKey::BoostersIndex,
+                StorageKey::BoostersItems,
+            ),
         }
     }
 }
