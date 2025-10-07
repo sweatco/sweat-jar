@@ -7,7 +7,10 @@ use near_sdk::{
 
 use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UDecimal, UTC};
 
+mod booster;
 mod common;
+
+pub use booster::BoostedScore;
 
 pub const DAYS_STORED: usize = 2;
 
