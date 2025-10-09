@@ -19,6 +19,7 @@ impl TermsApi for Terms {
             Terms::Fixed(terms) => deposit.is_liquid(now, terms.lockup_term.0),
             Terms::Flexible(_) => true,
             Terms::ScoreBased(terms) => deposit.is_liquid(now, terms.lockup_term.0),
+            Terms::TieredScoreBased(terms) => deposit.is_liquid(now, terms.lockup_term.0),
         }
     }
 }

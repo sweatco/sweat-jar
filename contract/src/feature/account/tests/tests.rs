@@ -175,7 +175,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied(
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let products = context.contract().get_products();
-    assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Downgradable(_)));
+    assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Tier(_)));
 
     context.switch_account_to_manager();
     context

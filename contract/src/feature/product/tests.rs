@@ -8,13 +8,11 @@ use sweat_jar_model::{
     data::{
         account::Account,
         jar::Jar,
-        product::{
-            Apy, DowngradableApy, FixedProductTerms, Product, ProductAssertions, ProductModelApi, Terms, WithdrawalFee,
-        },
+        product::{Apy, FixedProductTerms, Product, ProductAssertions, ProductModelApi, Terms, WithdrawalFee},
     },
     interest::InterestCalculator,
     signer::test_utils::MessageSigner,
-    Timestamp, UDecimal, MS_IN_YEAR,
+    Timestamp, UDecimal, ValueTier, MS_IN_YEAR,
 };
 
 use crate::{
@@ -111,7 +109,7 @@ fn register_downgradable_product(
 
     assert_eq!(
         product.get_base_apy().clone(),
-        Apy::Downgradable(DowngradableApy {
+        Apy::Tier(ValueTier {
             default: UDecimal::new(20_000, 5),
             fallback: UDecimal::new(10_000, 5),
         })

@@ -48,7 +48,9 @@ impl Contract {
     fn update_score_based_jars_cache(&mut self, account_id: &AccountId) {
         self.update_account_cache(
             &account_id,
-            Some(|product: &Product| matches!(product.terms, Terms::ScoreBased(_))),
+            Some(|product: &Product| {
+                matches!(product.terms, Terms::ScoreBased(_)) || matches!(product.terms, Terms::TieredScoreBased(_))
+            }),
         );
     }
 }

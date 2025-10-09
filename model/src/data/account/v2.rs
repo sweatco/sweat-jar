@@ -9,7 +9,7 @@ use crate::{
         product::ProductId,
         score::AccountScore,
     },
-    DailyScore, DurationDays, Timezone, DAYS_STORED,
+    DurationDays, Timezone,
 };
 
 use super::{
@@ -20,7 +20,6 @@ use super::{
 #[near]
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct AccountV2 {
-    /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, Jar>,
     pub timezone: Timezone,

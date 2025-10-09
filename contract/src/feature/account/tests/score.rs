@@ -34,6 +34,8 @@ use crate::{
 };
 
 mod score_tests {
+    use sweat_jar_model::data::account::{versioned::AccountVersioned, Account};
+
     use super::*;
     use crate::Contract;
 
@@ -496,7 +498,13 @@ mod score_tests {
 mod account_score_tests {
     use near_sdk::env::block_timestamp_ms;
     use sweat_jar_model::{
-        convert_to_days_offset, data::account::Account, DailyScore, Day, ScoreIncrementProcessor, ScoreIncrements,
+        convert_to_days_offset,
+        data::account::{
+            features::{self, Feature},
+            versioned::AccountVersioned,
+            Account,
+        },
+        DailyScore, Day, ScoreIncrementProcessor, ScoreIncrements,
     };
 
     use super::*;
@@ -615,6 +623,95 @@ mod account_score_tests {
         context.set_block_timestamp_in_ms(MS_IN_DAY * 12);
 
         assert_eq!(score.get_last_finalized_score(timezone), 0);
+    }
+
+    #[rstest]
+    fn claim_from_tiered_score_jar_with_increased_cap_fearure(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        context.switch_account_to_manager();
+
+        context
+            .contract()
+            .accounts
+            .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+        context
+            .contract()
+            .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
+        context.contract().set_timezone(alice.clone(), 0.into());
+        context.contract().deposit(
+            alice.clone(),
+            DepositTicket {
+                product_id: product.id.clone(),
+                valid_until: MS_IN_YEAR.into(),
+                timezone: Some(Timezone::hour_shift(0)),
+            },
+            365_000.to_otto(),
+            None,
+        );
+
+        context.set_block_timestamp_in_ms(0);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(25_000, 0.into())])]);
+
+        context.set_block_timestamp_in_ms(MS_IN_DAY + MS_IN_HOUR);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(30_000, MS_IN_DAY.into())])]);
+
+        context.set_block_timestamp_in_ms(2 * MS_IN_DAY + MS_IN_HOUR);
+        let interest = context.contract().get_total_interest(alice.clone());
+        assert_eq!(400.to_otto(), interest.amount.total.0);
+    }
+
+    #[rstest]
+    fn claim_from_tiered_score_jar_with_increased_cap_fearure_disabled_later(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        context.switch_account_to_manager();
+
+        context
+            .contract()
+            .accounts
+            .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+        context
+            .contract()
+            .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
+        context.contract().set_timezone(alice.clone(), 0.into());
+        context.contract().deposit(
+            alice.clone(),
+            DepositTicket {
+                product_id: product.id.clone(),
+                valid_until: MS_IN_YEAR.into(),
+                timezone: Some(Timezone::hour_shift(0)),
+            },
+            365_000.to_otto(),
+            None,
+        );
+
+        context.set_block_timestamp_in_ms(0);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(25_000, 0.into())])]);
+
+        context.set_block_timestamp_in_ms(MS_IN_DAY + MS_IN_HOUR);
+        context
+            .contract()
+            .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, false);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(30_000, MS_IN_DAY.into())])]);
+
+        context.set_block_timestamp_in_ms(2 * MS_IN_DAY + MS_IN_HOUR);
+        let interest = context.contract().get_total_interest(alice.clone());
+        assert_eq!(300.to_otto(), interest.amount.total.0);
     }
 }
 
