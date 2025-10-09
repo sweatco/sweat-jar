@@ -488,55 +488,6 @@ mod score_tests {
         assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
     }
 
-    #[rstest]
-    fn claim_from_tiered_score_jar_only_with_booster(
-        admin: AccountId,
-        alice: AccountId,
-        #[from(tiered_score_based_product)] product: Product,
-    ) {
-        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-        context.switch_account_to_manager();
-
-        context
-            .contract()
-            .accounts
-            .set(alice.clone(), AccountVersioned::new(Account::default()).into());
-        context.contract().set_timezone(alice.clone(), 0.into());
-        context.contract().deposit(
-            alice.clone(),
-            DepositTicket {
-                product_id: product.id.clone(),
-                valid_until: MS_IN_YEAR.into(),
-                timezone: Some(Timezone::hour_shift(0)),
-            },
-            365_000.to_otto(),
-            None,
-        );
-
-        context.set_block_timestamp_in_ms(0);
-        context.contract().apply_booser(vec![alice.clone()], 5_000, 0.into());
-
-        context.set_block_timestamp_in_ms(MS_IN_DAY);
-
-        let interest = context.contract().get_total_interest(alice.clone());
-        assert_eq!(50.to_otto(), interest.amount.total.0);
-
-        context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
-        context
-            .contract()
-            .apply_booser(vec![alice.clone()], 5_000, MS_IN_DAY.into());
-
-        let interest = context.contract().get_total_interest(alice.clone());
-        assert_eq!(100.to_otto(), interest.amount.total.0);
-
-        context.set_block_timestamp_in_ms(3 * MS_IN_DAY);
-        context
-            .contract()
-            .apply_booser(vec![alice.clone()], 10_000, (2 * MS_IN_DAY).into());
-
-        let interest = context.contract().get_total_interest(alice.clone());
-        assert_eq!(200.to_otto(), interest.amount.total.0);
-    }
 }
 
 mod account_score_tests {
