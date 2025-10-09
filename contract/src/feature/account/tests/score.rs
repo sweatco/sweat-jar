@@ -489,7 +489,7 @@ mod score_tests {
     }
 
     #[rstest]
-    fn claim_from_tiered_score_jar(
+    fn claim_from_tiered_score_jar_only_with_booster(
         admin: AccountId,
         alice: AccountId,
         #[from(tiered_score_based_product)] product: Product,
@@ -513,16 +513,22 @@ mod score_tests {
             None,
         );
 
-        context.set_block_timestamp_in_hours(12);
+        context.set_block_timestamp_in_ms(0);
+        context.contract().apply_booser(vec![alice.clone()], 5_000, 0.into());
+
+        context.set_block_timestamp_in_ms(MS_IN_DAY);
+
+        let interest = context.contract().get_total_interest(alice.clone());
+        let accrual_after_one_day: u128 = 50.to_otto();
+        assert_eq!(accrual_after_one_day, interest.amount.total.0);
+
+        context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
         context
             .contract()
-            .apply_booser(vec![alice.clone()], 5_000, (12 * MS_IN_HOUR).into());
+            .apply_booser(vec![alice.clone()], 5_000, MS_IN_DAY.into());
 
-        context.set_block_timestamp_in_hours(25);
         let interest = context.contract().get_total_interest(alice.clone());
-
-        let accrual_after_one_day: u128 = 50.to_otto();
-        assert_eq!(accrual_after_one_day, interest.amount.total.0)
+        assert_eq!(2 * accrual_after_one_day, interest.amount.total.0)
     }
 }
 
