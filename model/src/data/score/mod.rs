@@ -27,6 +27,13 @@ impl ToAPY for Score {
     }
 }
 
+impl ToAPY for u32 {
+    /// 1000 scores = 1%
+    fn to_apy(self) -> UDecimal {
+        UDecimal::new(self.into(), 5)
+    }
+}
+
 #[derive(Default)]
 pub struct ScoreRecord {
     pub score: Vec<Score>,
@@ -140,6 +147,19 @@ impl AccountScore {
                 .collect(),
             updated: self.updated_at,
         }
+    }
+
+    pub fn get_pending_boosters(&self) -> Score {
+        self.history
+            .iter()
+            .map(|item| {
+                if item.booster.is_claimed() {
+                    0
+                } else {
+                    item.booster.get_value()
+                }
+            })
+            .sum()
     }
 
     pub fn get_last_finalized_score(&self, timezone: Timezone) -> Score {
