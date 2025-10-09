@@ -27,6 +27,13 @@ impl ToAPY for Score {
     }
 }
 
+impl ToAPY for u32 {
+    /// 1000 scores = 1%
+    fn to_apy(self) -> UDecimal {
+        UDecimal::new(self.into(), 5)
+    }
+}
+
 #[derive(Default)]
 pub struct ScoreRecord {
     pub score: Vec<Score>,

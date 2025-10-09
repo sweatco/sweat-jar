@@ -1,14 +1,16 @@
 #[cfg(test)]
 pub mod test_utils {
+    use std::default;
+
     use near_sdk::json_types::U128;
     use rstest::fixture;
     use sweat_jar_model::{
         data::product::{
             Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, ProductId, ScoreBasedProductTerms, Terms,
-            WithdrawalFee,
+            TieredScoreBasedProductTerms, WithdrawalFee,
         },
         signer::test_utils::MessageSigner,
-        TokenAmount, UDecimal, ValueTier, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
+        ConfigurableValue, TokenAmount, UDecimal, ValueTier, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
     };
 
     use crate::common::testing::TokenUtils;
@@ -20,6 +22,19 @@ pub mod test_utils {
     pub struct ProtectedProduct {
         pub product: Product,
         pub signer: MessageSigner,
+    }
+
+    #[fixture]
+    pub fn tiered_score_based_product(product: Product) -> Product {
+        product
+            .with_id("product_ts_1_year_20_10_cap".to_string())
+            .with_terms(Terms::TieredScoreBased(TieredScoreBasedProductTerms {
+                lockup_term: (365 * MS_IN_DAY).into(),
+                score_cap: ConfigurableValue::Tier(ValueTier {
+                    default: 20_000,
+                    fallback: 10_000,
+                }),
+            }))
     }
 
     #[fixture]

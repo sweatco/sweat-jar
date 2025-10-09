@@ -158,6 +158,8 @@ impl InterestCalculator for ScoreBasedProductTerms {
 impl InterestCalculator for TieredScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
         let score = account.score.get_pending_scores(account.timezone).score;
+        let booster = account.score.get_pending_boosters();
+
         let cap = match self.score_cap {
             ConfigurableValue::Constant(value) => value,
             ConfigurableValue::Tier(value) => {
@@ -168,9 +170,10 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
                 }
             }
         };
-        let total_score: Score = score.iter().map(|score| score.min(&cap)).sum();
 
-        (total_score + account.score.get_pending_boosters()).min(100).to_apy()
+        let total_score: u32 = score.into_iter().map(|score| score.min(cap) as u32).sum::<u32>() + booster as u32;
+
+        total_score.min(100_000).to_apy()
     }
 
     fn get_interest_calculation_term(

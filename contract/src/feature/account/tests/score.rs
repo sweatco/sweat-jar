@@ -32,6 +32,8 @@ use crate::{
 };
 
 mod score_tests {
+    use sweat_jar_model::data::account::{versioned::AccountVersioned, Account};
+
     use super::*;
 
     #[rstest]
@@ -484,6 +486,43 @@ mod score_tests {
         ctx.set_block_timestamp_in_ms(1_733_140_384_365); // Mon Dec 02 2024 11:53:04
 
         assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
+    }
+
+    #[rstest]
+    fn claim_from_tiered_score_jar(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        context.switch_account_to_manager();
+
+        context
+            .contract()
+            .accounts
+            .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+        context.contract().set_timezone(alice.clone(), 0.into());
+        context.contract().deposit(
+            alice.clone(),
+            DepositTicket {
+                product_id: product.id.clone(),
+                valid_until: MS_IN_YEAR.into(),
+                timezone: Some(Timezone::hour_shift(0)),
+            },
+            365_000.to_otto(),
+            None,
+        );
+
+        context.set_block_timestamp_in_hours(12);
+        context
+            .contract()
+            .apply_booser(vec![alice.clone()], 5_000, (12 * MS_IN_HOUR).into());
+
+        context.set_block_timestamp_in_hours(25);
+        let interest = context.contract().get_total_interest(alice.clone());
+
+        let accrual_after_one_day: u128 = 50.to_otto();
+        assert_eq!(accrual_after_one_day, interest.amount.total.0)
     }
 }
 
