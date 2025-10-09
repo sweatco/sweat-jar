@@ -519,8 +519,7 @@ mod score_tests {
         context.set_block_timestamp_in_ms(MS_IN_DAY);
 
         let interest = context.contract().get_total_interest(alice.clone());
-        let accrual_after_one_day: u128 = 50.to_otto();
-        assert_eq!(accrual_after_one_day, interest.amount.total.0);
+        assert_eq!(50.to_otto(), interest.amount.total.0);
 
         context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
         context
@@ -528,7 +527,15 @@ mod score_tests {
             .apply_booser(vec![alice.clone()], 5_000, MS_IN_DAY.into());
 
         let interest = context.contract().get_total_interest(alice.clone());
-        assert_eq!(2 * accrual_after_one_day, interest.amount.total.0)
+        assert_eq!(100.to_otto(), interest.amount.total.0);
+
+        context.set_block_timestamp_in_ms(3 * MS_IN_DAY);
+        context
+            .contract()
+            .apply_booser(vec![alice.clone()], 10_000, (2 * MS_IN_DAY).into());
+
+        let interest = context.contract().get_total_interest(alice.clone());
+        assert_eq!(200.to_otto(), interest.amount.total.0);
     }
 }
 
