@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use near_sdk::near;
+use strum::IntoEnumIterator;
 
 use super::Account;
 use crate::{
@@ -15,6 +16,7 @@ pub struct AccountView {
     pub jars: HashMap<ProductId, JarView>,
     pub score: AccountScore,
     pub is_penalty_applied: bool,
+    pub features: HashMap<Feature, bool>,
 }
 
 impl From<Account> for AccountView {
@@ -28,6 +30,9 @@ impl From<Account> for AccountView {
                 .collect(),
             score: value.score,
             is_penalty_applied: !value.features.is_feature_enabled(&Feature::IncreasedApy),
+            features: Feature::iter()
+                .map(|feature| (feature, value.features.is_feature_enabled(&feature)))
+                .collect(),
         }
     }
 }
