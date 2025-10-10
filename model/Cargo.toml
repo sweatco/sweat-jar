@@ -28,6 +28,8 @@ ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true, optional = true }
 sha2 = "0.10.8"
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [dev-dependencies]
 fake = { workspace = true }

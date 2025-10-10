@@ -1,8 +1,9 @@
 use near_sdk::near;
+use strum::{Display, EnumIter};
 
 #[near(serializers = [json])]
 #[serde(rename_all = "snake_case")]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumIter, Display)]
 pub enum Feature {
     IncreasedApy,
     IncreasedScoreCap,
