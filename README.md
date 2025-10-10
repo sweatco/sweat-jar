@@ -68,7 +68,7 @@ Integration tests crate contains `measure` module which can be used to measure r
 
 #### 3.1. To measure a single call you need to:
 - Create a method: `(Input) -> anyhow::Result<Gas>`.
-- In this method prepere context and everything required for the call.
+- In this method prepare context and everything required for the call.
 - Wrap the call you want to measure in `OutcomeStorage::measure`.
 - Pass a label, it is any text which can be found in logs of this method and identify it.
 - Pass calling account id.

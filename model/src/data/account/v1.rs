@@ -11,10 +11,9 @@ use crate::{
     AccountScoreLegacy,
 };
 
-#[near]
+#[near(serializers=[borsh, json])]
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct AccountV1 {
-    /// TODO: doc change for BE migration
     pub nonce: u32,
     pub jars: HashMap<ProductId, Jar>,
     pub score: AccountScoreLegacy,

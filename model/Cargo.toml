@@ -1,6 +1,6 @@
 [package]
 name = "sweat-jar-model"
-version = "4.0.6"
+version = "4.0.7"
 publish = false
 edition = "2021"
 
@@ -28,6 +28,8 @@ ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true, optional = true }
 sha2 = "0.10.8"
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [dev-dependencies]
 fake = { workspace = true }

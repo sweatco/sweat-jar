@@ -11,13 +11,15 @@ use nitka::near_sdk::json_types::{Base64VecU8, I64, U128};
 use nitka::near_sdk::*;
 use nitka_proc::make_integration_version;
 
+use crate::data::jar::JarsView;
 use crate::{
     data::{
         account::features::Feature,
         booster::Booster,
+        account::view::AccountView,
         claim::ClaimedAmountView,
         deposit::DepositTicket,
-        jar::{AggregatedInterestView, JarsView},
+        jar::AggregatedInterestView,
         product::{Product, ProductId},
         withdraw::{BulkWithdrawView, WithdrawView},
     },
@@ -71,6 +73,8 @@ pub trait AccountApi {
     ///
     /// A `Vec<JarView>` containing details about all deposit jars belonging to the specified account.
     fn get_jars_for_account(&self, account_id: AccountId) -> JarsView;
+
+    fn get_account(&self, account_id: AccountId) -> Option<AccountView>;
 
     /// Retrieves the total interest amount across all deposit jars for a provided account.
     ///

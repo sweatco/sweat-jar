@@ -114,7 +114,7 @@ async fn restake_many_jars() -> Result<()> {
     let mut original_dates: Vec<u64> = original_jars
         .0
         .values()
-        .flat_map(|deposits| deposits.iter().map(|(timestamp, _)| timestamp))
+        .flat_map(|deposits| deposits.iter().map(|(timestamp, _)| &timestamp.0))
         .cloned()
         .collect();
     original_dates.sort();
@@ -144,7 +144,7 @@ async fn restake_many_jars() -> Result<()> {
     assert_eq!(1, restaked_jars.get_total_deposits_number());
     let restake_date = restaked_jars.0.get(&product_id).unwrap().first().unwrap().0;
 
-    assert!(*original_date_latest < restake_date);
+    assert!(*original_date_latest < restake_date.0);
 
     Ok(())
 }

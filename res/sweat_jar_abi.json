@@ -2,7 +2,7 @@
   "schema_version": "0.4.0",
   "metadata": {
     "name": "sweat_jar",
-    "version": "4.0.6",
+    "version": "4.0.7",
     "authors": [
       "Sweat Economy"
     ],
@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "5s8ukxbb5tw3wvTwYkrGZi6HLdr7uaDKJg9nhnVNqmak"
+    "wasm_hash": "2zc9dkSPQGYtpyYShjZR7KuWwx53G4RPtjvmHQPNXZvc"
   },
   "body": {
     "functions": [
@@ -318,6 +318,34 @@
           "serialization_type": "json",
           "type_schema": {
             "$ref": "#/definitions/PromiseOrValueString"
+          }
+        }
+      },
+      {
+        "name": "get_account",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/AccountView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -967,6 +995,41 @@
                   "type": "null"
                 }
               ]
+            }
+          }
+        },
+        "AccountView": {
+          "type": "object",
+          "required": [
+            "features",
+            "is_penalty_applied",
+            "jars",
+            "nonce",
+            "score"
+          ],
+          "properties": {
+            "features": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              }
+            },
+            "is_penalty_applied": {
+              "type": "boolean"
+            },
+            "jars": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/JarView"
+              }
+            },
+            "nonce": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "score": {
+              "$ref": "#/definitions/AccountScore"
             }
           }
         },
@@ -1799,6 +1862,21 @@
             }
           }
         },
+        "JarCacheView": {
+          "type": "object",
+          "required": [
+            "interest",
+            "updated_at"
+          ],
+          "properties": {
+            "interest": {
+              "type": "string"
+            },
+            "updated_at": {
+              "type": "string"
+            }
+          }
+        },
         "JarCompanion": {
           "type": "object",
           "properties": {
@@ -1844,6 +1922,48 @@
             }
           }
         },
+        "JarView": {
+          "type": "object",
+          "required": [
+            "claim_remainder",
+            "deposits",
+            "is_pending_withdraw"
+          ],
+          "properties": {
+            "cache": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/JarCacheView"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claim_remainder": {
+              "type": "string"
+            },
+            "deposits": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "string"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            },
+            "is_pending_withdraw": {
+              "type": "boolean"
+            }
+          }
+        },
         "JarsView": {
           "type": "object",
           "additionalProperties": {
@@ -1852,9 +1972,7 @@
               "type": "array",
               "items": [
                 {
-                  "type": "integer",
-                  "format": "uint64",
-                  "minimum": 0.0
+                  "type": "string"
                 },
                 {
                   "type": "string"

@@ -1,19 +1,42 @@
 use std::collections::HashMap;
 
-use near_sdk::{json_types::U128, near, Timestamp};
+use near_sdk::{
+    json_types::{U128, U64},
+    near, Timestamp,
+};
 
 use crate::{
     data::{account::Account, product::ProductId},
     TokenAmount,
 };
 
+use super::{Deposit, Jar, JarCache};
+
 #[near(serializers=[json])]
 #[derive(Clone, Debug, PartialEq, Default)]
-pub struct JarsView(pub HashMap<ProductId, Vec<(Timestamp, U128)>>);
+pub struct JarsView(pub HashMap<ProductId, Vec<DepositView>>);
 
-pub struct DepositView(ProductId, Timestamp, TokenAmount);
+#[near(serializers=[json])]
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct JarView {
+    pub deposits: Vec<DepositView>,
+    pub cache: Option<JarCacheView>,
+    pub is_pending_withdraw: bool,
+    pub claim_remainder: U64,
+}
 
-impl DepositView {
+#[near(serializers=[json])]
+#[derive(Clone, Debug, PartialEq, Default)]
+pub struct JarCacheView {
+    pub updated_at: U64,
+    pub interest: U128,
+}
+
+pub type DepositView = (U64, U128); // Timestamp, TokenAmount
+
+pub struct CompatDepositView(ProductId, Timestamp, TokenAmount);
+
+impl CompatDepositView {
     pub fn product_id(&self) -> ProductId {
         self.0.clone()
     }
@@ -39,12 +62,16 @@ impl JarsView {
             .sum()
     }
 
-    pub fn get_last_deposit(&self) -> Option<DepositView> {
-        self.list_deposits().into_iter().max_by_key(DepositView::timestamp)
+    pub fn get_last_deposit(&self) -> Option<CompatDepositView> {
+        self.list_deposits()
+            .into_iter()
+            .max_by_key(CompatDepositView::timestamp)
     }
 
-    pub fn get_first_deposit(&self) -> Option<DepositView> {
-        self.list_deposits().into_iter().min_by_key(DepositView::timestamp)
+    pub fn get_first_deposit(&self) -> Option<CompatDepositView> {
+        self.list_deposits()
+            .into_iter()
+            .min_by_key(CompatDepositView::timestamp)
     }
 
     pub fn get_total_principal_for_product(&self, product_id: &ProductId) -> TokenAmount {
@@ -67,13 +94,13 @@ impl JarsView {
         self.0.is_empty()
     }
 
-    fn list_deposits(&self) -> Vec<DepositView> {
+    fn list_deposits(&self) -> Vec<CompatDepositView> {
         self.0
             .iter()
             .flat_map(|(product_id, deposits)| {
                 deposits
                     .iter()
-                    .map(move |(timestamp, principal)| DepositView(product_id.clone(), *timestamp, principal.0))
+                    .map(move |(timestamp, principal)| CompatDepositView(product_id.clone(), timestamp.0, principal.0))
             })
             .collect()
     }
@@ -88,10 +115,7 @@ impl From<&Account> for JarsView {
                 .map(|(product_id, jar)| {
                     (
                         product_id.clone(),
-                        jar.deposits
-                            .iter()
-                            .map(|deposit| (deposit.created_at, deposit.principal.into()))
-                            .collect(),
+                        jar.deposits.iter().cloned().map(DepositView::from).collect(),
                     )
                 })
                 .collect(),
@@ -120,4 +144,30 @@ impl Default for AggregatedTokenAmountView {
 pub struct AggregatedInterestView {
     pub amount: AggregatedTokenAmountView,
     pub timestamp: Timestamp,
+}
+
+impl From<Jar> for JarView {
+    fn from(value: Jar) -> Self {
+        JarView {
+            deposits: value.deposits.into_iter().map(DepositView::from).collect(),
+            cache: value.cache.map(JarCacheView::from),
+            is_pending_withdraw: value.is_pending_withdraw,
+            claim_remainder: value.claim_remainder.into(),
+        }
+    }
+}
+
+impl From<Deposit> for DepositView {
+    fn from(value: Deposit) -> Self {
+        (value.created_at.into(), value.principal.into())
+    }
+}
+
+impl From<JarCache> for JarCacheView {
+    fn from(value: JarCache) -> Self {
+        JarCacheView {
+            updated_at: value.updated_at.into(),
+            interest: value.interest.into(),
+        }
+    }
 }

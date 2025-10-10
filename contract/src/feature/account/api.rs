@@ -1,7 +1,7 @@
 use std::{collections::HashMap, convert::Into};
 
 use near_sdk::{
-    env::{self, panic_str},
+    env::{self},
     json_types::{I64, U128},
     near, AccountId,
 };
@@ -9,7 +9,7 @@ use sweat_jar_model::{
     api::AccountApi,
     convert_to_days_offset,
     data::{
-        account::{common::FeaturesAccess, features::Feature, Account},
+        account::{common::FeaturesAccess, features::Feature, view::AccountView, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
         score::Score,
@@ -63,6 +63,10 @@ impl AccountApi for Contract {
         }
 
         JarsView::default()
+    }
+
+    fn get_account(&self, account_id: AccountId) -> Option<AccountView> {
+        self.try_get_account(&account_id).map(|account| account.clone().into())
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
