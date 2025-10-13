@@ -1,4 +1,4 @@
-use nitka::misc::ToNear;
+use nitka::{json, misc::ToNear};
 use sweat_jar_model::{
     api::*,
     data::{
@@ -35,6 +35,17 @@ async fn premium_product() -> anyhow::Result<()> {
         .sweat_jar()
         .register_product(product.clone())
         .with_user(&manager)
+        .await?;
+
+    let _ = manager
+        .call(context.sweat_jar().contract.id(), "set_feature_enabled")
+        .args_json(json!({
+            "account_id": alice.id(),
+            "feature": "increased_apy",
+            "enabled": true
+        }))
+        .max_gas()
+        .transact()
         .await?;
 
     let product_id = &product.id;

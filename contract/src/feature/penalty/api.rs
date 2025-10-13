@@ -1,7 +1,5 @@
 use near_sdk::{env, near, AccountId};
-use sweat_jar_model::{
-    data::account::{common::FeaturesAccess, features::Feature},
-};
+use sweat_jar_model::data::account::{common::FeaturesAccess, features::Feature};
 
 #[allow(deprecated)]
 use sweat_jar_model::api::PenaltyApi;
