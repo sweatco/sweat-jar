@@ -15,7 +15,6 @@ use sweat_jar_model::{
         jar::{AggregatedTokenAmountView, Jar, JarView},
         product::{Apy, Product, ProductId},
     },
-
     Timezone,
 };
 
@@ -33,6 +32,30 @@ use crate::{
     },
     Contract,
 };
+
+#[rstest]
+fn set_timezone_before_deposit(admin: AccountId, alice: AccountId) {
+    let mut context = Context::new(admin);
+
+    context.switch_account_to_manager();
+    context.contract().set_timezone(alice.clone(), 1.into());
+
+    let alice = context.contract().get_account(&alice).clone();
+    assert!(alice.timezone.is_valid());
+}
+
+#[rstest]
+fn enable_feature_before_deposit(admin: AccountId, alice: AccountId) {
+    let mut context = Context::new(admin);
+
+    context.switch_account_to_manager();
+    context
+        .contract()
+        .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
+
+    let alice = context.contract().get_account(&alice).clone();
+    assert!(alice.features.is_feature_enabled(&Feature::IncreasedScoreCap));
+}
 
 #[rstest]
 fn get_total_interest_with_no_jars(admin: AccountId, alice: AccountId) {
