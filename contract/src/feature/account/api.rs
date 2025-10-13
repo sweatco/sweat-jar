@@ -149,16 +149,18 @@ impl AccountApi for Contract {
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {
         self.assert_manager();
 
-        let account = self.get_account_mut(&account_id);
+        let account = self.get_or_create_account_mut(&account_id);
         account.try_set_timezone(Some(Timezone::new(timezone.0)));
     }
 
     fn set_feature_enabled(&mut self, account_id: AccountId, feature: Feature, enabled: bool) {
         self.assert_manager();
 
-        self.update_account_cache(&account_id, None);
+        if self.accounts.contains_key(&account_id) {
+            self.update_account_cache(&account_id, None);
+        }
 
-        let account = self.get_account_mut(&account_id);
+        let account = self.get_or_create_account_mut(&account_id);
         account.set_feature_enabled(&feature, enabled);
 
         emit(EventKind::SetFeatureEnabled(account_id, feature, enabled));
