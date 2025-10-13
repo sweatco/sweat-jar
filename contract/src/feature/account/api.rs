@@ -116,7 +116,7 @@ impl AccountApi for Contract {
         emit(EventKind::RecordScore(event));
     }
 
-    fn apply_booser(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC) {
+    fn apply_booster(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC) {
         self.assert_manager();
 
         let mut applied = vec![];

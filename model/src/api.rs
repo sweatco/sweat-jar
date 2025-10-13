@@ -14,8 +14,8 @@ use nitka_proc::make_integration_version;
 use crate::data::jar::JarsView;
 use crate::{
     data::{
-        account::view::AccountView,
         account::features::Feature,
+        account::view::AccountView,
         booster::Booster,
         claim::ClaimedAmountView,
         deposit::DepositTicket,
@@ -107,7 +107,7 @@ pub trait AccountApi {
     /// - This function will panic if a product associated with a jar does not exist.
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
 
-    fn apply_booser(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC);
+    fn apply_booster(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC);
 
     /// Return users timezone if user has any score based jars
     fn get_timezone(&self, account_id: AccountId) -> Option<I64>;
