@@ -9,7 +9,7 @@ use sweat_jar_model::{
     api::AccountApi,
     convert_to_days_offset,
     data::{
-        account::{common::FeaturesAccess, features::Feature, view::AccountView, Account},
+        account::{common::FeaturesAccess, features::Feature, v2::AppliedBooster, view::AccountView, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
         score::Score,
@@ -19,7 +19,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    common::event::{emit, EventKind, ScoreData},
+    common::event::{emit, ApplyBoosterData, EventKind, ScoreData},
     Contract, ContractExt,
 };
 
@@ -119,21 +119,35 @@ impl AccountApi for Contract {
     fn apply_booser(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC) {
         self.assert_manager();
 
-        for account_id in account_ids {
-            self.assert_timezone_is_set(&account_id);
-            self.get_account(&account_id).timezone.assert_not_future(timestamp);
+        let mut applied = vec![];
+        let mut rejected = vec![];
 
-            self.update_score_based_jars_cache(&account_id);
+        for account_id in account_ids.iter() {
+            self.assert_timezone_is_set(account_id);
+            self.get_account(account_id).timezone.assert_not_future(timestamp);
 
-            let account = self.get_account_mut(&account_id);
+            self.update_score_based_jars_cache(account_id);
+
+            let account = self.get_account_mut(account_id);
             account.score.settle(account.timezone);
             account.assert_no_pending_score();
 
             let adjusted_timestamp = account.timezone.adjust(timestamp);
             let days_offset = (account.timezone.today().0 - adjusted_timestamp.day().0) as DaysOffset;
 
-            account.score.apply_booster(days_offset, score);
+            if account.score.apply_booster(days_offset, score) {
+                applied.push(account_id.clone());
+            } else {
+                rejected.push(account_id.clone());
+            }
         }
+
+        emit(EventKind::ApplyBooster(ApplyBoosterData {
+            applied,
+            rejected,
+            timestamp,
+            score,
+        }));
     }
 
     fn get_timezone(&self, account_id: AccountId) -> Option<I64> {

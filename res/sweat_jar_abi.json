@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.7.1"
     },
-    "wasm_hash": "2zc9dkSPQGYtpyYShjZR7KuWwx53G4RPtjvmHQPNXZvc"
+    "wasm_hash": "Cnojj8H6RWd6YefsjGt9oRgrn1XbHXzHwQ32e8VEzNyx"
   },
   "body": {
     "functions": [
@@ -1068,6 +1068,37 @@
             }
           }
         },
+        "ApplyBoosterData": {
+          "type": "object",
+          "required": [
+            "applied",
+            "rejected",
+            "score",
+            "timestamp"
+          ],
+          "properties": {
+            "applied": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            "rejected": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            "score": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "timestamp": {
+              "$ref": "#/definitions/UTC"
+            }
+          }
+        },
         "Base64VecU8": {
           "description": "Helper class to serialize/deserialize `Vec<u8>` to base64 string.\n\n# Example ```rust use near_sdk::{json_types::Base64VecU8, near};\n\n#[near(serializers=[json])] struct NewStruct { field: Base64VecU8, } ```",
           "type": "array",
@@ -1795,6 +1826,24 @@
                   "type": "string",
                   "enum": [
                     "batch_set_feature_enabled"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/ApplyBoosterData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "apply_booster"
                   ]
                 }
               }

@@ -34,6 +34,7 @@ pub enum EventKind {
     MigrateProducts(Vec<ProductId>),
     SetFeatureEnabled(AccountId, Feature, bool),
     BatchSetFeatureEnabled(Vec<AccountId>, Feature, bool),
+    ApplyBooster(ApplyBoosterData),
 }
 
 #[derive(Debug)]
@@ -176,6 +177,15 @@ pub struct ChangeProductPublicKeyData {
 pub struct ScoreData {
     pub account_id: AccountId,
     pub score: Vec<(Score, Local)>,
+}
+
+#[derive(Debug, Clone)]
+#[near(serializers=[json])]
+pub struct ApplyBoosterData {
+    pub applied: Vec<AccountId>,
+    pub rejected: Vec<AccountId>,
+    pub timestamp: UTC,
+    pub score: Score,
 }
 
 impl From<EventKind> for SweatJarEvent {
