@@ -1,8 +1,10 @@
 use near_sdk::{env, near, AccountId};
 use sweat_jar_model::{
-    api::PenaltyApi,
     data::account::{common::FeaturesAccess, features::Feature},
 };
+
+#[allow(deprecated)]
+use sweat_jar_model::api::PenaltyApi;
 
 use crate::{
     common::event::{
@@ -14,6 +16,7 @@ use crate::{
 };
 
 #[near]
+#[allow(deprecated)]
 impl PenaltyApi for Contract {
     fn set_penalty(&mut self, account_id: AccountId, value: bool) {
         self.assert_manager();

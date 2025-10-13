@@ -106,7 +106,7 @@ fn claim_from_tiered_score_jar_with_mixed_regular_and_boosted_score(
         .contract()
         .record_score(vec![(alice.clone(), vec![(25_000, 0.into())])]);
 
-    // Day 1: Apply booster (5,000) for yestarday
+    // Day 1: Apply booster (5,000) for yesterday
     context.set_block_timestamp_in_ms(MS_IN_DAY);
     context.contract().apply_booster(vec![alice.clone()], 5_000, 0.into());
 

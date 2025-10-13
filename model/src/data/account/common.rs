@@ -7,7 +7,7 @@ use crate::{
         product::{Product, ProductId},
     },
     interest::InterestCalculator,
-    AccountScore, Timestamp, Timezone, TokenAmount,
+    Timestamp, Timezone, TokenAmount,
 };
 
 use super::{Account, AccountCompanion};

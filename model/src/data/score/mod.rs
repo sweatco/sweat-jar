@@ -1,5 +1,3 @@
-use std::u16;
-
 use near_sdk::{
     env::{block_timestamp_ms, panic_str},
     near,
@@ -96,6 +94,7 @@ impl AccountScore {
         &mut self.history[days_ago as usize]
     }
 
+    #[allow(dead_code)]
     fn set(&mut self, days_ago: DaysOffset, score: DailyScore) {
         self.assert_in_bounds(days_ago as usize);
         self.history[days_ago as usize] = score;
@@ -104,8 +103,8 @@ impl AccountScore {
     fn add(&mut self, days_ago: DaysOffset, increment: Score) {
         let score = self.get_mut(days_ago);
 
-        score.pending = score.pending.checked_add(increment).unwrap_or(u16::MAX);
-        score.total = score.total.checked_add(increment).unwrap_or(u16::MAX);
+        score.pending = score.pending.saturating_add(increment);
+        score.total = score.total.saturating_add(increment);
     }
 
     pub fn apply_booster(&mut self, days_ago: DaysOffset, value: Score) -> bool {
@@ -134,6 +133,7 @@ impl AccountScore {
         result
     }
 
+    #[allow(clippy::unused_self)]
     fn assert_in_bounds(&self, index: usize) {
         if index >= DAYS_STORED {
             panic_str(format!("{index} is out of range. Only store {DAYS_STORED} days.").as_str());
@@ -183,10 +183,10 @@ impl AccountScore {
             vec![self.settle_at(0), self.settle_at(1)]
         };
 
-        if days_since_last_update == 1 {
-            self.shift();
-        } else if days_since_last_update > 1 {
-            self.wipe();
+        match days_since_last_update.cmp(&1) {
+            std::cmp::Ordering::Equal => self.shift(),
+            std::cmp::Ordering::Greater => self.wipe(),
+            std::cmp::Ordering::Less => {}
         }
 
         self.updated_at = block_timestamp_ms().into();
@@ -218,7 +218,8 @@ impl AccountScore {
     }
 
     pub fn get_days_number_since_last_update(&self, timezone: Timezone) -> DaysOffset {
-        (timezone.today().0 - self.get_update_day(timezone).0) as DaysOffset
+        DaysOffset::try_from(timezone.today().0 - self.get_update_day(timezone).0)
+            .unwrap_or_else(|_| panic_str("Failed to calculate days offset"))
     }
 }
 
@@ -271,16 +272,20 @@ pub struct SegmentedScoreIncrements {
 pub fn convert_to_days_offset(input: Vec<(Score, Local)>, timezone: Timezone) -> Vec<(Score, DaysOffset)> {
     input
         .iter()
-        .map(|increment| (increment.0, (timezone.today().0 - increment.1.day().0) as _))
+        .map(|increment| {
+            let days_offset = DaysOffset::try_from(timezone.today().0 - increment.1.day().0)
+                .unwrap_or_else(|_| panic_str("Failed to calculate days offset"));
+            (increment.0, days_offset)
+        })
         .collect()
 }
 
 impl From<AccountScoreLegacy> for AccountScore {
     fn from(value: AccountScoreLegacy) -> Self {
         let mut history = [DailyScore::default(); DAYS_STORED];
-        for i in 0..DAYS_STORED {
-            history[i].pending = value.scores[i];
-            history[i].total = value.scores_history[i];
+        for (i, item) in history.iter_mut().enumerate().take(DAYS_STORED) {
+            item.pending = value.scores[i];
+            item.total = value.scores_history[i];
         }
 
         Self {

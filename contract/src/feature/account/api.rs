@@ -9,7 +9,7 @@ use sweat_jar_model::{
     api::AccountApi,
     convert_to_days_offset,
     data::{
-        account::{common::FeaturesAccess, features::Feature, v2::AppliedBooster, view::AccountView, Account},
+        account::{common::FeaturesAccess, features::Feature, view::AccountView, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
         score::Score,
@@ -47,7 +47,7 @@ impl Contract {
 
     fn update_score_based_jars_cache(&mut self, account_id: &AccountId) {
         self.update_account_cache(
-            &account_id,
+            account_id,
             Some(|product: &Product| {
                 matches!(product.terms, Terms::ScoreBased(_)) || matches!(product.terms, Terms::TieredScoreBased(_))
             }),
@@ -122,7 +122,7 @@ impl AccountApi for Contract {
         let mut applied = vec![];
         let mut rejected = vec![];
 
-        for account_id in account_ids.iter() {
+        for account_id in &account_ids {
             self.assert_timezone_is_set(account_id);
             self.get_account(account_id).timezone.assert_not_future(timestamp);
 
@@ -133,7 +133,8 @@ impl AccountApi for Contract {
             account.assert_no_pending_score();
 
             let adjusted_timestamp = account.timezone.adjust(timestamp);
-            let days_offset = (account.timezone.today().0 - adjusted_timestamp.day().0) as DaysOffset;
+            let days_offset = DaysOffset::try_from(account.timezone.today().0 - adjusted_timestamp.day().0)
+                .unwrap_or_else(|_| panic_str("Failed to calculate days offset"));
 
             if account.score.apply_booster(days_offset, score) {
                 applied.push(account_id.clone());

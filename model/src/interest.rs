@@ -171,7 +171,7 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
             }
         };
 
-        let total_score: u32 = score.into_iter().map(|score| score.min(cap) as u32).sum::<u32>() + booster as u32;
+        let total_score: u32 = score.into_iter().map(|score| u32::from(score.min(cap))).sum::<u32>() + u32::from(booster);
 
         total_score.min(100_000).to_apy()
     }

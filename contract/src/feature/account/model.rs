@@ -1,6 +1,3 @@
-use sweat_jar_model::{convert_to_days_offset, data::account::Account, ScoreIncrementProcessor, ScoreIncrements};
-
-use crate::common::event::{emit, EventKind};
 
 #[cfg(test)]
 pub(crate) mod test_utils {

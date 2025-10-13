@@ -68,10 +68,7 @@ impl Timezone {
         let adjusted_timestamp = self.adjust(timestamp);
 
         if adjusted_timestamp > now {
-            panic_str(&format!(
-                "Timestamp from future: {:?}. Now: {:?}",
-                adjusted_timestamp, now
-            ));
+            panic_str(&format!("Timestamp from future: {adjusted_timestamp:?}. Now: {now:?}"));
         }
     }
 }

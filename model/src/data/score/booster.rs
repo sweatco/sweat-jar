@@ -28,7 +28,7 @@ impl BoostedScore {
     /// ```
     pub fn new(score: Score, is_claimed: bool) -> Self {
         let normalized_score = score / 10;
-        let claimed_bit = if is_claimed { 1 } else { 0 };
+        let claimed_bit = u16::from(is_claimed);
         Self((normalized_score << 1) | claimed_bit)
     }
 
