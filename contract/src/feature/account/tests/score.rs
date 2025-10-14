@@ -1,7 +1,5 @@
 #![cfg(test)]
 
-use std::collections::HashMap;
-
 use fake::Fake;
 use near_sdk::{
     json_types::{I64, U128},
@@ -13,7 +11,7 @@ use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{
         deposit::DepositTicket,
-        jar::{Jar, JarView},
+        jar::Jar,
         product::{Product, ProductId},
         withdraw::WithdrawView,
     },
@@ -30,14 +28,11 @@ use crate::{
         },
     },
     feature::{account::model::test_utils::jar, product::model::test_utils::*},
-    Contract, StorageKey,
+    StorageKey,
 };
 
 mod score_tests {
-    use sweat_jar_model::data::account::{versioned::AccountVersioned, Account};
-
     use super::*;
-    use crate::Contract;
 
     #[rstest]
     #[should_panic(expected = "Can be performed only by admin")]
@@ -376,6 +371,24 @@ mod score_tests {
     }
 
     #[rstest]
+    #[should_panic(expected = "Timezone is not set for account 'alice.near'")]
+    fn test_score_recording_before_before_tizone_is_set(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_10_days_20_cap_score_based)] product: Product,
+        #[with(vec![(0, 100)])] jar: Jar,
+    ) {
+        let mut context = Context::new(admin.clone())
+            .with_products(&[product.clone()])
+            .with_latest_account(&alice, &[(product.id.clone(), jar)]);
+
+        context.switch_account_to_manager();
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(0, 10_000.into())])]);
+    }
+
+    #[rstest]
     fn test_steps_history(
         admin: AccountId,
         alice: AccountId,
@@ -497,14 +510,11 @@ mod score_tests {
 
 mod account_score_tests {
     use near_sdk::env::block_timestamp_ms;
+    use sweat_jar_model::ScoreIncrementProcessor;
     use sweat_jar_model::{
         convert_to_days_offset,
-        data::account::{
-            features::{self, Feature},
-            versioned::AccountVersioned,
-            Account,
-        },
-        DailyScore, Day, ScoreIncrementProcessor, ScoreIncrements,
+        data::account::{features::Feature, versioned::AccountVersioned, Account},
+        DailyScore, ScoreIncrements,
     };
 
     use super::*;

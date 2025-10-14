@@ -7,8 +7,10 @@ use near_sdk::{
     AccountId,
 };
 use rstest::rstest;
+#[allow(deprecated)]
+use sweat_jar_model::api::PenaltyApi;
 use sweat_jar_model::{
-    api::{AccountApi, ClaimApi, PenaltyApi, ProductApi, WithdrawApi},
+    api::{AccountApi, ClaimApi, ProductApi, WithdrawApi},
     data::{
         account::features::Feature,
         deposit::DepositTicket,
@@ -177,6 +179,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
     let mut interest = context.contract().get_total_interest(alice.clone()).amount.total.0;
     assert_eq!(interest, 10_000_000);
 
+    #[allow(deprecated)]
     context.contract().set_penalty(alice.clone(), true);
 
     context.set_block_timestamp_in_ms(31_536_000_000);
@@ -186,6 +189,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
 }
 
 #[rstest]
+#[allow(deprecated)]
 fn get_total_interest_for_premium_with_multiple_penalties_applied(
     admin: AccountId,
     alice: AccountId,
@@ -319,7 +323,7 @@ fn set_timezone_by_not_manager(
     #[from(product_1_year_12_percent)] product: Product,
     #[with(vec![(0, 100_000_000)])] jar: Jar,
 ) {
-    let mut context = Context::new(admin)
+    let context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 

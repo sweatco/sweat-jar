@@ -1,4 +1,3 @@
-
 #[cfg(test)]
 pub(crate) mod test_utils {
     use rstest::fixture;
@@ -21,26 +20,10 @@ pub(crate) mod test_utils {
     }
 
     pub(crate) trait JarBuilder {
-        fn with_deposit(self, created_at: Timestamp, principal: TokenAmount) -> Self;
-        fn with_deposits(self, deposits: Vec<(Timestamp, TokenAmount)>) -> Self;
         fn with_pending_withdraw(self) -> Self;
     }
 
     impl JarBuilder for Jar {
-        fn with_deposit(mut self, created_at: Timestamp, principal: TokenAmount) -> Self {
-            self.deposits.push(Deposit::new(created_at, principal));
-            self
-        }
-
-        fn with_deposits(mut self, deposits: Vec<(Timestamp, TokenAmount)>) -> Self {
-            self.deposits.extend(
-                deposits
-                    .into_iter()
-                    .map(|(created_at, deposit)| Deposit::new(created_at, deposit)),
-            );
-            self
-        }
-
         fn with_pending_withdraw(mut self) -> Self {
             self.is_pending_withdraw = true;
             self

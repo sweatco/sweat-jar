@@ -9,7 +9,7 @@ use sweat_jar_model::{
         deposit::DepositTicket,
         product::Product,
     },
-    BoostedScore, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+    BoostedScore, Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
 };
 
 use crate::{

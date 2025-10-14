@@ -25,6 +25,7 @@ pub struct OldState {
 impl Contract {
     #[private]
     #[init(ignore_state)]
+    #[mutants::skip]
     pub fn migrate_state() -> Self {
         let old_state: OldState = near_sdk::env::state_read().expect("Failed to read old state");
 

@@ -2,8 +2,10 @@
 
 use near_sdk::AccountId;
 use rstest::rstest;
+#[allow(deprecated)]
+use sweat_jar_model::api::PenaltyApi;
 use sweat_jar_model::{
-    api::{AccountApi, PenaltyApi},
+    api::AccountApi,
     data::{account::features::Feature, jar::Jar},
     MS_IN_YEAR,
 };
@@ -14,6 +16,7 @@ use crate::{
 };
 
 #[rstest]
+#[allow(deprecated)]
 fn apply_penalty_in_batch(
     admin: AccountId,
     alice: AccountId,

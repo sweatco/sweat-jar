@@ -1,7 +1,7 @@
 use near_sdk::{test_utils::test_env::alice, AccountId};
 use rstest::rstest;
 use sweat_jar_model::{
-    api::{AccountApi, ClaimApi, ProductApi, RestakeApi},
+    api::{ClaimApi, ProductApi, RestakeApi},
     data::{
         deposit::{DepositMessage, DepositTicket, Purpose},
         jar::Jar,

@@ -231,10 +231,6 @@ impl WhitespaceTrimmer for String {
     }
 }
 
-pub(crate) trait DefaultBuilder {
-    fn new() -> Self;
-}
-
 pub trait AfterCatchUnwind {
     fn after_catch_unwind(&self);
 }
