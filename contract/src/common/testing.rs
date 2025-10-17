@@ -310,3 +310,101 @@ mod tests {
         context.contract().update_contract(vec![], None);
     }
 }
+
+#[cfg(feature = "integration-test")]
+mod integration_tests {
+    use std::{cell::RefCell, collections::HashMap};
+
+    use near_sdk::{
+        borsh::{BorshDeserialize, BorshSerialize},
+        collections::UnorderedMap,
+        near,
+        store::LookupMap,
+        AccountId,
+    };
+    use sweat_jar_model::{
+        data::{
+            account::versioned::AccountVersioned,
+            product::{Product, ProductId},
+        },
+        TokenAmount,
+    };
+
+    use crate::{feature::booster::model::Boosters, Contract};
+
+    #[near]
+    impl InitApi for Contract {
+        #[init]
+        #[private]
+        fn init(
+            token_account_id: AccountId,
+            fee_account_id: AccountId,
+            manager: AccountId,
+            previous_version_account_id: AccountId,
+        ) -> Self {
+            Self {
+                token_account_id,
+                fee_account_id,
+                manager,
+                products: UnorderedMap::new(StorageKey::Products),
+                products_cache: HashMap::default().into(),
+                accounts: LookupMap::new(StorageKey::Accounts),
+                fee_amount: 0,
+                previous_version_account_id,
+                boosters: Boosters::new(
+                    env::block_timestamp_ms(),
+                    StorageKey::BoostersIndex,
+                    StorageKey::BoostersItems,
+                ),
+                time_scale: 1.0,
+            }
+        }
+    }
+    #[near(serializers=[borsh])]
+    struct ContractSerdeHelper {
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        products: UnorderedMap<ProductId, Product>,
+        accounts: LookupMap<AccountId, AccountVersioned>,
+        fee_amount: TokenAmount,
+        previous_version_account_id: AccountId,
+        boosters: Boosters,
+        time_scale: f64,
+    }
+
+    impl From<ContractSerdeHelper> for Contract {
+        fn from(value: ContractSerdeHelper) -> Self {
+            Self {
+                token_account_id: value.token_account_id,
+                fee_account_id: value.fee_account_id,
+                manager: value.manager,
+                products: value.products,
+                accounts: value.accounts,
+                products_cache: RefCell::new(HashMap::new()),
+                fee_amount: value.fee_amount,
+                previous_version_account_id: value.previous_version_account_id,
+                boosters: value.boosters,
+                time_scale: value.time_scale,
+            }
+        }
+    }
+
+    impl BorshSerialize for Contract {
+        fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+            let helper: ContractSerdeHelper = self.into();
+            helper.serialize(writer)
+        }
+    }
+
+    impl BorshDeserialize for Contract {
+        fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+            let state = ContractSerdeHelper::deserialize_reader(reader)?;
+
+            // Sync time scale to global thread-local storage automatically on deserialization
+            sweat_jar_model::set_global_time_scale(state.time_scale);
+
+            Ok(state.into())
+        }
+    }
+}

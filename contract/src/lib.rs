@@ -23,9 +23,10 @@ mod migration;
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[near(contract_state)]
-#[derive(PanicOnDefault, SelfUpdate)]
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
+#[cfg_attr(not(feature = "integration-test"), near(contract_state))]
+#[cfg_attr(feature = "integration-test", near(contract_state, serializers = []))]
+#[derive(PanicOnDefault, SelfUpdate)]
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
     pub token_account_id: AccountId,
@@ -50,6 +51,17 @@ pub struct Contract {
     pub fee_amount: TokenAmount,
     pub previous_version_account_id: AccountId,
     pub boosters: Boosters,
+
+    /// Time scale for integration tests, stored in blockchain state.
+    /// This value is persisted and automatically synced to global thread-local storage on deserialization.
+    /// The actual time scale is accessed in code via ms_in_day()/ms_in_year() functions.
+    ///
+    /// Examples:
+    /// - `1.0` - Normal time (1 day = 24 hours)
+    /// - `1.0/24.0` - Accelerated 24x (1 day = 1 hour)
+    /// - `1.0/365.0` - Accelerated 365x (1 year = 1 day)
+    #[cfg(feature = "integration-test")]
+    pub time_scale: f64,
 }
 
 #[near]
@@ -62,6 +74,7 @@ pub(crate) enum StorageKey {
 }
 
 #[near]
+#[cfg(not(feature = "integration-test"))]
 impl InitApi for Contract {
     #[init]
     #[private]

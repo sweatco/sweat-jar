@@ -21,4 +21,10 @@ impl IntegrationTestMethods for Contract {
             account.deposit(&product_id, principal, (now + i as u64).into());
         }
     }
+
+    fn set_time_scale(&mut self, time_scale: f64) {
+        self.assert_manager();
+        self.time_scale = time_scale;
+        sweat_jar_model::set_global_time_scale(time_scale);
+    }
 }
