@@ -8,8 +8,7 @@ use crate::{
             FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
         },
     },
-    ConfigurableValue, Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal,
-    ms_in_day, ms_in_year,
+    ms_in_day, ms_in_year, ConfigurableValue, Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal,
 };
 
 // TODO: add tests
@@ -173,7 +172,8 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
             }
         };
 
-        let total_score: u32 = score.into_iter().map(|score| u32::from(score.min(cap))).sum::<u32>() + u32::from(booster);
+        let total_score: u32 =
+            score.into_iter().map(|score| u32::from(score.min(cap))).sum::<u32>() + u32::from(booster);
 
         total_score.min(100_000).to_apy()
     }

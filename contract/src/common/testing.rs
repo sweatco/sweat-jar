@@ -392,8 +392,17 @@ mod integration_tests {
 
     impl BorshSerialize for Contract {
         fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-            let helper: ContractSerdeHelper = self.into();
-            helper.serialize(writer)
+            // Directly serialize all fields in the same order as ContractSerdeHelper
+            self.token_account_id.serialize(writer)?;
+            self.fee_account_id.serialize(writer)?;
+            self.manager.serialize(writer)?;
+            self.products.serialize(writer)?;
+            self.accounts.serialize(writer)?;
+            self.fee_amount.serialize(writer)?;
+            self.previous_version_account_id.serialize(writer)?;
+            self.boosters.serialize(writer)?;
+            self.time_scale.serialize(writer)?;
+            Ok(())
         }
     }
 

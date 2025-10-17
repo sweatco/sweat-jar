@@ -88,7 +88,7 @@ pub fn ms_in_year() -> u64 {
 /// Trait for providing time-scaled constants for testing purposes.
 /// In production, this returns standard time constants.
 /// In integration tests, this can return scaled values to speed up time-dependent operations.
-/// 
+///
 /// DEPRECATED: Use the global ms_in_day() and ms_in_year() functions instead.
 pub trait TimeScale {
     fn ms_in_day(&self) -> u64;
@@ -110,7 +110,7 @@ impl TimeScale for StandardTimeScale {
 
 /// Scaled time with a specific value (for integration tests)
 /// time_scale is a multiplier: if 1/24, then a day happens in an hour
-/// 
+///
 /// DEPRECATED: Use set_global_time_scale() instead.
 #[cfg(feature = "integration-methods")]
 pub struct ScaledTimeValue {
