@@ -25,11 +25,6 @@
 //! let one_day = ms_in_day();
 //! ```
 //!
-//! ## Legacy TimeScale Trait
-//!
-//! The `TimeScale` trait is still available for backward compatibility, but the global functions
-//! are preferred for new code as they eliminate the need to pass `time_scale` as a parameter everywhere.
-
 use crate::{MS_IN_DAY, MS_IN_YEAR};
 
 #[cfg(feature = "integration-methods")]
@@ -83,54 +78,4 @@ pub fn ms_in_year() -> u64 {
 #[inline]
 pub fn ms_in_year() -> u64 {
     ((MS_IN_YEAR as f64) * get_time_scale()) as u64
-}
-
-/// Trait for providing time-scaled constants for testing purposes.
-/// In production, this returns standard time constants.
-/// In integration tests, this can return scaled values to speed up time-dependent operations.
-///
-/// DEPRECATED: Use the global ms_in_day() and ms_in_year() functions instead.
-pub trait TimeScale {
-    fn ms_in_day(&self) -> u64;
-    fn ms_in_year(&self) -> u64;
-}
-
-/// Standard time scale - returns unmodified time constants
-pub struct StandardTimeScale;
-
-impl TimeScale for StandardTimeScale {
-    fn ms_in_day(&self) -> u64 {
-        ms_in_day()
-    }
-
-    fn ms_in_year(&self) -> u64 {
-        ms_in_year()
-    }
-}
-
-/// Scaled time with a specific value (for integration tests)
-/// time_scale is a multiplier: if 1/24, then a day happens in an hour
-///
-/// DEPRECATED: Use set_global_time_scale() instead.
-#[cfg(feature = "integration-methods")]
-pub struct ScaledTimeValue {
-    scale: f64,
-}
-
-#[cfg(feature = "integration-methods")]
-impl ScaledTimeValue {
-    pub fn new(scale: f64) -> Self {
-        Self { scale }
-    }
-}
-
-#[cfg(feature = "integration-methods")]
-impl TimeScale for ScaledTimeValue {
-    fn ms_in_day(&self) -> u64 {
-        ((MS_IN_DAY as f64) * self.scale) as u64
-    }
-
-    fn ms_in_year(&self) -> u64 {
-        ((MS_IN_YEAR as f64) * self.scale) as u64
-    }
 }
