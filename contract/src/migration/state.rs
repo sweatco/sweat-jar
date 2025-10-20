@@ -1,5 +1,8 @@
 use near_sdk::{collections::UnorderedMap, env, near, store::LookupMap, AccountId};
 use std::collections::HashMap;
+
+#[cfg(feature = "integration-test")]
+use std::cell::RefCell;
 use sweat_jar_model::{
     data::{
         account::versioned::AccountVersioned,
@@ -22,6 +25,7 @@ pub struct OldState {
 }
 
 #[near]
+#[cfg(not(feature = "integration-test"))]
 impl Contract {
     #[private]
     #[init(ignore_state)]

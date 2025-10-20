@@ -8,7 +8,7 @@ use crate::{
             FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
         },
     },
-    ConfigurableValue, Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
+    ms_in_day, ms_in_year, ConfigurableValue, Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal,
 };
 
 // TODO: add tests
@@ -34,9 +34,10 @@ pub trait InterestCalculator {
                 (acc.0 + interest, acc.1 + remainder)
             });
 
+        let year_ms = ms_in_year();
         let total_remainder = jar.claim_remainder + remainder;
-        let remainder: u64 = total_remainder % MS_IN_YEAR;
-        let extra_interest = u128::from(total_remainder / MS_IN_YEAR);
+        let remainder: u64 = total_remainder % year_ms;
+        let extra_interest = u128::from(total_remainder / year_ms);
 
         (cached_interest + interest + extra_interest, remainder)
     }
@@ -151,7 +152,7 @@ impl InterestCalculator for ScoreBasedProductTerms {
             return 0;
         }
 
-        MS_IN_DAY
+        ms_in_day()
     }
 }
 
@@ -171,7 +172,8 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
             }
         };
 
-        let total_score: u32 = score.into_iter().map(|score| u32::from(score.min(cap))).sum::<u32>() + u32::from(booster);
+        let total_score: u32 =
+            score.into_iter().map(|score| u32::from(score.min(cap))).sum::<u32>() + u32::from(booster);
 
         total_score.min(100_000).to_apy()
     }
@@ -196,12 +198,12 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
             return 0;
         }
 
-        MS_IN_DAY
+        ms_in_day()
     }
 }
 
 fn get_interest(principal: TokenAmount, apy: UDecimal, term: Duration) -> (TokenAmount, u64) {
-    let ms_in_year: u128 = MS_IN_YEAR.into();
+    let year_ms: u128 = ms_in_year().into();
     let term_in_milliseconds: u128 = term.into();
 
     let yearly_interest = apy * principal;
@@ -209,8 +211,8 @@ fn get_interest(principal: TokenAmount, apy: UDecimal, term: Duration) -> (Token
 
     // This will never fail because `MS_IN_YEAR` is u64
     // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
-    let remainder: u64 = (interest % ms_in_year).try_into().unwrap();
-    let interest = interest / ms_in_year;
+    let remainder: u64 = (interest % year_ms).try_into().unwrap();
+    let interest = interest / year_ms;
 
     (interest, remainder)
 }

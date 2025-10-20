@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+mod booster;
+mod booster_performance;
 mod claim_detailed;
 mod context;
 mod fast_forward;
