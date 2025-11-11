@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use near_sdk::{AccountId, PromiseOrValue};
+use near_sdk::{serde_json, AccountId, PromiseOrValue};
 use rstest::rstest;
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi},
@@ -71,6 +71,11 @@ fn claim_from_tiered_score_jar_only_with_booster(
 
     let interest = context.contract().get_total_interest(alice.clone());
     assert_eq!(200.to_otto(), interest.amount.total.0);
+}
+
+#[rstest]
+fn test_json(#[from(tiered_score_based_product)] product: Product) {
+    dbg!(serde_json::to_string(&product).unwrap());
 }
 
 #[rstest]
