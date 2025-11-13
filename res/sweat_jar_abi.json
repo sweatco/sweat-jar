@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.9.0"
     },
-    "wasm_hash": "3qcV2pKXwHXEaztcFucQqnRRhrp24yTXgQX2jMwk19EJ"
+    "wasm_hash": "6MRvg3iNitS7zWJkSqJfNoJ9Yrpg6Pue28H3HMzzQYXY"
   },
   "body": {
     "functions": [
@@ -536,13 +536,6 @@
             }
           ]
         }
-      },
-      {
-        "name": "migrate_state",
-        "kind": "call",
-        "modifiers": [
-          "init"
-        ]
       },
       {
         "name": "record_score",

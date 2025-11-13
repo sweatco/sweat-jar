@@ -16,7 +16,6 @@ use crate::{
     data::{
         account::features::Feature,
         account::view::AccountView,
-        booster::Booster,
         claim::ClaimedAmountView,
         deposit::DepositTicket,
         jar::AggregatedInterestView,
@@ -289,13 +288,6 @@ pub trait WithdrawApi {
     /// Withdraws all jars for user, or only specified list of jars if `jars` argument is `Some`
     fn withdraw_all(&mut self, product_ids: Option<HashSet<ProductId>>)
         -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
-}
-
-#[make_integration_version]
-pub trait BoosterApi {
-    fn register_booster(&mut self, booster: Booster);
-
-    fn get_boosters(&self) -> Vec<Booster>;
 }
 
 #[cfg(feature = "integration-methods")]

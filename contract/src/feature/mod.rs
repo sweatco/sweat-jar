@@ -1,5 +1,4 @@
 pub mod account;
-pub mod booster;
 pub mod claim;
 pub mod fee;
 #[cfg(not(test))]

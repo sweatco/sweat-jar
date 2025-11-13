@@ -1,6 +1,5 @@
 use std::{cell::RefCell, collections::HashMap};
 
-use feature::booster::model::Boosters;
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -53,7 +52,6 @@ pub struct Contract {
 
     pub fee_amount: TokenAmount,
     pub previous_version_account_id: AccountId,
-    pub boosters: Boosters,
 }
 
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
@@ -171,11 +169,6 @@ impl InitApi for Contract {
             accounts: LookupMap::new(StorageKey::Accounts),
             fee_amount: 0,
             previous_version_account_id,
-            boosters: Boosters::new(
-                env::block_timestamp_ms(),
-                StorageKey::BoostersIndex,
-                StorageKey::BoostersItems,
-            ),
             #[cfg(feature = "integration-test")]
             time_scale: 1.0,
         }

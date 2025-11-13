@@ -4,12 +4,11 @@ use near_sdk::near;
 
 use crate::{
     data::{
-        booster::BoosterIndex,
         jar::{Jar, JarCompanion},
         product::ProductId,
         score::AccountScore,
     },
-    DurationDays, Timezone,
+    Timezone,
 };
 
 use super::{
@@ -25,14 +24,6 @@ pub struct AccountV2 {
     pub timezone: Timezone,
     pub score: AccountScore,
     pub features: Features,
-    pub booster: Option<AppliedBooster>,
-}
-
-#[near]
-#[derive(Default, Debug, PartialEq, Clone)]
-pub struct AppliedBooster {
-    pub index: BoosterIndex,
-    pub applied_at: DurationDays,
 }
 
 #[near(serializers=[json])]
@@ -55,7 +46,6 @@ impl From<AccountV1> for AccountV2 {
             timezone: value.score.timezone,
             score: value.score.into(),
             features,
-            booster: None,
         }
     }
 }
