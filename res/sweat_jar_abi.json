@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.9.0"
     },
-    "wasm_hash": "8BG1MJcHBZsWxPftfebeKRkVhW9XGPwM2MuogxVF3EXf"
+    "wasm_hash": "DSUoNAM5SCdtJDbc4s9MvKd9LB5qaKQMLu8ko57v9nr"
   },
   "body": {
     "functions": [
@@ -949,6 +949,24 @@
             }
           }
         },
+        "AccountScoreView": {
+          "type": "object",
+          "required": [
+            "history",
+            "updated_at"
+          ],
+          "properties": {
+            "history": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DailyScoreView"
+              }
+            },
+            "updated_at": {
+              "$ref": "#/definitions/UTC"
+            }
+          }
+        },
         "AccountV2Companion": {
           "type": "object",
           "properties": {
@@ -1023,7 +1041,7 @@
               "minimum": 0.0
             },
             "score": {
-              "$ref": "#/definitions/AccountScore"
+              "$ref": "#/definitions/AccountScoreView"
             },
             "timezone": {
               "$ref": "#/definitions/Timezone"
@@ -1307,6 +1325,31 @@
           "properties": {
             "booster": {
               "$ref": "#/definitions/BoostedScore"
+            },
+            "pending": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "total": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          }
+        },
+        "DailyScoreView": {
+          "type": "object",
+          "required": [
+            "booster",
+            "pending",
+            "total"
+          ],
+          "properties": {
+            "booster": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
             },
             "pending": {
               "type": "integer",

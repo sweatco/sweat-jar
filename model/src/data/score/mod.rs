@@ -49,6 +49,26 @@ pub struct DailyScore {
     pub booster: BoostedScore,
 }
 
+#[near(serializers=[json])]
+#[derive(Default, Debug, PartialEq, Clone)]
+pub struct DailyScoreView {
+    pub pending: Score,
+    pub total: Score,
+    pub booster: Score,
+    pub is_booster_claimed: bool,
+}
+
+impl From<DailyScore> for DailyScoreView {
+    fn from(value: DailyScore) -> Self {
+        Self {
+            pending: value.pending,
+            total: value.total,
+            booster: value.booster.get_value(),
+            is_booster_claimed: value.booster.is_claimed(),
+        }
+    }
+}
+
 impl DailyScore {
     pub fn new(value: Score) -> Self {
         Self {
@@ -73,6 +93,22 @@ pub struct AccountScoreLegacy {
 pub struct AccountScore {
     updated_at: UTC,
     history: [DailyScore; DAYS_STORED],
+}
+
+#[near(serializers=[json])]
+#[derive(Default, Debug, PartialEq, Clone)]
+pub struct AccountScoreView {
+    pub updated_at: UTC,
+    pub history: Vec<DailyScoreView>,
+}
+
+impl From<AccountScore> for AccountScoreView {
+    fn from(value: AccountScore) -> Self {
+        Self {
+            updated_at: value.updated_at,
+            history: value.history.iter().cloned().map(DailyScoreView::from).collect(),
+        }
+    }
 }
 
 impl AccountScore {
