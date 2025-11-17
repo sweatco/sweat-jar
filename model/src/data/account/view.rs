@@ -6,7 +6,7 @@ use strum::IntoEnumIterator;
 use super::Account;
 use crate::{
     data::{account::features::Feature, jar::JarView, product::ProductId},
-    AccountScore,
+    AccountScore, Timezone,
 };
 
 #[near(serializers=[json])]
@@ -17,6 +17,7 @@ pub struct AccountView {
     pub score: AccountScore,
     pub is_penalty_applied: bool,
     pub features: HashMap<Feature, bool>,
+    pub timezone: Timezone,
 }
 
 impl From<Account> for AccountView {
@@ -33,6 +34,7 @@ impl From<Account> for AccountView {
             features: Feature::iter()
                 .map(|feature| (feature, value.features.is_feature_enabled(&feature)))
                 .collect(),
+            timezone: value.timezone,
         }
     }
 }
