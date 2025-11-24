@@ -52,13 +52,13 @@ impl Contract {
 
     pub(crate) fn get_account(&self, account_id: &AccountId) -> &Account {
         self.try_get_account(account_id)
-            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found in smart cotract").as_str()))
     }
 
     pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
         self.accounts
             .get_mut(account_id)
-            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found in smart cotract").as_str()))
             .deref_mut()
     }
 
