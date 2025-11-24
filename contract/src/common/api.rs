@@ -51,7 +51,6 @@ impl IntegrationTestMethods for Contract {
                 account.timezone = timezone;
                 account.score = Default::default();
             }
-            account.booster = None;
             account.jars.remove(&product_id);
             account.deposit(&product_id, principal_value, Some(deposit_timestamp_ms));
 

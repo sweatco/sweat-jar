@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.9.0"
     },
-    "wasm_hash": "DSUoNAM5SCdtJDbc4s9MvKd9LB5qaKQMLu8ko57v9nr"
+    "wasm_hash": "JKYnt3jLD7ZQRW1e2uzdVQPUR8wpG3bPvwJAdS1m8Le"
   },
   "body": {
     "functions": [
@@ -1342,6 +1342,7 @@
           "type": "object",
           "required": [
             "booster",
+            "is_booster_claimed",
             "pending",
             "total"
           ],
@@ -1350,6 +1351,9 @@
               "type": "integer",
               "format": "uint16",
               "minimum": 0.0
+            },
+            "is_booster_claimed": {
+              "type": "boolean"
             },
             "pending": {
               "type": "integer",

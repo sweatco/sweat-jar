@@ -81,7 +81,6 @@ pub struct Contract {
 
     pub fee_amount: TokenAmount,
     pub previous_version_account_id: AccountId,
-    pub boosters: Boosters,
 
     /// Time scale for integration tests, stored in blockchain state.
     /// This value is persisted and automatically synced to global thread-local storage on deserialization.
@@ -104,7 +103,6 @@ impl BorshSerialize for Contract {
         self.accounts.serialize(writer)?;
         self.fee_amount.serialize(writer)?;
         self.previous_version_account_id.serialize(writer)?;
-        self.boosters.serialize(writer)?;
         self.time_scale.serialize(writer)?;
         Ok(())
     }
@@ -120,7 +118,6 @@ impl BorshDeserialize for Contract {
         let accounts = LookupMap::deserialize_reader(reader)?;
         let fee_amount = TokenAmount::deserialize_reader(reader)?;
         let previous_version_account_id = AccountId::deserialize_reader(reader)?;
-        let boosters = Boosters::deserialize_reader(reader)?;
         let time_scale = f64::deserialize_reader(reader)?;
 
         // Sync time scale to global thread-local storage automatically on deserialization
@@ -135,7 +132,6 @@ impl BorshDeserialize for Contract {
             products_cache: RefCell::new(HashMap::new()),
             fee_amount,
             previous_version_account_id,
-            boosters,
             time_scale,
         })
     }
@@ -146,8 +142,6 @@ impl BorshDeserialize for Contract {
 pub(crate) enum StorageKey {
     Products,
     Accounts,
-    BoostersIndex,
-    BoostersItems,
 }
 
 #[near]

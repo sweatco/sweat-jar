@@ -106,7 +106,7 @@ impl From<AccountScore> for AccountScoreView {
     fn from(value: AccountScore) -> Self {
         Self {
             updated_at: value.updated_at,
-            history: value.history.iter().cloned().map(DailyScoreView::from).collect(),
+            history: value.history.iter().copied().map(DailyScoreView::from).collect(),
         }
     }
 }
