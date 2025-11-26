@@ -506,6 +506,106 @@ mod score_tests {
 
         assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
     }
+
+    #[rstest]
+    fn record_multiple_scores_exceeding_cap_for_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract().get_or_create_account_mut(&alice).deposit(
+            &product.id,
+            365_000_000_000_000_000_000,
+            star_time.into(),
+        );
+        ctx.contract()
+            .get_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        let action_time = star_time + MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 1: record score_1: score_1 < score_cap
+        {
+            ctx.switch_account_to_manager();
+            ctx.contract().record_score(vec![(
+                alice.clone(),
+                vec![(15_000, (action_time - 5 * MS_IN_HOUR).into())],
+            )]);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(150_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+
+        // STEP 2: record score_2: (score_1 + score_2) > score_cap
+        {
+            ctx.switch_account_to_manager();
+            ctx.contract().record_score(vec![(
+                alice.clone(),
+                vec![(15_000, (action_time - 5 * MS_IN_HOUR).into())],
+            )]);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(30_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+    }
+
+    #[rstest]
+    fn record_multiple_scores_exceeding_cap_for_tiered_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract().get_or_create_account_mut(&alice).deposit(
+            &product.id,
+            365_000_000_000_000_000_000,
+            star_time.into(),
+        );
+        ctx.contract()
+            .get_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        let action_time = star_time + MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 1: record score_1: score_1 < score_cap
+        {
+            ctx.switch_account_to_manager();
+            ctx.contract().record_score(vec![(
+                alice.clone(),
+                vec![(7_000, (action_time - 5 * MS_IN_HOUR).into())],
+            )]);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(70_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+
+        // STEP 2: record score_2: (score_1 + score_2) > score_cap
+        {
+            ctx.switch_account_to_manager();
+            ctx.contract().record_score(vec![(
+                alice.clone(),
+                vec![(5_000, (action_time - 5 * MS_IN_HOUR).into())],
+            )]);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(30_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+    }
 }
 
 mod account_score_tests {

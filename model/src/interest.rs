@@ -8,10 +8,9 @@ use crate::{
             FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
         },
     },
-    ms_in_day, ms_in_year, ConfigurableValue, Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal,
+    ms_in_day, ms_in_year, ConfigurableValue, Duration, Timestamp, ToAPY, TokenAmount, UDecimal,
 };
 
-// TODO: add tests
 pub trait InterestCalculator {
     fn get_interest(&self, account: &Account, jar: &Jar, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
@@ -126,10 +125,10 @@ impl InterestCalculator for FlexibleProductTerms {
 
 impl InterestCalculator for ScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        let score = account.score.get_pending_scores(account.timezone).score;
-        let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
-
-        total_score.to_apy()
+        account
+            .score
+            .get_capped_pending_score(account.timezone, self.score_cap)
+            .to_apy()
     }
 
     fn get_interest_calculation_term(
@@ -158,9 +157,6 @@ impl InterestCalculator for ScoreBasedProductTerms {
 
 impl InterestCalculator for TieredScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        let score = account.score.get_pending_scores(account.timezone).score;
-        let booster = account.score.get_pending_boosters();
-
         let cap = match self.score_cap {
             ConfigurableValue::Constant(value) => value,
             ConfigurableValue::Tier(value) => {
@@ -172,8 +168,10 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
             }
         };
 
-        let total_score: u32 =
-            score.into_iter().map(|score| u32::from(score.min(cap))).sum::<u32>() + u32::from(booster);
+        let pending_score = account.score.get_capped_pending_score(account.timezone, cap);
+        let booster = account.score.get_pending_boosters();
+
+        let total_score: u32 = u32::from(pending_score) + u32::from(booster);
 
         total_score.min(100_000).to_apy()
     }

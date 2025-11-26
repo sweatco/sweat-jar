@@ -32,12 +32,6 @@ impl ToAPY for u32 {
     }
 }
 
-#[derive(Default)]
-pub struct ScoreRecord {
-    pub score: Vec<Score>,
-    pub updated: UTC,
-}
-
 pub type ScoreIncrement = (Score, UTC);
 pub type ScoreIncrements = Vec<ScoreIncrement>;
 
@@ -76,6 +70,10 @@ impl DailyScore {
             total: value,
             booster: BoostedScore::default(),
         }
+    }
+
+    pub fn settled_score(&self) -> Score {
+        self.total - self.pending
     }
 }
 
@@ -176,15 +174,18 @@ impl AccountScore {
         }
     }
 
-    pub fn get_pending_scores(&self, timezone: Timezone) -> ScoreRecord {
-        ScoreRecord {
-            score: self
-                .get_finalized_scores(timezone)
-                .iter()
-                .filter_map(|item| if item.pending == 0 { None } else { Some(item.pending) })
-                .collect(),
-            updated: self.updated_at,
-        }
+    pub fn get_capped_pending_score(&self, timezone: Timezone, total_cap: Score) -> Score {
+        self.get_finalized_scores(timezone)
+            .iter()
+            .map(|item| {
+                if item.total <= total_cap {
+                    item.pending
+                } else {
+                    let settled = item.total - item.pending;
+                    total_cap.saturating_sub(settled)
+                }
+            })
+            .sum()
     }
 
     pub fn get_pending_boosters(&self) -> Score {
