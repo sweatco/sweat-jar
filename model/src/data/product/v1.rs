@@ -151,4 +151,8 @@ impl Terms {
             Terms::TieredScoreBased(terms) => Some(terms.lockup_term.0),
         }
     }
+
+    pub fn is_score_based(&self) -> bool {
+        matches!(self, Terms::ScoreBased(_) | Terms::TieredScoreBased(_))
+    }
 }

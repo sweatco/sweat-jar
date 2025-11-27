@@ -163,6 +163,7 @@ impl AccountScore {
     fn settle_at(&mut self, days_ago: DaysOffset) -> Score {
         let result = self.get(days_ago).pending;
         self.get_mut(days_ago).pending = 0;
+        self.get_mut(days_ago).booster.set_claimed(true);
 
         result
     }
@@ -188,8 +189,15 @@ impl AccountScore {
             .sum()
     }
 
-    pub fn get_pending_boosters(&self) -> Score {
-        self.history
+    pub fn get_capped_total_finalized_score(&self, timezone: Timezone, total_cap: Score) -> Score {
+        self.get_finalized_scores(timezone)
+            .iter()
+            .map(|item| item.total.min(total_cap))
+            .sum()
+    }
+
+    pub fn get_pending_finalized_boosters(&self, timezone: Timezone) -> Score {
+        self.get_finalized_scores(timezone)
             .iter()
             .map(|item| {
                 if item.booster.is_claimed() {
@@ -198,6 +206,13 @@ impl AccountScore {
                     item.booster.get_value()
                 }
             })
+            .sum()
+    }
+
+    pub fn get_finalized_boosters(&self, timezone: Timezone) -> Score {
+        self.get_finalized_scores(timezone)
+            .iter()
+            .map(|item| item.booster.get_value())
             .sum()
     }
 

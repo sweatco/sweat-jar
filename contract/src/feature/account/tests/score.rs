@@ -10,13 +10,14 @@ use rstest::{fixture, rstest};
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{
+        account::Account,
         deposit::DepositTicket,
         jar::Jar,
-        product::{Product, ProductId},
+        product::{Product, ProductId, Terms},
         withdraw::WithdrawView,
     },
-    interest::InterestCalculator,
-    AccountScore, Score, Timezone, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+    interest::{FixedApyEvaluator, InterestCalculator},
+    AccountScore, Score, Timezone, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
 };
 
 use crate::{
@@ -473,34 +474,23 @@ mod score_tests {
 
         let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
 
+        let ticket = DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
+            timezone: Some(Timezone::hour_shift(0)),
+        };
+
         ctx.switch_account(admin.clone());
         ctx.set_block_timestamp_in_ms(1_732_653_318_018 - MS_IN_DAY);
-        ctx.contract().deposit(
-            alice.clone(),
-            DepositTicket {
-                product_id: product.id.clone(),
-                valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
-                timezone: Some(Timezone::hour_shift(0)),
-            },
-            0,
-            None,
-        );
+        ctx.contract().deposit(alice.clone(), ticket.clone(), 0, None);
 
         ctx.set_block_timestamp_in_ms(1_732_653_318_018);
         ctx.contract()
             .record_score(vec![(alice.clone(), vec![(15100, 1_732_653_318_018.into())])]);
 
         ctx.set_block_timestamp_in_ms(1_733_139_450_015);
-        ctx.contract().deposit(
-            alice.clone(),
-            DepositTicket {
-                product_id: product.id.clone(),
-                valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
-                timezone: None,
-            },
-            100_000_000.to_otto(),
-            None,
-        );
+        ctx.contract()
+            .deposit(alice.clone(), ticket, 100_000_000.to_otto(), None);
 
         ctx.set_block_timestamp_in_ms(1_733_140_384_365); // Mon Dec 02 2024 11:53:04
 
@@ -604,6 +594,110 @@ mod score_tests {
 
             ctx.switch_account(alice.clone());
             assert_eq!(30_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+    }
+
+    #[rstest]
+    fn apply_finalized_to_new_deposit_after_claim_from_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 365_000_000_000_000_000_000, star_time.into());
+
+        let mut action_time = star_time + MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 1: record scorea and claim
+        {
+            ctx.switch_account_to_manager();
+            ctx.contract().record_score(vec![(
+                alice.clone(),
+                vec![(5_000, (action_time - 5 * MS_IN_HOUR).into())],
+            )]);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(50_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+
+        action_time += MS_IN_HOUR;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 2: new deposit and claim
+        {
+            ctx.contract().get_account_mut(&alice).deposit(
+                &product.id,
+                365_000_000_000_000_000_000,
+                action_time.into(),
+            );
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(50_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+    }
+
+    #[rstest]
+    fn apply_finalized_to_new_deposit_after_claim_from_tiered_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 365_000_000_000_000_000_000, star_time.into());
+
+        let mut action_time = star_time + MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 1: record scorea and claim
+        {
+            ctx.switch_account_to_manager();
+            ctx.contract().record_score(vec![(
+                alice.clone(),
+                vec![(5_000, (action_time - 5 * MS_IN_HOUR).into())],
+            )]);
+            ctx.contract()
+                .apply_booster(vec![alice.clone()], 30_000, UTC(action_time - 5 * MS_IN_HOUR));
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(350_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+
+        action_time += MS_IN_HOUR;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 2: new deposit and claim
+        {
+            ctx.contract().get_account_mut(&alice).deposit(
+                &product.id,
+                365_000_000_000_000_000_000,
+                action_time.into(),
+            );
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(350_000_000_000_000_000, ctx.claim_total(&alice));
         }
     }
 }
@@ -905,5 +999,23 @@ impl Context {
             amount,
             None,
         );
+    }
+}
+
+trait ApyProvider {
+    fn get_apy(&self, account: &Account) -> UDecimal;
+}
+
+impl ApyProvider for Terms {
+    fn get_apy(&self, account: &Account) -> UDecimal {
+        match self {
+            Terms::Fixed(terms) => terms.get_effective_apy(account),
+            Terms::Flexible(terms) => terms.get_effective_apy(account),
+            Terms::ScoreBased(terms) => account
+                .score
+                .get_capped_pending_score(account.timezone, terms.score_cap)
+                .to_apy(),
+            Terms::TieredScoreBased(_) => panic!(),
+        }
     }
 }

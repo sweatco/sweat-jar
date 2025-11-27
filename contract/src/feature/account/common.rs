@@ -9,7 +9,7 @@ use sweat_jar_model::{
     data::{
         account::Account,
         deposit::{DepositTicket, Purpose},
-        product::{Product, ProductAssertions, ProductId, Terms},
+        product::{Product, ProductAssertions, ProductId},
     },
     TokenAmount,
 };
@@ -37,11 +37,12 @@ impl Contract {
         let account = self.get_or_create_account_mut(&account_id);
         account.nonce += 1;
 
-        if matches!(product.terms, Terms::ScoreBased(_)) {
+        if product.terms.is_score_based() {
             account.try_set_timezone(ticket.timezone);
         }
 
         account.deposit(product_id, amount, None);
+        account.update_jar_cache(&product, env::block_timestamp_ms());
 
         emit(EventKind::Deposit(account_id, (product_id.clone(), amount.into())));
     }
