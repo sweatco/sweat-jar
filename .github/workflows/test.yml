@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install tools
-        run: cargo install --locked cargo-near
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.17.0/cargo-near-installer.sh | sh
 
       - name: Build
         run: make build
@@ -59,7 +59,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install cargo-near CLI
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.15.0/cargo-near-installer.sh | sh
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.17.0/cargo-near-installer.sh | sh
 
       - name: Integration tests
         run: make integration
