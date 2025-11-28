@@ -94,6 +94,7 @@ pub struct Contract {
 }
 
 #[cfg(feature = "integration-test")]
+#[mutants::skip]
 impl BorshSerialize for Contract {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         self.token_account_id.serialize(writer)?;
@@ -109,6 +110,7 @@ impl BorshSerialize for Contract {
 }
 
 #[cfg(feature = "integration-test")]
+#[mutants::skip]
 impl BorshDeserialize for Contract {
     fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
         let token_account_id = AccountId::deserialize_reader(reader)?;
