@@ -874,7 +874,26 @@ impl MultiDayBoosterScenario {
     }
 
     async fn advance_one_day(&mut self) -> Result<u64> {
-        self.context.fast_forward_minutes(6).await?;
+        let current_time = self.context.sweat_jar().block_timestamp_ms().await?;
+        
+        // With scale 1/288, 1 day = 5 minutes = 300,000 ms
+        const SCALED_DAY_MS: u64 = 300_000;
+        
+        let current_day_index = current_time / SCALED_DAY_MS;
+        
+        // Target the middle of the next day to avoid boundary issues
+        let target_time = (current_day_index + 1) * SCALED_DAY_MS + (SCALED_DAY_MS / 2);
+        
+        if target_time > current_time {
+            let needed_ms = target_time - current_time;
+            // Convert to minutes, rounding up
+            let needed_mins = (needed_ms + 60_000 - 1) / 60_000;
+            self.context.fast_forward_minutes(needed_mins).await?;
+        } else {
+            // Fallback if we somehow calculated a past time (should be impossible with +1 day)
+            self.context.fast_forward_minutes(1).await?;
+        }
+
         Ok(self.context.sweat_jar().block_timestamp_ms().await?)
     }
 }
