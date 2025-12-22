@@ -10,14 +10,13 @@ use rstest::{fixture, rstest};
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
     data::{
-        account::Account,
         deposit::DepositTicket,
         jar::Jar,
-        product::{Product, ProductId, Terms},
+        product::{Product, ProductId},
         withdraw::WithdrawView,
     },
-    interest::{FixedApyEvaluator, InterestCalculator},
-    AccountScore, Score, Timezone, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
+    interest::InterestCalculator,
+    AccountScore, Score, Timezone, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR, UTC,
 };
 
 use crate::{
@@ -999,23 +998,5 @@ impl Context {
             amount,
             None,
         );
-    }
-}
-
-trait ApyProvider {
-    fn get_apy(&self, account: &Account) -> UDecimal;
-}
-
-impl ApyProvider for Terms {
-    fn get_apy(&self, account: &Account) -> UDecimal {
-        match self {
-            Terms::Fixed(terms) => terms.get_effective_apy(account),
-            Terms::Flexible(terms) => terms.get_effective_apy(account),
-            Terms::ScoreBased(terms) => account
-                .score
-                .get_capped_pending_score(account.timezone, terms.score_cap)
-                .to_apy(),
-            Terms::TieredScoreBased(_) => panic!(),
-        }
     }
 }
