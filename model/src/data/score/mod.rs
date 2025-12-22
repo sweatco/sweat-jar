@@ -3,7 +3,10 @@ use near_sdk::{
     near,
 };
 
-use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UDecimal, UTC};
+use crate::{
+    data::product::{Apy, Cap},
+    Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UDecimal, UTC,
+};
 
 mod booster;
 mod common;
@@ -75,6 +78,10 @@ impl DailyScore {
     pub fn settled_score(&self) -> Score {
         self.total - self.pending
     }
+
+    pub fn to_capped_apy(&self, cap: Score, include_booster: bool) -> UDecimal {
+        (self.total.min(cap) + if include_booster { self.booster.get_value() } else { 0 }).to_apy()
+    }
 }
 
 #[near(serializers=[borsh, json])]
@@ -90,7 +97,7 @@ pub struct AccountScoreLegacy {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AccountScore {
     updated_at: UTC,
-    history: [DailyScore; DAYS_STORED],
+    pub history: [DailyScore; DAYS_STORED],
 }
 
 #[near(serializers=[json])]
@@ -151,11 +158,11 @@ impl AccountScore {
         true
     }
 
-    fn wipe(&mut self) {
+    pub fn wipe(&mut self) {
         self.history = [DailyScore::default(); DAYS_STORED];
     }
 
-    fn shift(&mut self) {
+    pub fn shift(&mut self) {
         self.history.copy_within(0..DAYS_STORED - 1, 1);
         self.history[0] = DailyScore::default();
     }
@@ -223,6 +230,16 @@ impl AccountScore {
             // Updated earlier than today => 0 offsetted day is finalized.
             1 => self.get(0).total,
             _ => 0,
+        }
+    }
+
+    pub fn get_last_finalized_record(&self, timezone: Timezone) -> DailyScore {
+        match self.get_days_number_since_last_update(timezone) {
+            // Updated today => 0 offsetted day's score is still ongoing. Return last finalized value.
+            0 => self.get(1),
+            // Updated earlier than today => 0 offsetted day is finalized.
+            1 => self.get(0),
+            _ => DailyScore::default(),
         }
     }
 

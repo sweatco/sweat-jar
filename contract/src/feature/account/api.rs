@@ -14,8 +14,8 @@ use sweat_jar_model::{
         product::{Product, ProductId, Terms},
         score::Score,
     },
-    interest::InterestCalculator,
-    DaysOffset, ScoreIncrementProcessor, TimeHelper, Timezone, TokenAmount, UTC,
+    interest::{get_interest, InterestCalculator},
+    ms_in_day, start_of_the_day, DaysOffset, ScoreIncrementProcessor, TimeHelper, Timezone, TokenAmount, UTC,
 };
 
 use crate::{
@@ -93,10 +93,9 @@ impl AccountApi for Contract {
 
         for (account_id, increments) in batch {
             self.assert_timezone_is_set(&account_id);
-            self.update_score_based_jars_cache(&account_id);
+            self.settle_interest(&account_id);
 
             let account = self.get_account_mut(&account_id);
-            account.score.settle(account.timezone);
             account.assert_no_pending_score();
 
             let segmented_increments = ScoreIncrementProcessor::new(&increments, account.timezone).process();
@@ -125,11 +124,9 @@ impl AccountApi for Contract {
         for account_id in &account_ids {
             self.assert_timezone_is_set(account_id);
             self.get_account(account_id).timezone.assert_not_future(timestamp);
-
-            self.update_score_based_jars_cache(account_id);
+            self.settle_interest(&account_id);
 
             let account = self.get_account_mut(account_id);
-            account.score.settle(account.timezone);
             account.assert_no_pending_score();
 
             let adjusted_timestamp = account.timezone.adjust(timestamp);
@@ -192,5 +189,109 @@ impl AccountApi for Contract {
         }
 
         emit(EventKind::BatchSetFeatureEnabled(account_ids, feature, enabled));
+    }
+}
+
+impl Contract {
+    fn settle_interest(&mut self, account_id: &AccountId) {
+        let account = self.get_account(account_id);
+        let days_since_last_update = account.score.get_days_number_since_last_update(account.timezone);
+
+        if days_since_last_update == 0 {
+            return;
+        }
+
+        let start_of_today = start_of_the_day(env::block_timestamp_ms());
+
+        if days_since_last_update == 1 {
+            let products =
+                self.get_products_for_account(account_id, Some(|product: &Product| product.terms.is_score_based()));
+            for product in products.iter() {
+                let account = self.get_account(account_id);
+                let jar = account.get_jar(&product.id);
+                let cache_updated_at = jar.cache.map_or(0, |cache| cache.updated_at);
+
+                if cache_updated_at < start_of_today {
+                    let account = self.get_account_mut(account_id);
+                    account.update_jar_cache(product, start_of_today);
+                }
+            }
+
+            self.get_account_mut(account_id).score.shift();
+
+            return;
+        }
+
+        if days_since_last_update < 1 {
+            let score_updated_at = account.score.updated_at();
+            let products =
+                self.get_products_for_account(account_id, Some(|product: &Product| product.terms.is_score_based()));
+
+            let mut increments: HashMap<&ProductId, (TokenAmount, u64)> = HashMap::new();
+            for product in products.iter() {
+                let jar = account.get_jar(&product.id);
+                let cache_updated_at = jar.cache.map_or(0, |cache| cache.updated_at);
+
+                if cache_updated_at >= start_of_today {
+                    continue;
+                }
+
+                let include_booster = matches!(product.terms, Terms::TieredScoreBased(_));
+
+                let increment: (TokenAmount, u64) = account
+                    .score
+                    .history
+                    .iter()
+                    .enumerate()
+                    .map(|(i, entry)| {
+                        let apy = entry.to_capped_apy(get_score_cap(account, product), include_booster);
+
+                        let day_start = start_of_the_day(score_updated_at - (i as u64) * ms_in_day());
+                        let day_end = day_start + ms_in_day();
+
+                        jar.deposits
+                            .iter()
+                            .map(|deposit| {
+                                let stard_time = deposit.created_at.max(day_start);
+                                let term = day_end.saturating_sub(stard_time);
+
+                                get_interest(deposit.principal, apy, term)
+                            })
+                            .fold((0, 0), |acc, (interest, remainder)| {
+                                (acc.0 + interest, acc.1 + remainder)
+                            })
+                    })
+                    .fold((0, 0), |acc, (interest, remainder)| {
+                        (acc.0 + interest, acc.1 + remainder)
+                    });
+
+                increments.insert(&product.id, increment);
+            }
+
+            let account = self.get_account_mut(account_id);
+            let now = env::block_timestamp_ms();
+
+            for (product_id, (interest, remainder)) in increments {
+                let jar = account.get_jar_mut(product_id);
+                let interest = jar.cache.map_or(0, |cache| cache.interest) + interest;
+                let remainder = jar.claim_remainder + remainder;
+
+                jar.update_cache(interest, remainder, now);
+            }
+
+            self.get_account_mut(account_id).score.wipe();
+
+            return;
+        }
+    }
+}
+
+fn get_score_cap(account: &Account, product: &Product) -> Score {
+    match product.terms.clone() {
+        Terms::TieredScoreBased(terms) => {
+            terms.get_score_cap(account.features.is_feature_enabled(&Feature::IncreasedScoreCap))
+        }
+        Terms::ScoreBased(terms) => terms.score_cap,
+        _ => panic_str("Only ScoreBased or TieredScoreBased Product is allowed"),
     }
 }

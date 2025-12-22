@@ -85,6 +85,21 @@ pub struct TieredScoreBasedProductTerms {
     pub lockup_term: U64,
 }
 
+impl TieredScoreBasedProductTerms {
+    pub fn get_score_cap(&self, is_increased: bool) -> Score {
+        match self.score_cap {
+            ConfigurableValue::Constant(value) => value,
+            ConfigurableValue::Tier(value) => {
+                if is_increased {
+                    value.default
+                } else {
+                    value.fallback
+                }
+            }
+        }
+    }
+}
+
 /// The `Cap` struct defines the capacity of a deposit jar in terms of the minimum and maximum allowed principal amounts.
 /// - `.0` – The minimum amount of tokens that can be stored in the jar.
 /// - `.1` – The maximum amount of tokens that can be stored in the jar.
