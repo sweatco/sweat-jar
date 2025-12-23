@@ -161,7 +161,7 @@ impl AccountApi for Contract {
     fn get_score(&self, account_id: AccountId) -> Option<U128> {
         let account = self.get_account(&account_id);
 
-        Some(u128::from(account.score.get_last_finalized_score(account.timezone)).into())
+        Some(u128::from(account.score.get_last_finalized_record(account.timezone).value).into())
     }
 
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {
@@ -199,8 +199,13 @@ impl AccountApi for Contract {
 }
 
 impl Contract {
-    fn settle_interest(&mut self, account_id: &AccountId) {
+    pub fn settle_interest(&mut self, account_id: &AccountId) {
         let account = self.get_account(account_id).clone();
+
+        if !account.is_timezone_set() {
+            return;
+        }
+
         let days_since_last_update = account.score.get_days_number_since_last_update(account.timezone);
 
         let settled_interest = self.get_settled_interest(account_id);

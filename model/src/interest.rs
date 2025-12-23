@@ -127,7 +127,7 @@ impl InterestCalculator for ScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
         account
             .score
-            .get_capped_total_finalized_score(account.timezone, self.score_cap)
+            .get_capped_finalized_score(account.timezone, self.score_cap)
             .to_apy()
     }
 
@@ -157,7 +157,7 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
         let score = account.score.get_last_finalized_record(account.timezone);
         let score_cap = self.get_score_cap(account.features.is_feature_enabled(&Feature::IncreasedScoreCap));
 
-        (score.total.min(score_cap) + score.booster.get_value()).to_apy()
+        (score.value.min(score_cap) + score.booster.get_value()).to_apy()
     }
 
     fn get_interest_calculation_term(

@@ -52,6 +52,8 @@ impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
 
+        self.settle_interest(&account_id);
+
         let account = self.get_account(&account_id);
         let mut accumulator = ClaimedAmountView::new(detailed);
         let now = env::block_timestamp_ms();
@@ -59,9 +61,6 @@ impl ClaimApi for Contract {
         let mut rollback_jars = HashMap::new();
         let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
         let mut event_data = ClaimData::new(now);
-
-        dbg!(account.score);
-        let settled_interest = self.get_settled_interest(&account_id);
 
         for (product_id, jar) in &account.jars {
             if jar.is_pending_withdraw {
@@ -72,7 +71,6 @@ impl ClaimApi for Contract {
 
             let product = self.get_product(product_id);
             let (interest, remainder) = product.terms.get_interest(account, jar, now);
-            let interest = interest + settled_interest.get(product_id).map_or(0, |(amount, _)| *amount);
 
             if interest == 0 {
                 continue;
@@ -95,10 +93,6 @@ impl ClaimApi for Contract {
             jars: rollback_jars.into(),
             ..AccountCompanion::default()
         };
-
-        if account.is_timezone_set() {
-            account.score.settle(account.timezone);
-        }
 
         // TODO: add test for 0 case and replace `gt` with `>`
         if accumulator.get_total().0.gt(&0) {

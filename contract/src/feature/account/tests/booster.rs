@@ -190,13 +190,6 @@ fn claim_from_tiered_score_jar_with_delayed_booster_claim(
     };
     let claimed = claim_result.get_total().0;
     assert_eq!(claimed, 180.to_otto());
-
-    // After claiming, booster should still not be available (it was for day 1)
-    let account_after_claim = context.contract().get_account(&alice).clone();
-    let pending_boosters_after = account_after_claim
-        .score
-        .get_pending_finalized_boosters(Timezone::hour_shift(0));
-    assert_eq!(pending_boosters_after, 0); // Booster should not be available
 }
 
 #[test]

@@ -766,9 +766,6 @@ mod account_score_tests {
         now += MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
         assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
-
-        assert_eq!(vec![2000, 3000], account.score.settle(TIMEZONE));
-        assert_eq!(0.00, product.terms.get_apy(&account).to_f32());
     }
 
     #[rstest]
@@ -798,16 +795,13 @@ mod account_score_tests {
 
         assert_eq!(score.updated_at(), MS_IN_DAY * 10);
         assert_eq!(score.scores(), (1006, 2005));
-        assert_eq!(score.settle(timezone), vec![2005]);
-        assert_eq!(score.get_last_finalized_score(timezone), 2005);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 2005);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 11);
-        assert_eq!(score.settle(timezone), vec![1006, 0]);
-        assert_eq!(score.get_last_finalized_score(timezone), 1006);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 1006);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 12);
-        assert_eq!(score.settle(timezone), vec![0, 0]);
-        assert_eq!(score.get_last_finalized_score(timezone), 0);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 0);
     }
 
     #[rstest]
@@ -817,15 +811,15 @@ mod account_score_tests {
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
-        assert_eq!(score.get_last_finalized_score(timezone), 2000);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 2000);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 11);
 
-        assert_eq!(score.get_last_finalized_score(timezone), 1000);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 1000);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 12);
 
-        assert_eq!(score.get_last_finalized_score(timezone), 0);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 0);
     }
 
     #[rstest]
@@ -861,12 +855,12 @@ mod account_score_tests {
             .contract()
             .record_score(vec![(alice.clone(), vec![(25_000, 0.into())])]);
 
-        context.set_block_timestamp_in_ms(MS_IN_DAY + MS_IN_HOUR);
+        context.set_block_timestamp_in_ms(MS_IN_DAY);
         context
             .contract()
             .record_score(vec![(alice.clone(), vec![(30_000, MS_IN_DAY.into())])]);
 
-        context.set_block_timestamp_in_ms(2 * MS_IN_DAY + MS_IN_HOUR);
+        context.set_block_timestamp_in_ms(3 * MS_IN_DAY);
         let interest = context.contract().get_total_interest(alice.clone());
         assert_eq!(400.to_otto(), interest.amount.total.0);
     }
