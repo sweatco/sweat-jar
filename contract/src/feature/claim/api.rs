@@ -58,6 +58,8 @@ impl ClaimApi for Contract {
         let mut accumulator = ClaimedAmountView::new(detailed);
         let now = env::block_timestamp_ms();
 
+        dbg!(&account.score);
+
         let mut rollback_jars = HashMap::new();
         let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
         let mut event_data = ClaimData::new(now);

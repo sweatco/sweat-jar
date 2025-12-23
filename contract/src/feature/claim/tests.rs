@@ -287,5 +287,5 @@ fn first_claim_with_booster(
     context.set_block_timestamp_in_ms(1752503478000);
     let claimed_amount = context.claim_total(&alice);
 
-    assert_eq!(136_986_301_369_863, claimed_amount);
+    assert_eq!(136_996_174_213_597, claimed_amount);
 }

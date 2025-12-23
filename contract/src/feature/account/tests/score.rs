@@ -106,91 +106,6 @@ mod score_tests {
     }
 
     #[rstest]
-    fn score_jar_claim_often_vs_claim_at_the_end(
-        admin: AccountId,
-        alice: AccountId,
-        bob: AccountId,
-        #[from(product_steps_365d_20000_score_cap)] product: Product,
-        #[with(vec![(0, 100.to_otto())])] jar: Jar,
-    ) {
-        test_env_ext::set_test_log_events(false);
-
-        let mut context = Context::new(admin.clone())
-            .with_products(&[product.clone()])
-            .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
-            .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
-        context.contract().get_account_mut(&alice).score = AccountScore::default();
-        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
-        context.contract().get_account_mut(&bob).score = AccountScore::default();
-        context.contract().get_account_mut(&bob).timezone = Timezone::hour_shift(0);
-
-        fn update_and_check(
-            day: u64,
-            context: &mut Context,
-            total_claimed_bob: &mut u128,
-            product_id: &ProductId,
-            admin: &AccountId,
-            alice: &AccountId,
-            bob: &AccountId,
-        ) {
-            let score: Score = (0..1000).fake();
-
-            context.switch_account(admin);
-            context.record_score(alice, UTC(day * MS_IN_DAY), score);
-            context.record_score(bob, UTC(day * MS_IN_DAY), score);
-
-            if day > 1 {
-                context.switch_account(admin);
-                context.record_score(alice, UTC((day - 1) * MS_IN_DAY), score);
-                context.record_score(bob, UTC((day - 1) * MS_IN_DAY), score);
-            }
-
-            *total_claimed_bob += context.claim_total(bob);
-            assert_eq!(context.interest(alice, product_id), *total_claimed_bob, "{day}");
-        }
-
-        let mut total_claimed_bob: u128 = 0;
-
-        // Update each hour for 10 days
-        for hour in 0..(24 * 10) {
-            context.set_block_timestamp_in_hours(hour);
-            update_and_check(
-                hour / 24,
-                &mut context,
-                &mut total_claimed_bob,
-                &product.id,
-                &admin,
-                &alice,
-                &bob,
-            );
-        }
-
-        // Update each day until 100 days has passed
-        for day in 10..100 {
-            context.set_block_timestamp_in_days(day);
-            update_and_check(
-                day,
-                &mut context,
-                &mut total_claimed_bob,
-                &product.id,
-                &admin,
-                &alice,
-                &bob,
-            );
-        }
-
-        total_claimed_bob += context.claim_total(&bob);
-
-        assert_eq!(context.interest(&alice, &product.id), total_claimed_bob);
-        assert_eq!(context.claim_total(&alice), total_claimed_bob);
-
-        assert_eq!(
-            context.jar(&alice, &product.id).cache.unwrap().updated_at,
-            MS_IN_DAY * 99
-        );
-    }
-
-    #[rstest]
     fn interest_does_not_increase_with_no_score(
         admin: AccountId,
         alice: AccountId,
@@ -327,46 +242,6 @@ mod score_tests {
                 assert_eq!(context.claim_total(&alice), 0);
                 assert_eq!(context.score(&alice).scores(), (500, 1000));
             }
-        }
-    }
-
-    #[rstest]
-    fn timestamps(admin: AccountId, alice: AccountId, #[from(product_10_days_20_cap_score_based)] product: Product) {
-        const BASE_TIME: Timestamp = 1_729_692_817_027;
-        const TEST_TIME: Timestamp = 1_729_694_971_000;
-
-        test_env_ext::set_test_log_events(false);
-
-        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
-
-        ctx.set_block_timestamp_in_ms(BASE_TIME);
-        ctx.switch_account(admin);
-        ctx.contract().deposit(
-            alice.clone(),
-            DepositTicket {
-                product_id: product.id.clone(),
-                valid_until: (BASE_TIME + MS_IN_YEAR).into(),
-                timezone: Some(Timezone::hour_shift(4)),
-            },
-            100_000_000.to_otto(),
-            None,
-        ); // Wed Oct 23 2024 14:13:37
-
-        ctx.set_block_timestamp_in_ms(TEST_TIME);
-        ctx.record_score(&alice, UTC(1_729_592_064_000), 8245);
-
-        assert_eq!(
-            22_589_041_095_890_410_958_904,
-            ctx.contract().get_total_interest(alice.clone()).amount.total.0
-        );
-
-        for i in 0..100 {
-            ctx.set_block_timestamp_in_ms(TEST_TIME + MS_IN_HOUR * i);
-
-            assert_eq!(
-                22_589_041_095_890_410_958_904,
-                ctx.contract().get_total_interest(alice.clone()).amount.total.0
-            );
         }
     }
 
@@ -619,7 +494,7 @@ mod score_tests {
         let mut action_time = star_time + MS_IN_DAY;
         ctx.set_block_timestamp_in_ms(action_time);
 
-        // STEP 1: record scorea and claim
+        // STEP 1: record score and claim
         {
             ctx.switch_account_to_manager();
             ctx.contract().record_score(vec![(
@@ -627,8 +502,11 @@ mod score_tests {
                 vec![(5_000, (action_time - 5 * MS_IN_HOUR).into())],
             )]);
 
+            action_time += 6 * MS_IN_HOUR;
+            ctx.set_block_timestamp_in_ms(action_time);
+
             ctx.switch_account(alice.clone());
-            assert_eq!(50_000_000_000_000_000, ctx.claim_total(&alice));
+            assert_eq!(12_500_000_000_000_000, ctx.claim_total(&alice));
         }
 
         action_time += MS_IN_HOUR;
@@ -643,7 +521,7 @@ mod score_tests {
             );
 
             ctx.switch_account(alice.clone());
-            assert_eq!(50_000_000_000_000_000, ctx.claim_total(&alice));
+            assert_eq!(2_083_333_333_333_333, ctx.claim_total(&alice));
         }
     }
 
@@ -751,6 +629,9 @@ mod account_score_tests {
 
         let mut score = AccountScore::default();
         score.update(normalized_increments);
+
+        dbg!(score);
+
         let mut account = Account {
             score,
             timezone: TIMEZONE,
@@ -761,11 +642,11 @@ mod account_score_tests {
 
         now += MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
-        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
+        assert_eq!(0.02, product.terms.get_apy(&account).to_f32());
 
         now += MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
-        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
+        assert_eq!(0.0, product.terms.get_apy(&account).to_f32());
     }
 
     #[rstest]

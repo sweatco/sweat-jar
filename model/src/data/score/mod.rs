@@ -162,13 +162,7 @@ impl AccountScore {
     }
 
     pub fn get_capped_finalized_score(&self, timezone: Timezone, total_cap: Score) -> Score {
-        let days_since_last_update = self.get_days_number_since_last_update(timezone);
-
-        if days_since_last_update > 1 {
-            return 0;
-        }
-
-        self.get(1).value.min(total_cap)
+        self.get_last_finalized_record(timezone).value.min(total_cap)
     }
 
     pub fn get_last_finalized_record(&self, timezone: Timezone) -> DailyScore {

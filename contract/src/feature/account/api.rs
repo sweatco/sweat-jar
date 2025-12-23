@@ -215,7 +215,14 @@ impl Contract {
             let interest = jar.cache.map_or(0, |cache| cache.interest) + interest;
             let remainder = jar.claim_remainder + remainder;
 
-            jar.update_cache(interest, remainder, env::block_timestamp_ms());
+            let start_of_today = start_of_the_day(env::block_timestamp_ms());
+            dbg!(env::block_timestamp_ms());
+            dbg!(start_of_today);
+            let update_time = jar
+                .cache
+                .map_or(start_of_today, |cache| cache.updated_at.max(start_of_today)); // TODO: is it really needed?
+            dbg!(update_time);
+            jar.update_cache(interest, remainder, update_time);
         }
 
         match days_since_last_update.cmp(&1) {
