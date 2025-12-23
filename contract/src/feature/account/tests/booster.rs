@@ -51,7 +51,7 @@ fn claim_from_tiered_score_jar_only_with_booster(
     context.set_block_timestamp_in_ms(0);
     context.contract().apply_booster(vec![alice.clone()], 5_000, 0.into());
 
-    context.set_block_timestamp_in_ms(MS_IN_DAY);
+    context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
 
     let interest = context.contract().get_total_interest(alice.clone());
     assert_eq!(50.to_otto(), interest.amount.total.0);
@@ -61,6 +61,7 @@ fn claim_from_tiered_score_jar_only_with_booster(
         .contract()
         .apply_booster(vec![alice.clone()], 5_000, MS_IN_DAY.into());
 
+    context.set_block_timestamp_in_ms(3 * MS_IN_DAY);
     let interest = context.contract().get_total_interest(alice.clone());
     assert_eq!(100.to_otto(), interest.amount.total.0);
 
@@ -69,6 +70,7 @@ fn claim_from_tiered_score_jar_only_with_booster(
         .contract()
         .apply_booster(vec![alice.clone()], 10_000, (2 * MS_IN_DAY).into());
 
+    context.set_block_timestamp_in_ms(4 * MS_IN_DAY);
     let interest = context.contract().get_total_interest(alice.clone());
     assert_eq!(200.to_otto(), interest.amount.total.0);
 }
@@ -110,6 +112,7 @@ fn claim_from_tiered_score_jar_with_mixed_regular_and_boosted_score(
     context.set_block_timestamp_in_ms(MS_IN_DAY);
     context.contract().apply_booster(vec![alice.clone()], 5_000, 0.into());
 
+    context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
     let interest = context.contract().get_total_interest(alice.clone());
     assert_eq!(150.to_otto(), interest.amount.total.0);
 
@@ -119,6 +122,7 @@ fn claim_from_tiered_score_jar_with_mixed_regular_and_boosted_score(
         .contract()
         .record_score(vec![(alice.clone(), vec![(5_000, (MS_IN_DAY + MS_IN_HOUR).into())])]);
 
+    context.set_block_timestamp_in_ms(3 * MS_IN_DAY);
     let interest = context.contract().get_total_interest(alice.clone());
     assert_eq!(200.to_otto(), interest.amount.total.0);
 

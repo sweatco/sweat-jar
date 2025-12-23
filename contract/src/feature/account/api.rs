@@ -12,10 +12,11 @@ use sweat_jar_model::{
         account::{common::FeaturesAccess, features::Feature, view::AccountView, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
-        score::Score,
+        score::{self, Score},
     },
     interest::{get_interest, InterestCalculator},
-    ms_in_day, start_of_the_day, DaysOffset, ScoreIncrementProcessor, TimeHelper, Timezone, TokenAmount, UTC,
+    ms_in_day, start_of_the_day, DailyScore, DaysOffset, ScoreIncrementProcessor, TimeHelper, Timestamp, Timezone,
+    TokenAmount, UTC,
 };
 
 use crate::{
@@ -24,13 +25,20 @@ use crate::{
 };
 
 impl Contract {
-    fn get_total_interest_for_account(&self, account: &Account) -> AggregatedInterestView {
+    fn get_total_interest_for_account(&self, account_id: &AccountId) -> AggregatedInterestView {
         let mut detailed_amounts = HashMap::<ProductId, U128>::new();
         let mut total_amount: TokenAmount = 0;
 
+        let settled_interest = self.get_settled_interest(account_id);
+
+        let account = self.get_account(account_id);
+        dbg!(account.score);
+
         for (product_id, jar) in &account.jars {
             let product = self.get_product(product_id);
-            let interest = product.terms.get_interest(account, jar, env::block_timestamp_ms()).0;
+
+            let (interest, _) = product.terms.get_interest(account, jar, env::block_timestamp_ms());
+            let interest = interest + settled_interest.get(product_id).map_or(0, |(amount, _)| *amount);
 
             detailed_amounts.insert(product_id.clone(), interest.into());
             total_amount += interest;
@@ -70,11 +78,11 @@ impl AccountApi for Contract {
     }
 
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView {
-        if let Some(account) = self.try_get_account(&account_id) {
-            return self.get_total_interest_for_account(account);
+        if self.try_get_account(&account_id).is_none() {
+            return AggregatedInterestView::default();
         }
 
-        AggregatedInterestView::default()
+        return self.get_total_interest_for_account(&account_id);
     }
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
@@ -96,7 +104,6 @@ impl AccountApi for Contract {
             self.settle_interest(&account_id);
 
             let account = self.get_account_mut(&account_id);
-            account.assert_no_pending_score();
 
             let segmented_increments = ScoreIncrementProcessor::new(&increments, account.timezone).process();
             let normalized_increments = convert_to_days_offset(segmented_increments.valid.clone(), account.timezone);
@@ -127,7 +134,6 @@ impl AccountApi for Contract {
             self.settle_interest(&account_id);
 
             let account = self.get_account_mut(account_id);
-            account.assert_no_pending_score();
 
             let adjusted_timestamp = account.timezone.adjust(timestamp);
             let days_offset = DaysOffset::try_from(account.timezone.today().0 - adjusted_timestamp.day().0)
@@ -194,40 +200,56 @@ impl AccountApi for Contract {
 
 impl Contract {
     fn settle_interest(&mut self, account_id: &AccountId) {
-        let account = self.get_account(account_id);
+        let account = self.get_account(account_id).clone();
         let days_since_last_update = account.score.get_days_number_since_last_update(account.timezone);
 
-        if days_since_last_update == 0 {
-            return;
+        let settled_interest = self.get_settled_interest(account_id);
+        for (product_id, (interest, remainder)) in settled_interest.iter() {
+            let account = self.get_account_mut(account_id);
+            let jar = account.get_jar_mut(product_id);
+            let interest = jar.cache.map_or(0, |cache| cache.interest) + interest;
+            let remainder = jar.claim_remainder + remainder;
+
+            jar.update_cache(interest, remainder, env::block_timestamp_ms());
         }
 
+        match days_since_last_update.cmp(&1) {
+            std::cmp::Ordering::Less => {}
+            std::cmp::Ordering::Equal => self.get_account_mut(account_id).score.shift(),
+            std::cmp::Ordering::Greater => self.get_account_mut(account_id).score.wipe(),
+        }
+    }
+
+    pub fn get_settled_interest(&self, account_id: &AccountId) -> HashMap<ProductId, (TokenAmount, u64)> {
+        let account = self.get_account(account_id);
+        if !account.timezone.is_valid() {
+            return HashMap::new();
+        }
+
+        let days_since_last_update = account.score.get_days_number_since_last_update(account.timezone);
         let start_of_today = start_of_the_day(env::block_timestamp_ms());
 
+        let mut scores: Vec<(Timestamp, DailyScore)> = vec![];
+        let score_updated_at = account.score.updated_at();
+
         if days_since_last_update == 1 {
-            let products =
-                self.get_products_for_account(account_id, Some(|product: &Product| product.terms.is_score_based()));
-            for product in products.iter() {
-                let account = self.get_account(account_id);
-                let jar = account.get_jar(&product.id);
-                let cache_updated_at = jar.cache.map_or(0, |cache| cache.updated_at);
+            let score = account.score.get(1);
+            let day_start = start_of_the_day(score_updated_at.saturating_sub(ms_in_day()));
 
-                if cache_updated_at < start_of_today {
-                    let account = self.get_account_mut(account_id);
-                    account.update_jar_cache(product, start_of_today);
-                }
+            scores.push((day_start, score));
+        } else if days_since_last_update > 1 {
+            for i in 0..account.score.history.len() {
+                let day_start = start_of_the_day(score_updated_at.saturating_sub((i as u64) * ms_in_day()));
+
+                scores.push((day_start, account.score.get(i as u16)));
             }
-
-            self.get_account_mut(account_id).score.shift();
-
-            return;
         }
 
-        if days_since_last_update < 1 {
-            let score_updated_at = account.score.updated_at();
+        let mut result = HashMap::new();
+        for (day_start, score) in scores {
             let products =
                 self.get_products_for_account(account_id, Some(|product: &Product| product.terms.is_score_based()));
 
-            let mut increments: HashMap<&ProductId, (TokenAmount, u64)> = HashMap::new();
             for product in products.iter() {
                 let jar = account.get_jar(&product.id);
                 let cache_updated_at = jar.cache.map_or(0, |cache| cache.updated_at);
@@ -238,51 +260,32 @@ impl Contract {
 
                 let include_booster = matches!(product.terms, Terms::TieredScoreBased(_));
 
-                let increment: (TokenAmount, u64) = account
-                    .score
-                    .history
+                let apy = score.to_capped_apy(get_score_cap(account, product), include_booster);
+                dbg!(apy);
+                let day_end = day_start + ms_in_day();
+
+                let increment: (TokenAmount, u64) = jar
+                    .deposits
                     .iter()
-                    .enumerate()
-                    .map(|(i, entry)| {
-                        let apy = entry.to_capped_apy(get_score_cap(account, product), include_booster);
+                    .map(|deposit| {
+                        let stard_time = deposit.created_at.max(day_start);
+                        let term = day_end.saturating_sub(stard_time);
 
-                        let day_start = start_of_the_day(score_updated_at - (i as u64) * ms_in_day());
-                        let day_end = day_start + ms_in_day();
+                        dbg!(term);
 
-                        jar.deposits
-                            .iter()
-                            .map(|deposit| {
-                                let stard_time = deposit.created_at.max(day_start);
-                                let term = day_end.saturating_sub(stard_time);
-
-                                get_interest(deposit.principal, apy, term)
-                            })
-                            .fold((0, 0), |acc, (interest, remainder)| {
-                                (acc.0 + interest, acc.1 + remainder)
-                            })
+                        get_interest(deposit.principal, apy, term)
                     })
                     .fold((0, 0), |acc, (interest, remainder)| {
                         (acc.0 + interest, acc.1 + remainder)
                     });
 
-                increments.insert(&product.id, increment);
+                let current_incriment: &mut (TokenAmount, u64) = result.entry(product.id.clone()).or_default();
+                current_incriment.0 += increment.0;
+                current_incriment.1 += increment.1;
             }
-
-            let account = self.get_account_mut(account_id);
-            let now = env::block_timestamp_ms();
-
-            for (product_id, (interest, remainder)) in increments {
-                let jar = account.get_jar_mut(product_id);
-                let interest = jar.cache.map_or(0, |cache| cache.interest) + interest;
-                let remainder = jar.claim_remainder + remainder;
-
-                jar.update_cache(interest, remainder, now);
-            }
-
-            self.get_account_mut(account_id).score.wipe();
-
-            return;
         }
+
+        return result;
     }
 }
 

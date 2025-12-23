@@ -80,6 +80,7 @@ impl DailyScore {
     }
 
     pub fn to_capped_apy(&self, cap: Score, include_booster: bool) -> UDecimal {
+        dbg!(self);
         (self.total.min(cap) + if include_booster { self.booster.get_value() } else { 0 }).to_apy()
     }
 }
@@ -125,7 +126,7 @@ impl AccountScore {
         self.updated_at.0
     }
 
-    fn get(&self, days_ago: DaysOffset) -> DailyScore {
+    pub fn get(&self, days_ago: DaysOffset) -> DailyScore {
         self.assert_in_bounds(days_ago as usize);
         self.history[days_ago as usize]
     }
@@ -197,10 +198,13 @@ impl AccountScore {
     }
 
     pub fn get_capped_total_finalized_score(&self, timezone: Timezone, total_cap: Score) -> Score {
-        self.get_finalized_scores(timezone)
-            .iter()
-            .map(|item| item.total.min(total_cap))
-            .sum()
+        let days_since_last_update = self.get_days_number_since_last_update(timezone);
+
+        if days_since_last_update > 1 {
+            return 0;
+        }
+
+        self.get(1).total.midpoint(total_cap)
     }
 
     pub fn get_pending_finalized_boosters(&self, timezone: Timezone) -> Score {

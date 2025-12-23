@@ -60,6 +60,9 @@ impl ClaimApi for Contract {
         let mut interest_per_jar: HashMap<ProductId, (TokenAmount, u64)> = HashMap::new();
         let mut event_data = ClaimData::new(now);
 
+        dbg!(account.score);
+        let settled_interest = self.get_settled_interest(&account_id);
+
         for (product_id, jar) in &account.jars {
             if jar.is_pending_withdraw {
                 continue;
@@ -69,6 +72,7 @@ impl ClaimApi for Contract {
 
             let product = self.get_product(product_id);
             let (interest, remainder) = product.terms.get_interest(account, jar, now);
+            let interest = interest + settled_interest.get(product_id).map_or(0, |(amount, _)| *amount);
 
             if interest == 0 {
                 continue;
