@@ -10,7 +10,7 @@
       "compiler": "rustc 1.86.0",
       "builder": "cargo-near cargo-near-build 0.9.0"
     },
-    "wasm_hash": "DmGTWhETqBQV1KgBTV5mN96YUMVJ5VfcgnBNAe3Ai6tp"
+    "wasm_hash": "G7sNFELqrNvuGMHsLUPeJtkSys4VxCFh2jF9BBNLyxT3"
   },
   "body": {
     "functions": [
@@ -1319,19 +1319,13 @@
           "type": "object",
           "required": [
             "booster",
-            "pending",
-            "total"
+            "value"
           ],
           "properties": {
             "booster": {
               "$ref": "#/definitions/BoostedScore"
             },
-            "pending": {
-              "type": "integer",
-              "format": "uint16",
-              "minimum": 0.0
-            },
-            "total": {
+            "value": {
               "type": "integer",
               "format": "uint16",
               "minimum": 0.0
@@ -1342,9 +1336,7 @@
           "type": "object",
           "required": [
             "booster",
-            "is_booster_claimed",
-            "pending",
-            "total"
+            "value"
           ],
           "properties": {
             "booster": {
@@ -1352,15 +1344,7 @@
               "format": "uint16",
               "minimum": 0.0
             },
-            "is_booster_claimed": {
-              "type": "boolean"
-            },
-            "pending": {
-              "type": "integer",
-              "format": "uint16",
-              "minimum": 0.0
-            },
-            "total": {
+            "value": {
               "type": "integer",
               "format": "uint16",
               "minimum": 0.0

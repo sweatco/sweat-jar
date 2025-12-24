@@ -52,6 +52,8 @@ impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
 
+        self.settle_interest(&account_id);
+
         let account = self.get_account(&account_id);
         let mut accumulator = ClaimedAmountView::new(detailed);
         let now = env::block_timestamp_ms();
@@ -91,10 +93,6 @@ impl ClaimApi for Contract {
             jars: rollback_jars.into(),
             ..AccountCompanion::default()
         };
-
-        if account.is_timezone_set() {
-            account.score.settle(account.timezone);
-        }
 
         // TODO: add test for 0 case and replace `gt` with `>`
         if accumulator.get_total().0.gt(&0) {

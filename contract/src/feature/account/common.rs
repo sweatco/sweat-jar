@@ -68,6 +68,8 @@ impl Contract {
     }
 
     pub(crate) fn update_account_cache(&mut self, account_id: &AccountId, filter: Option<fn(&Product) -> bool>) {
+        self.settle_interest(account_id);
+
         let now = env::block_timestamp_ms();
         let products = self.get_products_for_account(account_id, filter);
         let account = self.get_account_mut(account_id);

@@ -5,10 +5,7 @@ use near_sdk::{
 
 use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UDecimal, UTC};
 
-mod booster;
 mod common;
-
-pub use booster::BoostedScore;
 
 pub const DAYS_STORED: usize = 2;
 
@@ -38,42 +35,33 @@ pub type ScoreIncrements = Vec<ScoreIncrement>;
 #[near(serializers=[borsh, json])]
 #[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct DailyScore {
-    pub pending: Score,
-    pub total: Score,
-    pub booster: BoostedScore,
+    pub value: Score,
+    pub booster: Score,
 }
 
 #[near(serializers=[json])]
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct DailyScoreView {
-    pub pending: Score,
-    pub total: Score,
+    pub value: Score,
     pub booster: Score,
-    pub is_booster_claimed: bool,
 }
 
 impl From<DailyScore> for DailyScoreView {
     fn from(value: DailyScore) -> Self {
         Self {
-            pending: value.pending,
-            total: value.total,
-            booster: value.booster.get_value(),
-            is_booster_claimed: value.booster.is_claimed(),
+            value: value.value,
+            booster: value.booster,
         }
     }
 }
 
 impl DailyScore {
     pub fn new(value: Score) -> Self {
-        Self {
-            pending: value,
-            total: value,
-            booster: BoostedScore::default(),
-        }
+        Self { value, booster: 0 }
     }
 
-    pub fn settled_score(&self) -> Score {
-        self.total - self.pending
+    pub fn to_capped_apy(&self, cap: Score, include_booster: bool) -> UDecimal {
+        (self.value.min(cap) + if include_booster { self.booster } else { 0 }).to_apy()
     }
 }
 
@@ -90,7 +78,7 @@ pub struct AccountScoreLegacy {
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AccountScore {
     updated_at: UTC,
-    history: [DailyScore; DAYS_STORED],
+    pub history: [DailyScore; DAYS_STORED],
 }
 
 #[near(serializers=[json])]
@@ -118,7 +106,7 @@ impl AccountScore {
         self.updated_at.0
     }
 
-    fn get(&self, days_ago: DaysOffset) -> DailyScore {
+    pub fn get(&self, days_ago: DaysOffset) -> DailyScore {
         self.assert_in_bounds(days_ago as usize);
         self.history[days_ago as usize]
     }
@@ -137,35 +125,27 @@ impl AccountScore {
     fn add(&mut self, days_ago: DaysOffset, increment: Score) {
         let score = self.get_mut(days_ago);
 
-        score.pending = score.pending.saturating_add(increment);
-        score.total = score.total.saturating_add(increment);
+        score.value = score.value.saturating_add(increment);
     }
 
     pub fn apply_booster(&mut self, days_ago: DaysOffset, value: Score) -> bool {
-        if self.get(days_ago).booster.get_value() > 0 {
+        if self.get(days_ago).booster > 0 {
             return false;
         }
 
-        self.get_mut(days_ago).booster = BoostedScore::new(value, false);
+        self.get_mut(days_ago).booster = value;
+        self.updated_at = block_timestamp_ms().into();
 
         true
     }
 
-    fn wipe(&mut self) {
+    pub fn wipe(&mut self) {
         self.history = [DailyScore::default(); DAYS_STORED];
     }
 
-    fn shift(&mut self) {
+    pub fn shift(&mut self) {
         self.history.copy_within(0..DAYS_STORED - 1, 1);
         self.history[0] = DailyScore::default();
-    }
-
-    fn settle_at(&mut self, days_ago: DaysOffset) -> Score {
-        let result = self.get(days_ago).pending;
-        self.get_mut(days_ago).pending = 0;
-        self.get_mut(days_ago).booster.set_claimed(true);
-
-        result
     }
 
     #[allow(clippy::unused_self)]
@@ -175,75 +155,18 @@ impl AccountScore {
         }
     }
 
-    pub fn get_capped_pending_score(&self, timezone: Timezone, total_cap: Score) -> Score {
-        self.get_finalized_scores(timezone)
-            .iter()
-            .map(|item| {
-                if item.total <= total_cap {
-                    item.pending
-                } else {
-                    let settled = item.total - item.pending;
-                    total_cap.saturating_sub(settled)
-                }
-            })
-            .sum()
+    pub fn get_capped_finalized_score(&self, timezone: Timezone, total_cap: Score) -> Score {
+        self.get_last_finalized_record(timezone).value.min(total_cap)
     }
 
-    pub fn get_capped_total_finalized_score(&self, timezone: Timezone, total_cap: Score) -> Score {
-        self.get_finalized_scores(timezone)
-            .iter()
-            .map(|item| item.total.min(total_cap))
-            .sum()
-    }
-
-    pub fn get_pending_finalized_boosters(&self, timezone: Timezone) -> Score {
-        self.get_finalized_scores(timezone)
-            .iter()
-            .map(|item| {
-                if item.booster.is_claimed() {
-                    0
-                } else {
-                    item.booster.get_value()
-                }
-            })
-            .sum()
-    }
-
-    pub fn get_finalized_boosters(&self, timezone: Timezone) -> Score {
-        self.get_finalized_scores(timezone)
-            .iter()
-            .map(|item| item.booster.get_value())
-            .sum()
-    }
-
-    pub fn get_last_finalized_score(&self, timezone: Timezone) -> Score {
+    pub fn get_last_finalized_record(&self, timezone: Timezone) -> DailyScore {
         match self.get_days_number_since_last_update(timezone) {
             // Updated today => 0 offsetted day's score is still ongoing. Return last finalized value.
-            0 => self.get(1).total,
+            0 => self.get(1),
             // Updated earlier than today => 0 offsetted day is finalized.
-            1 => self.get(0).total,
-            _ => 0,
+            1 => self.get(0),
+            _ => DailyScore::default(),
         }
-    }
-
-    pub fn settle(&mut self, timezone: Timezone) -> Vec<Score> {
-        let days_since_last_update = self.get_days_number_since_last_update(timezone);
-
-        let settled_scores = if days_since_last_update == 0 {
-            vec![self.settle_at(1)]
-        } else {
-            vec![self.settle_at(0), self.settle_at(1)]
-        };
-
-        match days_since_last_update.cmp(&1) {
-            std::cmp::Ordering::Equal => self.shift(),
-            std::cmp::Ordering::Greater => self.wipe(),
-            std::cmp::Ordering::Less => {}
-        }
-
-        self.updated_at = block_timestamp_ms().into();
-
-        settled_scores
     }
 
     pub fn update(&mut self, increments: Vec<(Score, DaysOffset)>) {
@@ -252,17 +175,6 @@ impl AccountScore {
         }
 
         self.updated_at = block_timestamp_ms().into();
-    }
-
-    // If the score's last update day is yesterday or earlier relative to the today parameter, all historical score records are deemed finalized.
-    // Conversely, if the function is called on the same day as the score's last update, the score at index 0 (representing the current day)
-    // is considered active/ongoing and is excluded from the calculation.
-    fn get_finalized_scores(&self, timezone: Timezone) -> Vec<DailyScore> {
-        if timezone.today() > self.get_update_day(timezone) {
-            self.history.into()
-        } else {
-            self.history[1..].into()
-        }
     }
 
     pub fn get_update_day(&self, timezone: Timezone) -> Day {
@@ -336,8 +248,7 @@ impl From<AccountScoreLegacy> for AccountScore {
     fn from(value: AccountScoreLegacy) -> Self {
         let mut history = [DailyScore::default(); DAYS_STORED];
         for (i, item) in history.iter_mut().enumerate().take(DAYS_STORED) {
-            item.pending = value.scores[i];
-            item.total = value.scores_history[i];
+            item.value = value.scores_history[i];
         }
 
         Self {

@@ -5,7 +5,7 @@ use crate::{AccountScore, Score};
 
 impl AccountScore {
     pub fn scores(&self) -> (Score, Score) {
-        (self.get(0).pending, self.get(1).pending)
+        (self.get(0).value, self.get(1).value)
     }
 }
 

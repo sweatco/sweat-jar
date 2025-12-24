@@ -82,3 +82,7 @@ impl TimeHelper for Local {
         (self.0 % ms_in_day()).into()
     }
 }
+
+pub fn start_of_the_day(timestamp: Timestamp) -> Timestamp {
+    timestamp - timestamp % ms_in_day()
+}

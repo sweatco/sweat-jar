@@ -26,11 +26,7 @@ async fn measure_withdraw_test() -> Result<()> {
     .await?;
 
     let all_gas: Vec<_> = result.into_iter().map(|res| res.1).collect();
-
-    dbg!(&all_gas);
-
-    dbg!(all_gas.iter().max());
-    dbg!(all_gas.iter().min());
+    dbg!(all_gas);
 
     Ok(())
 }
@@ -44,8 +40,6 @@ async fn one_withdraw() -> anyhow::Result<()> {
         100_000,
     ))
     .await?;
-
-    dbg!(&gas);
 
     Ok(())
 }
