@@ -59,8 +59,7 @@ async fn measure_restake_total_test() -> Result<()> {
 #[mutants::skip]
 async fn one_restake() -> anyhow::Result<()> {
     let gas = measure_restake((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
-
-    dbg!(&gas);
+    println!(gas);
 
     Ok(())
 }

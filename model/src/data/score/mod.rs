@@ -5,10 +5,7 @@ use near_sdk::{
 
 use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UDecimal, UTC};
 
-mod booster;
 mod common;
-
-pub use booster::BoostedScore;
 
 pub const DAYS_STORED: usize = 2;
 
@@ -39,7 +36,7 @@ pub type ScoreIncrements = Vec<ScoreIncrement>;
 #[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub struct DailyScore {
     pub value: Score,
-    pub booster: BoostedScore,
+    pub booster: Score,
 }
 
 #[near(serializers=[json])]
@@ -53,22 +50,18 @@ impl From<DailyScore> for DailyScoreView {
     fn from(value: DailyScore) -> Self {
         Self {
             value: value.value,
-            booster: value.booster.get_value(),
+            booster: value.booster,
         }
     }
 }
 
 impl DailyScore {
     pub fn new(value: Score) -> Self {
-        Self {
-            value,
-            booster: BoostedScore::default(),
-        }
+        Self { value, booster: 0 }
     }
 
     pub fn to_capped_apy(&self, cap: Score, include_booster: bool) -> UDecimal {
-        dbg!(self);
-        (self.value.min(cap) + if include_booster { self.booster.get_value() } else { 0 }).to_apy()
+        (self.value.min(cap) + if include_booster { self.booster } else { 0 }).to_apy()
     }
 }
 
@@ -136,11 +129,12 @@ impl AccountScore {
     }
 
     pub fn apply_booster(&mut self, days_ago: DaysOffset, value: Score) -> bool {
-        if self.get(days_ago).booster.get_value() > 0 {
+        if self.get(days_ago).booster > 0 {
             return false;
         }
 
-        self.get_mut(days_ago).booster = BoostedScore::new(value, false);
+        self.get_mut(days_ago).booster = value;
+        self.updated_at = block_timestamp_ms().into();
 
         true
     }

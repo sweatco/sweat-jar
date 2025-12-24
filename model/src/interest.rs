@@ -8,7 +8,7 @@ use crate::{
             FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
         },
     },
-    ms_in_day, start_of_the_day, Duration, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_YEAR, UTC,
+    start_of_the_day, Duration, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_YEAR, UTC,
 };
 
 // TODO: add tests
@@ -23,8 +23,6 @@ pub trait InterestCalculator {
             .iter()
             .map(|deposit| {
                 let term = self.get_interest_calculation_term(account, now, since_date, deposit);
-
-                dbg!(term);
 
                 if term > 0 {
                     get_interest(deposit.principal, apy, term)
@@ -143,19 +141,12 @@ impl InterestCalculator for ScoreBasedProductTerms {
         let start_of_today = UTC(start_of_the_day(now));
         let start_of_today = account.timezone.adjust(start_of_today).0;
 
-        dbg!(deposit.created_at);
-
         let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
-            dbg!(cache_date);
             cmp::max(cache_date, deposit.created_at)
         });
         let since_date = start_of_today.max(since_date);
 
-        dbg!(since_date);
-
         let until_date = cmp::min(now, deposit.created_at + self.lockup_term.0);
-
-        dbg!(until_date);
 
         until_date.saturating_sub(since_date)
     }
@@ -166,7 +157,7 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
         let score = account.score.get_last_finalized_record(account.timezone);
         let score_cap = self.get_score_cap(account.features.is_feature_enabled(&Feature::IncreasedScoreCap));
 
-        (score.value.min(score_cap) + score.booster.get_value()).to_apy()
+        (score.value.min(score_cap) + score.booster).to_apy()
     }
 
     fn get_interest_calculation_term(

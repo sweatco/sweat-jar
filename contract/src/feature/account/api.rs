@@ -32,7 +32,6 @@ impl Contract {
         let settled_interest = self.get_settled_interest(account_id);
 
         let account = self.get_account(account_id);
-        dbg!(account.score);
 
         for (product_id, jar) in &account.jars {
             let product = self.get_product(product_id);
@@ -216,13 +215,8 @@ impl Contract {
             let remainder = jar.claim_remainder + remainder;
 
             let start_of_today = start_of_the_day(env::block_timestamp_ms());
-            dbg!(env::block_timestamp_ms());
-            dbg!(start_of_today);
-            let update_time = jar
-                .cache
-                .map_or(start_of_today, |cache| cache.updated_at.max(start_of_today)); // TODO: is it really needed?
-            dbg!(update_time);
-            jar.update_cache(interest, remainder, update_time);
+
+            jar.update_cache(interest, remainder, start_of_today);
         }
 
         match days_since_last_update.cmp(&1) {
@@ -264,26 +258,26 @@ impl Contract {
 
             for product in products.iter() {
                 let jar = account.get_jar(&product.id);
-                let cache_updated_at = jar.cache.map_or(0, |cache| cache.updated_at);
+                let cache_updated_at_relative = jar.cache.map_or(0, |cache| adjust_relative(cache.updated_at));
 
-                if cache_updated_at >= start_of_today {
+                if cache_updated_at_relative >= start_of_today {
                     continue;
                 }
 
                 let include_booster = matches!(product.terms, Terms::TieredScoreBased(_));
 
                 let apy = score.to_capped_apy(get_score_cap(account, product), include_booster);
-                dbg!(apy);
                 let day_end = day_start + ms_in_day();
 
                 let increment: (TokenAmount, u64) = jar
                     .deposits
                     .iter()
                     .map(|deposit| {
-                        let stard_time = deposit.created_at.max(day_start);
-                        let term = day_end.saturating_sub(stard_time);
-
-                        dbg!(term);
+                        let deposit_created_at_relative = adjust_relative(deposit.created_at);
+                        let start_time = deposit_created_at_relative
+                            .max(day_start)
+                            .max(cache_updated_at_relative);
+                        let term = day_end.saturating_sub(start_time);
 
                         get_interest(deposit.principal, apy, term)
                     })
@@ -299,6 +293,12 @@ impl Contract {
 
         return result;
     }
+}
+
+// APY for day N is defined by score of the day N-1.
+// So, to keep score recording dates and calculation dates, we should shift calculation dates to the past.
+fn adjust_relative(timestamp: Timestamp) -> Timestamp {
+    timestamp.saturating_sub(ms_in_day())
 }
 
 fn get_score_cap(account: &Account, product: &Product) -> Score {

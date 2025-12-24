@@ -63,8 +63,7 @@ async fn measure_claim_total_test() -> Result<()> {
 #[mutants::skip]
 async fn single_claim() -> anyhow::Result<()> {
     let gas = measure_claim((RegisterProductCommand::Locked10Minutes6Percents, 1)).await?;
-
-    dbg!(&gas);
+    dbg!(gas);
 
     Ok(())
 }
