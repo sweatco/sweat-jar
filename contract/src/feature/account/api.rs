@@ -285,9 +285,9 @@ impl Contract {
                         (acc.0 + interest, acc.1 + remainder)
                     });
 
-                let current_incriment: &mut (TokenAmount, u64) = result.entry(product.id.clone()).or_default();
-                current_incriment.0 += increment.0;
-                current_incriment.1 += increment.1;
+                let current_increment: &mut (TokenAmount, u64) = result.entry(product.id.clone()).or_default();
+                current_increment.0 += increment.0;
+                current_increment.1 += increment.1;
             }
         }
 
