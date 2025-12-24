@@ -1,4 +1,4 @@
-use std::{collections::HashMap, convert::Into};
+use std::{cmp::Ordering, collections::HashMap, convert::Into};
 
 use near_sdk::{
     env::{self, panic_str},
@@ -12,7 +12,7 @@ use sweat_jar_model::{
         account::{common::FeaturesAccess, features::Feature, view::AccountView, Account},
         jar::{AggregatedInterestView, AggregatedTokenAmountView, JarsView},
         product::{Product, ProductId, Terms},
-        score::{self, Score},
+        score::Score,
     },
     interest::{get_interest, InterestCalculator},
     ms_in_day, start_of_the_day, DailyScore, DaysOffset, ScoreIncrementProcessor, TimeHelper, Timestamp, Timezone,
@@ -51,15 +51,6 @@ impl Contract {
             timestamp: env::block_timestamp_ms(),
         }
     }
-
-    fn update_score_based_jars_cache(&mut self, account_id: &AccountId) {
-        self.update_account_cache(
-            account_id,
-            Some(|product: &Product| {
-                matches!(product.terms, Terms::ScoreBased(_)) || matches!(product.terms, Terms::TieredScoreBased(_))
-            }),
-        );
-    }
 }
 
 #[near]
@@ -81,7 +72,7 @@ impl AccountApi for Contract {
             return AggregatedInterestView::default();
         }
 
-        return self.get_total_interest_for_account(&account_id);
+        self.get_total_interest_for_account(&account_id)
     }
 
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
@@ -130,7 +121,7 @@ impl AccountApi for Contract {
         for account_id in &account_ids {
             self.assert_timezone_is_set(account_id);
             self.get_account(account_id).timezone.assert_not_future(timestamp);
-            self.settle_interest(&account_id);
+            self.settle_interest(account_id);
 
             let account = self.get_account_mut(account_id);
 
@@ -208,7 +199,7 @@ impl Contract {
         let days_since_last_update = account.score.get_days_number_since_last_update(account.timezone);
 
         let settled_interest = self.get_settled_interest(account_id);
-        for (product_id, (interest, remainder)) in settled_interest.iter() {
+        for (product_id, (interest, remainder)) in &settled_interest {
             let account = self.get_account_mut(account_id);
             let jar = account.get_jar_mut(product_id);
             let interest = jar.cache.map_or(0, |cache| cache.interest) + interest;
@@ -220,9 +211,9 @@ impl Contract {
         }
 
         match days_since_last_update.cmp(&1) {
-            std::cmp::Ordering::Less => {}
-            std::cmp::Ordering::Equal => self.get_account_mut(account_id).score.shift(),
-            std::cmp::Ordering::Greater => self.get_account_mut(account_id).score.wipe(),
+            Ordering::Less => {}
+            Ordering::Equal => self.get_account_mut(account_id).score.shift(),
+            Ordering::Greater => self.get_account_mut(account_id).score.wipe(),
         }
     }
 
@@ -238,16 +229,25 @@ impl Contract {
         let mut scores: Vec<(Timestamp, DailyScore)> = vec![];
         let score_updated_at = account.score.updated_at();
 
-        if days_since_last_update == 1 {
-            let score = account.score.get(1);
-            let day_start = start_of_the_day(score_updated_at.saturating_sub(ms_in_day()));
+        match days_since_last_update.cmp(&1) {
+            Ordering::Less => {}
+            Ordering::Equal => {
+                let score = account.score.get(1);
+                let day_start = start_of_the_day(score_updated_at.saturating_sub(ms_in_day()));
 
-            scores.push((day_start, score));
-        } else if days_since_last_update > 1 {
-            for i in 0..account.score.history.len() {
-                let day_start = start_of_the_day(score_updated_at.saturating_sub((i as u64) * ms_in_day()));
+                scores.push((day_start, score));
+            }
+            Ordering::Greater => {
+                for i in 0..account.score.history.len() {
+                    let day_start = start_of_the_day(score_updated_at.saturating_sub((i as u64) * ms_in_day()));
 
-                scores.push((day_start, account.score.get(i as u16)));
+                    scores.push((
+                        day_start,
+                        account
+                            .score
+                            .get(u16::try_from(i).unwrap_or_else(|_| panic_str("Value is out of types bounds"))),
+                    ));
+                }
             }
         }
 
@@ -256,7 +256,7 @@ impl Contract {
             let products =
                 self.get_products_for_account(account_id, Some(|product: &Product| product.terms.is_score_based()));
 
-            for product in products.iter() {
+            for product in &products {
                 let jar = account.get_jar(&product.id);
                 let cache_updated_at_relative = jar.cache.map_or(0, |cache| adjust_relative(cache.updated_at));
 
@@ -291,7 +291,7 @@ impl Contract {
             }
         }
 
-        return result;
+        result
     }
 }
 
