@@ -1,4 +1,4 @@
-use std::{fs::read_to_string, time::Duration};
+use std::fs::read_to_string;
 
 use anyhow::Result;
 use near_workspaces::Account;
@@ -8,16 +8,11 @@ use nitka::{
 };
 use sweat_jar_model::{
     api::*,
-    data::{
-        claim::ClaimedAmountView,
-        product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},
-    },
+    data::product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},
     UDecimal, MS_IN_DAY, MS_IN_SECOND,
 };
-use sweat_model::FungibleTokenCoreIntegration;
-use tokio::time::sleep;
 
-use crate::{jar_contract_extensions::JarContractExtensions, testnet::testnet_context::TestnetContext};
+use crate::testnet::testnet_context::TestnetContext;
 
 fn _get_products() -> Vec<Product> {
     let json_str = read_to_string("../products_testnet.json").unwrap();

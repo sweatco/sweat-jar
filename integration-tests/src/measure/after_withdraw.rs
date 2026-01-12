@@ -41,6 +41,8 @@ async fn one_withdraw() -> anyhow::Result<()> {
     ))
     .await?;
 
+    println!("{}", gas);
+
     Ok(())
 }
 
