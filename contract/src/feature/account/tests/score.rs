@@ -507,6 +507,204 @@ mod score_tests {
             assert_eq!(350_000_000_000_000_000, ctx.claim_total(&alice));
         }
     }
+
+    /// Tests that settle_interest correctly adds (not multiplies) remainder values.
+    /// This catches mutation: replace + with * in `let remainder = jar.claim_remainder + remainder`
+    #[rstest]
+    fn settle_interest_accumulates_remainder_correctly(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = MS_IN_DAY * 100;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        // Small deposit to generate non-trivial remainders
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 1_000_000, start_time.into());
+
+        // Record score for day 0
+        ctx.switch_account_to_manager();
+        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move to day 1 and claim - this will set claim_remainder
+        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
+        let first_claim = ctx.claim_total(&alice);
+
+        // Record score for day 1
+        ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move to day 2 and claim again - this should add remainders, not multiply
+        ctx.set_block_timestamp_in_ms(start_time + 2 * MS_IN_DAY);
+        let second_claim = ctx.claim_total(&alice);
+
+        // Both claims should be roughly equal (same score, same duration)
+        // If remainder was multiplied instead of added, second claim would be wrong
+        assert!(first_claim > 0, "First claim should be non-zero");
+        assert!(second_claim > 0, "Second claim should be non-zero");
+        // The claims should be approximately equal (within 1 unit due to remainder accumulation)
+        assert!(
+            (first_claim as i128 - second_claim as i128).abs() <= 1,
+            "Claims should be approximately equal: first={}, second={}",
+            first_claim,
+            second_claim
+        );
+    }
+
+    /// Tests that get_settled_interest correctly calculates day offsets using multiplication.
+    /// This catches mutation: replace * with / in `(i as u64) * ms_in_day()`
+    #[rstest]
+    fn get_settled_interest_calculates_multiple_days_correctly(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = MS_IN_DAY * 100;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 365_000_000_000_000_000_000, start_time.into());
+
+        // Record scores for day 0 and day 1
+        ctx.switch_account_to_manager();
+        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
+        ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move forward 3 days (more than 1 day since last update triggers the Greater branch)
+        ctx.set_block_timestamp_in_ms(start_time + 4 * MS_IN_DAY);
+
+        // The interest should reflect 2 full days of score history being settled
+        let interest = ctx.interest(&alice, &product.id);
+
+        // With 10k score (capped at 18k) = 10% APY
+        // 365_000 SWEAT * 10% / 365 days * 2 days = 200 SWEAT
+        // If day calculation used division instead of multiplication, interest would be wrong
+        assert!(
+            interest >= 180_000_000_000_000_000 && interest <= 220_000_000_000_000_000,
+            "Interest should be around 200 SWEAT (2 days worth), got: {}",
+            interest
+        );
+    }
+
+    /// Tests that interest from multiple deposits is summed (not multiplied) in fold.
+    /// This catches mutation: replace + with * in `(acc.0 + interest, acc.1 + remainder)`
+    #[rstest]
+    fn get_settled_interest_sums_multiple_deposits(
+        admin: AccountId,
+        alice: AccountId,
+        bob: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = MS_IN_DAY * 100;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        // Setup Alice with two separate deposits
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        let deposit_amount = 365_000_000_000_000_000_000u128;
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, deposit_amount, start_time.into());
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, deposit_amount, start_time.into());
+
+        // Setup Bob with single deposit of double amount
+        ctx.contract()
+            .get_or_create_account_mut(&bob)
+            .try_set_timezone(Timezone::new(0).into());
+
+        ctx.contract()
+            .get_account_mut(&bob)
+            .deposit(&product.id, deposit_amount * 2, start_time.into());
+
+        // Record same score for both
+        ctx.switch_account_to_manager();
+        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+        ctx.record_score(&bob, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move to next day and compare interest
+        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
+        let interest_two_deposits = ctx.interest(&alice, &product.id);
+        let interest_single_deposit = ctx.interest(&bob, &product.id);
+
+        // Two deposits should produce the same interest as one deposit of double amount
+        // If multiplication was used instead of addition, the result would be wildly different
+        assert_eq!(
+            interest_two_deposits, interest_single_deposit,
+            "Interest from two deposits ({}) should equal interest from single double deposit ({})",
+            interest_two_deposits, interest_single_deposit
+        );
+    }
+
+    /// Tests that remainders are accumulated (added, not multiplied) across multiple score days.
+    /// This catches mutation: replace += with *= in `current_increment.1 += increment.1`
+    #[rstest]
+    fn get_settled_interest_accumulates_remainder_across_days(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = MS_IN_DAY * 100;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        // Small deposit that generates non-trivial remainders
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 7_000_000, start_time.into());
+
+        // Record scores for two days
+        ctx.switch_account_to_manager();
+        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
+        ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move forward 3+ days to trigger Greater branch (processes multiple days)
+        ctx.set_block_timestamp_in_ms(start_time + 4 * MS_IN_DAY);
+
+        let interest = ctx.interest(&alice, &product.id);
+
+        // With multiplication instead of addition, remainder would compound incorrectly
+        // The interest should be approximately: 7_000_000 * 10% / 365 * 2 ≈ 3835
+        assert!(
+            interest >= 3000 && interest <= 5000,
+            "Interest should be reasonable for small deposit over 2 days, got: {}",
+            interest
+        );
+    }
 }
 
 mod account_score_tests {
