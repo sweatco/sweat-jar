@@ -17,6 +17,7 @@ release-api = []
 testing = ["dep:rand"]
 
 [dependencies]
+sweat-jar-primitives = { workspace = true }
 near-sdk = { workspace = true }
 
 nitka-proc = { workspace = true }

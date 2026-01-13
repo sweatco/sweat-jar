@@ -12,8 +12,9 @@ use sweat_jar_model::{
     },
     interest::InterestCalculator,
     signer::test_utils::MessageSigner,
-    Timestamp, UDecimal, ValueTier, MS_IN_YEAR,
+    Timestamp, ValueTier, MS_IN_YEAR,
 };
+use sweat_jar_primitives::UDecimal;
 
 use crate::{
     common::testing::{accounts::*, Context, TokenUtils},

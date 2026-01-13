@@ -9,8 +9,9 @@ use nitka::{
 use sweat_jar_model::{
     api::*,
     data::product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, WithdrawalFee},
-    UDecimal, MS_IN_DAY, MS_IN_SECOND,
+    MS_IN_DAY, MS_IN_SECOND,
 };
+use sweat_jar_primitives::UDecimal;
 
 use crate::testnet::testnet_context::TestnetContext;
 

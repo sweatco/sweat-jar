@@ -1,5 +1,7 @@
 use std::cmp;
 
+use sweat_jar_primitives::UDecimal;
+
 use crate::{
     data::{
         account::{common::FeaturesAccess, features::Feature, Account},
@@ -8,7 +10,7 @@ use crate::{
             FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
         },
     },
-    start_of_the_day, Duration, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_YEAR, UTC,
+    start_of_the_day, Duration, Timestamp, ToAPY, TokenAmount, MS_IN_YEAR, UTC,
 };
 
 // TODO: add tests

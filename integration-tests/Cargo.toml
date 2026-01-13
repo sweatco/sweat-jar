@@ -24,6 +24,7 @@ sweat-jar-model = { workspace = true, features = [
     "integration-api",
     "testing",
 ] }
+sweat-jar-primitives = { workspace = true }
 sweat-model = { workspace = true, features = ["integration-api"] }
 
 nitka = { workspace = true }

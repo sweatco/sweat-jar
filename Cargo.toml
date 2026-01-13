@@ -3,7 +3,7 @@
 resolver = "2"
 
 default-members = ["contract"]
-members = ["model", "contract", "integration-tests"]
+members = ["primitives", "model", "contract", "integration-tests"]
 
 [workspace.dependencies]
 anyhow = "1.0.75"
@@ -27,6 +27,7 @@ strum = { version = "0.27", features = ["derive"] }
 nitka = "0.4.0"
 nitka-proc = "0.4.0"
 
+sweat-jar-primitives = { path = "primitives" }
 sweat-jar-model = { path = "model" }
 sweat-model = { git = "https://github.com/sweatco/sweat-near", rev = "537ef7d0aa3bf58d87b77a1c9660b2d0299b6c00" }
 

@@ -713,8 +713,9 @@ mod account_score_tests {
     use sweat_jar_model::{
         convert_to_days_offset,
         data::account::{features::Feature, versioned::AccountVersioned, Account},
-        DailyScore, ScoreIncrements, UDecimal,
+        DailyScore, ScoreIncrements,
     };
+    use sweat_jar_primitives::UDecimal;
 
     use super::*;
 

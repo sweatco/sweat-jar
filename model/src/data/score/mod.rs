@@ -3,7 +3,9 @@ use near_sdk::{
     near,
 };
 
-use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UDecimal, UTC};
+use sweat_jar_primitives::UDecimal;
+
+use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UTC};
 
 mod common;
 

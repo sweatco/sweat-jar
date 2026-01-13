@@ -1,0 +1,11 @@
+[package]
+name = "sweat-jar-primitives"
+version = "0.1.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+near-sdk = { workspace = true }
+
+[dev-dependencies]
+fake = { workspace = true }

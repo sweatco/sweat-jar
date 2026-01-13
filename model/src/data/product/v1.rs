@@ -3,7 +3,9 @@ use near_sdk::{
     near,
 };
 
-use crate::{ConfigurableValue, Duration, Score, TokenAmount, UDecimal};
+use sweat_jar_primitives::UDecimal;
+
+use crate::{ConfigurableValue, Duration, Score, TokenAmount};
 
 pub type ProductId = String;
 

@@ -46,6 +46,10 @@ impl UDecimal {
     pub fn is_zero(&self) -> bool {
         self.significand() == 0
     }
+
+    pub fn saturating_mul(self, value: u128) -> u128 {
+        value.saturating_mul(self.significand()) / 10u128.pow(self.exponent())
+    }
 }
 
 impl Mul<u128> for UDecimal {
@@ -131,6 +135,32 @@ mod tests {
 
             assert!(diff < 0.008, "Diff: {diff}");
         }
+    }
+
+    #[test]
+    fn saturating_mul_matches_regular_mul() {
+        assert_eq!(UDecimal::new(12, 0).saturating_mul(5), UDecimal::new(12, 0) * 5);
+        assert_eq!(UDecimal::new(14, 1).saturating_mul(10), UDecimal::new(14, 1) * 10);
+        assert_eq!(UDecimal::new(16, 2).saturating_mul(100), UDecimal::new(16, 2) * 100);
+        assert_eq!(UDecimal::new(18, 3).saturating_mul(1000), UDecimal::new(18, 3) * 1000);
+    }
+
+    #[test]
+    fn saturating_mul_handles_overflow() {
+        // Large significand * large value would overflow without saturation
+        let large_decimal = UDecimal::new(u128::MAX, 0);
+        let result = large_decimal.saturating_mul(2);
+        assert_eq!(result, u128::MAX);
+
+        // Another overflow case: large value with smaller significand
+        let decimal = UDecimal::new(u128::MAX / 2 + 1, 0);
+        let result = decimal.saturating_mul(3);
+        assert_eq!(result, u128::MAX);
+
+        // Edge case: multiplying by u128::MAX
+        let decimal = UDecimal::new(2, 0);
+        let result = decimal.saturating_mul(u128::MAX);
+        assert_eq!(result, u128::MAX);
     }
 
     #[test]
