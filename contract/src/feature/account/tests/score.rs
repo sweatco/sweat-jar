@@ -713,7 +713,7 @@ mod account_score_tests {
     use sweat_jar_model::{
         convert_to_days_offset,
         data::account::{features::Feature, versioned::AccountVersioned, Account},
-        DailyScore, ScoreIncrements,
+        DailyScore, ScoreIncrements, UDecimal,
     };
 
     use super::*;
@@ -738,9 +738,15 @@ mod account_score_tests {
             (1_000, (today.0 - (MS_IN_HOUR * 550)).into()),
         ]
     }
+
     #[fixture]
     fn context(admin: AccountId) -> Context {
         Context::new(admin)
+    }
+
+    #[fixture]
+    fn daily_score(#[default(0)] value: Score, #[default(0)] booster: Score) -> DailyScore {
+        DailyScore { value, booster }
     }
 
     #[rstest]
@@ -967,6 +973,28 @@ mod account_score_tests {
             ctx.set_block_timestamp_in_ms(star_time + 24 * MS_IN_HOUR);
             assert_eq!(50_000_000_000_000_000, ctx.interest(&alice, &product.id));
         }
+    }
+
+    #[rstest]
+    fn when_include_booster_then_return_compound_capped_apy(#[with(20_000, 5_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(25_000, 5), daily_score.to_capped_apy(30_000, true));
+        assert_eq!(UDecimal::new(6_000, 5), daily_score.to_capped_apy(1_000, true));
+    }
+
+    #[rstest]
+    fn when_exclude_booster_then_return_score_capped_apy(#[with(20_000, 5_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(20_000, 5), daily_score.to_capped_apy(30_000, false));
+        assert_eq!(UDecimal::new(1_000, 5), daily_score.to_capped_apy(1_000, false));
+    }
+
+    #[rstest]
+    fn when_compound_apy_exceeds_type_bounds_shouldnt_fail(#[with(65_000, 20_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(85_000, 5), daily_score.to_capped_apy(Score::MAX, true));
+    }
+
+    #[rstest]
+    fn when_compound_apy_exceeds_max_value_it_gets_capped(#[with(65_000, 50_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(100_000, 5), daily_score.to_capped_apy(Score::MAX, true));
     }
 }
 

@@ -56,12 +56,22 @@ impl From<DailyScore> for DailyScoreView {
 }
 
 impl DailyScore {
+    pub const MAX: u32 = 100_000;
+
     pub fn new(value: Score) -> Self {
         Self { value, booster: 0 }
     }
 
     pub fn to_capped_apy(&self, cap: Score, include_booster: bool) -> UDecimal {
-        (self.value.min(cap) + if include_booster { self.booster } else { 0 }).to_apy()
+        let capped_score = self.value.min(cap);
+
+        if include_booster {
+            let compound_score = u32::from(capped_score) + u32::from(self.booster);
+
+            return compound_score.min(DailyScore::MAX).to_apy();
+        }
+
+        capped_score.to_apy()
     }
 }
 
