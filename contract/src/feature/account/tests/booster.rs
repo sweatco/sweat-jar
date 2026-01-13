@@ -204,3 +204,28 @@ fn claim_from_tiered_score_jar_with_delayed_booster_claim(
     let claimed = claim_result.get_total().0;
     assert_eq!(claimed, 180.to_otto());
 }
+
+#[rstest]
+fn booster_is_not_applied_when_too_old(admin: AccountId, alice: AccountId) {
+    test_env_ext::set_test_log_events(false);
+
+    let mut context = Context::new(admin.clone());
+    context.switch_account_to_manager();
+
+    context
+        .contract()
+        .accounts
+        .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+    context.contract().set_timezone(alice.clone(), 0.into());
+
+    // Day 10: Try to apply booster for day 8 (2 days ago, outside DAYS_STORED)
+    context.set_block_timestamp_in_ms(10 * MS_IN_DAY);
+    context
+        .contract()
+        .apply_booster(vec![alice.clone()], 5_000, (8 * MS_IN_DAY).into());
+
+    // Verify booster was not applied
+    let score = context.contract().get_account(&alice).score;
+    assert_eq!(score.get(0).booster, 0);
+    assert_eq!(score.get(1).booster, 0);
+}

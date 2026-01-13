@@ -139,6 +139,10 @@ impl AccountScore {
     }
 
     pub fn apply_booster(&mut self, days_ago: DaysOffset, value: Score) -> bool {
+        if days_ago as usize >= DAYS_STORED {
+            return false;
+        }
+
         if self.get(days_ago).booster > 0 {
             return false;
         }
