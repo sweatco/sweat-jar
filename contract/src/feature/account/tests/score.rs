@@ -764,7 +764,7 @@ mod account_score_tests {
         let mut score = AccountScore::default();
         score.update(normalized_increments);
 
-        let mut account = Account {
+        let account = Account {
             score,
             timezone: TIMEZONE,
             ..Account::default()
@@ -1008,13 +1008,6 @@ impl Context {
             .map_or(0, |value| value.0)
     }
 
-    fn jar(&self, account_id: &AccountId, product_id: &ProductId) -> Jar {
-        let contract = self.contract();
-        let account = contract.get_account(account_id);
-
-        account.get_jar(product_id).clone()
-    }
-
     pub(crate) fn claim_total(&mut self, account_id: &AccountId) -> TokenAmount {
         self.switch_account(account_id);
         let PromiseOrValue::Value(claim_result) = self.contract().claim_total(None) else {
@@ -1044,39 +1037,5 @@ impl Context {
 
     pub(crate) fn score(&self, account_id: &AccountId) -> AccountScore {
         self.contract().get_account(account_id).score
-    }
-
-    fn deposit(&mut self, account_id: &AccountId, product_id: &ProductId, amount: TokenAmount) {
-        self.deposit_internal(account_id, product_id, amount, None);
-    }
-
-    fn deposit_with_timezone(
-        &mut self,
-        account_id: &AccountId,
-        product_id: &ProductId,
-        amount: TokenAmount,
-        timezone: Timezone,
-    ) {
-        self.deposit_internal(account_id, product_id, amount, Some(timezone));
-    }
-
-    fn deposit_internal(
-        &mut self,
-        account_id: &AccountId,
-        product_id: &ProductId,
-        amount: TokenAmount,
-        timezone: Option<Timezone>,
-    ) {
-        self.switch_account(admin());
-        self.contract().deposit(
-            account_id.clone(),
-            DepositTicket {
-                product_id: product_id.clone(),
-                valid_until: (self.now() + MS_IN_YEAR).into(),
-                timezone,
-            },
-            amount,
-            None,
-        );
     }
 }

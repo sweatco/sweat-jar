@@ -19,7 +19,7 @@ use sweat_jar_model::{
         jar::Jar,
         product::{Product, ProductId},
     },
-    Timestamp, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
+    TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
 };
 
 use super::{env::test_env_ext, event::EventKind};
@@ -88,10 +88,6 @@ impl Context {
             legacy_jar_contract_id,
             contract: Arc::new(Mutex::new(contract)),
         }
-    }
-
-    pub(crate) fn now(&self) -> Timestamp {
-        self.builder.context.block_timestamp / 1_000_000
     }
 
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {
