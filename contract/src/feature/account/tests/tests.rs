@@ -691,6 +691,33 @@ mod signature_tests {
     }
 }
 
+mod interest_overflow_tests {
+    use sweat_jar_model::{interest::get_interest, MS_IN_YEAR};
+    use sweat_jar_primitives::UDecimal;
+
+    #[test]
+    fn get_interest_handles_overflow_in_yearly_interest() {
+        let principal = u128::MAX;
+        let apy = UDecimal::new(20, 2);
+        let term = MS_IN_YEAR;
+
+        let (interest, _remainder) = get_interest(principal, apy, term);
+
+        assert_eq!(interest, u128::MAX / u128::from(MS_IN_YEAR));
+    }
+
+    #[test]
+    fn get_interest_handles_overflow_in_term_multiplication() {
+        let principal = u128::MAX / 100;
+        let apy = UDecimal::new(1, 0);
+        let term = u64::MAX;
+
+        let (interest, _remainder) = get_interest(principal, apy, term);
+
+        assert_eq!(interest, u128::MAX / u128::from(MS_IN_YEAR));
+    }
+}
+
 impl Contract {
     pub fn get_jars_for_account_detailed(&self, account_id: &AccountId) -> HashMap<ProductId, JarView> {
         <Contract as AccountApi>::get_account(self, account_id.clone())

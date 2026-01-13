@@ -13,7 +13,6 @@ use crate::{
     start_of_the_day, Duration, Timestamp, ToAPY, TokenAmount, MS_IN_YEAR, UTC,
 };
 
-// TODO: add tests
 pub trait InterestCalculator {
     fn get_interest(&self, account: &Account, jar: &Jar, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
@@ -187,8 +186,8 @@ pub fn get_interest(principal: TokenAmount, apy: UDecimal, term: Duration) -> (T
     let ms_in_year: u128 = MS_IN_YEAR.into();
     let term_in_milliseconds: u128 = term.into();
 
-    let yearly_interest = apy * principal;
-    let interest = term_in_milliseconds * yearly_interest;
+    let yearly_interest = apy.saturating_mul(principal);
+    let interest = term_in_milliseconds.saturating_mul(yearly_interest);
 
     // This will never fail because `MS_IN_YEAR` is u64
     // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.
