@@ -284,6 +284,7 @@ fn restake_all_for_multiple_products_with_withdrawal(
     };
     assert_eq!(data.restaked.0, principal - withdrawal_amount);
     assert_eq!(data.withdrawn.0, withdrawal_amount);
+    assert!(data.is_success, "Restake event should have is_success=true");
 }
 
 #[rstest]
@@ -341,6 +342,62 @@ fn restake_all_for_multiple_products_with_withdrawal_and_fee(
     assert_eq!(data.restaked.0, principal - withdrawal_amount);
     assert_eq!(data.withdrawn.0, withdrawal_amount - target_fee);
     assert_eq!(context.contract().fee_amount, target_fee);
+    assert!(data.is_success, "Restake event should have is_success=true");
+}
+
+/// Tests that is_success field correctly reflects failed transfer.
+/// This catches mutation: delete field is_success from struct RestakeData expression
+#[rstest]
+fn restake_event_is_success_reflects_transfer_failure(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product_1_year_apy_10_percent)] product: Product,
+    #[with(vec![(0, 200_000), (MS_IN_YEAR / 4, 300_000)])]
+    #[from(jar)]
+    jar: Jar,
+) {
+    use crate::common::env::test_env_ext;
+
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone()])
+        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
+
+    // Wait until maturity
+    let restake_time = 2 * MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    // Create restake ticket
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+
+    // Simulate failed transfer
+    test_env_ext::set_test_future_success(false);
+
+    context.switch_account(&alice);
+    context.contract().restake_all(ticket, None, Some(100_000.into()));
+
+    // Restore default for other tests
+    test_env_ext::set_test_future_success(true);
+
+    // Check emitted event has is_success=false
+    let events = context.get_events();
+    assert_eq!(events.len(), 1);
+
+    let EventKind::Restake(_, data) = events.last().unwrap() else {
+        panic!("Expected Restake event");
+    };
+
+    // This assertion catches the mutation that deletes is_success field:
+    // - With field: is_success = env_ext::is_promise_success() = false
+    // - Without field (mutation): is_success = RestakeData::from(&request).is_success = true
+    assert!(
+        !data.is_success,
+        "Restake event should have is_success=false when transfer fails"
+    );
 }
 
 #[rstest]

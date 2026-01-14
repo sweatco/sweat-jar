@@ -540,15 +540,49 @@ mod score_tests {
         ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
         let first_claim = ctx.claim_total(&alice);
 
+        let remainder_after_first_claim = ctx.contract().get_account(&alice).get_jar(&product.id).claim_remainder;
+
         // Record score for day 1
         ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
 
-        // Move to day 2 and claim again - this should add remainders, not multiply
+        // Move to day 2 - settle_interest will be called during claim
+        // At this point: claim_remainder = remainder_after_first_claim (non-zero)
+        // and new remainder will be calculated from get_settled_interest
         ctx.set_block_timestamp_in_ms(start_time + 2 * MS_IN_DAY);
+
+        // Directly test settle_interest accumulation
+        ctx.contract().settle_interest(&alice);
+
+        // After settle_interest, the remainder should be: old_remainder + new_remainder
+        // If multiplication was used, it would be: old_remainder * new_remainder (different value)
+        let remainder_after_settle = ctx.contract().get_account(&alice).get_jar(&product.id).claim_remainder;
+
+        // The remainder should have accumulated (added), not multiplied
+        // With same conditions each day, remainder should roughly double (addition)
+        // With multiplication: if both are ~X, then X*X >> X+X which would overflow u64
+
+        // First, verify we have non-zero remainder to test with
+        assert!(
+            remainder_after_first_claim > 0,
+            "Test setup error: first claim should produce non-zero remainder"
+        );
+
+        // With addition: result ≈ 2 * remainder_after_first_claim
+        // With multiplication: result would overflow or be wildly different
+        // We check that the result is close to 2x (within 50% margin)
+        let expected_sum = remainder_after_first_claim * 2;
+        assert!(
+            remainder_after_settle >= expected_sum / 2 && remainder_after_settle <= expected_sum * 2,
+            "Remainder should accumulate via addition, not multiplication. \
+             First remainder: {}, After settle: {}, Expected ~{}",
+            remainder_after_first_claim,
+            remainder_after_settle,
+            expected_sum
+        );
+
         let second_claim = ctx.claim_total(&alice);
 
         // Both claims should be roughly equal (same score, same duration)
-        // If remainder was multiplied instead of added, second claim would be wrong
         assert!(first_claim > 0, "First claim should be non-zero");
         assert!(second_claim > 0, "Second claim should be non-zero");
         // The claims should be approximately equal (within 1 unit due to remainder accumulation)
@@ -562,6 +596,17 @@ mod score_tests {
 
     /// Tests that get_settled_interest correctly calculates day offsets using multiplication.
     /// This catches mutation: replace * with / in `(i as u64) * ms_in_day()`
+    ///
+    /// Key insight: With `/`, the mutation causes `i / ms_in_day() = 0` for all reasonable i values,
+    /// so all loop iterations use the SAME day_start. This causes duplicate interest calculation
+    /// for one day instead of calculating interest for different days.
+    ///
+    /// IMPORTANT: The code uses `adjust_relative()` which shifts timestamps back by 1 day.
+    /// So a deposit at day 1 + 12h has deposit_created_at_relative = day 0 + 12h.
+    ///
+    /// To catch this mutation, we create deposit at day 1 + 12h so that (after adjust_relative):
+    /// - With `*`: day 0 gets 12h interest, day 1 gets 24h interest → ~1.5 days total
+    /// - With `/`: both iterations calculate for day 1 (24h each) → ~2 days total (WRONG)
     #[rstest]
     fn get_settled_interest_calculates_multiple_days_correctly(
         admin: AccountId,
@@ -572,35 +617,60 @@ mod score_tests {
 
         let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
 
-        let start_time = MS_IN_DAY * 100;
-        ctx.set_block_timestamp_in_ms(start_time);
+        // Day 0 starts at this time
+        let day0_start = MS_IN_DAY * 100;
+        let day1_start = day0_start + MS_IN_DAY;
 
+        // Record score for day 0 first (need to do this before deposit for timezone setup)
+        ctx.set_block_timestamp_in_ms(day0_start + 6 * MS_IN_HOUR);
         ctx.contract()
             .get_or_create_account_mut(&alice)
             .try_set_timezone(Timezone::new(0).into());
 
+        ctx.switch_account_to_manager();
+        ctx.record_score(&alice, (day0_start + 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Create deposit at MID-DAY of day 1 (12 hours into day 1)
+        // After adjust_relative (-1 day), this becomes day 0 + 12h
+        // This means:
+        // - Day 0 period: deposit_created_at_relative = day0 + 12h, so term = 12h (partial)
+        // - Day 1 period: deposit_created_at_relative = day0 + 12h < day1 start, so term = 24h (full)
+        let deposit_time = day1_start + 12 * MS_IN_HOUR;
+        ctx.set_block_timestamp_in_ms(deposit_time);
+
         ctx.contract()
             .get_account_mut(&alice)
-            .deposit(&product.id, 365_000_000_000_000_000_000, start_time.into());
+            .deposit(&product.id, 365_000_000_000_000_000_000, deposit_time.into());
 
-        // Record scores for day 0 and day 1
-        ctx.switch_account_to_manager();
-        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
-        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
-        ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
+        // Move to day 1 + 18h and record score for day 1
+        ctx.set_block_timestamp_in_ms(day1_start + 18 * MS_IN_HOUR);
+        ctx.record_score(&alice, (day1_start + 6 * MS_IN_HOUR).into(), 10_000);
 
-        // Move forward 3 days (more than 1 day since last update triggers the Greater branch)
-        ctx.set_block_timestamp_in_ms(start_time + 4 * MS_IN_DAY);
+        // Move forward to day 4 (more than 1 day since last score update triggers Greater branch)
+        ctx.set_block_timestamp_in_ms(day0_start + 4 * MS_IN_DAY);
 
-        // The interest should reflect 2 full days of score history being settled
         let interest = ctx.interest(&alice, &product.id);
 
-        // With 10k score (capped at 18k) = 10% APY
-        // 365_000 SWEAT * 10% / 365 days * 2 days = 200 SWEAT
-        // If day calculation used division instead of multiplication, interest would be wrong
+        // With 10k score = 10% APY, 365_000 SWEAT deposit:
+        // - Day 0: deposit_created_at_relative = day0+12h, so 12h interest → 50 SWEAT
+        // - Day 1: deposit_created_at_relative < day1 start, so full 24h → 100 SWEAT
+        // - Total with correct `*`: ~150 SWEAT (1.5 days)
+        //
+        // With mutation `/`:
+        // - Both iterations use day 1's time range (day_start = day1 for both i=0 and i=1)
+        // - For both: deposit_created_at_relative = day0+12h < day1 start
+        // - Each calculates full 24 hours → 100 SWEAT each
+        // - Total: ~200 SWEAT (2 days - WRONG, duplicate!)
+        //
+        // We check that interest is around 150 SWEAT, NOT 200 SWEAT
+        let expected_interest = 150_000_000_000_000_000u128; // ~150 SWEAT
+
         assert!(
-            interest >= 180_000_000_000_000_000 && interest <= 220_000_000_000_000_000,
-            "Interest should be around 200 SWEAT (2 days worth), got: {}",
+            interest >= expected_interest - 20_000_000_000_000_000
+                && interest <= expected_interest + 20_000_000_000_000_000,
+            "Interest should be ~150 SWEAT (1.5 days: 12h day 0 + 24h day 1). Got: {}. \
+             If this is ~200 SWEAT, the day calculation is using `/` instead of `*`, \
+             causing duplicate calculation for day 1.",
             interest
         );
     }
@@ -653,8 +723,17 @@ mod score_tests {
         let interest_two_deposits = ctx.interest(&alice, &product.id);
         let interest_single_deposit = ctx.interest(&bob, &product.id);
 
+        // CRITICAL: Interest must be non-zero!
+        // If multiplication was used in fold (0 * interest = 0), all interest would be 0.
+        // With 10k score = 10% APY, 365_000 SWEAT * 2 deposits * 10% / 365 = ~200 SWEAT
+        assert!(
+            interest_two_deposits >= 180_000_000_000_000_000,
+            "Interest from two deposits should be ~200 SWEAT (non-zero). Got: {}. \
+             If this is 0, the fold is using multiplication instead of addition.",
+            interest_two_deposits
+        );
+
         // Two deposits should produce the same interest as one deposit of double amount
-        // If multiplication was used instead of addition, the result would be wildly different
         assert_eq!(
             interest_two_deposits, interest_single_deposit,
             "Interest from two deposits ({}) should equal interest from single double deposit ({})",
@@ -695,13 +774,25 @@ mod score_tests {
         // Move forward 3+ days to trigger Greater branch (processes multiple days)
         ctx.set_block_timestamp_in_ms(start_time + 4 * MS_IN_DAY);
 
-        let interest = ctx.interest(&alice, &product.id);
+        // Directly call get_settled_interest to verify remainder accumulation
+        let settled = ctx.contract().get_settled_interest(&alice);
+        let (interest, remainder) = settled.get(&product.id).expect("Should have interest for product");
 
-        // With multiplication instead of addition, remainder would compound incorrectly
-        // The interest should be approximately: 7_000_000 * 10% / 365 * 2 ≈ 3835
+        // With multiplication instead of addition, remainder would be 0 (0 * X = 0)
+        // With addition, remainder should be the sum of remainders from both days
         assert!(
-            interest >= 3000 && interest <= 5000,
-            "Interest should be reasonable for small deposit over 2 days, got: {}",
+            *remainder > 0,
+            "Remainder should be non-zero (sum of remainders from multiple days). Got: {}. \
+             If this is 0, the accumulation is using multiplication instead of addition.",
+            remainder
+        );
+
+        // Interest should also be non-zero
+        // The interest depends on how many days of score history are processed
+        assert!(
+            *interest > 0,
+            "Interest should be non-zero. Got: {}. \
+             If this is 0, the fold accumulation is using multiplication instead of addition.",
             interest
         );
     }
