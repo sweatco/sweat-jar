@@ -3,9 +3,7 @@ use std::collections::HashMap;
 use near_sdk::{env, ext_contract, json_types::U128, near, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi,
-    data::{
-        account::v1::AccountV1Companion, claim::ClaimedAmountView, jar::AggregatedTokenAmountView, product::ProductId,
-    },
+    data::{account::AccountCompanion, claim::ClaimedAmountView, jar::AggregatedTokenAmountView, product::ProductId},
     interest::InterestCalculator,
     TokenAmount,
 };
@@ -44,7 +42,7 @@ pub trait ClaimCallbacks {
         &mut self,
         account_id: AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV1Companion,
+        account_rollback: AccountCompanion,
         event: EventKind,
     ) -> ClaimedAmountView;
 }
@@ -53,6 +51,8 @@ pub trait ClaimCallbacks {
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
+
+        self.settle_interest(&account_id);
 
         let account = self.get_account(&account_id);
         let mut accumulator = ClaimedAmountView::new(detailed);
@@ -88,13 +88,11 @@ impl ClaimApi for Contract {
             event_data.add((product_id.clone(), interest.into()));
         }
 
-        let account_rollback = AccountV1Companion {
+        let account_rollback = AccountCompanion {
             score: account.score.into(),
             jars: rollback_jars.into(),
-            ..AccountV1Companion::default()
+            ..AccountCompanion::default()
         };
-
-        account.score.try_reset_score();
 
         // TODO: add test for 0 case and replace `gt` with `>`
         if accumulator.get_total().0.gt(&0) {
@@ -116,7 +114,7 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV1Companion,
+        account_rollback: AccountCompanion,
         event: EventKind,
     ) -> PromiseOrValue<ClaimedAmountView> {
         use crate::common::env::env_ext;
@@ -136,7 +134,7 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV1Companion,
+        account_rollback: AccountCompanion,
         event: EventKind,
     ) -> PromiseOrValue<ClaimedAmountView> {
         use crate::feature::ft_interface::gas::GAS_FOR_FT_TRANSFER;
@@ -161,7 +159,7 @@ impl Contract {
         &mut self,
         account_id: AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV1Companion,
+        account_rollback: AccountCompanion,
         event: EventKind,
         is_promise_success: bool,
     ) -> ClaimedAmountView {
@@ -200,7 +198,7 @@ impl ClaimCallbacks for Contract {
         &mut self,
         account_id: AccountId,
         claimed_amount: ClaimedAmountView,
-        account_rollback: AccountV1Companion,
+        account_rollback: AccountCompanion,
         event: EventKind,
     ) -> ClaimedAmountView {
         self.after_claim_internal(
@@ -218,7 +216,7 @@ impl ClaimCallbacks for Contract {
 fn after_claim_call(
     account_id: AccountId,
     claimed_amount: ClaimedAmountView,
-    account_rollback: AccountV1Companion,
+    account_rollback: AccountCompanion,
     event: EventKind,
 ) -> near_sdk::Promise {
     ext_self::ext(env::current_account_id())

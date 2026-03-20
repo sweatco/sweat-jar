@@ -17,6 +17,7 @@ release-api = []
 testing = ["dep:rand"]
 
 [dependencies]
+sweat-jar-primitives = { workspace = true }
 near-sdk = { workspace = true }
 
 nitka-proc = { workspace = true }
@@ -28,6 +29,7 @@ ed25519-dalek = { workspace = true }
 base64 = { workspace = true }
 rand = { workspace = true, optional = true }
 sha2 = "0.10.8"
+strum = { workspace = true }
 
 [dev-dependencies]
 fake = { workspace = true }

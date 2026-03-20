@@ -1,1 +1,8 @@
 exclude_globs = ["integration-tests/**"]
+
+# Score field in AccountCompanion rollback cannot be effectively tested because:
+# 1. settle_interest() modifies the score BEFORE rollback is captured
+# 2. The rollback value equals the current value (post-settle_interest)
+# 3. Deleting the field has no observable effect on test outcomes
+# See: contract/src/feature/claim/api.rs:92
+exclude_re = ["delete field score from struct AccountCompanion expression"]

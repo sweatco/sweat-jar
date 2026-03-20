@@ -14,6 +14,7 @@ use nitka_proc::make_integration_version;
 use crate::data::jar::JarsView;
 use crate::{
     data::{
+        account::features::Feature,
         account::view::AccountView,
         claim::ClaimedAmountView,
         deposit::DepositTicket,
@@ -105,6 +106,8 @@ pub trait AccountApi {
     /// - This function will panic if a product associated with a jar does not exist.
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>);
 
+    fn apply_booster(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC);
+
     /// Return users timezone if user has any score based jars
     fn get_timezone(&self, account_id: AccountId) -> Option<I64>;
 
@@ -112,6 +115,10 @@ pub trait AccountApi {
     fn get_score(&self, account_id: AccountId) -> Option<U128>;
 
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64);
+
+    fn set_feature_enabled(&mut self, account_id: AccountId, feature: Feature, value: bool);
+
+    fn batch_set_feature_enabled(&mut self, account_ids: Vec<AccountId>, feature: Feature, value: bool);
 }
 
 #[make_integration_version]
@@ -165,6 +172,7 @@ pub trait FeeApi {
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
+#[deprecated]
 #[make_integration_version]
 pub trait PenaltyApi {
     /// Sets the penalty status for a specified jar.
@@ -287,4 +295,21 @@ pub trait WithdrawApi {
 pub trait IntegrationTestMethods {
     fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
     fn bulk_create_jars(&mut self, account_id: AccountId, product_id: ProductId, principal: u128, number_of_jars: u16);
+    fn set_time_scale(&mut self, time_scale: f64);
+    /// Seeds the contract with a batch of step jars for a TieredScoreBased product.
+    ///
+    /// Each tuple in `accounts` contains:
+    /// - the on-chain account ID that should own the jar,
+    /// - the principal to lock (in token smallest units),
+    /// - the timezone offset (hours relative to UTC) that should be associated with that account.
+    ///
+    /// The helper creates (or updates) the jar holder, sets the timezone, and inserts a single deposit per account
+    /// using the provided `product_id`. The `deposit_timestamp_ms` allows the test to deterministically position
+    /// the deposits within the accelerated timeline.
+    fn seed_accounts(
+        &mut self,
+        product_id: ProductId,
+        accounts: Vec<(AccountId, U128, crate::Timezone)>,
+        deposit_timestamp_ms: u64,
+    );
 }

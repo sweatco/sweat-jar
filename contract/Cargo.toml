@@ -23,9 +23,10 @@ container_build_command = [
 [features]
 default = ["release"]
 release = ["sweat-jar-model/release-api"]
+integration-methods = ["sweat-jar-model/integration-methods"]
 integration-test = [
     "sweat-jar-model/release-api",
-    "sweat-jar-model/integration-methods",
+    "integration-methods",
 ]
 integration-api = ["sweat-jar-model/integration-api"]
 
@@ -37,6 +38,7 @@ near-self-update-proc = { workspace = true }
 near-contract-standards = { workspace = true }
 
 sweat-jar-model = { workspace = true }
+sweat-jar-primitives = { workspace = true }
 
 [dev-dependencies]
 fake = { workspace = true }

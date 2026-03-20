@@ -15,11 +15,11 @@ use near_sdk::{
 use sweat_jar_model::{
     api::InitApi,
     data::{
-        account::{versioned::AccountVersioned, Account},
+        account::{v1::AccountV1, versioned::AccountVersioned, Account},
         jar::Jar,
         product::{Product, ProductId},
     },
-    Timestamp, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
+    TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
 };
 
 use super::{env::test_env_ext, event::EventKind};
@@ -90,10 +90,6 @@ impl Context {
         }
     }
 
-    pub(crate) fn now(&self) -> Timestamp {
-        self.builder.context.block_timestamp / 1_000_000
-    }
-
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {
         self.contract.try_lock().expect("Contract is already locked")
     }
@@ -107,17 +103,6 @@ impl Context {
     }
 
     pub(crate) fn with_latest_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
-        self.with_account(account_id, jars, |account| AccountVersioned::new(account))
-    }
-
-    pub(crate) fn with_v1_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
-        self.with_account(account_id, jars, |account| AccountVersioned::V1(account))
-    }
-
-    fn with_account<F>(self, account_id: &AccountId, jars: &[(ProductId, Jar)], account_factory: F) -> Self
-    where
-        F: FnOnce(Account) -> AccountVersioned,
-    {
         if jars.is_empty() {
             return self;
         }
@@ -129,7 +114,25 @@ impl Context {
 
         store_account_raw(
             account_id.clone(),
-            Base64VecU8(to_vec(&account_factory(account)).unwrap()),
+            Base64VecU8(to_vec(&AccountVersioned::new(account)).unwrap()),
+        );
+
+        self
+    }
+
+    pub(crate) fn with_v1_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
+        if jars.is_empty() {
+            return self;
+        }
+
+        let mut account = AccountV1::default();
+        for (product_id, jar) in jars {
+            account.jars.insert(product_id.clone(), jar.clone());
+        }
+
+        store_account_raw(
+            account_id.clone(),
+            Base64VecU8(to_vec(&AccountVersioned::V1(account)).unwrap()),
         );
 
         self
@@ -224,10 +227,6 @@ impl WhitespaceTrimmer for String {
     }
 }
 
-pub(crate) trait DefaultBuilder {
-    fn new() -> Self;
-}
-
 pub trait AfterCatchUnwind {
     fn after_catch_unwind(&self);
 }
@@ -305,5 +304,112 @@ mod tests {
     fn self_update_without_access(admin: AccountId) {
         let context = Context::new(admin);
         context.contract().update_contract(vec![], None);
+    }
+}
+
+#[cfg(feature = "integration-test")]
+mod integration_tests {
+    use std::{cell::RefCell, collections::HashMap};
+
+    use near_sdk::{
+        borsh::{BorshDeserialize, BorshSerialize},
+        collections::UnorderedMap,
+        near,
+        store::LookupMap,
+        AccountId,
+    };
+    use sweat_jar_model::{
+        data::{
+            account::versioned::AccountVersioned,
+            product::{Product, ProductId},
+        },
+        TokenAmount,
+    };
+
+    use crate::{feature::booster::model::Boosters, Contract};
+
+    #[near]
+    impl InitApi for Contract {
+        #[init]
+        #[private]
+        fn init(
+            token_account_id: AccountId,
+            fee_account_id: AccountId,
+            manager: AccountId,
+            previous_version_account_id: AccountId,
+        ) -> Self {
+            Self {
+                token_account_id,
+                fee_account_id,
+                manager,
+                products: UnorderedMap::new(StorageKey::Products),
+                products_cache: HashMap::default().into(),
+                accounts: LookupMap::new(StorageKey::Accounts),
+                fee_amount: 0,
+                previous_version_account_id,
+                boosters: Boosters::new(
+                    env::block_timestamp_ms(),
+                    StorageKey::BoostersIndex,
+                    StorageKey::BoostersItems,
+                ),
+                time_scale: 1.0,
+            }
+        }
+    }
+    #[near(serializers=[borsh])]
+    struct ContractSerdeHelper {
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        manager: AccountId,
+        products: UnorderedMap<ProductId, Product>,
+        accounts: LookupMap<AccountId, AccountVersioned>,
+        fee_amount: TokenAmount,
+        previous_version_account_id: AccountId,
+        boosters: Boosters,
+        time_scale: f64,
+    }
+
+    impl From<ContractSerdeHelper> for Contract {
+        fn from(value: ContractSerdeHelper) -> Self {
+            Self {
+                token_account_id: value.token_account_id,
+                fee_account_id: value.fee_account_id,
+                manager: value.manager,
+                products: value.products,
+                accounts: value.accounts,
+                products_cache: RefCell::new(HashMap::new()),
+                fee_amount: value.fee_amount,
+                previous_version_account_id: value.previous_version_account_id,
+                boosters: value.boosters,
+                time_scale: value.time_scale,
+            }
+        }
+    }
+
+    impl BorshSerialize for Contract {
+        fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+            // Directly serialize all fields in the same order as ContractSerdeHelper
+            self.token_account_id.serialize(writer)?;
+            self.fee_account_id.serialize(writer)?;
+            self.manager.serialize(writer)?;
+            self.products.serialize(writer)?;
+            self.accounts.serialize(writer)?;
+            self.fee_amount.serialize(writer)?;
+            self.previous_version_account_id.serialize(writer)?;
+            self.boosters.serialize(writer)?;
+            self.time_scale.serialize(writer)?;
+            Ok(())
+        }
+    }
+
+    impl BorshDeserialize for Contract {
+        fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
+            let state = ContractSerdeHelper::deserialize_reader(reader)?;
+
+            // Sync time scale to global thread-local storage automatically on deserialization
+            sweat_jar_model::set_global_time_scale(state.time_scale);
+
+            Ok(state.into())
+        }
     }
 }

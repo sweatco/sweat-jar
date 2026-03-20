@@ -12,8 +12,9 @@ use sweat_jar_model::{
         product::{Apy, Cap, FixedProductTerms, Product, ProductId, Terms},
         withdraw::BulkWithdrawView,
     },
-    TokenAmount, UDecimal, MS_IN_DAY,
+    TokenAmount, MS_IN_DAY,
 };
+use sweat_jar_primitives::UDecimal;
 
 use crate::{
     common::{

@@ -56,8 +56,7 @@ async fn measure_after_claim_total_test() -> anyhow::Result<()> {
 #[mutants::skip]
 async fn one_after_claim() -> anyhow::Result<()> {
     let gas = measure_after_claim_total((RegisterProductCommand::Locked6Months6PercentsWithWithdrawFee, 1)).await?;
-
-    dbg!(&gas);
+    dbg!(gas);
 
     Ok(())
 }

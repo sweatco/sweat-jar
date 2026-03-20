@@ -3,7 +3,10 @@ use near_sdk::{
     log, near, serde_json, AccountId,
 };
 use sweat_jar_model::{
-    data::product::{Product, ProductId},
+    data::{
+        account::features::Feature,
+        product::{Product, ProductId},
+    },
     Local, Score, Timestamp, TokenAmount, UTC,
 };
 
@@ -29,6 +32,9 @@ pub enum EventKind {
     OldScoreWarning((Score, Local)),
     JarsMerge(AccountId),
     MigrateProducts(Vec<ProductId>),
+    SetFeatureEnabled(AccountId, Feature, bool),
+    BatchSetFeatureEnabled(Vec<AccountId>, Feature, bool),
+    ApplyBooster(ApplyBoosterData),
 }
 
 #[derive(Debug)]
@@ -170,7 +176,16 @@ pub struct ChangeProductPublicKeyData {
 #[near(serializers=[json])]
 pub struct ScoreData {
     pub account_id: AccountId,
-    pub score: Vec<(Score, UTC)>,
+    pub score: Vec<(Score, Local)>,
+}
+
+#[derive(Debug, Clone)]
+#[near(serializers=[json])]
+pub struct ApplyBoosterData {
+    pub applied: Vec<AccountId>,
+    pub rejected: Vec<AccountId>,
+    pub timestamp: UTC,
+    pub score: Score,
 }
 
 impl From<EventKind> for SweatJarEvent {

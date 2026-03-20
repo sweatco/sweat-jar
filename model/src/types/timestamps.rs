@@ -2,9 +2,11 @@ use std::ops::{Deref, Sub};
 
 use near_sdk::{env::block_timestamp_ms, near, Timestamp};
 
-use crate::MS_IN_DAY;
+use crate::ms_in_day;
 
 pub type Day = Local;
+
+pub type DaysOffset = u16;
 
 /// Timestamp in UTC timezone
 #[repr(transparent)]
@@ -73,10 +75,14 @@ pub trait TimeHelper {
 
 impl TimeHelper for Local {
     fn day(&self) -> Day {
-        (self.0 / MS_IN_DAY).into()
+        (self.0 / ms_in_day()).into()
     }
 
     fn time(&self) -> Local {
-        (self.0 % MS_IN_DAY).into()
+        (self.0 % ms_in_day()).into()
     }
+}
+
+pub fn start_of_the_day(timestamp: Timestamp) -> Timestamp {
+    timestamp - timestamp % ms_in_day()
 }

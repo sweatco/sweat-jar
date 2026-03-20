@@ -7,9 +7,12 @@ use near_sdk::{
     AccountId,
 };
 use rstest::rstest;
+#[allow(deprecated)]
+use sweat_jar_model::api::PenaltyApi;
 use sweat_jar_model::{
-    api::{AccountApi, ClaimApi, PenaltyApi, ProductApi, WithdrawApi},
+    api::{AccountApi, ClaimApi, ProductApi, WithdrawApi},
     data::{
+        account::features::Feature,
         deposit::DepositTicket,
         jar::{AggregatedTokenAmountView, Jar, JarView},
         product::{Apy, Product, ProductId},
@@ -31,6 +34,30 @@ use crate::{
     },
     Contract,
 };
+
+#[rstest]
+fn set_timezone_before_deposit(admin: AccountId, alice: AccountId) {
+    let mut context = Context::new(admin);
+
+    context.switch_account_to_manager();
+    context.contract().set_timezone(alice.clone(), 1.into());
+
+    let alice = context.contract().get_account(&alice).clone();
+    assert!(alice.timezone.is_valid());
+}
+
+#[rstest]
+fn enable_feature_before_deposit(admin: AccountId, alice: AccountId) {
+    let mut context = Context::new(admin);
+
+    context.switch_account_to_manager();
+    context
+        .contract()
+        .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
+
+    let alice = context.contract().get_account(&alice).clone();
+    assert!(alice.features.is_feature_enabled(&Feature::IncreasedScoreCap));
+}
 
 #[rstest]
 fn get_total_interest_with_no_jars(admin: AccountId, alice: AccountId) {
@@ -142,12 +169,17 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
         .with_products(&[product.clone()])
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
+    context.switch_account_to_manager();
+    context
+        .contract()
+        .set_feature_enabled(alice.clone(), Feature::IncreasedApy, true);
+
     context.set_block_timestamp_in_ms(15_768_000_000);
 
     let mut interest = context.contract().get_total_interest(alice.clone()).amount.total.0;
     assert_eq!(interest, 10_000_000);
 
-    context.switch_account_to_manager();
+    #[allow(deprecated)]
     context.contract().set_penalty(alice.clone(), true);
 
     context.set_block_timestamp_in_ms(31_536_000_000);
@@ -157,6 +189,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
 }
 
 #[rstest]
+#[allow(deprecated)]
 fn get_total_interest_for_premium_with_multiple_penalties_applied(
     admin: AccountId,
     alice: AccountId,
@@ -169,9 +202,12 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied(
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let products = context.contract().get_products();
-    assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Downgradable(_)));
+    assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Tier(_)));
 
-    context.switch_account(&admin);
+    context.switch_account_to_manager();
+    context
+        .contract()
+        .set_feature_enabled(alice.clone(), Feature::IncreasedApy, true);
 
     context.set_block_timestamp_in_ms(270_000);
     context.contract().set_penalty(alice.clone(), true);
@@ -287,7 +323,7 @@ fn set_timezone_by_not_manager(
     #[from(product_1_year_12_percent)] product: Product,
     #[with(vec![(0, 100_000_000)])] jar: Jar,
 ) {
-    let mut context = Context::new(admin)
+    let context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
@@ -325,7 +361,7 @@ fn set_timezone_by_manager_when_timezone_already_set(
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
     let timezone = 360_000;
-    context.contract().get_account_mut(&alice).score.timezone = Timezone::new(timezone);
+    context.contract().get_account_mut(&alice).timezone = Timezone::new(timezone);
 
     context.switch_account_to_manager();
     context.contract().set_timezone(alice.clone(), I64(0));
@@ -652,6 +688,33 @@ mod signature_tests {
             )
             .to_string()
         }
+    }
+}
+
+mod interest_overflow_tests {
+    use sweat_jar_model::{interest::get_interest, MS_IN_YEAR};
+    use sweat_jar_primitives::UDecimal;
+
+    #[test]
+    fn get_interest_handles_overflow_in_yearly_interest() {
+        let principal = u128::MAX;
+        let apy = UDecimal::new(20, 2);
+        let term = MS_IN_YEAR;
+
+        let (interest, _remainder) = get_interest(principal, apy, term);
+
+        assert_eq!(interest, u128::MAX / u128::from(MS_IN_YEAR));
+    }
+
+    #[test]
+    fn get_interest_handles_overflow_in_term_multiplication() {
+        let principal = u128::MAX / 100;
+        let apy = UDecimal::new(1, 0);
+        let term = u64::MAX;
+
+        let (interest, _remainder) = get_interest(principal, apy, term);
+
+        assert_eq!(interest, u128::MAX / u128::from(MS_IN_YEAR));
     }
 }
 

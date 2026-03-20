@@ -58,8 +58,7 @@ async fn measure_batch_penalty_test() -> Result<()> {
 #[tokio::test]
 async fn single_batch_penalty() -> Result<()> {
     let gas = measure_batch_penalty((RegisterProductCommand::Flexible6Months6Percents, 1)).await?;
-
-    dbg!(&gas);
+    dbg!(gas);
 
     Ok(())
 }

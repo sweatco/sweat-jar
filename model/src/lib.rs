@@ -2,9 +2,11 @@ pub mod api;
 pub mod data;
 pub mod interest;
 pub mod signer;
+pub mod time_scale;
 pub mod types;
 
 pub use data::score::*;
+pub use time_scale::*;
 pub use types::*;
 
 /// Amount of fungible tokens

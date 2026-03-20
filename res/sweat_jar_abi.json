@@ -8,9 +8,9 @@
     ],
     "build": {
       "compiler": "rustc 1.86.0",
-      "builder": "cargo-near cargo-near-build 0.7.1"
+      "builder": "cargo-near cargo-near-build 0.9.0"
     },
-    "wasm_hash": "ECFe3jGtwP8t93wETpdHzxKWivbutRZBj7Awj4FN1nFB"
+    "wasm_hash": "419ps7kpc8Lx1tFSYfaxpgfzyrSSGKL7N1staTjY9VY9"
   },
   "body": {
     "functions": [
@@ -68,7 +68,7 @@
             {
               "name": "account_rollback",
               "type_schema": {
-                "$ref": "#/definitions/AccountV1Companion"
+                "$ref": "#/definitions/AccountV2Companion"
               }
             },
             {
@@ -162,6 +162,68 @@
           "type_schema": {
             "$ref": "#/definitions/WithdrawView"
           }
+        }
+      },
+      {
+        "name": "apply_booster",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AccountId"
+                }
+              }
+            },
+            {
+              "name": "score",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              }
+            },
+            {
+              "name": "timestamp",
+              "type_schema": {
+                "$ref": "#/definitions/UTC"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "batch_set_feature_enabled",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/AccountId"
+                }
+              }
+            },
+            {
+              "name": "feature",
+              "type_schema": {
+                "$ref": "#/definitions/Feature"
+              }
+            },
+            {
+              "name": "enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
         }
       },
       {
@@ -653,6 +715,33 @@
         }
       },
       {
+        "name": "set_feature_enabled",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            {
+              "name": "feature",
+              "type_schema": {
+                "$ref": "#/definitions/Feature"
+              }
+            },
+            {
+              "name": "enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
         "name": "set_penalty",
         "kind": "call",
         "params": {
@@ -843,49 +932,52 @@
         "AccountScore": {
           "type": "object",
           "required": [
-            "scores",
-            "scores_history",
-            "timezone",
-            "updated"
+            "history",
+            "updated_at"
           ],
           "properties": {
-            "scores": {
-              "description": "Scores buffer used for interest calculation. Can be invalidated on claim.",
+            "history": {
               "type": "array",
               "items": {
-                "type": "integer",
-                "format": "uint16",
-                "minimum": 0.0
+                "$ref": "#/definitions/DailyScore"
               },
               "maxItems": 2,
               "minItems": 2
             },
-            "scores_history": {
-              "description": "Score history values used for displaying it in application. Will not be invalidated during claim.",
-              "type": "array",
-              "items": {
-                "type": "integer",
-                "format": "uint16",
-                "minimum": 0.0
-              },
-              "maxItems": 2,
-              "minItems": 2
-            },
-            "timezone": {
-              "$ref": "#/definitions/Timezone"
-            },
-            "updated": {
+            "updated_at": {
               "$ref": "#/definitions/UTC"
             }
           }
         },
-        "AccountV1Companion": {
+        "AccountScoreView": {
+          "type": "object",
+          "required": [
+            "history",
+            "updated_at"
+          ],
+          "properties": {
+            "history": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DailyScoreView"
+              }
+            },
+            "updated_at": {
+              "$ref": "#/definitions/UTC"
+            }
+          }
+        },
+        "AccountV2Companion": {
           "type": "object",
           "properties": {
-            "is_penalty_applied": {
-              "type": [
-                "boolean",
-                "null"
+            "features": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Features"
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "jars": {
@@ -920,12 +1012,20 @@
         "AccountView": {
           "type": "object",
           "required": [
+            "features",
             "is_penalty_applied",
             "jars",
             "nonce",
-            "score"
+            "score",
+            "timezone"
           ],
           "properties": {
+            "features": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "boolean"
+              }
+            },
             "is_penalty_applied": {
               "type": "boolean"
             },
@@ -941,7 +1041,10 @@
               "minimum": 0.0
             },
             "score": {
-              "$ref": "#/definitions/AccountScore"
+              "$ref": "#/definitions/AccountScoreView"
+            },
+            "timezone": {
+              "$ref": "#/definitions/Timezone"
             }
           }
         },
@@ -980,36 +1083,36 @@
             }
           }
         },
-        "Apy": {
-          "description": "The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.",
-          "oneOf": [
-            {
-              "description": "Describes a constant APY, where the interest remains the same throughout the product's term.",
-              "type": "object",
-              "required": [
-                "Constant"
-              ],
-              "properties": {
-                "Constant": {
-                  "$ref": "#/definitions/UDecimal"
-                }
-              },
-              "additionalProperties": false
+        "ApplyBoosterData": {
+          "type": "object",
+          "required": [
+            "applied",
+            "rejected",
+            "score",
+            "timestamp"
+          ],
+          "properties": {
+            "applied": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AccountId"
+              }
             },
-            {
-              "description": "Describes a downgradable APY, where an oracle can set a penalty if a user violates the product's terms.",
-              "type": "object",
-              "required": [
-                "Downgradable"
-              ],
-              "properties": {
-                "Downgradable": {
-                  "$ref": "#/definitions/DowngradableApy"
-                }
-              },
-              "additionalProperties": false
+            "rejected": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AccountId"
+              }
+            },
+            "score": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "timestamp": {
+              "$ref": "#/definitions/UTC"
             }
-          ]
+          }
         },
         "Base64VecU8": {
           "description": "Helper class to serialize/deserialize `Vec<u8>` to base64 string.\n\n# Example ```rust use near_sdk::{json_types::Base64VecU8, near};\n\n#[near(serializers=[json])] struct NewStruct { field: Base64VecU8, } ```",
@@ -1148,6 +1251,102 @@
             }
           ]
         },
+        "ConfigurableValue_for_UDecimal": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "Constant"
+              ],
+              "properties": {
+                "Constant": {
+                  "$ref": "#/definitions/UDecimal"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "Tier"
+              ],
+              "properties": {
+                "Tier": {
+                  "$ref": "#/definitions/ValueTier_for_UDecimal"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "ConfigurableValue_for_uint16": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "Constant"
+              ],
+              "properties": {
+                "Constant": {
+                  "type": "integer",
+                  "format": "uint16",
+                  "minimum": 0.0
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "Tier"
+              ],
+              "properties": {
+                "Tier": {
+                  "$ref": "#/definitions/ValueTier_for_uint16"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "DailyScore": {
+          "type": "object",
+          "required": [
+            "booster",
+            "value"
+          ],
+          "properties": {
+            "booster": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          }
+        },
+        "DailyScoreView": {
+          "type": "object",
+          "required": [
+            "booster",
+            "value"
+          ],
+          "properties": {
+            "booster": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "value": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          }
+        },
         "Deposit": {
           "type": "object",
           "required": [
@@ -1210,32 +1409,6 @@
             "valid_until": {
               "description": "Specifies the expiration date of the ticket. The expiration date is measured in milliseconds since the Unix epoch. This property ensures that the request to create a jar is valid only until the specified timestamp. After this timestamp, the ticket becomes invalid and should not be accepted.",
               "type": "string"
-            }
-          }
-        },
-        "DowngradableApy": {
-          "description": "The `DowngradableApy` struct describes an APY that can be downgraded by an oracle.",
-          "type": "object",
-          "required": [
-            "default",
-            "fallback"
-          ],
-          "properties": {
-            "default": {
-              "description": "The default APY value if the user meets all the terms of the product.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/UDecimal"
-                }
-              ]
-            },
-            "fallback": {
-              "description": "The fallback APY value if the user violates some of the terms of the product.",
-              "allOf": [
-                {
-                  "$ref": "#/definitions/UDecimal"
-                }
-              ]
             }
           }
         },
@@ -1615,8 +1788,103 @@
                   ]
                 }
               }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "$ref": "#/definitions/AccountId"
+                    },
+                    {
+                      "$ref": "#/definitions/Feature"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "set_feature_enabled"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/AccountId"
+                      }
+                    },
+                    {
+                      "$ref": "#/definitions/Feature"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "batch_set_feature_enabled"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/ApplyBoosterData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "apply_booster"
+                  ]
+                }
+              }
             }
           ]
+        },
+        "Feature": {
+          "type": "string",
+          "enum": [
+            "increased_apy",
+            "increased_score_cap"
+          ]
+        },
+        "Features": {
+          "type": "integer",
+          "format": "uint8",
+          "minimum": 0.0
         },
         "FixedProductTerms": {
           "description": "The `FixedProductTerms` struct contains terms specific to Fixed products.",
@@ -1627,7 +1895,7 @@
           ],
           "properties": {
             "apy": {
-              "$ref": "#/definitions/Apy"
+              "$ref": "#/definitions/ConfigurableValue_for_UDecimal"
             },
             "lockup_term": {
               "description": "The maturity term of the jar in seconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
@@ -1643,7 +1911,7 @@
           ],
           "properties": {
             "apy": {
-              "$ref": "#/definitions/Apy"
+              "$ref": "#/definitions/ConfigurableValue_for_UDecimal"
             }
           }
         },
@@ -2053,7 +2321,7 @@
                     "minimum": 0.0
                   },
                   {
-                    "$ref": "#/definitions/UTC"
+                    "$ref": "#/definitions/Local"
                   }
                 ],
                 "maxItems": 2,
@@ -2121,8 +2389,44 @@
                   ]
                 }
               }
+            },
+            {
+              "description": "TODO: doc",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/TieredScoreBasedProductTerms"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "tiered_score_based"
+                  ]
+                }
+              }
             }
           ]
+        },
+        "TieredScoreBasedProductTerms": {
+          "description": "TODO: doc",
+          "type": "object",
+          "required": [
+            "lockup_term",
+            "score_cap"
+          ],
+          "properties": {
+            "lockup_term": {
+              "description": "The maturity term of the jar in milliseconds, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
+              "type": "string"
+            },
+            "score_cap": {
+              "$ref": "#/definitions/ConfigurableValue_for_uint16"
+            }
+          }
         },
         "Timezone": {
           "description": "Timezone described as time shift from UTC in ms",
@@ -2150,6 +2454,40 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "ValueTier_for_UDecimal": {
+          "type": "object",
+          "required": [
+            "default",
+            "fallback"
+          ],
+          "properties": {
+            "default": {
+              "$ref": "#/definitions/UDecimal"
+            },
+            "fallback": {
+              "$ref": "#/definitions/UDecimal"
+            }
+          }
+        },
+        "ValueTier_for_uint16": {
+          "type": "object",
+          "required": [
+            "default",
+            "fallback"
+          ],
+          "properties": {
+            "default": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "fallback": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            }
+          }
         },
         "WithdrawView": {
           "description": "The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.",
