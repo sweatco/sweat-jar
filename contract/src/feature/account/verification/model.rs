@@ -1,7 +1,7 @@
 use near_sdk::{env, env::panic_str, json_types::Base64VecU8, require, AccountId};
 use sweat_jar_model::{
     data::{
-        deposit::{DepositMessage, DepositTicket, Purpose},
+        deposit::{AirdropMessage, DepositMessage, DepositTicket, Purpose},
         product::ProductModelApi,
     },
     signer::MessageVerifier,
@@ -37,6 +37,33 @@ impl Contract {
                 amount,
                 ticket.valid_until.0,
                 nonce,
+            );
+
+            MessageVerifier::new(pk).verify(message.material(), &message.sha256(), &signature.0);
+        }
+    }
+
+    pub(crate) fn verify_airdrop(
+        &self,
+        ticket: &DepositTicket,
+        amount: TokenAmount,
+        receivers: &[AccountId],
+        signature: Option<&Base64VecU8>,
+    ) {
+        let product = self.get_product(&ticket.product_id);
+
+        if let Some(pk) = &product.get_public_key() {
+            let Some(signature) = signature else {
+                panic_str("Signature is required");
+            };
+            ticket.verify_expiration_date();
+
+            let message = AirdropMessage::new(
+                &env::current_account_id(),
+                &ticket.product_id,
+                amount,
+                receivers,
+                ticket.valid_until.0,
             );
 
             MessageVerifier::new(pk).verify(message.material(), &message.sha256(), &signature.0);

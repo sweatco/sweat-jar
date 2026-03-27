@@ -71,6 +71,32 @@ pub trait JarContractExtensions {
         valid_until: u64,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
+
+    /// Airdrops `amount_per_receiver` tokens to each account in `receivers`.
+    /// Total transferred amount must equal `amount_per_receiver * receivers.len()`.
+    /// Caller (`manager`) must be the contract's manager account.
+    fn airdrop(
+        &self,
+        manager: &Account,
+        product_id: String,
+        amount_per_receiver: u128,
+        receivers: &[Account],
+        timezone: Option<Timezone>,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
+
+    /// Same as `airdrop` but for protected products that require an ed25519 signature.
+    fn airdrop_protected(
+        &self,
+        manager: &Account,
+        product_id: String,
+        amount_per_receiver: u128,
+        receivers: &[Account],
+        timezone: Option<Timezone>,
+        signature: Base64VecU8,
+        valid_until: u64,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128>;
 }
 
 pub trait JarContractLegacyExtensions {
@@ -172,6 +198,73 @@ impl JarContractExtensions for SweatJarContract<'_> {
         });
 
         self.create_jar_internal(user, msg, amount, ft_contract)
+    }
+
+    fn airdrop(
+        &self,
+        manager: &Account,
+        product_id: String,
+        amount_per_receiver: u128,
+        receivers: &[Account],
+        timezone: Option<Timezone>,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
+        let receiver_ids: Vec<&str> = receivers.iter().map(|a| a.id().as_str()).collect();
+        let total_amount = amount_per_receiver * receiver_ids.len() as u128;
+
+        println!(
+            "▶️ Airdrop(product = {:?}) to {:?} with {:?} tokens each",
+            product_id, receiver_ids, amount_per_receiver,
+        );
+
+        let msg = json!({
+            "type": "airdrop",
+            "data": {
+                "ticket": {
+                    "product_id": product_id,
+                    "valid_until": "0",
+                    "timezone": timezone,
+                },
+                "receivers": receiver_ids,
+            }
+        });
+
+        self.create_jar_internal(manager, msg, total_amount, ft_contract)
+    }
+
+    fn airdrop_protected(
+        &self,
+        manager: &Account,
+        product_id: String,
+        amount_per_receiver: u128,
+        receivers: &[Account],
+        timezone: Option<Timezone>,
+        signature: Base64VecU8,
+        valid_until: u64,
+        ft_contract: &SweatContract<'_>,
+    ) -> ContractCall<U128> {
+        let receiver_ids: Vec<&str> = receivers.iter().map(|a| a.id().as_str()).collect();
+        let total_amount = amount_per_receiver * receiver_ids.len() as u128;
+
+        println!(
+            "▶️ Airdrop protected(product = {:?}) to {:?} with {:?} tokens each",
+            product_id, receiver_ids, amount_per_receiver,
+        );
+
+        let msg = json!({
+            "type": "airdrop",
+            "data": {
+                "ticket": {
+                    "product_id": product_id,
+                    "valid_until": valid_until.to_string(),
+                    "timezone": timezone,
+                },
+                "signature": signature,
+                "receivers": receiver_ids,
+            }
+        });
+
+        self.create_jar_internal(manager, msg, total_amount, ft_contract)
     }
 }
 

@@ -12,6 +12,8 @@ pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
     Migrate(AccountId, Base64VecU8),
+    /// Represents a request to airdrop an equal token amount to a list of receivers.
+    Airdrop(AirdropStakeMessage),
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.
@@ -25,6 +27,20 @@ pub struct StakeMessage {
 
     /// An optional account ID representing the intended owner of the created jar.
     receiver_id: Option<AccountId>,
+}
+
+/// The `AirdropStakeMessage` struct represents a request to airdrop tokens to a batch of accounts.
+/// The total transfer amount must equal `amount_per_receiver * receivers.len()`.
+#[near(serializers=[json])]
+pub struct AirdropStakeMessage {
+    /// Ticket specifying the product, expiry, and optional timezone (required for score-based products).
+    ticket: DepositTicket,
+
+    /// An optional ed25519 signature. Required when the product has a public key set.
+    signature: Option<Base64VecU8>,
+
+    /// Accounts that will each receive a deposit of `total_amount / receivers.len()` tokens.
+    receivers: Vec<AccountId>,
 }
 
 #[near]
@@ -47,6 +63,16 @@ impl FungibleTokenReceiver for Contract {
                     self.get_account(&account_id).get_total_principal() == amount.0,
                     "Total principal mismatch"
                 );
+            }
+            FtMessage::Airdrop(message) => {
+                require!(sender_id == self.manager, "Only manager can perform airdrops");
+                let count = message.receivers.len() as u128;
+                require!(count > 0, "Receivers list is empty");
+                require!(
+                    amount.0 % count == 0,
+                    "Amount must be evenly divisible among receivers"
+                );
+                self.airdrop(message.ticket, amount.0 / count, message.receivers, message.signature.as_ref());
             }
         }
 
