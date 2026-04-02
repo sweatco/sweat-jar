@@ -7,7 +7,7 @@ use nitka::{
     },
     ContractCall,
 };
-use sweat_jar_model::{api::SweatJarContract, Timezone};
+use sweat_jar_model::{api::SweatJarContract, data::score::Score, Timezone};
 use sweat_model::{FungibleTokenCoreIntegration, SweatContract};
 
 trait Internal {
@@ -86,6 +86,7 @@ pub trait JarContractExtensions {
     ) -> ContractCall<U128>;
 
     /// Same as `airdrop` but for protected products that require an ed25519 signature.
+    /// Pass `booster = 0` to skip booster application.
     fn airdrop_protected(
         &self,
         manager: &Account,
@@ -95,6 +96,7 @@ pub trait JarContractExtensions {
         timezone: Option<Timezone>,
         signature: Base64VecU8,
         valid_until: u64,
+        booster: Score,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
 }
@@ -241,15 +243,18 @@ impl JarContractExtensions for SweatJarContract<'_> {
         timezone: Option<Timezone>,
         signature: Base64VecU8,
         valid_until: u64,
+        booster: Score,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128> {
         let receiver_ids: Vec<&str> = receivers.iter().map(|a| a.id().as_str()).collect();
         let total_amount = amount_per_receiver * receiver_ids.len() as u128;
 
         println!(
-            "▶️ Airdrop protected(product = {:?}) to {:?} with {:?} tokens each",
-            product_id, receiver_ids, amount_per_receiver,
+            "▶️ Airdrop protected(product = {:?}) to {:?} with {:?} tokens each (booster = {})",
+            product_id, receiver_ids, amount_per_receiver, booster,
         );
+
+        let booster_opt: Option<Score> = if booster > 0 { Some(booster) } else { None };
 
         let msg = json!({
             "type": "airdrop",
@@ -261,6 +266,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
                 },
                 "signature": signature,
                 "receivers": receiver_ids,
+                "booster": booster_opt,
             }
         });
 

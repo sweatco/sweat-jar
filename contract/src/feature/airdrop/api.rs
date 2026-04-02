@@ -2,13 +2,14 @@ use near_sdk::{env, json_types::Base64VecU8, AccountId};
 use sweat_jar_model::{
     data::{
         deposit::DepositTicket,
-        product::ProductAssertions,
+        product::{Product, ProductAssertions},
+        score::Score,
     },
-    TokenAmount,
+    Timestamp, TokenAmount,
 };
 
 use crate::{
-    common::event::{emit, EventKind},
+    common::event::{emit, ApplyBoosterData, EventKind},
     Contract,
 };
 
@@ -19,6 +20,7 @@ impl Contract {
         amount_per_receiver: TokenAmount,
         receivers: Vec<AccountId>,
         signature: Option<&Base64VecU8>,
+        booster: Score,
     ) {
         let product = self.get_product(&ticket.product_id);
 
@@ -27,18 +29,69 @@ impl Contract {
         self.verify_airdrop(&ticket, amount_per_receiver, &receivers, signature);
 
         let now = env::block_timestamp_ms();
+        let mut booster_applied = vec![];
+        let mut booster_rejected = vec![];
+
         for account_id in receivers {
-            let account = self.get_or_create_account_mut(&account_id);
-            // Nonce is intentionally NOT incremented — airdrop is a manager action
-            if product.terms.is_score_based() {
-                account.try_set_timezone(ticket.timezone);
-            }
-            account.deposit(&ticket.product_id, amount_per_receiver, None);
-            account.update_jar_cache(&product, now);
+            self.prepare_account_for_airdrop(&account_id, &ticket, &product);
+            self.settle_interest_before_booster(&account_id, booster);
+            self.create_airdrop_deposit(&account_id, &ticket, amount_per_receiver, &product, now);
+            self.apply_airdrop_booster(&account_id, booster, &mut booster_applied, &mut booster_rejected);
             emit(EventKind::Deposit(
                 account_id,
                 (ticket.product_id.clone(), amount_per_receiver.into()),
             ));
+        }
+
+        if booster > 0 {
+            emit(EventKind::ApplyBooster(ApplyBoosterData {
+                applied: booster_applied,
+                rejected: booster_rejected,
+                timestamp: now.into(),
+                score: booster,
+            }));
+        }
+    }
+
+    fn prepare_account_for_airdrop(&mut self, account_id: &AccountId, ticket: &DepositTicket, product: &Product) {
+        let account = self.get_or_create_account_mut(account_id);
+        if product.terms.is_score_based() {
+            account.try_set_timezone(ticket.timezone);
+        }
+    }
+
+    fn settle_interest_before_booster(&mut self, account_id: &AccountId, booster: Score) {
+        if booster > 0 {
+            self.settle_interest(account_id);
+        }
+    }
+
+    fn create_airdrop_deposit(
+        &mut self,
+        account_id: &AccountId,
+        ticket: &DepositTicket,
+        amount_per_receiver: TokenAmount,
+        product: &Product,
+        now: Timestamp,
+    ) {
+        let account = self.get_account_mut(account_id);
+        account.deposit(&ticket.product_id, amount_per_receiver, None);
+        account.update_jar_cache(product, now);
+    }
+
+    fn apply_airdrop_booster(
+        &mut self,
+        account_id: &AccountId,
+        booster: Score,
+        applied: &mut Vec<AccountId>,
+        rejected: &mut Vec<AccountId>,
+    ) {
+        if booster > 0 {
+            if self.get_account_mut(account_id).score.apply_booster(0, booster) {
+                applied.push(account_id.clone());
+            } else {
+                rejected.push(account_id.clone());
+            }
         }
     }
 }
@@ -300,5 +353,71 @@ mod tests {
 
         context.switch_account_to_ft_contract_account();
         context.contract().ft_on_transfer(admin.clone(), U128(amount_per_receiver), msg.to_string());
+    }
+
+    fn airdrop_msg_with_booster(
+        product_id: &str,
+        receivers: &[AccountId],
+        timezone: Option<Timezone>,
+        booster: u16,
+    ) -> String {
+        json!({
+            "type": "airdrop",
+            "data": {
+                "ticket": {
+                    "product_id": product_id,
+                    "valid_until": "0",
+                    "timezone": timezone,
+                },
+                "receivers": receivers,
+                "booster": booster,
+            }
+        })
+        .to_string()
+    }
+
+    #[rstest]
+    fn airdrop_with_booster_applied(admin: AccountId, alice: AccountId, product_1_year_12_cap_score_based: Product) {
+        let product = product_1_year_12_cap_score_based;
+        let amount_per_receiver = 1_000_000u128;
+        let timezone = Timezone::hour_shift(0);
+        let booster = 5_000u16;
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        context.switch_account_to_ft_contract_account();
+        context.contract().ft_on_transfer(
+            admin.clone(),
+            U128(amount_per_receiver),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), booster),
+        );
+
+        let contract = context.contract();
+        let alice_account = contract.get_account(&alice);
+        assert_eq!(amount_per_receiver, alice_account.get_jar(&product.id).total_principal());
+        // Booster for today (days_ago = 0) should be applied
+        assert_eq!(booster, alice_account.score.history[0].booster);
+    }
+
+    #[rstest]
+    fn airdrop_with_zero_booster_not_applied(
+        admin: AccountId,
+        alice: AccountId,
+        product_1_year_12_cap_score_based: Product,
+    ) {
+        let product = product_1_year_12_cap_score_based;
+        let amount_per_receiver = 1_000_000u128;
+        let timezone = Timezone::hour_shift(0);
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        context.switch_account_to_ft_contract_account();
+        context.contract().ft_on_transfer(
+            admin.clone(),
+            U128(amount_per_receiver),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0),
+        );
+
+        let contract = context.contract();
+        let alice_account = contract.get_account(&alice);
+        assert_eq!(0, alice_account.score.history[0].booster, "Booster should not be set when booster=0");
     }
 }

@@ -94,6 +94,7 @@ async fn airdrop_score_based_sets_timezone() -> Result<()> {
             Some(timezone),
             signature.into(),
             valid_until,
+            0,
             &context.ft_contract(),
         )
         .await?;
@@ -125,6 +126,7 @@ async fn airdrop_score_based_sets_timezone() -> Result<()> {
             Some(Timezone::hour_shift(0)), // different timezone — should be ignored
             signature2.into(),
             valid_until,
+            0,
             &context.ft_contract(),
         )
         .await?;
@@ -162,6 +164,64 @@ async fn airdrop_by_non_manager_fails() -> Result<()> {
     // Verify no deposit was created for bob
     let bob_jars = context.sweat_jar().get_jars_for_account(bob.to_near()).await?;
     assert_eq!(0, bob_jars.get_total_principal());
+
+    Ok(())
+}
+
+#[tokio::test]
+#[mutants::skip]
+async fn airdrop_with_booster() -> Result<()> {
+    println!("👷🏽 Run airdrop with booster test");
+
+    let signer = MessageSigner::new();
+    let product = Product {
+        public_key: Some(signer.public_key().into()),
+        ..RegisterProductCommand::Locked10Minutes20000ScoreCap.get()
+    };
+
+    let mut context = prepare_contract(None, []).await?;
+
+    let manager = context.manager().await?;
+    let alice = context.alice().await?;
+
+    context
+        .sweat_jar()
+        .register_product(product.clone())
+        .with_user(&manager)
+        .await?;
+
+    let amount_per_receiver = 1_000_000u128;
+    let timezone = Timezone::hour_shift(0);
+    let valid_until = 49_012_505_000_000u64;
+    let booster = 5_000u16;
+
+    let receivers = [alice.clone()];
+    let airdrop_message = AirdropMessage::new(
+        context.sweat_jar().contract.as_account().id(),
+        &product.id,
+        amount_per_receiver,
+        &[alice.id().clone()],
+        valid_until,
+    );
+    let signature = signer.sign(airdrop_message.material());
+
+    context
+        .sweat_jar()
+        .airdrop_protected(
+            &manager,
+            product.id.clone(),
+            amount_per_receiver,
+            &receivers,
+            Some(timezone),
+            signature.into(),
+            valid_until,
+            booster,
+            &context.ft_contract(),
+        )
+        .await?;
+
+    let alice_jars = context.sweat_jar().get_jars_for_account(alice.to_near()).await?;
+    assert_eq!(amount_per_receiver, alice_jars.get_total_principal());
 
     Ok(())
 }
