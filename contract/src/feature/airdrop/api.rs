@@ -1,11 +1,11 @@
-use near_sdk::{env, json_types::Base64VecU8, AccountId};
+use near_sdk::{env, env::panic_str, json_types::Base64VecU8, AccountId};
 use sweat_jar_model::{
     data::{
         deposit::DepositTicket,
         product::{Product, ProductAssertions},
         score::Score,
     },
-    Timestamp, TokenAmount,
+    DaysOffset, TimeHelper, Timestamp, TokenAmount, UTC,
 };
 
 use crate::{
@@ -21,6 +21,7 @@ impl Contract {
         receivers: Vec<AccountId>,
         signature: Option<&Base64VecU8>,
         booster: Score,
+        booster_timestamp: Option<UTC>,
     ) {
         let product = self.get_product(&ticket.product_id);
 
@@ -36,7 +37,7 @@ impl Contract {
             self.prepare_account_for_airdrop(&account_id, &ticket, &product);
             self.settle_interest_before_booster(&account_id, booster);
             self.create_airdrop_deposit(&account_id, &ticket, amount_per_receiver, &product, now);
-            self.apply_airdrop_booster(&account_id, booster, &mut booster_applied, &mut booster_rejected);
+            self.apply_airdrop_booster(&account_id, booster, booster_timestamp, &mut booster_applied, &mut booster_rejected);
             emit(EventKind::Deposit(
                 account_id,
                 (ticket.product_id.clone(), amount_per_receiver.into()),
@@ -47,7 +48,7 @@ impl Contract {
             emit(EventKind::ApplyBooster(ApplyBoosterData {
                 applied: booster_applied,
                 rejected: booster_rejected,
-                timestamp: now.into(),
+                timestamp: booster_timestamp.unwrap_or_else(|| now.into()),
                 score: booster,
             }));
         }
@@ -84,11 +85,22 @@ impl Contract {
         &mut self,
         account_id: &AccountId,
         booster: Score,
+        booster_timestamp: Option<UTC>,
         applied: &mut Vec<AccountId>,
         rejected: &mut Vec<AccountId>,
     ) {
         if booster > 0 {
-            if self.get_account_mut(account_id).score.apply_booster(0, booster) {
+            let days_ago = if let Some(timestamp) = booster_timestamp {
+                let account = self.get_account_mut(account_id);
+                account.timezone.assert_not_future(timestamp);
+                let adjusted = account.timezone.adjust(timestamp);
+                DaysOffset::try_from(account.timezone.today().0 - adjusted.day().0)
+                    .unwrap_or_else(|_| panic_str("Failed to calculate days offset"))
+            } else {
+                0
+            };
+
+            if self.get_account_mut(account_id).score.apply_booster(days_ago, booster) {
                 applied.push(account_id.clone());
             } else {
                 rejected.push(account_id.clone());
@@ -108,7 +120,7 @@ mod tests {
             product::Product,
         },
         signer::test_utils::Base64String,
-        Timezone,
+        Timezone, MS_IN_DAY,
     };
 
     use crate::{
@@ -364,6 +376,7 @@ mod tests {
         receivers: &[AccountId],
         timezone: Option<Timezone>,
         booster: u16,
+        booster_timestamp: Option<u64>,
     ) -> String {
         json!({
             "type": "airdrop",
@@ -375,6 +388,7 @@ mod tests {
                 },
                 "receivers": receivers,
                 "booster": booster,
+                "booster_timestamp": booster_timestamp,
             }
         })
         .to_string()
@@ -392,7 +406,7 @@ mod tests {
         context.contract().ft_on_transfer(
             admin.clone(),
             U128(amount_per_receiver),
-            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), booster),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), booster, None),
         );
 
         let contract = context.contract();
@@ -423,7 +437,7 @@ mod tests {
         context.contract().ft_on_transfer(
             admin.clone(),
             U128(amount_per_receiver),
-            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0, None),
         );
 
         let contract = context.contract();
@@ -453,7 +467,7 @@ mod tests {
         context.contract().ft_on_transfer(
             admin.clone(),
             U128(amount_per_receiver),
-            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0, None),
         );
         let initial_updated_at = context.contract().get_account(&alice).score.updated_at();
 
@@ -464,7 +478,7 @@ mod tests {
         context.contract().ft_on_transfer(
             admin.clone(),
             U128(amount_per_receiver),
-            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0, None),
         );
 
         let contract = context.contract();
@@ -473,6 +487,59 @@ mod tests {
             initial_updated_at,
             alice_account.score.updated_at(),
             "Score updated_at must not change when booster=0"
+        );
+    }
+
+    #[rstest]
+    fn airdrop_with_booster_timestamp_yesterday(
+        admin: AccountId,
+        alice: AccountId,
+        product_1_year_12_cap_score_based: Product,
+    ) {
+        let product = product_1_year_12_cap_score_based;
+        let amount_per_receiver = 1_000_000u128;
+        let timezone = Timezone::hour_shift(0);
+        let booster = 5_000u16;
+        // Block time = start of day 2; yesterday = any time during day 1
+        let now = MS_IN_DAY * 2;
+        let yesterday = MS_IN_DAY + MS_IN_DAY / 2;
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        context.set_block_timestamp_in_ms(now);
+
+        context.switch_account_to_ft_contract_account();
+        context.contract().ft_on_transfer(
+            admin.clone(),
+            U128(amount_per_receiver),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), booster, Some(yesterday)),
+        );
+
+        let contract = context.contract();
+        let alice_account = contract.get_account(&alice);
+        assert_eq!(booster, alice_account.score.history[1].booster, "Booster should be applied to yesterday (history[1])");
+        assert_eq!(0, alice_account.score.history[0].booster, "Today's booster should be untouched");
+    }
+
+    #[rstest]
+    #[should_panic(expected = "Timestamp from future")]
+    fn airdrop_with_booster_timestamp_future_panics(
+        admin: AccountId,
+        alice: AccountId,
+        product_1_year_12_cap_score_based: Product,
+    ) {
+        let product = product_1_year_12_cap_score_based;
+        let amount_per_receiver = 1_000_000u128;
+        let timezone = Timezone::hour_shift(0);
+        let booster = 5_000u16;
+        let now = MS_IN_DAY;
+        let future_timestamp = MS_IN_DAY * 2; // tomorrow
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        context.set_block_timestamp_in_ms(now);
+
+        context.switch_account_to_ft_contract_account();
+        context.contract().ft_on_transfer(
+            admin.clone(),
+            U128(amount_per_receiver),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), booster, Some(future_timestamp)),
         );
     }
 }

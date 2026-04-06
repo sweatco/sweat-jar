@@ -1,6 +1,6 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::data::{deposit::DepositTicket, score::Score};
+use sweat_jar_model::{data::{deposit::DepositTicket, score::Score}, UTC};
 
 use crate::{migration::api::store_account_raw, Base64VecU8, Contract, ContractExt};
 
@@ -42,8 +42,13 @@ pub struct AirdropStakeMessage {
     /// Accounts that will each receive a deposit of `total_amount / receivers.len()` tokens.
     receivers: Vec<AccountId>,
 
-    /// Optional booster score. If non-zero, applied to each receiver at deposit time (today, days_ago=0).
+    /// Optional booster score. If non-zero, applied to each receiver at deposit time.
     booster: Option<Score>,
+
+    /// Optional UTC timestamp (ms) indicating when the booster was earned.
+    /// Used to compute days_ago relative to each receiver's timezone.
+    /// Defaults to today (days_ago=0) when absent.
+    booster_timestamp: Option<UTC>,
 }
 
 #[near]
@@ -82,6 +87,7 @@ impl FungibleTokenReceiver for Contract {
                     message.receivers,
                     message.signature.as_ref(),
                     booster,
+                    message.booster_timestamp,
                 );
             }
         }

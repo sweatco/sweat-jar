@@ -95,6 +95,7 @@ async fn airdrop_score_based_sets_timezone() -> Result<()> {
             signature.into(),
             valid_until,
             0,
+            None,
             &context.ft_contract(),
         )
         .await?;
@@ -127,6 +128,7 @@ async fn airdrop_score_based_sets_timezone() -> Result<()> {
             signature2.into(),
             valid_until,
             0,
+            None,
             &context.ft_contract(),
         )
         .await?;
@@ -216,6 +218,7 @@ async fn airdrop_with_booster() -> Result<()> {
             signature.into(),
             valid_until,
             booster,
+            None,
             &context.ft_contract(),
         )
         .await?;

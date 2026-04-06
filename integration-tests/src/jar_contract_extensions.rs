@@ -87,6 +87,7 @@ pub trait JarContractExtensions {
 
     /// Same as `airdrop` but for protected products that require an ed25519 signature.
     /// Pass `booster = 0` to skip booster application.
+    /// Pass `booster_timestamp = None` to apply booster to today (days_ago = 0).
     fn airdrop_protected(
         &self,
         manager: &Account,
@@ -97,6 +98,7 @@ pub trait JarContractExtensions {
         signature: Base64VecU8,
         valid_until: u64,
         booster: Score,
+        booster_timestamp: Option<u64>,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128>;
 }
@@ -244,6 +246,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
         signature: Base64VecU8,
         valid_until: u64,
         booster: Score,
+        booster_timestamp: Option<u64>,
         ft_contract: &SweatContract<'_>,
     ) -> ContractCall<U128> {
         let receiver_ids: Vec<&str> = receivers.iter().map(|a| a.id().as_str()).collect();
@@ -267,6 +270,7 @@ impl JarContractExtensions for SweatJarContract<'_> {
                 "signature": signature,
                 "receivers": receiver_ids,
                 "booster": booster_opt,
+                "booster_timestamp": booster_timestamp,
             }
         });
 
