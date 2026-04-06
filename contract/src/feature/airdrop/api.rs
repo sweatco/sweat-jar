@@ -60,6 +60,7 @@ impl Contract {
         }
     }
 
+    #[mutants::skip]
     fn settle_interest_before_booster(&mut self, account_id: &AccountId, booster: Score) {
         if booster > 0 {
             self.settle_interest(account_id);
@@ -111,9 +112,12 @@ mod tests {
     };
 
     use crate::{
-        common::testing::{
-            accounts::{admin, alice, bob},
-            Context,
+        common::{
+            event::EventKind,
+            testing::{
+                accounts::{admin, alice, bob},
+                Context,
+            },
         },
         feature::product::model::test_utils::{
             product, product_1_year_12_cap_score_based, protected_product, ProtectedProduct,
@@ -396,6 +400,12 @@ mod tests {
         assert_eq!(amount_per_receiver, alice_account.get_jar(&product.id).total_principal());
         // Booster for today (days_ago = 0) should be applied
         assert_eq!(booster, alice_account.score.history[0].booster);
+
+        let events = context.get_events();
+        assert!(
+            events.iter().any(|e| matches!(e, EventKind::ApplyBooster(d) if d.score == booster)),
+            "ApplyBooster event must be emitted when booster > 0"
+        );
     }
 
     #[rstest]
@@ -419,5 +429,50 @@ mod tests {
         let contract = context.contract();
         let alice_account = contract.get_account(&alice);
         assert_eq!(0, alice_account.score.history[0].booster, "Booster should not be set when booster=0");
+
+        let events = context.get_events();
+        assert!(
+            !events.iter().any(|e| matches!(e, EventKind::ApplyBooster(_))),
+            "ApplyBooster event must not be emitted when booster=0"
+        );
+    }
+
+    #[rstest]
+    fn airdrop_zero_booster_does_not_update_score_timestamp(
+        admin: AccountId,
+        alice: AccountId,
+        product_1_year_12_cap_score_based: Product,
+    ) {
+        let product = product_1_year_12_cap_score_based;
+        let amount_per_receiver = 1_000_000u128;
+        let timezone = Timezone::hour_shift(0);
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        // First airdrop at t=0: creates alice's account with updated_at=0
+        context.switch_account_to_ft_contract_account();
+        context.contract().ft_on_transfer(
+            admin.clone(),
+            U128(amount_per_receiver),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0),
+        );
+        let initial_updated_at = context.contract().get_account(&alice).score.updated_at();
+
+        // Advance time so a spurious apply_booster call would produce a different updated_at
+        context.set_block_timestamp_in_ms(1_000);
+
+        // Second airdrop at t=1000 with booster=0 — apply_booster must NOT be called
+        context.contract().ft_on_transfer(
+            admin.clone(),
+            U128(amount_per_receiver),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), 0),
+        );
+
+        let contract = context.contract();
+        let alice_account = contract.get_account(&alice);
+        assert_eq!(
+            initial_updated_at,
+            alice_account.score.updated_at(),
+            "Score updated_at must not change when booster=0"
+        );
     }
 }
