@@ -89,22 +89,30 @@ impl Contract {
         applied: &mut Vec<AccountId>,
         rejected: &mut Vec<AccountId>,
     ) {
-        if booster > 0 {
-            let days_ago = if let Some(timestamp) = booster_timestamp {
-                let account = self.get_account_mut(account_id);
-                account.timezone.assert_not_future(timestamp);
-                let adjusted = account.timezone.adjust(timestamp);
-                DaysOffset::try_from(account.timezone.today().0 - adjusted.day().0)
-                    .unwrap_or_else(|_| panic_str("Failed to calculate days offset"))
-            } else {
-                0
-            };
+        if booster == 0 {
+            return;
+        }
 
-            if self.get_account_mut(account_id).score.apply_booster(days_ago, booster) {
-                applied.push(account_id.clone());
-            } else {
-                rejected.push(account_id.clone());
-            }
+        let account = self.get_account_mut(account_id);
+
+        if !account.timezone.is_valid() {
+            rejected.push(account_id.clone());
+            return;
+        }
+
+        let days_ago = if let Some(timestamp) = booster_timestamp {
+            account.timezone.assert_not_future(timestamp);
+            let adjusted = account.timezone.adjust(timestamp);
+            DaysOffset::try_from(account.timezone.today().0 - adjusted.day().0)
+                .unwrap_or_else(|_| panic_str("Failed to calculate days offset"))
+        } else {
+            0
+        };
+
+        if account.score.apply_booster(days_ago, booster) {
+            applied.push(account_id.clone());
+        } else {
+            rejected.push(account_id.clone());
         }
     }
 }
@@ -541,5 +549,32 @@ mod tests {
             U128(amount_per_receiver),
             airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), booster, Some(future_timestamp)),
         );
+    }
+
+    #[rstest]
+    fn airdrop_with_booster_no_timezone_goes_to_rejected(admin: AccountId, alice: AccountId, product: Product) {
+        let amount_per_receiver = 1_000_000u128;
+        let booster = 5_000u16;
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        context.switch_account_to_ft_contract_account();
+        // `product` is not score-based, so no timezone is set on alice's account
+        context.contract().ft_on_transfer(
+            admin.clone(),
+            U128(amount_per_receiver),
+            airdrop_msg_with_booster(&product.id, &[alice.clone()], None, booster, None),
+        );
+
+        let events = context.get_events();
+        let booster_event = events
+            .iter()
+            .find_map(|e| if let EventKind::ApplyBooster(d) = e { Some(d) } else { None })
+            .expect("ApplyBooster event must be emitted");
+
+        assert!(
+            booster_event.rejected.contains(&alice),
+            "alice must be in rejected: no timezone means not eligible for a booster"
+        );
+        assert!(booster_event.applied.is_empty());
     }
 }
