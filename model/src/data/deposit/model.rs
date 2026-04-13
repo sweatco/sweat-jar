@@ -39,6 +39,7 @@ pub struct DepositTicket {
 pub enum Purpose {
     Deposit,
     Restake,
+    Airdrop,
 }
 
 impl Display for Purpose {
@@ -46,6 +47,7 @@ impl Display for Purpose {
         match self {
             Purpose::Deposit => write!(f, "deposit"),
             Purpose::Restake => write!(f, "restake"),
+            Purpose::Airdrop => write!(f, "airdrop"),
         }
     }
 }
@@ -86,5 +88,32 @@ impl Deref for DepositMessage {
     type Target = String;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+pub struct AirdropMessage(String);
+
+impl AirdropMessage {
+    pub fn new(
+        contract_account_id: &AccountId,
+        product_id: &ProductId,
+        amount: TokenAmount,
+        receivers: &[AccountId],
+        valid_until: Timestamp,
+    ) -> Self {
+        let mut sorted: Vec<&AccountId> = receivers.iter().collect();
+        sorted.sort();
+        let receivers_str = sorted.iter().map(|a| a.as_str()).collect::<Vec<_>>().join(",");
+        Self(format!(
+            "airdrop,{contract_account_id},{product_id},{amount},{valid_until},{receivers_str}"
+        ))
+    }
+
+    pub fn material(&self) -> &str {
+        &self.0
+    }
+
+    pub fn sha256(&self) -> Vec<u8> {
+        sha256(self.0.as_bytes())
     }
 }

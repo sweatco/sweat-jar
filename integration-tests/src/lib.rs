@@ -1,5 +1,6 @@
 #![cfg(test)]
 
+mod airdrop;
 mod booster;
 mod booster_performance;
 mod claim_detailed;
