@@ -72,21 +72,14 @@ impl MigrationToV2 for Contract {
         }
     }
 
+    fn force_migrate_account(&mut self, account_id: AccountId) -> PromiseOrValue<(AccountId, bool)> {
+        self.assert_manager();
+        self.migrate_account_inner(account_id)
+    }
+
     fn migrate_account(&mut self) -> PromiseOrValue<(AccountId, bool)> {
         let account_id = env::predecessor_account_id();
-        self.assert_account_exists(&account_id);
-        self.assert_account_is_not_migrating(&account_id);
-
-        let Some((principal, memo, msg)) = self.prepare_migration_params(account_id.clone()) else {
-            return self.finalize_migration(account_id, true);
-        };
-
-        assert_gas(
-            Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER + TGAS_FOR_MIGRATION_CALLBACK).as_gas(),
-            || format!("Out of gas in migrate_account({account_id})"),
-        );
-
-        self.transfer_account(&account_id, principal, memo, msg)
+        self.migrate_account_inner(account_id)
     }
 
     fn is_account_locked(&self, account_id: AccountId) -> bool {
@@ -130,10 +123,7 @@ impl Contract {
                 msg.as_str(),
                 TGAS_FOR_MIGRATION_TRANSFER,
             )
-            .then(
-                Self::ext(env::current_account_id())
-                    .after_account_transferred(account_id.clone()),
-            )
+            .then(Self::ext(env::current_account_id()).after_account_transferred(account_id.clone()))
             .into()
     }
 
@@ -184,6 +174,22 @@ impl Contract {
 }
 #[mutants::skip]
 impl Contract {
+    fn migrate_account_inner(&mut self, account_id: AccountId) -> PromiseOrValue<(AccountId, bool)> {
+        self.assert_account_exists(&account_id);
+        self.assert_account_is_not_migrating(&account_id);
+
+        let Some((principal, memo, msg)) = self.prepare_migration_params(account_id.clone()) else {
+            return self.finalize_migration(account_id, true);
+        };
+
+        assert_gas(
+            Gas::from_tgas(TGAS_FOR_MIGRATION_TRANSFER + TGAS_FOR_MIGRATION_CALLBACK).as_gas(),
+            || format!("Out of gas in migrate_account({account_id})"),
+        );
+
+        self.transfer_account(&account_id, principal, memo, msg)
+    }
+
     fn prepare_migration_params(&mut self, account_id: AccountId) -> Option<(TokenAmount, String, String)> {
         let (account, principal) = self.map_legacy_account(account_id.clone());
         if account.jars.is_empty() {
@@ -280,6 +286,27 @@ mod tests {
 
     use super::*;
     use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
+
+    #[test]
+    #[should_panic(expected = r#"Can be performed only by admin"#)]
+    fn force_migrate_by_unauthorized_account() {
+        let admin = admin();
+        let alice = alice();
+
+        let product = Product {
+            id: "product".to_string(),
+            ..Product::new()
+        };
+
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        context
+            .contract()
+            .create_jars(alice.clone(), "product".to_string(), 3 * 10u128.pow(18), 450);
+
+        context.switch_account(alice.clone());
+        context.contract().force_migrate_account(alice);
+    }
 
     #[test]
     #[ignore]
