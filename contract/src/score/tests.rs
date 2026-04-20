@@ -500,3 +500,46 @@ fn test_steps_and_migration() {
 
     ctx.record_score(UTC(0), 25000, alice());
 }
+
+#[test]
+fn when_account_doesnt_exist_it_skips_score() {
+    const ALICE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), TermDays(10), ScoreCap(20_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(4)))
+        .build();
+
+    ctx.contract()
+        .accounts
+        .get_mut(&alice())
+        .unwrap()
+        .jars
+        .first_mut()
+        .unwrap()
+        .created_at = 1729692817027; // Wed Oct 23 2024 14:13:37
+
+    ctx.set_block_timestamp_in_ms(1729694971000); // Wed Oct 23 2024 14:49:31
+
+    ctx.switch_account(admin());
+    ctx.contract().record_score(vec![
+        (alice(), vec![(8245, UTC(1729592064000))]),
+        (bob(), vec![(10000, UTC(1729592064000))]),
+    ]);
+
+    assert_eq!(
+        ctx.contract().get_total_interest(alice()).amount.total.0,
+        22589041095890410958904
+    );
+
+    for i in 0..100 {
+        ctx.set_block_timestamp_in_ms(1729694971000 + MS_IN_HOUR * i);
+
+        assert_eq!(
+            ctx.contract().get_total_interest(alice()).amount.total.0,
+            22589041095890410958904
+        );
+    }
+}

@@ -25,11 +25,9 @@ impl ScoreApi for Contract {
             self.migrate_account_if_needed(&account);
 
             let account_jars = self.accounts.entry(account.clone()).or_default();
-
-            assert!(
-                account_jars.has_score_jars(),
-                "Account '{account}' doesn't have score jars"
-            );
+            if !account_jars.has_score_jars() {
+                continue;
+            }
 
             let score = account_jars.score.claim_score();
 
