@@ -1,0 +1,4 @@
+[toolchain]
+# Pinned independently of the contract's own toolchain (see contract/Cargo.toml's
+# reproducible_build constraints) — this crate is host-only Rust, no wasm32 involved.
+channel = "1.93"
