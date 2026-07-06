@@ -3,11 +3,7 @@ use std::{
     ops::Deref,
 };
 
-#[cfg(not(feature = "integration-test"))]
-use near_sdk::AccountId;
-use near_sdk::{json_types::U64, near};
-#[cfg(feature = "integration-test")]
-use nitka::near_sdk::AccountId;
+use near_sdk::{json_types::U64, near, AccountId};
 
 use crate::{data::product::ProductId, signer::sha256, Timestamp, Timezone, TokenAmount};
 

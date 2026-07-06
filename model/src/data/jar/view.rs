@@ -5,12 +5,11 @@ use near_sdk::{
     near, Timestamp,
 };
 
+use super::{Deposit, Jar, JarCache};
 use crate::{
     data::{account::Account, product::ProductId},
     TokenAmount,
 };
-
-use super::{Deposit, Jar, JarCache};
 
 #[near(serializers=[json])]
 #[derive(Clone, Debug, PartialEq, Default)]

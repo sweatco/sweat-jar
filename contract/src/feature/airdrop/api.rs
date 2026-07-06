@@ -37,7 +37,13 @@ impl Contract {
             self.prepare_account_for_airdrop(&account_id, &ticket, &product);
             self.settle_interest_before_booster(&account_id, booster);
             self.create_airdrop_deposit(&account_id, &ticket, amount_per_receiver, &product, now);
-            self.apply_airdrop_booster(&account_id, booster, booster_timestamp, &mut booster_applied, &mut booster_rejected);
+            self.apply_airdrop_booster(
+                &account_id,
+                booster,
+                booster_timestamp,
+                &mut booster_applied,
+                &mut booster_rejected,
+            );
             emit(EventKind::Deposit(
                 account_id,
                 (ticket.product_id.clone(), amount_per_receiver.into()),
@@ -123,10 +129,7 @@ mod tests {
     use near_sdk::{json_types::U128, serde_json::json, AccountId};
     use rstest::rstest;
     use sweat_jar_model::{
-        data::{
-            deposit::AirdropMessage,
-            product::Product,
-        },
+        data::{deposit::AirdropMessage, product::Product},
         signer::test_utils::Base64String,
         Timezone, MS_IN_DAY,
     };
@@ -288,15 +291,19 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract().ft_on_transfer(
-            admin.clone(),
-            U128(amount_per_receiver * 2),
-            msg.to_string(),
-        );
+        context
+            .contract()
+            .ft_on_transfer(admin.clone(), U128(amount_per_receiver * 2), msg.to_string());
 
         let contract = context.contract();
-        assert_eq!(amount_per_receiver, contract.get_account(&alice).get_jar(&product.id).total_principal());
-        assert_eq!(amount_per_receiver, contract.get_account(&bob).get_jar(&product.id).total_principal());
+        assert_eq!(
+            amount_per_receiver,
+            contract.get_account(&alice).get_jar(&product.id).total_principal()
+        );
+        assert_eq!(
+            amount_per_receiver,
+            contract.get_account(&bob).get_jar(&product.id).total_principal()
+        );
     }
 
     #[rstest]
@@ -334,11 +341,9 @@ mod tests {
         let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         context.switch_account_to_ft_contract_account();
-        context.contract().ft_on_transfer(
-            admin.clone(),
-            U128(1_000_000),
-            airdrop_msg(&product.id, &[]),
-        );
+        context
+            .contract()
+            .ft_on_transfer(admin.clone(), U128(1_000_000), airdrop_msg(&product.id, &[]));
     }
 
     #[rstest]
@@ -376,7 +381,9 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract().ft_on_transfer(admin.clone(), U128(amount_per_receiver), msg.to_string());
+        context
+            .contract()
+            .ft_on_transfer(admin.clone(), U128(amount_per_receiver), msg.to_string());
     }
 
     fn airdrop_msg_with_booster(
@@ -419,13 +426,18 @@ mod tests {
 
         let contract = context.contract();
         let alice_account = contract.get_account(&alice);
-        assert_eq!(amount_per_receiver, alice_account.get_jar(&product.id).total_principal());
+        assert_eq!(
+            amount_per_receiver,
+            alice_account.get_jar(&product.id).total_principal()
+        );
         // Booster for today (days_ago = 0) should be applied
         assert_eq!(booster, alice_account.score.history[0].booster);
 
         let events = context.get_events();
         assert!(
-            events.iter().any(|e| matches!(e, EventKind::ApplyBooster(d) if d.score == booster)),
+            events
+                .iter()
+                .any(|e| matches!(e, EventKind::ApplyBooster(d) if d.score == booster)),
             "ApplyBooster event must be emitted when booster > 0"
         );
     }
@@ -450,7 +462,10 @@ mod tests {
 
         let contract = context.contract();
         let alice_account = contract.get_account(&alice);
-        assert_eq!(0, alice_account.score.history[0].booster, "Booster should not be set when booster=0");
+        assert_eq!(
+            0, alice_account.score.history[0].booster,
+            "Booster should not be set when booster=0"
+        );
 
         let events = context.get_events();
         assert!(
@@ -523,8 +538,14 @@ mod tests {
 
         let contract = context.contract();
         let alice_account = contract.get_account(&alice);
-        assert_eq!(booster, alice_account.score.history[1].booster, "Booster should be applied to yesterday (history[1])");
-        assert_eq!(0, alice_account.score.history[0].booster, "Today's booster should be untouched");
+        assert_eq!(
+            booster, alice_account.score.history[1].booster,
+            "Booster should be applied to yesterday (history[1])"
+        );
+        assert_eq!(
+            0, alice_account.score.history[0].booster,
+            "Today's booster should be untouched"
+        );
     }
 
     #[rstest]
@@ -547,7 +568,13 @@ mod tests {
         context.contract().ft_on_transfer(
             admin.clone(),
             U128(amount_per_receiver),
-            airdrop_msg_with_booster(&product.id, &[alice.clone()], Some(timezone), booster, Some(future_timestamp)),
+            airdrop_msg_with_booster(
+                &product.id,
+                &[alice.clone()],
+                Some(timezone),
+                booster,
+                Some(future_timestamp),
+            ),
         );
     }
 
@@ -568,7 +595,13 @@ mod tests {
         let events = context.get_events();
         let booster_event = events
             .iter()
-            .find_map(|e| if let EventKind::ApplyBooster(d) = e { Some(d) } else { None })
+            .find_map(|e| {
+                if let EventKind::ApplyBooster(d) = e {
+                    Some(d)
+                } else {
+                    None
+                }
+            })
             .expect("ApplyBooster event must be emitted");
 
         assert!(

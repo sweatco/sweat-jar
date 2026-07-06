@@ -800,11 +800,10 @@ mod score_tests {
 
 mod account_score_tests {
     use near_sdk::env::block_timestamp_ms;
-    use sweat_jar_model::ScoreIncrementProcessor;
     use sweat_jar_model::{
         convert_to_days_offset,
         data::account::{features::Feature, versioned::AccountVersioned, Account},
-        DailyScore, ScoreIncrements,
+        DailyScore, ScoreIncrementProcessor, ScoreIncrements,
     };
     use sweat_jar_primitives::UDecimal;
 

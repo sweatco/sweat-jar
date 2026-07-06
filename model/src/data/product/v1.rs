@@ -2,7 +2,6 @@ use near_sdk::{
     json_types::{Base64VecU8, U128, U64},
     near,
 };
-
 use sweat_jar_primitives::UDecimal;
 
 use crate::{ConfigurableValue, Duration, Score, TokenAmount};

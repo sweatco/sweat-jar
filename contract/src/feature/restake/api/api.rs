@@ -78,7 +78,6 @@ pub(super) trait RemainderTransfer {
     fn transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
 }
 
-#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub(super) trait RemainderTransferCallback {
     fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;

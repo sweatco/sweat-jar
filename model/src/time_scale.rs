@@ -25,10 +25,10 @@
 //! let one_day = ms_in_day();
 //! ```
 //!
-use crate::{MS_IN_DAY, MS_IN_YEAR};
-
 #[cfg(feature = "integration-methods")]
 use std::cell::Cell;
+
+use crate::{MS_IN_DAY, MS_IN_YEAR};
 
 #[cfg(feature = "integration-methods")]
 thread_local! {

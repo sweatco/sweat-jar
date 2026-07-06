@@ -35,7 +35,6 @@ mod gas {
         Gas::from_gas(INITIAL_GAS_FOR_AFTER_CLAIM.as_gas() + ADDITIONAL_AFTER_CLAIM_JAR_COST.as_gas() * 200);
 }
 
-#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub trait ClaimCallbacks {
     fn after_claim(
