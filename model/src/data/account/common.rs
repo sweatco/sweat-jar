@@ -1,6 +1,9 @@
-use super::features::{Feature, Features};
 use near_sdk::env::{self, panic_str};
 
+use super::{
+    features::{Feature, Features},
+    Account, AccountCompanion,
+};
 use crate::{
     data::{
         jar::{Deposit, Jar},
@@ -9,8 +12,6 @@ use crate::{
     interest::InterestCalculator,
     Timestamp, Timezone, TokenAmount,
 };
-
-use super::{Account, AccountCompanion};
 
 pub trait FeaturesAccess {
     fn features(&self) -> &Features;

@@ -1,6 +1,9 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::{data::{deposit::DepositTicket, score::Score}, UTC};
+use sweat_jar_model::{
+    data::{deposit::DepositTicket, score::Score},
+    UTC,
+};
 
 use crate::{migration::api::store_account_raw, Base64VecU8, Contract, ContractExt};
 
@@ -46,8 +49,8 @@ pub struct AirdropStakeMessage {
     booster: Option<Score>,
 
     /// Optional UTC timestamp (ms) indicating when the booster was earned.
-    /// Used to compute days_ago relative to each receiver's timezone.
-    /// Defaults to today (days_ago=0) when absent.
+    /// Used to compute `days_ago` relative to each receiver's timezone.
+    /// Defaults to today (`days_ago=0`) when absent.
     booster_timestamp: Option<UTC>,
 }
 
@@ -77,7 +80,7 @@ impl FungibleTokenReceiver for Contract {
                 let count = message.receivers.len() as u128;
                 require!(count > 0, "Receivers list is empty");
                 require!(
-                    amount.0 % count == 0,
+                    amount.0.is_multiple_of(count),
                     "Amount must be evenly divisible among receivers"
                 );
                 let booster = message.booster.unwrap_or(0);

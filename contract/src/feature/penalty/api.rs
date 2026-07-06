@@ -1,8 +1,7 @@
 use near_sdk::{env, near, AccountId};
-use sweat_jar_model::data::account::{common::FeaturesAccess, features::Feature};
-
 #[allow(deprecated)]
 use sweat_jar_model::api::PenaltyApi;
+use sweat_jar_model::data::account::{common::FeaturesAccess, features::Feature};
 
 use crate::{
     common::event::{
@@ -16,6 +15,7 @@ use crate::{
 #[near]
 #[allow(deprecated)]
 impl PenaltyApi for Contract {
+    #[allow(deprecated)]
     fn set_penalty(&mut self, account_id: AccountId, value: bool) {
         self.assert_manager();
 
@@ -31,6 +31,7 @@ impl PenaltyApi for Contract {
         }));
     }
 
+    #[allow(deprecated)]
     fn batch_set_penalty(&mut self, account_ids: Vec<AccountId>, value: bool) {
         self.assert_manager();
 
@@ -48,6 +49,7 @@ impl PenaltyApi for Contract {
         }));
     }
 
+    #[allow(deprecated)]
     fn is_penalty_applied(&self, account_id: AccountId) -> bool {
         !self.get_account(&account_id).is_feature_enabled(&Feature::IncreasedApy)
     }

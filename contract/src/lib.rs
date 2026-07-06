@@ -1,5 +1,7 @@
 use std::{cell::RefCell, collections::HashMap};
 
+#[cfg(feature = "integration-test")]
+use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::{
     collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
     BorshStorageKey, PanicOnDefault,
@@ -13,9 +15,6 @@ use sweat_jar_model::{
     },
     TokenAmount,
 };
-
-#[cfg(feature = "integration-test")]
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 
 mod common;
 mod doc;

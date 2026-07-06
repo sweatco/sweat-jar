@@ -2,7 +2,6 @@ use near_sdk::{
     env::{block_timestamp_ms, panic_str},
     near,
 };
-
 use sweat_jar_primitives::UDecimal;
 
 use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UTC};

@@ -38,7 +38,7 @@ test: ##@Testing Run unit tests.
 	cargo test
 
 integration: ##@Testing Run integration tests.
-	cargo test --package integration-tests
+	@echo "Integration tests are disabled pending a nitka/sweat-model replacement (see PROD-3637)."
 
 int: integration ##@Testing Shorthand for `integration`
 

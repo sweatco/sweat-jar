@@ -2,6 +2,10 @@ use std::collections::HashMap;
 
 use near_sdk::near;
 
+use super::{
+    features::{Feature, Features},
+    v1::AccountV1,
+};
 use crate::{
     data::{
         jar::{Jar, JarCompanion},
@@ -9,11 +13,6 @@ use crate::{
         score::AccountScore,
     },
     Timezone,
-};
-
-use super::{
-    features::{Feature, Features},
-    v1::AccountV1,
 };
 
 #[near]

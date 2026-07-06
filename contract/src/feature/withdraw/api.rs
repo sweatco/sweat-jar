@@ -82,7 +82,6 @@ use crate::{
     env, AccountId, Contract, ContractExt,
 };
 
-#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub(super) trait WithdrawCallbacks {
     fn after_withdraw(&mut self, account_id: AccountId, request: WithdrawalRequest) -> WithdrawView;
