@@ -6,9 +6,6 @@ install: ##@Miscellaneous Install dependencies
 	@npm i near-cli
 	@cargo build
 
-measure: ##@Miscellaneous Measure gas cost.
-	./scripts/measure.sh
-
 check: ##@Miscellaneous Run all checks.
 	make fmt && make lint && make build && make test && make int && make mutation
 
@@ -38,7 +35,7 @@ test: ##@Testing Run unit tests.
 	cargo test
 
 integration: ##@Testing Run integration tests.
-	@echo "Integration tests are disabled pending a nitka/sweat-model replacement (see PROD-3637)."
+	cd integration-tests && cargo test
 
 int: integration ##@Testing Shorthand for `integration`
 
