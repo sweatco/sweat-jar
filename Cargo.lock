@@ -2238,17 +2238,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "near-self-update-proc"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f7930d44eb422740465504d82fab52ba3fc8f42b8f4195330b5b4f1708b71bcd"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "near-stdx"
 version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3419,7 +3408,6 @@ dependencies = [
  "near-contract-standards",
  "near-plugins",
  "near-sdk",
- "near-self-update-proc",
  "rstest",
  "sweat-jar-model",
  "sweat-jar-primitives",

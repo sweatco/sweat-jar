@@ -27,8 +27,6 @@ strum = { version = "0.27", features = ["derive"] }
 sweat-jar-primitives = { path = "primitives" }
 sweat-jar-model = { path = "model" }
 
-near-self-update-proc = "0.1.2"
-
 near-sdk = "5.28.3"
 near-contract-standards = "5.28.3"
 near-plugins = "0.5.3"
