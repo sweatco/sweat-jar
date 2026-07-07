@@ -6,7 +6,7 @@ use sweat_jar_model::{
     UTC,
 };
 
-use crate::{migration::api::store_account_raw, Base64VecU8, Contract, ContractExt};
+use crate::{migration::api::store_account_raw, Base64VecU8, Contract, ContractExt, Roles};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -78,8 +78,8 @@ impl FungibleTokenReceiver for Contract {
             }
             FtMessage::Airdrop(message) => {
                 require!(
-                    self.acl_has_any_role(vec!["Oracle".to_string()], sender_id),
-                    "Only manager can perform airdrops"
+                    self.acl_has_any_role(vec![Roles::Oracle.into()], sender_id),
+                    "Only accounts with the Oracle role can perform airdrops"
                 );
                 let count = message.receivers.len() as u128;
                 require!(count > 0, "Receivers list is empty");

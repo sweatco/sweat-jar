@@ -124,9 +124,9 @@ async fn airdrop_score_based_sets_timezone() -> Result<()> {
 
 #[tokio::test]
 #[tracing::instrument]
-async fn airdrop_by_non_manager_fails() -> Result<()> {
+async fn airdrop_by_non_oracle_fails() -> Result<()> {
     common::prepare::init_tracing();
-    info!("airdrop non-manager test");
+    info!("airdrop by non-oracle test");
 
     let context = prepare_contract([RegisterProductCommand::Locked10Minutes6Percents]).await?;
 
