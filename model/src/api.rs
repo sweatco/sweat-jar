@@ -12,6 +12,7 @@ use crate::{
         deposit::DepositTicket,
         jar::{AggregatedInterestView, JarsView},
         product::{Product, ProductId},
+        score::DailyScoreView,
         withdraw::{BulkWithdrawView, WithdrawView},
     },
     Score, UTC,
@@ -114,6 +115,13 @@ pub trait AccountApi {
 
     /// Returns current active score if user has any score based jars
     fn get_score(&self, account_id: AccountId) -> Option<U128>;
+
+    /// Returns the account's most recently finalized daily score, including
+    /// any applied booster. Unlike `get_score` (which only reflects the
+    /// recorded `value`), this also surfaces `booster` so callers/tests can
+    /// observe booster application directly rather than inferring it
+    /// indirectly (e.g. from the `ApplyBooster` event log).
+    fn get_boosted_score(&self, account_id: AccountId) -> Option<DailyScoreView>;
 
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64);
 

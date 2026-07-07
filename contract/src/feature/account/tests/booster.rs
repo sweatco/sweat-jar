@@ -24,6 +24,37 @@ use crate::{
 };
 
 #[rstest]
+fn get_boosted_score_reflects_booster_only_after_finalization(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(tiered_score_based_product)] product: Product,
+) {
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+    context.switch_account_to_manager();
+
+    context
+        .contract()
+        .accounts
+        .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+    context.contract().set_timezone(alice.clone(), 0.into());
+
+    context.set_block_timestamp_in_ms(0);
+    context.contract().apply_booster(vec![alice.clone()], 5_000, 0.into());
+
+    // `get_boosted_score` mirrors `get_score`'s "last *finalized*" semantics
+    // (`AccountScore::get_last_finalized_record`): a booster applied "today"
+    // (days_ago=0) sits in the still-in-progress slot and isn't visible until
+    // the day boundary passes — same-block/same-day observability needs the
+    // emitted `ApplyBooster` event instead (see integration-tests' airdrop.rs).
+    assert_eq!(0, context.contract().get_boosted_score(alice.clone()).unwrap().booster);
+
+    context.set_block_timestamp_in_ms(MS_IN_DAY);
+
+    let boosted = context.contract().get_boosted_score(alice.clone()).unwrap();
+    assert_eq!(5_000, boosted.booster);
+}
+
+#[rstest]
 fn claim_from_tiered_score_jar_only_with_booster(
     admin: AccountId,
     alice: AccountId,

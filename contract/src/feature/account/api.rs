@@ -16,8 +16,8 @@ use sweat_jar_model::{
         score::Score,
     },
     interest::{get_interest, InterestCalculator},
-    ms_in_day, start_of_the_day, DailyScore, DaysOffset, ScoreIncrementProcessor, TimeHelper, Timestamp, Timezone,
-    TokenAmount, UTC,
+    ms_in_day, start_of_the_day, DailyScore, DailyScoreView, DaysOffset, ScoreIncrementProcessor, TimeHelper,
+    Timestamp, Timezone, TokenAmount, UTC,
 };
 
 use crate::{
@@ -150,6 +150,12 @@ impl AccountApi for Contract {
         let account = self.get_account(&account_id);
 
         Some(u128::from(account.score.get_last_finalized_record(account.timezone).value).into())
+    }
+
+    fn get_boosted_score(&self, account_id: AccountId) -> Option<DailyScoreView> {
+        let account = self.get_account(&account_id);
+
+        Some(account.score.get_last_finalized_record(account.timezone).into())
     }
 
     #[access_control_any(roles(Roles::Oracle))]
