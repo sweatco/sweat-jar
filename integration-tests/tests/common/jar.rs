@@ -564,6 +564,46 @@ pub async fn airdrop_protected(
     booster: u16,
     booster_timestamp: Option<u64>,
 ) -> Result<U128> {
+    let value: Value = airdrop_protected_raw(
+        jar,
+        ft,
+        manager,
+        product_id,
+        amount_per_receiver,
+        receivers,
+        timezone,
+        signature,
+        valid_until,
+        booster,
+        booster_timestamp,
+    )
+    .await?
+    .into_result()?
+    .json()?;
+    Ok(value.as_str().unwrap().parse()?)
+}
+
+/// Raw variant of `airdrop_protected` for tests that need to inspect the
+/// emitted `ApplyBooster` event directly — the plain `Result<U128>` path only
+/// surfaces the deposit total, which doesn't change whether a booster was
+/// actually applied or silently rejected (booster and principal are tracked
+/// independently; `get_score`'s view only reflects recorded score, never the
+/// booster field, so the event log is the only observable proof of booster
+/// application).
+#[allow(clippy::too_many_arguments)]
+pub async fn airdrop_protected_raw(
+    jar: &Contract,
+    ft: &Contract,
+    manager: &Account,
+    product_id: &str,
+    amount_per_receiver: u128,
+    receivers: &[Account],
+    timezone: Option<i64>,
+    signature: Base64VecU8,
+    valid_until: u64,
+    booster: u16,
+    booster_timestamp: Option<u64>,
+) -> Result<ExecutionFinalResult> {
     let receiver_ids: Vec<&AccountId> = receivers.iter().map(Account::id).collect();
     let total_amount = amount_per_receiver * receiver_ids.len() as u128;
     let booster_opt = if booster > 0 { Some(booster) } else { None };
@@ -577,5 +617,5 @@ pub async fn airdrop_protected(
             "booster_timestamp": booster_timestamp,
         }
     });
-    create_jar_with_msg(jar, ft, manager, msg, total_amount).await
+    create_jar_with_msg_raw(jar, ft, manager, msg, total_amount).await
 }

@@ -1,4 +1,5 @@
 use anyhow::Result;
+use serde_json::Value;
 use sweat_jar_model::{
     data::{deposit::AirdropMessage, product::Product},
     signer::test_utils::MessageSigner,
@@ -180,7 +181,7 @@ async fn airdrop_with_booster() -> Result<()> {
     );
     let signature = signer.sign(airdrop_message.material());
 
-    jar::airdrop_protected(
+    let result = jar::airdrop_protected_raw(
         &context.jar,
         &context.ft,
         &context.manager,
@@ -193,10 +194,40 @@ async fn airdrop_with_booster() -> Result<()> {
         booster,
         None,
     )
-    .await?;
+    .await?
+    .into_result()?;
 
     let alice_jars = jar::get_jars_for_account(&context.jar, context.alice.id()).await?;
     assert_eq!(amount_per_receiver, alice_jars.get_total_principal());
+
+    // Principal alone doesn't prove the booster was actually applied — booster
+    // and principal are tracked independently, and `get_score`'s view only
+    // reflects recorded score, never the booster field. The `ApplyBooster`
+    // event is the only observable proof the booster reached alice's account.
+    let apply_booster_event = result
+        .logs()
+        .iter()
+        .find_map(|log| {
+            let json = log.strip_prefix("EVENT_JSON:")?;
+            let event: Value = serde_json::from_str(json).ok()?;
+            (event["event"] == "apply_booster").then_some(event)
+        })
+        .expect("an ApplyBooster event should have been emitted");
+
+    let applied = apply_booster_event["data"]["applied"]
+        .as_array()
+        .expect("ApplyBooster event should have an 'applied' array");
+    assert_eq!(
+        1,
+        applied.len(),
+        "exactly one account should have the booster applied: {applied:?}"
+    );
+    assert_eq!(context.alice.id().as_str(), applied[0].as_str().unwrap());
+
+    let rejected = apply_booster_event["data"]["rejected"]
+        .as_array()
+        .expect("ApplyBooster event should have a 'rejected' array");
+    assert!(rejected.is_empty(), "no account should have been rejected: {rejected:?}");
 
     Ok(())
 }
