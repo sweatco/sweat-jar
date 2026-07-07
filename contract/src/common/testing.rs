@@ -289,7 +289,10 @@ impl<T> UnwrapPromise<T> for PromiseOrValue<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::testing::{expect_panic, AfterCatchUnwind};
+    use near_plugins::AccessControllable;
+    use near_sdk::env;
+
+    use crate::common::testing::{accounts::admin, expect_panic, AfterCatchUnwind, Context};
 
     #[test]
     #[should_panic(expected = "Contract didn't panic when expected to.\nExpected message: Something went wrong")]
@@ -304,6 +307,21 @@ mod tests {
         });
 
         expect_panic(&Ctx, "Something went wrong", || {});
+    }
+
+    /// Mirrors `migrate_access_control_grants_all_roles_and_drops_manager` in
+    /// `migration::tests`, but for the `init()` path: `Context::new` deploys the
+    /// contract with `current_account_id` = "owner" and `super_admin` = the
+    /// distinct `manager` account it's given, so this verifies the deploying
+    /// account (the contract's own account) doesn't retain super-admin power
+    /// after `init` bootstraps then transfers it away.
+    #[test]
+    fn init_leaves_super_admin_only_with_requested_account() {
+        let super_admin = admin();
+        let context = Context::new(super_admin.clone());
+
+        assert!(context.contract().acl_is_super_admin(super_admin));
+        assert!(!context.contract().acl_is_super_admin(env::current_account_id()));
     }
 }
 
