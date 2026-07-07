@@ -41,7 +41,8 @@ pub async fn prepare_contract(products: impl IntoIterator<Item = RegisterProduct
     let fee = create_user(&root, "fee_longer_name_to_be_closer_to_real").await?;
 
     ft::new(&ft, ".u.sweat.testnet").await?;
-    jar::init(&jar, ft.id(), fee.id(), manager.id(), root.id()).await?;
+    jar::init(&jar, ft.id(), fee.id(), root.id()).await?;
+    jar::grant_all_roles(&jar, manager.id()).await?;
 
     ft::storage_deposit(&ft, jar.id()).await?;
     ft::storage_deposit(&ft, fee.id()).await?;

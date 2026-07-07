@@ -44,7 +44,7 @@ fn withdraw_fee_ft_transfer_failure(admin: AccountId) {
 }
 
 #[rstest]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions")]
 fn withdraw_fee_not_admin(admin: AccountId, #[values("alice.near", "bob.near")] account: AccountId) {
     let mut context = Context::new(admin);
     let fee_amount = 1_000_000;

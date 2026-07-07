@@ -35,6 +35,7 @@ mutants = { workspace = true }
 near-sdk = { workspace = true, features = ["unit-testing"] }
 near-self-update-proc = { workspace = true }
 near-contract-standards = { workspace = true }
+near-plugins = { workspace = true }
 
 sweat-jar-model = { workspace = true }
 sweat-jar-primitives = { workspace = true }

@@ -8,6 +8,7 @@ use std::{
 };
 
 use near_contract_standards::fungible_token::Balance;
+use near_plugins::AccessControllable;
 use near_sdk::{
     borsh::to_vec, json_types::Base64VecU8, test_utils::VMContextBuilder, testing_env, AccountId, NearToken,
     PromiseOrValue,
@@ -55,6 +56,7 @@ pub(crate) struct Context {
     pub owner: AccountId,
     pub ft_contract_id: AccountId,
     pub legacy_jar_contract_id: AccountId,
+    pub manager: AccountId,
     builder: VMContextBuilder,
 }
 
@@ -74,18 +76,18 @@ impl Context {
 
         testing_env!(builder.build());
 
-        let contract = Contract::init(
-            ft_contract_id.clone(),
-            fee_account_id,
-            manager,
-            legacy_jar_contract_id.clone(),
-        );
+        let mut contract = Contract::init(ft_contract_id.clone(), fee_account_id, legacy_jar_contract_id.clone());
+
+        for role in ["Oracle", "ProductManager", "FeeManager", "Maintainer"] {
+            contract.acl_grant_role(role.to_string(), manager.clone());
+        }
 
         Self {
             owner,
             ft_contract_id,
             builder,
             legacy_jar_contract_id,
+            manager,
             contract: Arc::new(Mutex::new(contract)),
         }
     }
@@ -172,7 +174,7 @@ impl Context {
     }
 
     pub(crate) fn switch_account_to_manager(&mut self) {
-        let manager = self.contract().manager.clone();
+        let manager = self.manager.clone();
         self.switch_account(manager);
     }
 

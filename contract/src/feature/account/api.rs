@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, convert::Into};
 
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{
     env::{self, panic_str},
     json_types::{I64, U128},
@@ -21,7 +22,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::event::{emit, ApplyBoosterData, EventKind, ScoreData},
-    Contract, ContractExt,
+    Contract, ContractExt, Roles,
 };
 
 impl Contract {
@@ -75,18 +76,16 @@ impl AccountApi for Contract {
         self.get_total_interest_for_account(&account_id)
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
-        self.assert_manager();
-
         let account = self.get_account_mut(&account_id);
         for jar in account.jars.values_mut() {
             jar.is_pending_withdraw = false;
         }
     }
 
+    #[access_control_any(roles(Roles::Oracle))]
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
-        self.assert_manager();
-
         let mut event = vec![];
 
         for (account_id, increments) in batch {
@@ -112,9 +111,8 @@ impl AccountApi for Contract {
         emit(EventKind::RecordScore(event));
     }
 
+    #[access_control_any(roles(Roles::Oracle))]
     fn apply_booster(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC) {
-        self.assert_manager();
-
         let mut applied = vec![];
         let mut rejected = vec![];
 
@@ -154,16 +152,14 @@ impl AccountApi for Contract {
         Some(u128::from(account.score.get_last_finalized_record(account.timezone).value).into())
     }
 
+    #[access_control_any(roles(Roles::Oracle))]
     fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {
-        self.assert_manager();
-
         let account = self.get_or_create_account_mut(&account_id);
         account.try_set_timezone(Some(Timezone::new(timezone.0)));
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn set_feature_enabled(&mut self, account_id: AccountId, feature: Feature, enabled: bool) {
-        self.assert_manager();
-
         if self.accounts.contains_key(&account_id) {
             self.update_account_cache(&account_id, None);
         }
@@ -174,9 +170,8 @@ impl AccountApi for Contract {
         emit(EventKind::SetFeatureEnabled(account_id, feature, enabled));
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn batch_set_feature_enabled(&mut self, account_ids: Vec<AccountId>, feature: Feature, enabled: bool) {
-        self.assert_manager();
-
         for account_id in &account_ids {
             self.update_account_cache(account_id, None);
 

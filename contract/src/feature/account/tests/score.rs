@@ -30,7 +30,7 @@ mod score_tests {
     use super::*;
 
     #[rstest]
-    #[should_panic(expected = "Can be performed only by admin")]
+    #[should_panic(expected = "Insufficient permissions")]
     fn record_score_by_non_manager(admin: AccountId) {
         let mut context = Context::new(admin);
 
