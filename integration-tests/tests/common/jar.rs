@@ -13,6 +13,7 @@ use sweat_jar_model::data::{
     deposit::DepositTicket,
     jar::{AggregatedInterestView, JarsView},
     product::{Product, ProductId},
+    score::DailyScoreView,
     withdraw::{BulkWithdrawView, WithdrawView},
 };
 
@@ -135,6 +136,17 @@ pub async fn get_score(jar: &Contract, account_id: &AccountId) -> Result<Option<
         .await?
         .json()?;
     Ok(value.map(|v| v.as_str().unwrap().parse().unwrap()))
+}
+
+/// Unlike `get_score` (which only ever reflects `DailyScore.value`, from
+/// `record_score`), this also surfaces `booster` (from `apply_booster`/
+/// airdrop) — the only direct, non-event-log way to observe booster state.
+pub async fn get_boosted_score(jar: &Contract, account_id: &AccountId) -> Result<Option<DailyScoreView>> {
+    Ok(jar
+        .view("get_boosted_score")
+        .args_json(json!({ "account_id": account_id }))
+        .await?
+        .json()?)
 }
 
 pub async fn is_penalty_applied(jar: &Contract, account_id: &AccountId) -> Result<bool> {
