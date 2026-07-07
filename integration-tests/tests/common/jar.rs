@@ -23,18 +23,48 @@ pub async fn init(
     token_account_id: &AccountId,
     fee_account_id: &AccountId,
     previous_version_account_id: &AccountId,
+    super_admin: &AccountId,
+    roles: &RoleAssignments,
 ) -> Result<()> {
     jar.call("init")
         .args_json(json!({
             "token_account_id": token_account_id,
             "fee_account_id": fee_account_id,
             "previous_version_account_id": previous_version_account_id,
+            "super_admin": super_admin,
+            "roles": roles,
         }))
         .max_gas()
         .transact()
         .await?
         .into_result()?;
     Ok(())
+}
+
+/// JSON shape matching the contract's `RoleAssignments` — one list of account
+/// IDs per `AccessControllable` role. Used as the `init`/migration argument.
+#[derive(serde::Serialize)]
+pub struct RoleAssignments {
+    pub oracle: Vec<AccountId>,
+    pub product_manager: Vec<AccountId>,
+    pub fee_manager: Vec<AccountId>,
+    pub maintainer: Vec<AccountId>,
+    pub staging_manager: Vec<AccountId>,
+    pub upgrade_manager: Vec<AccountId>,
+}
+
+/// Convenience for the common case: one account holding every role, matching
+/// the previous `grant_all_roles` behavior but granted atomically at `init`
+/// time instead of via a separate post-init call.
+pub fn all_roles_to(account_id: &AccountId) -> RoleAssignments {
+    RoleAssignments {
+        oracle: vec![account_id.clone()],
+        product_manager: vec![account_id.clone()],
+        fee_manager: vec![account_id.clone()],
+        maintainer: vec![account_id.clone()],
+        staging_manager: vec![account_id.clone()],
+        upgrade_manager: vec![account_id.clone()],
+    }
 }
 
 /// Grants all 4 `AccessControllable` roles to `account_id`. Must be called

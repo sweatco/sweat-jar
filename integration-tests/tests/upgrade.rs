@@ -45,7 +45,23 @@ async fn upgrade_access_control() -> anyhow::Result<()> {
     assert!(result.into_result().has_panic(&insufficient_permissions("up_deploy_code")));
 
     // StagingManager only: can stage, still cannot deploy.
-    jar::grant_role(&context.jar, "StagingManager", context.alice.id()).await?;
+    //
+    // `jar::grant_role` self-signs as the jar contract account, which held
+    // implicit super-admin under the old `init()`. Since PROD-3696 made
+    // super-admin an explicit `init` param (see `prepare_contract`, which now
+    // names `manager` as super-admin), the jar contract itself holds no admin
+    // power after init — a self-signed `acl_grant_role` call silently no-ops
+    // (near_plugins returns `None`/`false` rather than panicking) instead of
+    // actually granting the role. `manager` is the real super-admin now, so
+    // it must be the one signing this grant.
+    context
+        .manager
+        .call(context.jar.id(), "acl_grant_role")
+        .args_json(json!({ "role": "StagingManager", "account_id": context.alice.id() }))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
 
     context
         .alice
@@ -93,9 +109,11 @@ async fn upgrade_deploy_round_trip() -> anyhow::Result<()> {
         "there should be a jar before the upgrade"
     );
 
-    for role in ["StagingManager", "UpgradeManager"] {
-        jar::grant_role(&context.jar, role, context.manager.id()).await?;
-    }
+    // `manager` already holds `StagingManager`/`UpgradeManager` from
+    // `prepare_contract`'s init-time role grants (PROD-3696), so no explicit
+    // grant is needed here — unlike the pre-PROD-3696 code, which granted
+    // only 4 roles at `prepare_contract` time and needed this loop to add the
+    // 2 upgrade roles afterward.
 
     context
         .manager
