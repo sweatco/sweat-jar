@@ -23,7 +23,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::event::{emit, EventKind},
-    grant_role_assignments, Contract, ContractExt, StorageKey,
+    init_authority, Contract, ContractExt, StorageKey,
 };
 
 #[near]
@@ -77,16 +77,9 @@ impl Contract {
             time_scale: 1.0,
         };
 
-        // See the matching comment in `InitApi::init` (contract/src/lib.rs): a fresh
-        // `AccessControllable` storage has no admins yet, so `acl_grant_role` (used by
-        // `grant_role_assignments`) can only succeed once the predecessor itself holds
-        // admin permission. Bootstrap the predecessor as super-admin, perform the grants,
-        // then hand off super-admin to the caller-supplied `super_admin` via
-        // `acl_transfer_super_admin` (a no-op if they're the same account), so only
-        // `super_admin` ends up holding it.
-        contract.acl_init_super_admin(env::predecessor_account_id());
-        grant_role_assignments(&mut contract, roles);
-        contract.acl_transfer_super_admin(super_admin);
+        // See `init_authority`'s doc comment (contract/src/lib.rs) for why this bootstrap-
+        // then-transfer dance is needed and why it's shared with `InitApi::init`.
+        init_authority(&mut contract, super_admin, roles);
 
         contract
     }

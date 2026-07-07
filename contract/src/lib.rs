@@ -189,26 +189,41 @@ impl InitApi for Contract {
             time_scale: 1.0,
         };
 
-        // `acl_grant_role` (used by `grant_role_assignments`) only succeeds when the
-        // predecessor already holds admin permission for the role being granted, and a
-        // fresh contract has no admins yet. So the predecessor (forced to equal
-        // `current_account_id` by `#[private]`) is bootstrapped as the first super-admin
-        // to perform the grants, then handed off to the caller-supplied `super_admin` via
-        // `acl_transfer_super_admin`, which adds `super_admin` and revokes the bootstrap
-        // account in one step (a no-op if they're the same account). This ensures only
-        // `super_admin` ends up holding super-admin permission, regardless of who deployed.
-        contract.acl_init_super_admin(env::predecessor_account_id());
-        grant_role_assignments(&mut contract, roles);
-        contract.acl_transfer_super_admin(super_admin);
+        init_authority(&mut contract, super_admin, roles);
 
         contract
     }
 }
 
+/// Bootstraps the contract's own account as a temporary super-admin (required
+/// because `acl_grant_role`/`acl_transfer_super_admin` both check
+/// `env::predecessor_account_id()` for permission, not the account being
+/// granted/named), grants every role in `roles`, then transfers super-admin
+/// status to `super_admin`. The contract's own account retains no admin power
+/// once this returns, unless `super_admin` is the contract's own account.
+///
+/// `acl_grant_role` (used by `grant_role_assignments`) only succeeds when the
+/// predecessor already holds admin permission for the role being granted, and a
+/// fresh `AccessControllable` storage has no admins yet. So the predecessor
+/// (forced to equal `current_account_id` by `#[private]` at both call sites) is
+/// bootstrapped as the first super-admin to perform the grants, then handed off
+/// to the caller-supplied `super_admin` via `acl_transfer_super_admin`, which
+/// adds `super_admin` and revokes the bootstrap account in one step (a no-op if
+/// they're the same account). Shared by `InitApi::init` (fresh deploys) and
+/// `migrate_access_control` (the already-deployed contract) so both entry
+/// points behave identically here instead of duplicating this security-critical
+/// sequence.
+pub(crate) fn init_authority(contract: &mut Contract, super_admin: AccountId, roles: RoleAssignments) {
+    contract.acl_init_super_admin(env::predecessor_account_id());
+    grant_role_assignments(contract, roles);
+    contract.acl_transfer_super_admin(super_admin);
+}
+
 /// Grants every account listed in `roles` its corresponding `AccessControllable`
-/// role. Shared by `InitApi::init` (fresh deploys) and `migrate_access_control`
-/// (the already-deployed contract), so both entry points assign roles
-/// identically instead of duplicating this loop.
+/// role. Used internally by `init_authority`, which is itself shared by
+/// `InitApi::init` (fresh deploys) and `migrate_access_control` (the
+/// already-deployed contract), so both entry points assign roles identically
+/// instead of duplicating this loop.
 pub(crate) fn grant_role_assignments(contract: &mut Contract, roles: RoleAssignments) {
     for account_id in roles.oracle {
         contract.acl_grant_role("Oracle".to_string(), account_id);
