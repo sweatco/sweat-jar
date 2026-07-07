@@ -8,7 +8,7 @@ use near_sdk::{
     AccountId, BorshStorageKey, PanicOnDefault,
 };
 use sweat_jar_model::{
-    api::InitApi,
+    api::{InitApi, RoleAssignments},
     data::{
         account::versioned::AccountVersioned,
         product::{Product, ProductId},
@@ -170,7 +170,13 @@ pub(crate) enum StorageKey {
 impl InitApi for Contract {
     #[init]
     #[private]
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, previous_version_account_id: AccountId) -> Self {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        previous_version_account_id: AccountId,
+        super_admin: AccountId,
+        roles: RoleAssignments,
+    ) -> Self {
         let mut contract = Self {
             token_account_id,
             fee_account_id,
@@ -183,9 +189,44 @@ impl InitApi for Contract {
             time_scale: 1.0,
         };
 
-        contract.acl_init_super_admin(env::current_account_id());
+        // `acl_grant_role` (used by `grant_role_assignments`) only succeeds when the
+        // predecessor already holds admin permission for the role being granted, and a
+        // fresh contract has no admins yet. So the predecessor (forced to equal
+        // `current_account_id` by `#[private]`) is bootstrapped as the first super-admin
+        // to perform the grants, then handed off to the caller-supplied `super_admin` via
+        // `acl_transfer_super_admin`, which adds `super_admin` and revokes the bootstrap
+        // account in one step (a no-op if they're the same account). This ensures only
+        // `super_admin` ends up holding super-admin permission, regardless of who deployed.
+        contract.acl_init_super_admin(env::predecessor_account_id());
+        grant_role_assignments(&mut contract, roles);
+        contract.acl_transfer_super_admin(super_admin);
 
         contract
+    }
+}
+
+/// Grants every account listed in `roles` its corresponding `AccessControllable`
+/// role. Shared by `InitApi::init` (fresh deploys) and `migrate_access_control`
+/// (the already-deployed contract), so both entry points assign roles
+/// identically instead of duplicating this loop.
+pub(crate) fn grant_role_assignments(contract: &mut Contract, roles: RoleAssignments) {
+    for account_id in roles.oracle {
+        contract.acl_grant_role("Oracle".to_string(), account_id);
+    }
+    for account_id in roles.product_manager {
+        contract.acl_grant_role("ProductManager".to_string(), account_id);
+    }
+    for account_id in roles.fee_manager {
+        contract.acl_grant_role("FeeManager".to_string(), account_id);
+    }
+    for account_id in roles.maintainer {
+        contract.acl_grant_role("Maintainer".to_string(), account_id);
+    }
+    for account_id in roles.staging_manager {
+        contract.acl_grant_role("StagingManager".to_string(), account_id);
+    }
+    for account_id in roles.upgrade_manager {
+        contract.acl_grant_role("UpgradeManager".to_string(), account_id);
     }
 }
 
