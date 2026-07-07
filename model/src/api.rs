@@ -18,12 +18,7 @@ use crate::{
 };
 
 pub trait InitApi {
-    fn init(
-        token_account_id: AccountId,
-        fee_account_id: AccountId,
-        manager: AccountId,
-        previous_version_account_id: AccountId,
-    ) -> Self;
+    fn init(token_account_id: AccountId, fee_account_id: AccountId, previous_version_account_id: AccountId) -> Self;
 }
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.

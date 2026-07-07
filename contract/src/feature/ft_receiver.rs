@@ -1,4 +1,5 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
+use near_plugins::AccessControllable;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     data::{deposit::DepositTicket, score::Score},
@@ -76,7 +77,10 @@ impl FungibleTokenReceiver for Contract {
                 );
             }
             FtMessage::Airdrop(message) => {
-                require!(sender_id == self.manager, "Only manager can perform airdrops");
+                require!(
+                    self.acl_has_any_role(vec!["Oracle".to_string()], sender_id),
+                    "Only manager can perform airdrops"
+                );
                 let count = message.receivers.len() as u128;
                 require!(count > 0, "Receivers list is empty");
                 require!(

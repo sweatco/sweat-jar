@@ -1,5 +1,6 @@
 use std::{cell::RefCell, collections::HashMap};
 
+use near_plugins::{access_control, AccessControlRole, AccessControllable};
 #[cfg(feature = "integration-test")]
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::{
@@ -24,19 +25,29 @@ mod migration;
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Roles for `near_plugins`' `AccessControllable`. All 4 are granted to the same
+/// account during migration (no second real operator exists yet) — splitting
+/// them across separate operator accounts later is additive (grant a role to a
+/// new account), not a redesign.
+#[derive(AccessControlRole, Copy, Clone)]
+pub enum Roles {
+    Oracle,
+    ProductManager,
+    FeeManager,
+    Maintainer,
+}
+
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 #[cfg(not(feature = "integration-test"))]
 #[near(contract_state)]
 #[derive(PanicOnDefault, SelfUpdate)]
+#[access_control(role_type(Roles))]
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
     pub token_account_id: AccountId,
 
     /// The account ID where fees for applicable operations are directed.
     pub fee_account_id: AccountId,
-
-    /// The account ID authorized to perform sensitive operations on the contract.
-    pub manager: AccountId,
 
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
@@ -58,15 +69,13 @@ pub struct Contract {
 #[cfg(feature = "integration-test")]
 #[near(contract_state, serializers = [])]
 #[derive(PanicOnDefault, SelfUpdate)]
+#[access_control(role_type(Roles))]
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
     pub token_account_id: AccountId,
 
     /// The account ID where fees for applicable operations are directed.
     pub fee_account_id: AccountId,
-
-    /// The account ID authorized to perform sensitive operations on the contract.
-    pub manager: AccountId,
 
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
@@ -98,7 +107,6 @@ impl BorshSerialize for Contract {
     fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
         self.token_account_id.serialize(writer)?;
         self.fee_account_id.serialize(writer)?;
-        self.manager.serialize(writer)?;
         self.products.serialize(writer)?;
         self.accounts.serialize(writer)?;
         self.fee_amount.serialize(writer)?;
@@ -114,7 +122,6 @@ impl BorshDeserialize for Contract {
     fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
         let token_account_id = AccountId::deserialize_reader(reader)?;
         let fee_account_id = AccountId::deserialize_reader(reader)?;
-        let manager = AccountId::deserialize_reader(reader)?;
         let products = UnorderedMap::deserialize_reader(reader)?;
         let accounts = LookupMap::deserialize_reader(reader)?;
         let fee_amount = TokenAmount::deserialize_reader(reader)?;
@@ -127,7 +134,6 @@ impl BorshDeserialize for Contract {
         Ok(Self {
             token_account_id,
             fee_account_id,
-            manager,
             products,
             accounts,
             products_cache: RefCell::new(HashMap::new()),
@@ -149,16 +155,10 @@ pub(crate) enum StorageKey {
 impl InitApi for Contract {
     #[init]
     #[private]
-    fn init(
-        token_account_id: AccountId,
-        fee_account_id: AccountId,
-        manager: AccountId,
-        previous_version_account_id: AccountId,
-    ) -> Self {
-        Self {
+    fn init(token_account_id: AccountId, fee_account_id: AccountId, previous_version_account_id: AccountId) -> Self {
+        let mut contract = Self {
             token_account_id,
             fee_account_id,
-            manager,
             products: UnorderedMap::new(StorageKey::Products),
             products_cache: HashMap::default().into(),
             accounts: LookupMap::new(StorageKey::Accounts),
@@ -166,6 +166,10 @@ impl InitApi for Contract {
             previous_version_account_id,
             #[cfg(feature = "integration-test")]
             time_scale: 1.0,
-        }
+        };
+
+        contract.acl_init_super_admin(env::current_account_id());
+
+        contract
     }
 }

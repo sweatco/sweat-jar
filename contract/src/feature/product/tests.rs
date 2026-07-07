@@ -44,7 +44,7 @@ fn add_product_to_list_by_admin(admin: AccountId, product: Product) {
 }
 
 #[rstest]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions")]
 fn add_product_to_list_by_not_admin(admin: AccountId, product: Product) {
     let mut context = Context::new(admin);
 
@@ -207,7 +207,7 @@ fn set_public_key(
 }
 
 #[rstest]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions")]
 fn set_public_key_by_not_admin(
     admin: AccountId,
     alice: AccountId,

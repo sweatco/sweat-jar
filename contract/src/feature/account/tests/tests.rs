@@ -259,7 +259,7 @@ fn get_interest_after_withdraw(
 }
 
 #[rstest]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions")]
 fn unlock_not_by_manager(
     admin: AccountId,
     alice: AccountId,
@@ -316,7 +316,7 @@ fn unlock_by_manager(
 }
 
 #[rstest]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions")]
 fn set_timezone_by_not_manager(
     admin: AccountId,
     alice: AccountId,

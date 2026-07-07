@@ -22,20 +22,33 @@ pub async fn init(
     jar: &Contract,
     token_account_id: &AccountId,
     fee_account_id: &AccountId,
-    manager: &AccountId,
     previous_version_account_id: &AccountId,
 ) -> Result<()> {
     jar.call("init")
         .args_json(json!({
             "token_account_id": token_account_id,
             "fee_account_id": fee_account_id,
-            "manager": manager,
             "previous_version_account_id": previous_version_account_id,
         }))
         .max_gas()
         .transact()
         .await?
         .into_result()?;
+    Ok(())
+}
+
+/// Grants all 4 `AccessControllable` roles to `account_id`. Must be called
+/// after `init` (which makes the contract itself super-admin but grants no
+/// roles) so a real operator account can call role-gated methods.
+pub async fn grant_all_roles(jar: &Contract, account_id: &AccountId) -> Result<()> {
+    for role in ["Oracle", "ProductManager", "FeeManager", "Maintainer"] {
+        jar.call("acl_grant_role")
+            .args_json(json!({ "role": role, "account_id": account_id }))
+            .max_gas()
+            .transact()
+            .await?
+            .into_result()?;
+    }
     Ok(())
 }
 
@@ -237,6 +250,34 @@ pub async fn set_feature_enabled(
     manager
         .call(jar.id(), "set_feature_enabled")
         .args_json(json!({ "account_id": account_id, "feature": feature, "enabled": enabled }))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+    Ok(())
+}
+
+pub async fn unlock_jars_for_account(jar: &Contract, caller: &Account, account_id: &AccountId) -> Result<()> {
+    caller
+        .call(jar.id(), "unlock_jars_for_account")
+        .args_json(json!({ "account_id": account_id }))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+    Ok(())
+}
+
+pub async fn batch_set_feature_enabled(
+    jar: &Contract,
+    caller: &Account,
+    account_ids: Vec<AccountId>,
+    feature: &str,
+    enabled: bool,
+) -> Result<()> {
+    caller
+        .call(jar.id(), "batch_set_feature_enabled")
+        .args_json(json!({ "account_ids": account_ids, "feature": feature, "enabled": enabled }))
         .max_gas()
         .transact()
         .await?

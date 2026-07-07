@@ -4,5 +4,6 @@
 
 pub mod ft;
 pub mod jar;
+pub mod panic;
 pub mod prepare;
 pub mod product;

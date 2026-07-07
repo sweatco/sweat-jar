@@ -31,5 +31,6 @@ near-self-update-proc = "0.1.2"
 
 near-sdk = "5.28.3"
 near-contract-standards = "5.28.3"
+near-plugins = "0.5.3"
 
 rstest = "0.25.0"
