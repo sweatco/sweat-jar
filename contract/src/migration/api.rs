@@ -1,6 +1,5 @@
 use std::cell::RefCell;
 
-use near_plugins::AccessControllable;
 use near_sdk::{
     collections::UnorderedMap,
     env,
