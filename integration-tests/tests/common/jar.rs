@@ -67,9 +67,15 @@ pub fn all_roles_to(account_id: &AccountId) -> RoleAssignments {
     }
 }
 
-/// Grants all 4 `AccessControllable` roles to `account_id`. Must be called
-/// after `init` (which makes the contract itself super-admin but grants no
-/// roles) so a real operator account can call role-gated methods.
+/// Grants all 4 original `AccessControllable` roles to `account_id`, self-signed
+/// by the jar contract account. Only succeeds if the jar contract itself
+/// currently holds admin power for those roles — since `init`'s `super_admin`
+/// argument is explicit and typically names a different account (see
+/// `jar::init`/`all_roles_to`), the jar contract usually does NOT retain admin
+/// power after init, so this self-signed call will silently no-op in that case
+/// (`acl_grant_role` returns `None` rather than panicking on insufficient
+/// permission). Prefer granting roles at `init` time via `RoleAssignments`, or
+/// have the actual super-admin account sign the `acl_grant_role` call directly.
 pub async fn grant_all_roles(jar: &Contract, account_id: &AccountId) -> Result<()> {
     for role in ["Oracle", "ProductManager", "FeeManager", "Maintainer"] {
         jar.call("acl_grant_role")
@@ -82,9 +88,11 @@ pub async fn grant_all_roles(jar: &Contract, account_id: &AccountId) -> Result<(
     Ok(())
 }
 
-/// Grants a single `AccessControllable` role to `account_id`. Unlike
-/// `grant_all_roles`, this lets a test hold exactly one role and verify the
-/// other is still denied.
+/// Grants a single `AccessControllable` role to `account_id`, self-signed by
+/// the jar contract account. Unlike `grant_all_roles`, this lets a test hold
+/// exactly one role and verify the other is still denied — but is subject to
+/// the same caveat: it only succeeds if the jar contract itself currently
+/// holds admin power for that role (see `grant_all_roles`'s doc comment).
 pub async fn grant_role(jar: &Contract, role: &str, account_id: &AccountId) -> Result<()> {
     jar.call("acl_grant_role")
         .args_json(json!({ "role": role, "account_id": account_id }))
