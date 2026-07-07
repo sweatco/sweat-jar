@@ -14,7 +14,7 @@ use near_sdk::{
     PromiseOrValue,
 };
 use sweat_jar_model::{
-    api::InitApi,
+    api::{InitApi, RoleAssignments},
     data::{
         account::{v1::AccountV1, versioned::AccountVersioned, Account},
         jar::Jar,
@@ -76,11 +76,20 @@ impl Context {
 
         testing_env!(builder.build());
 
-        let mut contract = Contract::init(ft_contract_id.clone(), fee_account_id, legacy_jar_contract_id.clone());
-
-        for role in ["Oracle", "ProductManager", "FeeManager", "Maintainer"] {
-            contract.acl_grant_role(role.to_string(), manager.clone());
-        }
+        let contract = Contract::init(
+            ft_contract_id.clone(),
+            fee_account_id,
+            legacy_jar_contract_id.clone(),
+            manager.clone(),
+            RoleAssignments {
+                oracle: vec![manager.clone()],
+                product_manager: vec![manager.clone()],
+                fee_manager: vec![manager.clone()],
+                maintainer: vec![manager.clone()],
+                staging_manager: vec![manager.clone()],
+                upgrade_manager: vec![manager.clone()],
+            },
+        );
 
         Self {
             owner,

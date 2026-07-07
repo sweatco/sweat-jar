@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use near_sdk::{
     json_types::{Base64VecU8, I64, U128},
-    AccountId,
+    near, AccountId,
 };
 
 use crate::{
@@ -17,8 +17,30 @@ use crate::{
     Score, UTC,
 };
 
+/// Initial holders for each `near_plugins` `AccessControllable` role, passed
+/// explicitly to `init`/`migrate_access_control` rather than defaulting to any
+/// particular account. Each role accepts multiple initial holders; granting a
+/// role to further accounts later is still possible via the standard
+/// `acl_grant_role` method, unaffected by this struct.
+#[derive(Clone, Debug)]
+#[near(serializers=[json])]
+pub struct RoleAssignments {
+    pub oracle: Vec<AccountId>,
+    pub product_manager: Vec<AccountId>,
+    pub fee_manager: Vec<AccountId>,
+    pub maintainer: Vec<AccountId>,
+    pub staging_manager: Vec<AccountId>,
+    pub upgrade_manager: Vec<AccountId>,
+}
+
 pub trait InitApi {
-    fn init(token_account_id: AccountId, fee_account_id: AccountId, previous_version_account_id: AccountId) -> Self;
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        previous_version_account_id: AccountId,
+        super_admin: AccountId,
+        roles: RoleAssignments,
+    ) -> Self;
 }
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.

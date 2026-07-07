@@ -13,6 +13,7 @@ use near_sdk::{
     AccountId, IntoStorageKey,
 };
 use sweat_jar_model::{
+    api::RoleAssignments,
     data::{
         account::versioned::AccountVersioned,
         product::{Product, ProductId},
@@ -22,7 +23,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::event::{emit, EventKind},
-    Contract, ContractExt, StorageKey,
+    grant_role_assignments, Contract, ContractExt, StorageKey,
 };
 
 #[near]
@@ -42,7 +43,13 @@ impl Contract {
 
     /// One-shot migration for the already-deployed contract: drops the
     /// `manager` field from the Borsh layout and bootstraps `AccessControllable`
-    /// storage, granting every role to the account that used to be `manager`.
+    /// storage. `super_admin`/`roles` are explicit, required arguments — this
+    /// method does not fall back to `old.manager` for any role. `old.manager`
+    /// remains part of `OldContract` (required to correctly parse the old
+    /// Borsh layout) but is intentionally never read here: whoever runs this
+    /// migration decides explicitly who holds which role, even if that means
+    /// passing the same account that used to be `manager` into several
+    /// `RoleAssignments` fields.
     /// No `&self`/`&mut self` param — near-sdk must not try to auto-deserialize
     /// the *new* struct shape from the *old* on-chain bytes before this body
     /// runs; `env::state_read` does that manually against `OldContract` instead.
@@ -55,7 +62,7 @@ impl Contract {
     /// already-deployed contract this migration targets.
     #[init(ignore_state)]
     #[private]
-    pub fn migrate_access_control() -> Self {
+    pub fn migrate_access_control(super_admin: AccountId, roles: RoleAssignments) -> Self {
         let old: OldContract = env::state_read().expect("failed to read old state");
 
         let mut contract = Self {
@@ -70,10 +77,16 @@ impl Contract {
             time_scale: 1.0,
         };
 
-        contract.acl_init_super_admin(env::current_account_id());
-        for role in ["Oracle", "ProductManager", "FeeManager", "Maintainer"] {
-            contract.acl_grant_role(role.to_string(), old.manager.clone());
-        }
+        // See the matching comment in `InitApi::init` (contract/src/lib.rs): a fresh
+        // `AccessControllable` storage has no admins yet, so `acl_grant_role` (used by
+        // `grant_role_assignments`) can only succeed once the predecessor itself holds
+        // admin permission. Bootstrap the predecessor as super-admin, perform the grants,
+        // then hand off super-admin to the caller-supplied `super_admin` via
+        // `acl_transfer_super_admin` (a no-op if they're the same account), so only
+        // `super_admin` ends up holding it.
+        contract.acl_init_super_admin(env::predecessor_account_id());
+        grant_role_assignments(&mut contract, roles);
+        contract.acl_transfer_super_admin(super_admin);
 
         contract
     }

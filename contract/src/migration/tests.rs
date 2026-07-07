@@ -56,10 +56,13 @@ fn migrate_products_by_unauthorized_account(
 fn migrate_access_control_grants_all_roles_and_drops_manager() {
     use near_plugins::AccessControllable;
     use near_sdk::{collections::UnorderedMap, env, store::LookupMap, test_utils::VMContextBuilder, testing_env};
+    use sweat_jar_model::api::RoleAssignments;
 
     use crate::{migration::api::OldContract, Contract, StorageKey};
 
     let owner: AccountId = "owner".to_string().try_into().unwrap();
+    let super_admin: AccountId = "super_admin".to_string().try_into().unwrap();
+    let operator: AccountId = "operator".to_string().try_into().unwrap();
 
     let mut builder = VMContextBuilder::new();
     builder
@@ -82,13 +85,34 @@ fn migrate_access_control_grants_all_roles_and_drops_manager() {
     };
     env::state_write(&old_state);
 
-    let contract = Contract::migrate_access_control();
+    let roles = RoleAssignments {
+        oracle: vec![operator.clone()],
+        product_manager: vec![operator.clone()],
+        fee_manager: vec![operator.clone()],
+        maintainer: vec![operator.clone()],
+        staging_manager: vec![operator.clone()],
+        upgrade_manager: vec![operator.clone()],
+    };
 
-    for role in ["Oracle", "ProductManager", "FeeManager", "Maintainer"] {
+    let contract = Contract::migrate_access_control(super_admin.clone(), roles);
+
+    for role in [
+        "Oracle",
+        "ProductManager",
+        "FeeManager",
+        "Maintainer",
+        "StagingManager",
+        "UpgradeManager",
+    ] {
         assert!(
-            contract.acl_has_role(role.to_string(), old_manager.clone()),
-            "expected old manager to hold role {role}"
+            contract.acl_has_role(role.to_string(), operator.clone()),
+            "expected operator to hold role {role}"
+        );
+        assert!(
+            !contract.acl_has_role(role.to_string(), old_manager.clone()),
+            "old manager should not automatically hold role {role} anymore"
         );
     }
-    assert!(contract.acl_is_super_admin(env::current_account_id()));
+    assert!(contract.acl_is_super_admin(super_admin));
+    assert!(!contract.acl_is_super_admin(env::current_account_id()));
 }
