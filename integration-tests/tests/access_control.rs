@@ -550,8 +550,8 @@ async fn seed_accounts_by_non_maintainer_panics() -> anyhow::Result<()> {
 }
 
 // --- airdrop (Oracle, via ft_on_transfer's FtMessage::Airdrop — not an
-// #[access_control_any]-attributed method, so it panics with the original
-// "Only manager can perform airdrops" message, not the ACL macro's message) ---
+// #[access_control_any]-attributed method, so it panics with a custom
+// require! message, not the ACL macro's fixed message format) ---
 
 #[tokio::test]
 #[tracing::instrument]
@@ -613,7 +613,9 @@ async fn airdrop_by_non_oracle_panics() -> anyhow::Result<()> {
         .transact()
         .await?;
 
-    assert!(result.into_result().has_panic("Only manager can perform airdrops"));
+    assert!(result
+        .into_result()
+        .has_panic("Only accounts with the Oracle role can perform airdrops"));
 
     Ok(())
 }

@@ -307,13 +307,13 @@ mod tests {
     }
 
     #[rstest]
-    #[should_panic(expected = "Only manager can perform airdrops")]
-    fn airdrop_not_manager(admin: AccountId, alice: AccountId, bob: AccountId, product: Product) {
+    #[should_panic(expected = "Only accounts with the Oracle role can perform airdrops")]
+    fn airdrop_by_non_oracle(admin: AccountId, alice: AccountId, bob: AccountId, product: Product) {
         let amount_per_receiver = 1_000_000u128;
         let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
 
         context.switch_account_to_ft_contract_account();
-        // alice is not the manager
+        // alice does not hold the Oracle role
         context.contract().ft_on_transfer(
             alice.clone(),
             U128(amount_per_receiver * 2),
