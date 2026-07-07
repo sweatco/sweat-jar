@@ -280,10 +280,6 @@ impl<T> UnwrapPromise<T> for PromiseOrValue<T> {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::AccountId;
-    use rstest::rstest;
-
-    use super::{accounts::admin, Context};
     use crate::common::testing::{expect_panic, AfterCatchUnwind};
 
     #[test]
@@ -299,13 +295,6 @@ mod tests {
         });
 
         expect_panic(&Ctx, "Something went wrong", || {});
-    }
-
-    #[rstest]
-    #[should_panic(expected = r#"Can be performed only by admin"#)]
-    fn self_update_without_access(admin: AccountId) {
-        let context = Context::new(admin);
-        context.contract().update_contract(vec![], None);
     }
 }
 

@@ -141,6 +141,20 @@ fn sweat_jar_wasm_path() -> PathBuf {
     wasm_path(SWEAT_JAR_WASM_ENV, res_path("sweat_jar.wasm"))
 }
 
+/// Reads the same sweat_jar wasm bytes the sandbox already deployed via
+/// `prepare_contract` — used by the upgrade round-trip test to stage/deploy
+/// the contract's own current code over itself.
+pub fn jar_wasm_bytes() -> Result<Vec<u8>> {
+    let path = sweat_jar_wasm_path();
+    std::fs::read(&path).map_err(|e| {
+        anyhow!(
+            "failed to read sweat_jar WASM at {} — did you run `make build-integration`? \
+             Override the path with the {SWEAT_JAR_WASM_ENV} env var. ({e})",
+            path.display()
+        )
+    })
+}
+
 async fn deploy(worker: &Worker<Sandbox>, path: PathBuf, label: &str, env_var: &str) -> Result<Contract> {
     let bytes = std::fs::read(&path).map_err(|e| {
         anyhow!(

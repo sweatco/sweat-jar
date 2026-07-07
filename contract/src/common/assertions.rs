@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use near_plugins::AccessControllable;
 use near_sdk::{env, require, AccountId};
 
 use crate::Contract;
@@ -10,13 +9,6 @@ impl Contract {
         require!(
             env::predecessor_account_id() == self.token_account_id,
             format!("Can receive tokens only from {}", self.token_account_id)
-        );
-    }
-
-    pub(crate) fn assert_account_can_update(&self) {
-        require!(
-            self.acl_has_any_role(vec!["Maintainer".to_string()], env::predecessor_account_id()),
-            "Can be performed only by admin"
         );
     }
 

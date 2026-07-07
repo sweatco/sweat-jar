@@ -52,6 +52,19 @@ pub async fn grant_all_roles(jar: &Contract, account_id: &AccountId) -> Result<(
     Ok(())
 }
 
+/// Grants a single `AccessControllable` role to `account_id`. Unlike
+/// `grant_all_roles`, this lets a test hold exactly one role and verify the
+/// other is still denied.
+pub async fn grant_role(jar: &Contract, role: &str, account_id: &AccountId) -> Result<()> {
+    jar.call("acl_grant_role")
+        .args_json(json!({ "role": role, "account_id": account_id }))
+        .max_gas()
+        .transact()
+        .await?
+        .into_result()?;
+    Ok(())
+}
+
 pub async fn get_products(jar: &Contract) -> Result<Vec<Product>> {
     Ok(jar.view("get_products").await?.json()?)
 }
