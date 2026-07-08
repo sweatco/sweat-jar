@@ -52,6 +52,68 @@ fn migrate_products_by_unauthorized_account(
     context.contract().migrate_products(vec![product_1, product_2]);
 }
 
+#[rstest]
+#[should_panic(expected = "Product already exists")]
+fn migrate_products_rejects_existing_product(
+    #[from(admin)] admin: AccountId,
+    #[from(product_1_year_apy_10_percent)] product: Product,
+) {
+    let mut context = Context::new(admin).with_products(&[product.clone()]);
+
+    let previous_version_account_id = context.contract().previous_version_account_id.clone();
+    context.switch_account(&previous_version_account_id);
+    context.contract().migrate_products(vec![product]);
+}
+
+#[rstest]
+#[should_panic(expected = "Cap minimum must be less than maximum")]
+fn migrate_products_rejects_invalid_cap_order(
+    #[from(admin)] admin: AccountId,
+    #[from(product_1_year_apy_10_percent)] product: Product,
+) {
+    let mut context = Context::new(admin);
+    let invalid_product = product.with_cap(1_000, 100);
+
+    let previous_version_account_id = context.contract().previous_version_account_id.clone();
+    context.switch_account(&previous_version_account_id);
+    context.contract().migrate_products(vec![invalid_product]);
+}
+
+#[rstest]
+#[should_panic(expected = "Insufficient permissions")]
+fn disable_migration_by_non_maintainer_panics(admin: AccountId, alice: AccountId) {
+    let mut context = Context::new(admin);
+
+    context.switch_account(&alice);
+    context.with_deposit_yocto(1, |context| context.contract().disable_migration());
+}
+
+#[rstest]
+fn disable_migration_blocks_further_migration(
+    #[from(admin)] admin: AccountId,
+    #[from(product_1_year_apy_10_percent)] product: Product,
+) {
+    let mut context = Context::new(admin);
+    let previous_version_account_id = context.contract().previous_version_account_id.clone();
+
+    context.switch_account_to_manager();
+    context.with_deposit_yocto(1, |context| context.contract().disable_migration());
+
+    assert_ne!(
+        previous_version_account_id,
+        context.contract().previous_version_account_id
+    );
+
+    let events = context.get_events();
+    assert!(matches!(events.last().unwrap(), EventKind::MigrationDisabled));
+
+    context.switch_account(&previous_version_account_id);
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        context.contract().migrate_products(vec![product]);
+    }));
+    assert!(result.is_err(), "migrate_products must fail after disable_migration");
+}
+
 #[test]
 fn migrate_access_control_grants_all_roles_and_drops_manager() {
     use near_plugins::AccessControllable;

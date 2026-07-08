@@ -6,7 +6,10 @@ use sweat_jar_model::{
     UTC,
 };
 
-use crate::{migration::api::store_account_raw, Base64VecU8, Contract, ContractExt, Roles};
+use crate::{
+    migration::api::{is_new_or_empty_account, store_account_raw},
+    Base64VecU8, Contract, ContractExt, Roles,
+};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -69,6 +72,11 @@ impl FungibleTokenReceiver for Contract {
             }
             FtMessage::Migrate(account_id, account_bytes) => {
                 self.assert_migrate_from_previous_version(&sender_id);
+
+                require!(
+                    is_new_or_empty_account(&account_id),
+                    "Refusing to overwrite a non-empty account via migration"
+                );
 
                 store_account_raw(account_id.clone(), account_bytes);
                 require!(
@@ -248,5 +256,25 @@ mod tests {
         let alice_account = contract.get_account(&alice);
         assert_eq!(4, alice_account.jars.len());
         assert_eq!(1_630_000_000_000_000_000_000, alice_account.get_total_principal());
+    }
+
+    #[rstest]
+    #[should_panic(expected = "Refusing to overwrite a non-empty account via migration")]
+    fn migrate_rejects_overwrite_of_existing_account(admin: AccountId, alice_migration_message: String) {
+        let mut context = Context::new(admin);
+
+        context.switch_account_to_ft_contract_account();
+        context.contract().ft_on_transfer(
+            context.legacy_jar_contract_id.clone(),
+            U128(1_630_000_000_000_000_000_000),
+            alice_migration_message.clone(),
+        );
+
+        // Second migration for the same already-migrated account must be rejected.
+        context.contract().ft_on_transfer(
+            context.legacy_jar_contract_id.clone(),
+            U128(1_630_000_000_000_000_000_000),
+            alice_migration_message,
+        );
     }
 }
