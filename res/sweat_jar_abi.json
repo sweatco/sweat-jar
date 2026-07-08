@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "F1HGKaVF7CnAbF4JioKEwuJJgjc7uEQZvbP4tTcjMUdy"
+    "wasm_hash": "6NKs9enD6mYXTQMMvjpa3d9uftsjSMSCNSBQNpcEpinD"
   },
   "body": {
     "functions": [
@@ -1744,6 +1744,16 @@
               "anyOf": [
                 {
                   "$ref": "#/definitions/AccountScore"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "timezone": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Timezone"
                 },
                 {
                   "type": "null"

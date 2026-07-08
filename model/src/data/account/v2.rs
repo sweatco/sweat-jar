@@ -30,6 +30,7 @@ pub struct AccountV2 {
 pub struct AccountV2Companion {
     pub nonce: Option<u32>,
     pub jars: Option<HashMap<ProductId, JarCompanion>>,
+    pub timezone: Option<Timezone>,
     pub score: Option<AccountScore>,
     pub features: Option<Features>,
 }

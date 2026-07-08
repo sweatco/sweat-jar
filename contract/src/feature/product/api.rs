@@ -18,7 +18,7 @@ impl ProductApi for Contract {
     #[payable]
     fn register_product(&mut self, product: Product) {
         assert_one_yocto();
-        assert!(self.products.get(&product.id).is_none(), "Product already exists");
+        require!(self.products.get(&product.id).is_none(), "Product already exists");
         product.assert_score_based_product_is_protected();
         product.assert_fee_amount();
         product.assert_cap_order();

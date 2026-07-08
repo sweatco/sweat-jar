@@ -4,6 +4,7 @@ use near_sdk::{
     near, require, AccountId, PromiseOrValue,
     PromiseOrValue::Value,
 };
+use primitive_types::U256;
 use sweat_jar_model::{
     api::RestakeApi,
     data::{
@@ -276,7 +277,7 @@ impl RequestBuilder for RestakeAllRequestBuilder {
         let withdrawal = if withdrawal_amount.gt(&0) {
             Some(WithdrawalDto {
                 amount: withdrawal_amount,
-                fee: (total_fee * withdrawal_amount).div_ceil(total_mature_balance),
+                fee: mul_div_ceil(total_fee, withdrawal_amount, total_mature_balance),
             })
         } else {
             None
@@ -319,5 +320,47 @@ impl DepositDto {
             product_id,
             amount: target_amount,
         }
+    }
+}
+
+/// `ceil(a * b / c)`, widening the intermediate product to `U256` so `a * b`
+/// can't overflow `u128` even when the final result does fit back into one
+/// (guaranteed at the call site here since `b <= c`, so the true result is
+/// bounded by `a`). A plain `(a * b).div_ceil(c)` panics on overflow for
+/// realistic SWEAT amounts well before hitting any economically meaningful
+/// edge case.
+fn mul_div_ceil(a: TokenAmount, b: TokenAmount, c: TokenAmount) -> TokenAmount {
+    let numerator = U256::from(a) * U256::from(b);
+    let denominator = U256::from(c);
+    ((numerator + denominator - U256::one()) / denominator).as_u128()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mul_div_ceil;
+
+    #[test]
+    fn matches_naive_formula_for_small_values() {
+        assert_eq!(mul_div_ceil(100, 30, 40), (100u128 * 30).div_ceil(40));
+        assert_eq!(mul_div_ceil(7, 3, 5), (7u128 * 3).div_ceil(5));
+    }
+
+    #[test]
+    fn does_not_overflow_for_realistic_large_amounts() {
+        // total_fee and withdrawal_amount both ~10^26 yocto (a few hundred
+        // thousand SWEAT, an entirely ordinary jar size): their naive product
+        // overflows u128::MAX (~3.4 * 10^38) by many orders of magnitude, but
+        // the true mul_div_ceil result is bounded by total_fee since
+        // withdrawal_amount <= total_mature_balance, so this must not panic.
+        // Regression test for PROD-3727 (L-2).
+        let total_fee: u128 = 500_000 * 10u128.pow(21);
+        let withdrawal_amount: u128 = 900_000 * 10u128.pow(21);
+        let total_mature_balance: u128 = 1_000_000 * 10u128.pow(21);
+
+        let fee = mul_div_ceil(total_fee, withdrawal_amount, total_mature_balance);
+
+        assert!(fee > 0);
+        assert!(fee <= total_fee);
+        assert_eq!(fee, 450_000 * 10u128.pow(21));
     }
 }
