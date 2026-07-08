@@ -89,7 +89,10 @@ impl ProductAssertions for Product {
 
         let fee_ok = match fee {
             WithdrawalFee::Fix(amount) => amount.0 < self.cap.min(),
-            WithdrawalFee::Percent(percent) => percent.to_f32() < 100.0,
+            // `Percent` is fractional (e.g. 0.10 = 10%), so a fee is only sane
+            // below 1.0 (100%) — not 100.0, which would let a fee exceed the
+            // full withdrawn amount.
+            WithdrawalFee::Percent(percent) => percent.to_f32() < 1.0,
         };
 
         require!(

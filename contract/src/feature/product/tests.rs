@@ -146,6 +146,26 @@ fn register_product_with_too_high_percent_fee(
 }
 
 #[rstest]
+#[should_panic(
+    expected = "Fee for this product is too high. It is possible for a user to pay more in fees than they staked."
+)]
+fn register_product_with_percent_fee_over_100_percent(
+    admin: AccountId,
+    #[from(product_1_year_12_percent)] product: Product,
+) {
+    // UDecimal::new(99, 0) = 99.0 = 9900%. The old `percent.to_f32() < 100.0`
+    // check compared the fractional value against the wrong threshold and let
+    // this through (only the boundary value 100.0 happened to be rejected).
+    // Regression test for PROD-3721.
+    let product = product.with_withdrawal_fee(WithdrawalFee::Percent(UDecimal::new(99, 0)));
+
+    let mut context = Context::new(admin.clone());
+
+    context.switch_account_to_manager();
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product));
+}
+
+#[rstest]
 fn register_product_with_fee(
     admin: AccountId,
     #[from(product_1_year_12_percent_with_fixed_fee)] product_with_fixed_fee: Product,
