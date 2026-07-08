@@ -13,8 +13,9 @@ const SWEAT_JAR_WASM_ENV: &str = "SWEAT_JAR_WASM";
 const SWEAT_WASM_ENV: &str = "SWEAT_WASM";
 
 /// A booted sandbox with the SWEAT token and the sweat_jar contract deployed and
-/// wired together: `manager` is the jar's manager, `alice`/`bob` are funded and
-/// registered with the token, `fee` is the jar's fee-collection account.
+/// wired together: `manager` is a test account granted every ACL role (there is
+/// no "manager" role — see `RoleAssignments`/`all_roles_to`), `alice`/`bob` are
+/// funded and registered with the token, `fee` is the jar's fee-collection account.
 pub struct Context {
     // Held to keep the sandbox alive for the test's lifetime.
     pub worker: Worker<Sandbox>,
