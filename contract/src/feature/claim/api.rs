@@ -26,10 +26,12 @@ mod gas {
     /// Const of after claim call with 1 jar
     pub(super) const INITIAL_GAS_FOR_AFTER_CLAIM: Gas = Gas::from_tgas(4);
 
-    /// Cost of adding 1 additional jar in after claim call. Measured with `measure_after_claim_total_test`
+    /// Cost of adding 1 additional jar in after claim call. Measured with
+    /// `measure_after_claim_gas` (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     pub(super) const ADDITIONAL_AFTER_CLAIM_JAR_COST: Gas = Gas::from_ggas(80);
 
-    /// Values are measured with `measure_after_claim_total_test`
+    /// Values are measured with `measure_after_claim_gas`
+    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     /// For now number of jars is arbitrary
     pub(super) const GAS_FOR_AFTER_CLAIM: Gas =
         Gas::from_gas(INITIAL_GAS_FOR_AFTER_CLAIM.as_gas() + ADDITIONAL_AFTER_CLAIM_JAR_COST.as_gas() * 200);

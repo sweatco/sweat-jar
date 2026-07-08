@@ -202,15 +202,20 @@ pub async fn set_public_key(
     Ok(())
 }
 
-pub async fn claim_total(jar: &Contract, user: &Account, detailed: Option<bool>) -> Result<ClaimedAmountView> {
+/// Raw variant: returns the full `ExecutionFinalResult` (rather than the
+/// unwrapped view) so callers can read `.total_gas_burnt`, e.g. for gas
+/// measurement in `tests/measure_gas.rs`.
+pub async fn claim_total_raw(jar: &Contract, user: &Account, detailed: Option<bool>) -> Result<ExecutionFinalResult> {
     Ok(user
         .call(jar.id(), "claim_total")
         .args_json(json!({ "detailed": detailed }))
         .max_gas()
         .transact()
-        .await?
-        .into_result()?
-        .json()?)
+        .await?)
+}
+
+pub async fn claim_total(jar: &Contract, user: &Account, detailed: Option<bool>) -> Result<ClaimedAmountView> {
+    Ok(claim_total_raw(jar, user, detailed).await?.into_result()?.json()?)
 }
 
 pub async fn restake(
@@ -255,15 +260,32 @@ pub async fn restake_all(
     Ok(())
 }
 
-pub async fn withdraw(jar: &Contract, user: &Account, product_id: &str) -> Result<WithdrawView> {
+/// Raw variant: see `claim_total_raw`'s doc comment.
+pub async fn withdraw_raw(jar: &Contract, user: &Account, product_id: &str) -> Result<ExecutionFinalResult> {
     Ok(user
         .call(jar.id(), "withdraw")
         .args_json(json!({ "product_id": product_id }))
         .max_gas()
         .transact()
-        .await?
-        .into_result()?
-        .json()?)
+        .await?)
+}
+
+pub async fn withdraw(jar: &Contract, user: &Account, product_id: &str) -> Result<WithdrawView> {
+    Ok(withdraw_raw(jar, user, product_id).await?.into_result()?.json()?)
+}
+
+/// Raw variant: see `claim_total_raw`'s doc comment.
+pub async fn withdraw_all_raw(
+    jar: &Contract,
+    user: &Account,
+    product_ids: Option<HashSet<ProductId>>,
+) -> Result<ExecutionFinalResult> {
+    Ok(user
+        .call(jar.id(), "withdraw_all")
+        .args_json(json!({ "product_ids": product_ids }))
+        .max_gas()
+        .transact()
+        .await?)
 }
 
 pub async fn withdraw_all(
@@ -271,14 +293,7 @@ pub async fn withdraw_all(
     user: &Account,
     product_ids: Option<HashSet<ProductId>>,
 ) -> Result<BulkWithdrawView> {
-    Ok(user
-        .call(jar.id(), "withdraw_all")
-        .args_json(json!({ "product_ids": product_ids }))
-        .max_gas()
-        .transact()
-        .await?
-        .into_result()?
-        .json()?)
+    Ok(withdraw_all_raw(jar, user, product_ids).await?.into_result()?.json()?)
 }
 
 pub async fn withdraw_fee(jar: &Contract, manager: &Account) -> Result<U128> {
