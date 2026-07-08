@@ -99,7 +99,7 @@ impl ProductAssertions for Product {
     }
 
     fn assert_score_based_product_is_protected(&self) {
-        if matches!(self.terms, Terms::ScoreBased(_)) {
+        if self.terms.is_score_based() {
             require!(self.public_key.is_some(), "Score based must be protected.");
         }
     }

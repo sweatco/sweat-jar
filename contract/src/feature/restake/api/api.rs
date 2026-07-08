@@ -9,7 +9,7 @@ use sweat_jar_model::{
     data::{
         deposit::{DepositTicket, Purpose},
         jar::Assertions,
-        product::{ProductAssertions, ProductId, ProductModelApi, Terms},
+        product::{ProductAssertions, ProductId, ProductModelApi},
     },
     TokenAmount,
 };
@@ -140,7 +140,7 @@ impl Contract {
         }
 
         let product = self.get_product(&ticket.product_id);
-        if matches!(product.terms, Terms::ScoreBased(_)) {
+        if product.terms.is_score_based() {
             self.get_account_mut(&request.account_id)
                 .try_set_timezone(ticket.timezone);
         }

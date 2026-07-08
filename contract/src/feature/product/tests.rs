@@ -26,7 +26,7 @@ use crate::{
             product_1_year_12_percent_with_invalid_percent_fee, product_1_year_12_percent_with_percent_fee,
             product_1_year_30_cap_score_based_protected, product_1_year_apy_7_percent_protected,
             product_1_year_apy_downgradable_20_10_percent_protected, product_2_years_10_percent,
-            product_flexible_10_percent, BaseApy, ProductBuilder, ProtectedProduct,
+            product_flexible_10_percent, tiered_score_based_product, BaseApy, ProductBuilder, ProtectedProduct,
         },
     },
 };
@@ -314,6 +314,18 @@ fn register_score_based_product_with_signature(
 fn register_score_based_product_without_signature(
     admin: AccountId,
     #[from(product_1_year_12_cap_score_based)] product: Product,
+) {
+    let mut context = Context::new(admin.clone());
+
+    context.switch_account_to_manager();
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
+}
+
+#[rstest]
+#[should_panic(expected = "Score based must be protected.")]
+fn register_tiered_score_based_product_without_signature(
+    admin: AccountId,
+    #[from(tiered_score_based_product)] product: Product,
 ) {
     let mut context = Context::new(admin.clone());
 
