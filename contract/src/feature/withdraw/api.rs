@@ -20,13 +20,15 @@ use crate::common::env::test_env_ext;
 pub(crate) mod gas {
     use near_sdk::Gas;
 
-    /// Value is measured with `measure_withdraw_test`
+    /// Value is measured with `measure_after_withdraw_gas`
+    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     /// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
     pub(super) const GAS_FOR_AFTER_WITHDRAW: Gas = Gas::from_tgas(4);
 
     pub(crate) const GAS_FOR_AFTER_FEE_WITHDRAW: Gas = Gas::from_tgas(4);
 
-    /// Value is measured with `measure_withdraw_all`
+    /// Value is measured with `measure_bulk_withdraw_gas`
+    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     /// 10 `TGas` was enough for 200 jars. 15 here just in case.
     pub(super) const GAS_FOR_BULK_AFTER_WITHDRAW: Gas = Gas::from_tgas(15);
 }
