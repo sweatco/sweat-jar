@@ -128,7 +128,7 @@ impl WithdrawApi for Contract {
                 .jars
                 .get(&product_id)
                 .unwrap_or_else(|| panic_str(&format!("No jar found for {product_id}")));
-            if jar.is_pending_withdraw {
+            if jar.is_locked {
                 continue;
             }
 

@@ -23,6 +23,19 @@ use crate::{
     Contract, ContractExt,
 };
 
+#[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
+pub(crate) mod gas {
+    use near_sdk::Gas;
+
+    /// Value is measured with `measure_after_restake_remainder_gas`
+    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs).
+    /// Total transaction gas measured ~7.83 `TGas`, flat across principals —
+    /// same profile as `withdraw`'s ~7.6 `TGas` total, which calibrates
+    /// `GAS_FOR_AFTER_WITHDRAW` to 4 `TGas`. 4 here too, for the same reason.
+    pub(crate) const GAS_FOR_AFTER_TRANSFER_REMAINDER: Gas = Gas::from_tgas(4);
+}
+
 #[derive(Debug)]
 #[near(serializers=[json])]
 pub(super) struct Request {
@@ -239,7 +252,7 @@ impl RequestBuilder for RestakeAllRequestBuilder {
         let mut total_fee = 0;
 
         for (product_id, jar) in &contract.get_account(&self.account_id).jars {
-            if jar.is_pending_withdraw {
+            if jar.is_locked {
                 continue;
             }
 

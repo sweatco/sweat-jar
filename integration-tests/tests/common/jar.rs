@@ -218,15 +218,17 @@ pub async fn claim_total(jar: &Contract, user: &Account, detailed: Option<bool>)
     Ok(claim_total_raw(jar, user, detailed).await?.into_result()?.json()?)
 }
 
-pub async fn restake(
+/// Raw variant: see `claim_total_raw`'s doc comment.
+pub async fn restake_raw(
     jar: &Contract,
     user: &Account,
     from: &str,
     ticket: DepositTicket,
     signature: Option<Base64VecU8>,
     amount: Option<U128>,
-) -> Result<()> {
-    user.call(jar.id(), "restake")
+) -> Result<ExecutionFinalResult> {
+    Ok(user
+        .call(jar.id(), "restake")
         .args_json(json!({
             "from": from,
             "ticket": ticket,
@@ -235,6 +237,18 @@ pub async fn restake(
         }))
         .max_gas()
         .transact()
+        .await?)
+}
+
+pub async fn restake(
+    jar: &Contract,
+    user: &Account,
+    from: &str,
+    ticket: DepositTicket,
+    signature: Option<Base64VecU8>,
+    amount: Option<U128>,
+) -> Result<()> {
+    restake_raw(jar, user, from, ticket, signature, amount)
         .await?
         .into_result()?;
     Ok(())
@@ -335,10 +349,15 @@ pub async fn set_feature_enabled(
     Ok(())
 }
 
-pub async fn unlock_jars_for_account(jar: &Contract, caller: &Account, account_id: &AccountId) -> Result<()> {
+pub async fn unlock_jars_for_account(
+    jar: &Contract,
+    caller: &Account,
+    account_id: &AccountId,
+    product_ids: Vec<ProductId>,
+) -> Result<()> {
     caller
         .call(jar.id(), "unlock_jars_for_account")
-        .args_json(json!({ "account_id": account_id }))
+        .args_json(json!({ "account_id": account_id, "product_ids": product_ids }))
         .max_gas()
         .transact()
         .await?

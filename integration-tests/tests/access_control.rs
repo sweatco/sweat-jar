@@ -120,7 +120,7 @@ async fn unlock_jars_for_account_by_maintainer_succeeds() -> anyhow::Result<()> 
     let product_id = RegisterProductCommand::Locked12Months12Percents.id();
 
     jar::create_jar(&context.jar, &context.ft, &context.alice, &product_id, 1_000_000).await?;
-    jar::unlock_jars_for_account(&context.jar, &context.manager, context.alice.id()).await?;
+    jar::unlock_jars_for_account(&context.jar, &context.manager, context.alice.id(), vec![product_id]).await?;
 
     Ok(())
 }
@@ -137,7 +137,7 @@ async fn unlock_jars_for_account_by_non_maintainer_panics() -> anyhow::Result<()
     let result = context
         .bob
         .call(context.jar.id(), "unlock_jars_for_account")
-        .args_json(json!({ "account_id": context.alice.id() }))
+        .args_json(json!({ "account_id": context.alice.id(), "product_ids": [product_id] }))
         .max_gas()
         .transact()
         .await?;

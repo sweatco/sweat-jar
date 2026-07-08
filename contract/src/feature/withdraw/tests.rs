@@ -275,7 +275,7 @@ fn test_failed_withdraw_promise(
     let contract = context.contract();
     let jar = contract.get_account(&alice).get_jar(&product.id);
     assert_eq!(total_principal_before_withdrawal, jar.total_principal());
-    assert!(!jar.is_pending_withdraw);
+    assert!(!jar.is_locked);
 }
 
 #[rstest]
@@ -553,8 +553,8 @@ fn batch_withdraw_all_with_failed_transfer_promise(
     assert_eq!(jar.total_principal() * 2, jars.get_total_principal());
 
     let account = context.contract().get_account(&alice).clone();
-    assert!(!account.get_jar(&product.id).is_pending_withdraw);
-    assert!(!account.get_jar(&another_product.id).is_pending_withdraw);
+    assert!(!account.get_jar(&product.id).is_locked);
+    assert!(!account.get_jar(&another_product.id).is_locked);
 }
 
 #[rstest]

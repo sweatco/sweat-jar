@@ -79,7 +79,7 @@ fn claim_pending_withdraw_jar(
     #[from(product_1_year_12_percent)] product: Product,
     #[with(vec![(0, 100_000_000), (1, 200_000_000)])] jar: Jar,
 ) {
-    let jar = jar.with_pending_withdraw();
+    let jar = jar.with_locked();
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);

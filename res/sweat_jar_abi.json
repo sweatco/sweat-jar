@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "9FnfvvxDqXCPSh7q1dVrct7DM1wzgUNpGwpWeJzZPwv5"
+    "wasm_hash": "G6Lb5uVrUfWjeDb1FG1nouzRgdNFqoxuKrSbumhTXis8"
   },
   "body": {
     "functions": [
@@ -1423,6 +1423,15 @@
                 "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
                 "type": "string"
               }
+            },
+            {
+              "name": "product_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           ]
         }
@@ -2757,7 +2766,7 @@
                 "$ref": "#/definitions/Deposit"
               }
             },
-            "is_pending_withdraw": {
+            "is_locked": {
               "type": [
                 "boolean",
                 "null"

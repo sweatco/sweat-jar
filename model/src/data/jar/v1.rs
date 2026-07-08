@@ -10,7 +10,7 @@ use crate::{Timestamp, TokenAmount};
 pub struct Jar {
     pub deposits: Vec<Deposit>,
     pub cache: Option<JarCache>,
-    pub is_pending_withdraw: bool,
+    pub is_locked: bool,
     pub claim_remainder: u64,
 }
 
@@ -20,7 +20,7 @@ pub struct Jar {
 pub struct JarCompanion {
     pub deposits: Option<Vec<Deposit>>,
     pub cache: Option<Option<JarCache>>,
-    pub is_pending_withdraw: Option<bool>,
+    pub is_locked: Option<bool>,
     pub claim_remainder: Option<u64>,
 }
 
