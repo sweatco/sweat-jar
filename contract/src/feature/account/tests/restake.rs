@@ -7,7 +7,7 @@ use sweat_jar_model::{
         jar::Jar,
         product::Product,
     },
-    TokenAmount, MS_IN_DAY, MS_IN_YEAR,
+    Timezone, TokenAmount, MS_IN_DAY, MS_IN_YEAR,
 };
 
 use crate::{
@@ -17,7 +17,9 @@ use crate::{
     },
     feature::{
         account::model::test_utils::jar,
-        product::model::test_utils::{product, protected_product, ProductBuilder, ProtectedProduct},
+        product::model::test_utils::{
+            product, protected_product, tiered_score_based_product, ProductBuilder, ProtectedProduct,
+        },
     },
 };
 
@@ -665,4 +667,44 @@ fn restake_exceeds_target_product_cap(
 
     context.switch_account(&alice);
     context.contract().restake(product.id.clone(), ticket, None, None);
+}
+
+#[rstest]
+fn restake_into_tiered_score_based_product_sets_timezone(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product)] source_product: Product,
+    #[from(tiered_score_based_product)] target_product: Product,
+    #[values(1_000_000)] principal: TokenAmount,
+    #[from(jar)]
+    #[with(vec![(0, principal)])]
+    alice_jar: Jar,
+) {
+    let _ = principal;
+    let mut context = Context::new(admin)
+        .with_products(&[source_product.clone(), target_product.clone()])
+        .with_latest_account(&alice, &[(source_product.id.clone(), alice_jar)]);
+
+    assert!(
+        !context.contract().get_account(&alice).timezone.is_valid(),
+        "alice's first interaction with any product is this restake, so her timezone must not be set yet"
+    );
+
+    let restake_time = MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    let timezone = Timezone::hour_shift(3);
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: target_product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: Some(timezone),
+    };
+
+    context.switch_account(&alice);
+    context
+        .contract()
+        .restake(source_product.id.clone(), ticket, None, None);
+
+    assert_eq!(timezone, context.contract().get_account(&alice).timezone);
 }
