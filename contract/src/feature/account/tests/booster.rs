@@ -7,9 +7,9 @@ use sweat_jar_model::{
     data::{
         account::{versioned::AccountVersioned, Account},
         deposit::DepositTicket,
-        product::Product,
+        product::{Product, Terms, TieredScoreBasedProductTerms},
     },
-    Timezone, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
+    ConfigurableValue, Timezone, ValueTier, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
 };
 
 use crate::{
@@ -259,4 +259,52 @@ fn booster_is_not_applied_when_too_old(admin: AccountId, alice: AccountId) {
     let score = context.contract().get_account(&alice).score;
     assert_eq!(score.get(0).booster, 0);
     assert_eq!(score.get(1).booster, 0);
+}
+
+#[rstest]
+fn get_apy_does_not_panic_when_score_cap_plus_booster_exceeds_u16(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(tiered_score_based_product)] base_product: Product,
+) {
+    // score_cap (60_000) + booster (60_000) = 120_000, well above u16::MAX
+    // (65_535) — regression test for PROD-3723.
+    let product = base_product.with_terms(Terms::TieredScoreBased(TieredScoreBasedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        score_cap: ConfigurableValue::Tier(ValueTier {
+            default: 60_000,
+            fallback: 60_000,
+        }),
+    }));
+
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+    context.switch_account_to_manager();
+
+    context
+        .contract()
+        .accounts
+        .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+    context.contract().set_timezone(alice.clone(), 0.into());
+    context.contract().deposit(
+        alice.clone(),
+        DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: MS_IN_YEAR.into(),
+            timezone: Some(Timezone::hour_shift(0)),
+        },
+        365_000.to_otto(),
+        None,
+    );
+
+    context.set_block_timestamp_in_ms(0);
+    context
+        .contract()
+        .record_score(vec![(alice.clone(), vec![(60_000, 0.into())])]);
+    context.contract().apply_booster(vec![alice.clone()], 60_000, 0.into());
+
+    // Advance past finalization so get_total_interest reads this day's
+    // record and exercises TieredScoreBasedProductTerms::get_apy.
+    context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
+    let interest = context.contract().get_total_interest(alice.clone());
+    assert!(interest.amount.total.0 > 0, "expected nonzero interest, not a panic");
 }

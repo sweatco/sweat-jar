@@ -9,6 +9,7 @@ use crate::{
         product::{
             FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
         },
+        score::DailyScore,
     },
     start_of_the_day, Duration, Timestamp, ToAPY, TokenAmount, MS_IN_YEAR, UTC,
 };
@@ -158,7 +159,8 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
         let score = account.score.get_last_finalized_record(account.timezone);
         let score_cap = self.get_score_cap(account.features.is_feature_enabled(&Feature::IncreasedScoreCap));
 
-        (score.value.min(score_cap) + score.booster).to_apy()
+        let raw = u32::from(score.value.min(score_cap)) + u32::from(score.booster);
+        raw.min(DailyScore::MAX).to_apy()
     }
 
     fn get_interest_calculation_term(
