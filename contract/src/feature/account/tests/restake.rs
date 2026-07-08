@@ -17,7 +17,7 @@ use crate::{
     },
     feature::{
         account::model::test_utils::jar,
-        product::model::test_utils::{product, protected_product, ProtectedProduct},
+        product::model::test_utils::{product, protected_product, ProductBuilder, ProtectedProduct},
     },
 };
 
@@ -633,4 +633,36 @@ fn restake_with_withdrawal(
     };
     assert_eq!(data.restaked.0, principal - withdrawal_amount);
     assert_eq!(data.withdrawn.0, withdrawal_amount);
+}
+
+#[rstest]
+#[should_panic(expected = "Total amount is out of product bounds")]
+fn restake_exceeds_target_product_cap(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(product)] product: Product,
+    #[values(1_000_000)] principal: TokenAmount,
+    #[from(jar)]
+    #[with(vec![(0, principal)])]
+    alice_jar: Jar,
+) {
+    let _ = principal;
+    let target_product = product.clone().with_id("target".to_string()).with_cap(1, 100);
+
+    let mut context = Context::new(admin)
+        .with_products(&[product.clone(), target_product.clone()])
+        .with_latest_account(&alice, &[(product.id.clone(), alice_jar)]);
+
+    let restake_time = MS_IN_YEAR + MS_IN_DAY;
+    context.set_block_timestamp_in_ms(restake_time);
+
+    let valid_until = MS_IN_YEAR * 10;
+    let ticket = DepositTicket {
+        product_id: target_product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
+
+    context.switch_account(&alice);
+    context.contract().restake(product.id.clone(), ticket, None, None);
 }
