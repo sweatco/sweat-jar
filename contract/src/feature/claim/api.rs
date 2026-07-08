@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use near_sdk::{env, ext_contract, json_types::U128, near, AccountId, PromiseOrValue};
+use near_sdk::{env, ext_contract, json_types::U128, near, require, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi,
     data::{account::AccountCompanion, claim::ClaimedAmountView, jar::AggregatedTokenAmountView, product::ProductId},
@@ -18,6 +18,12 @@ use crate::{
     Contract, ContractExt,
 };
 
+/// Hard cap on jars processed by a single `claim_total` call. `after_claim`'s
+/// gas budget scales with the actual jar count in the call (see `gas`
+/// module below), but an unbounded jar count would still need an unbounded
+/// gas budget — this bounds it to a value gas measurements are trusted for.
+pub(super) const MAX_JARS_PER_CLAIM: usize = 200;
+
 #[cfg(not(test))]
 #[mutants::skip] // Covered by integration tests
 mod gas {
@@ -30,11 +36,12 @@ mod gas {
     /// `measure_after_claim_gas` (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     pub(super) const ADDITIONAL_AFTER_CLAIM_JAR_COST: Gas = Gas::from_ggas(80);
 
-    /// Values are measured with `measure_after_claim_gas`
-    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs)
-    /// For now number of jars is arbitrary
-    pub(super) const GAS_FOR_AFTER_CLAIM: Gas =
-        Gas::from_gas(INITIAL_GAS_FOR_AFTER_CLAIM.as_gas() + ADDITIONAL_AFTER_CLAIM_JAR_COST.as_gas() * 200);
+    /// Gas to reserve for `after_claim` given `jar_count` jars are being
+    /// claimed in this call (`jar_count` is enforced elsewhere to be
+    /// `<= MAX_JARS_PER_CLAIM`, so this can't run away unbounded).
+    pub(super) fn gas_for_after_claim(jar_count: u64) -> Gas {
+        INITIAL_GAS_FOR_AFTER_CLAIM.saturating_add(Gas::from_gas(ADDITIONAL_AFTER_CLAIM_JAR_COST.as_gas() * jar_count))
+    }
 }
 
 #[ext_contract(ext_self)]
@@ -81,6 +88,12 @@ impl ClaimApi for Contract {
             accumulator.add(product_id, interest);
         }
 
+        require!(
+            interest_per_jar.len() <= MAX_JARS_PER_CLAIM,
+            format!("Too many jars in a single claim, max is {MAX_JARS_PER_CLAIM}")
+        );
+        let jar_count = interest_per_jar.len() as u64;
+
         let account = self.get_account_mut(&account_id);
         for (product_id, (interest, remainder)) in interest_per_jar {
             let jar = account.get_jar_mut(&product_id);
@@ -102,6 +115,7 @@ impl ClaimApi for Contract {
                 accumulator,
                 account_rollback,
                 EventKind::Claim(account_id.clone(), event_data),
+                jar_count,
             )
         } else {
             PromiseOrValue::Value(accumulator)
@@ -117,6 +131,7 @@ impl Contract {
         claimed_amount: ClaimedAmountView,
         account_rollback: AccountCompanion,
         event: EventKind,
+        _jar_count: u64,
     ) -> PromiseOrValue<ClaimedAmountView> {
         use crate::common::env::env_ext;
 
@@ -137,11 +152,14 @@ impl Contract {
         claimed_amount: ClaimedAmountView,
         account_rollback: AccountCompanion,
         event: EventKind,
+        jar_count: u64,
     ) -> PromiseOrValue<ClaimedAmountView> {
         use crate::feature::ft_interface::gas::GAS_FOR_FT_TRANSFER;
 
+        let after_claim_gas = gas::gas_for_after_claim(jar_count);
+
         assert_gas(
-            GAS_FOR_FT_TRANSFER.as_gas() * 2 + gas::GAS_FOR_AFTER_CLAIM.as_gas(),
+            GAS_FOR_FT_TRANSFER.as_gas() * 2 + after_claim_gas.as_gas(),
             || "Not enough gas for claim".to_string(),
         );
 
@@ -152,6 +170,7 @@ impl Contract {
                 claimed_amount,
                 account_rollback,
                 event,
+                after_claim_gas,
             ))
             .into()
     }
@@ -219,8 +238,9 @@ fn after_claim_call(
     claimed_amount: ClaimedAmountView,
     account_rollback: AccountCompanion,
     event: EventKind,
+    after_claim_gas: near_sdk::Gas,
 ) -> near_sdk::Promise {
     ext_self::ext(env::current_account_id())
-        .with_static_gas(gas::GAS_FOR_AFTER_CLAIM)
+        .with_static_gas(after_claim_gas)
         .after_claim(account_id, claimed_amount, account_rollback, event)
 }

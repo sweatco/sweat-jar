@@ -19,6 +19,7 @@ use crate::{
     },
     feature::{
         account::model::test_utils::{jar, JarBuilder},
+        claim::api::MAX_JARS_PER_CLAIM,
         product::model::test_utils::*,
     },
 };
@@ -288,4 +289,29 @@ fn first_claim_with_booster(
     let claimed_amount = context.claim_total(&alice);
 
     assert_eq!(136_996_174_213_597, claimed_amount);
+}
+
+#[rstest]
+#[should_panic(expected = "Too many jars in a single claim")]
+fn claim_total_rejects_more_than_max_jars(
+    alice: AccountId,
+    admin: AccountId,
+    #[from(product_1_year_12_percent)] base_product: Product,
+) {
+    // Regression test for PROD-3725: claim_total's callback gas budget used
+    // to be a flat constant sized for 200 jars regardless of how many jars
+    // an actual call processed -- this cap is what makes the now-dynamic
+    // budget safe to compute per call.
+    let products: Vec<Product> = (0..=MAX_JARS_PER_CLAIM)
+        .map(|i| base_product.clone().with_id(format!("product_{i}")))
+        .collect();
+    let jars: Vec<(String, Jar)> = products.iter().map(|p| (p.id.clone(), jar(vec![(0, 100_000_000)]))).collect();
+
+    let mut context = Context::new(admin)
+        .with_products(&products)
+        .with_latest_account(&alice, &jars);
+
+    context.set_block_timestamp_in_ms(MS_IN_DAY);
+    context.switch_account(alice);
+    context.contract().claim_total(None);
 }
