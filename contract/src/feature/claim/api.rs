@@ -105,6 +105,7 @@ impl ClaimApi for Contract {
         let account_rollback = AccountCompanion {
             score: account.score.into(),
             jars: rollback_jars.into(),
+            timezone: account.timezone.into(),
             ..AccountCompanion::default()
         };
 
@@ -196,7 +197,13 @@ impl Contract {
                 }
             }
 
+            let account_is_empty = account.is_empty();
+
             emit(event);
+
+            if account_is_empty {
+                self.accounts.remove(&account_id);
+            }
 
             claimed_amount
         } else {

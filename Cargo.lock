@@ -3408,6 +3408,7 @@ dependencies = [
  "near-contract-standards",
  "near-plugins",
  "near-sdk",
+ "primitive-types",
  "rstest",
  "sweat-jar-model",
  "sweat-jar-primitives",

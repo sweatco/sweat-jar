@@ -149,13 +149,19 @@ impl AccountApi for Contract {
     }
 
     fn get_score(&self, account_id: AccountId) -> Option<U128> {
-        let account = self.get_account(&account_id);
+        let account = self.try_get_account(&account_id)?;
+        if !account.timezone.is_valid() {
+            return None;
+        }
 
         Some(u128::from(account.score.get_last_finalized_record(account.timezone).value).into())
     }
 
     fn get_boosted_score(&self, account_id: AccountId) -> Option<DailyScoreView> {
-        let account = self.get_account(&account_id);
+        let account = self.try_get_account(&account_id)?;
+        if !account.timezone.is_valid() {
+            return None;
+        }
 
         Some(account.score.get_last_finalized_record(account.timezone).into())
     }

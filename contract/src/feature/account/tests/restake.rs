@@ -184,7 +184,7 @@ fn restake_for_protected_product_success(
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    let valid_until = MS_IN_YEAR * 10;
+    let valid_until = restake_time + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product.id.clone(),
         valid_until: valid_until.into(),
@@ -233,7 +233,7 @@ fn sequential_restake_for_protected_product_success(
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    let valid_until = MS_IN_YEAR * 10;
+    let valid_until = restake_time + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product.id.clone(),
         valid_until: valid_until.into(),
@@ -264,8 +264,17 @@ fn sequential_restake_for_protected_product_success(
     assert_eq!(principal, jar.1.into());
     assert_eq!(restake_time, jar.0 .0);
 
+    // A full year has passed since the first ticket's valid_until, so the
+    // second restake needs its own ticket with a fresh valid_until.
     let restake_time = restake_time + MS_IN_YEAR + MS_IN_DAY;
     context.set_block_timestamp_in_ms(restake_time);
+
+    let valid_until = restake_time + MS_IN_DAY;
+    let ticket = DepositTicket {
+        product_id: product.id.clone(),
+        valid_until: valid_until.into(),
+        timezone: None,
+    };
 
     let signature = signer.sign(
         DepositMessage::new(
@@ -311,7 +320,7 @@ fn restake_for_protected_product_invalid_signature(
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    let valid_until = MS_IN_YEAR * 10;
+    let valid_until = restake_time + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product.id.clone(),
         valid_until: valid_until.into(),
@@ -355,7 +364,7 @@ fn restake_with_deposit_signature(
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    let valid_until = MS_IN_YEAR * 10;
+    let valid_until = restake_time + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product.id.clone(),
         valid_until: valid_until.into(),
@@ -416,7 +425,7 @@ fn restake_for_protected_product_repeated_nonce(
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    let valid_until = MS_IN_YEAR * 10;
+    let valid_until = restake_time + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product_1.id.clone(),
         valid_until: valid_until.into(),
@@ -487,7 +496,9 @@ fn restake_for_protected_product_maturity_mistiming(
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    let valid_until = MS_IN_YEAR * 10;
+    // The actual restake call happens 2 days later (see below), so
+    // valid_until needs to cover that later timestamp too.
+    let valid_until = restake_time + 2 * MS_IN_DAY + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product.id.clone(),
         valid_until: valid_until.into(),
@@ -537,7 +548,7 @@ fn deposit_with_outdated_nonce_after_restake(
     context.set_block_timestamp_in_ms(restake_time);
 
     context.switch_account(&alice);
-    let valid_until = MS_IN_YEAR * 10;
+    let valid_until = restake_time + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product.id.clone(),
         valid_until: valid_until.into(),
@@ -565,7 +576,7 @@ fn deposit_with_outdated_nonce_after_restake(
         .restake(product.id.clone(), ticket.clone(), Some(signature.into()), None);
 
     // Try to create new jar with outdated nonce (0)
-    let valid_until = MS_IN_YEAR * 10;
+    let valid_until = restake_time + MS_IN_DAY;
     let ticket = DepositTicket {
         product_id: product.id.clone(),
         valid_until: valid_until.into(),
