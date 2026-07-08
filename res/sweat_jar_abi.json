@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "G6Lb5uVrUfWjeDb1FG1nouzRgdNFqoxuKrSbumhTXis8"
+    "wasm_hash": "Fy7bnVLvpXYJzsscGhKKCgx1wFVjXaZn1Dw86ckgwxpJ"
   },
   "body": {
     "functions": [
@@ -813,6 +813,14 @@
       {
         "name": "contract_source_metadata",
         "kind": "view"
+      },
+      {
+        "name": "disable_migration",
+        "doc": " One-shot: retires the `previous_version_account_id` privilege so\n `migrate_products`/`FtMessage::Migrate` can never be called again,\n bounding the blast radius of a future compromise of that account.\n Idempotent — calling more than once is a harmless no-op, since\n `\"system\"` is a reserved NEAR account no signed transaction can ever\n have as its `predecessor_account_id`.",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ]
       },
       {
         "name": "ft_on_transfer",
@@ -2529,6 +2537,20 @@
                   "type": "string",
                   "enum": [
                     "migrate_products"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "event"
+              ],
+              "properties": {
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "migration_disabled"
                   ]
                 }
               }

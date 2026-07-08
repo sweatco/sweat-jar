@@ -28,6 +28,14 @@ pub trait FeaturesAccess {
 }
 
 impl Account {
+    /// True iff every field is still at its default — i.e. this account has
+    /// never received a deposit, score, feature flag, or timezone. Used to
+    /// guard the one-shot account migration against overwriting an account
+    /// that already has real state.
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+
     pub fn get_total_principal(&self) -> TokenAmount {
         self.jars
             .iter()

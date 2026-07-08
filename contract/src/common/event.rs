@@ -32,6 +32,7 @@ pub enum EventKind {
     OldScoreWarning((Score, Local)),
     JarsMerge(AccountId),
     MigrateProducts(Vec<ProductId>),
+    MigrationDisabled,
     SetFeatureEnabled(AccountId, Feature, bool),
     BatchSetFeatureEnabled(Vec<AccountId>, Feature, bool),
     ApplyBooster(ApplyBoosterData),
