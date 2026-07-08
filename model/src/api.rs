@@ -89,7 +89,9 @@ pub trait AccountApi {
     /// Returns 0 if the account has no associated jars.
     fn get_total_interest(&self, account_id: AccountId) -> AggregatedInterestView;
 
-    fn unlock_jars_for_account(&mut self, account_id: AccountId);
+    /// Unlocks (clears `is_locked` on) the jars for `account_id` named in `product_ids` only —
+    /// does not touch any other jar the account may have.
+    fn unlock_jars_for_account(&mut self, account_id: AccountId, product_ids: Vec<ProductId>);
 
     /// Records the score for a batch of accounts and updates their jars score accordingly.
     ///

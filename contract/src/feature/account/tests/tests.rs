@@ -29,7 +29,8 @@ use crate::{
         account::model::test_utils::jar,
         product::model::test_utils::{
             product_1_hour_apy_downgradable_23_10_percent_protected, product_1_year_12_percent,
-            product_1_year_apy_downgradable_20_10_percent_protected, product_disabled, BaseApy, ProtectedProduct,
+            product_1_year_20_percent, product_1_year_apy_downgradable_20_10_percent_protected, product_disabled,
+            BaseApy, ProtectedProduct,
         },
     },
     Contract,
@@ -273,45 +274,49 @@ fn unlock_not_by_maintainer(
         .contract()
         .get_account_mut(&alice)
         .get_jar_mut(&product.id)
-        .is_pending_withdraw = true;
+        .is_locked = true;
 
     context.switch_account(&alice);
-    context.contract().unlock_jars_for_account(alice);
+    context.contract().unlock_jars_for_account(alice, vec![product.id]);
 }
 
 #[rstest]
-fn unlock_by_maintainer(
+fn unlock_by_maintainer_only_unlocks_specified_products(
     admin: AccountId,
     alice: AccountId,
-    #[from(product_1_year_12_percent)] product: Product,
+    #[from(product_1_year_12_percent)] product_a: Product,
+    #[from(product_1_year_20_percent)] product_b: Product,
     #[with(vec![(0, 300_000_000)])] jar: Jar,
 ) {
     let mut context = Context::new(admin.clone())
-        .with_products(&[product.clone()])
-        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_products(&[product_a.clone(), product_b.clone()])
+        .with_latest_account(
+            &alice,
+            &[(product_a.id.clone(), jar.clone()), (product_b.id.clone(), jar.clone())],
+        );
     context
         .contract()
         .get_account_mut(&alice)
-        .get_jar_mut(&product.id)
-        .is_pending_withdraw = true;
-
-    assert!(
-        context
-            .contract()
-            .get_account(&alice)
-            .get_jar(&product.id)
-            .is_pending_withdraw
-    );
+        .get_jar_mut(&product_a.id)
+        .is_locked = true;
+    context
+        .contract()
+        .get_account_mut(&alice)
+        .get_jar_mut(&product_b.id)
+        .is_locked = true;
 
     context.switch_account_to_manager();
-    context.contract().unlock_jars_for_account(alice.clone());
+    context
+        .contract()
+        .unlock_jars_for_account(alice.clone(), vec![product_a.id.clone()]);
 
     assert!(
-        !context
-            .contract()
-            .get_account(&alice)
-            .get_jar(&product.id)
-            .is_pending_withdraw
+        !context.contract().get_account(&alice).get_jar(&product_a.id).is_locked,
+        "product_a was named in product_ids, must be unlocked"
+    );
+    assert!(
+        context.contract().get_account(&alice).get_jar(&product_b.id).is_locked,
+        "product_b was not named in product_ids, must stay locked"
     );
 }
 

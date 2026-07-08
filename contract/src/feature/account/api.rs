@@ -77,10 +77,12 @@ impl AccountApi for Contract {
     }
 
     #[access_control_any(roles(Roles::Maintainer))]
-    fn unlock_jars_for_account(&mut self, account_id: AccountId) {
+    fn unlock_jars_for_account(&mut self, account_id: AccountId, product_ids: Vec<ProductId>) {
         let account = self.get_account_mut(&account_id);
-        for jar in account.jars.values_mut() {
-            jar.is_pending_withdraw = false;
+        for product_id in &product_ids {
+            if let Some(jar) = account.jars.get_mut(product_id) {
+                jar.is_locked = false;
+            }
         }
     }
 

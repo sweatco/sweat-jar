@@ -64,7 +64,7 @@ impl ClaimApi for Contract {
         let mut event_data = ClaimData::new(now);
 
         for (product_id, jar) in &account.jars {
-            if jar.is_pending_withdraw {
+            if jar.is_locked {
                 continue;
             }
 

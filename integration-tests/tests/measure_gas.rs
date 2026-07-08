@@ -10,6 +10,7 @@
 
 use anyhow::Result;
 use near_workspaces::types::Gas;
+use sweat_jar_model::data::deposit::DepositTicket;
 
 mod common;
 use common::{jar, prepare::prepare_contract, product::RegisterProductCommand};
@@ -115,6 +116,51 @@ async fn measure_bulk_withdraw_gas() -> Result<()> {
     }
 
     report("withdraw_all (bulk after_withdraw callback)", &samples);
+
+    Ok(())
+}
+
+const RESTAKE_REMAINDER_PRINCIPALS: [u128; 3] = [100_000, 300_000, 500_000];
+
+/// Measures `restake`'s gas cost when a non-zero withdrawal remainder is
+/// produced (dominated by the `after_transfer_remainder` callback), across a
+/// range of principals. Restaking less than the full mature balance of a
+/// liquid (early-withdrawal-allowed) jar always produces a remainder.
+#[tokio::test]
+#[ignore = "run explicitly via `make measure-gas`"]
+async fn measure_after_restake_remainder_gas() -> Result<()> {
+    let source = RegisterProductCommand::Flexible6Months6Percents;
+    let target = RegisterProductCommand::Locked10Minutes6Percents;
+    let source_id = source.id();
+    let target_id = target.id();
+    let mut samples = Vec::new();
+
+    for &principal in &RESTAKE_REMAINDER_PRINCIPALS {
+        let context = prepare_contract([source, target]).await?;
+
+        jar::create_jar(&context.jar, &context.ft, &context.alice, &source_id, principal).await?;
+
+        let ticket = DepositTicket {
+            product_id: target_id.clone(),
+            valid_until: 0.into(),
+            timezone: None,
+        };
+        let outcome = jar::restake_raw(
+            &context.jar,
+            &context.alice,
+            &source_id,
+            ticket,
+            None,
+            Some((principal / 2).into()),
+        )
+        .await?;
+        let gas = outcome.total_gas_burnt;
+        outcome.into_result()?;
+
+        samples.push((principal as usize, gas));
+    }
+
+    report("restake with remainder (after_transfer_remainder callback)", &samples);
 
     Ok(())
 }
