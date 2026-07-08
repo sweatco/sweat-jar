@@ -54,6 +54,7 @@ impl Contract {
             product.assert_score_based_product_is_protected();
             product.assert_fee_amount();
             product.assert_cap_order();
+            product.assert_udecimal_exponents_in_range();
 
             self.products.insert(&product.id, &product);
             product_ids.push(product.id);

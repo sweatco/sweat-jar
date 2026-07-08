@@ -362,3 +362,19 @@ fn register_product_with_inverted_cap(admin: AccountId, #[from(product_1_year_12
     context.switch_account_to_manager();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 }
+
+#[rstest]
+#[should_panic(expected = "UDecimal exponent out of range")]
+fn register_product_with_out_of_range_apy_exponent(admin: AccountId, #[from(product_1_year_12_percent)] product: Product) {
+    let mut context = Context::new(admin.clone());
+    // 10u128.pow(100) panics unconditionally -- every apy * principal
+    // computation for this product would panic. Regression test for
+    // PROD-3724.
+    let product = product.with_terms(Terms::Fixed(FixedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        apy: Apy::Constant(UDecimal::new(1, 100)),
+    }));
+
+    context.switch_account_to_manager();
+    context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
+}
