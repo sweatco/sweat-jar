@@ -18,6 +18,17 @@ pub enum ConfigurableValue<T: Clone> {
     Tier(ValueTier<T>),
 }
 
+impl<T: Clone> ConfigurableValue<T> {
+    /// Every concrete value this `ConfigurableValue` can resolve to —
+    /// `[value]` for `Constant`, `[default, fallback]` for `Tier`.
+    pub fn values(&self) -> Vec<&T> {
+        match self {
+            ConfigurableValue::Constant(value) => vec![value],
+            ConfigurableValue::Tier(tier) => vec![&tier.default, &tier.fallback],
+        }
+    }
+}
+
 pub mod serde_helpers {
     use near_sdk::near;
 

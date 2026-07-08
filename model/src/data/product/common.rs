@@ -1,4 +1,5 @@
 use near_sdk::{env, json_types::Base64VecU8, require};
+use sweat_jar_primitives::UDecimal;
 
 use super::{Product, Terms, WithdrawalFee};
 use crate::{data::jar::Deposit, TokenAmount};
@@ -57,6 +58,7 @@ pub trait ProductAssertions {
     fn assert_enabled(&self);
     fn assert_fee_amount(&self);
     fn assert_score_based_product_is_protected(&self);
+    fn assert_udecimal_exponents_in_range(&self);
 }
 
 impl ProductAssertions for Product {
@@ -104,6 +106,33 @@ impl ProductAssertions for Product {
     fn assert_score_based_product_is_protected(&self) {
         if self.terms.is_score_based() {
             require!(self.public_key.is_some(), "Score based must be protected.");
+        }
+    }
+
+    /// `UDecimal` ops panic unconditionally once `exponent` exceeds
+    /// `UDecimal::MAX_EXPONENT` (`10u128.pow` overflows), regardless of
+    /// `significand` — so a product stored with an out-of-range exponent
+    /// anywhere would panic on every `apy`/fee computation from then on.
+    /// Checks every `UDecimal` this product carries: both `apy` tiers on
+    /// `Fixed`/`Flexible` terms, and a `Percent` withdrawal fee.
+    fn assert_udecimal_exponents_in_range(&self) {
+        let mut decimals: Vec<&UDecimal> = Vec::new();
+
+        match &self.terms {
+            Terms::Fixed(terms) => decimals.extend(terms.apy.values()),
+            Terms::Flexible(terms) => decimals.extend(terms.apy.values()),
+            Terms::ScoreBased(_) | Terms::TieredScoreBased(_) => {}
+        }
+
+        if let Some(WithdrawalFee::Percent(percent)) = &self.withdrawal_fee {
+            decimals.push(percent);
+        }
+
+        for decimal in decimals {
+            require!(
+                decimal.exponent() <= UDecimal::MAX_EXPONENT,
+                "UDecimal exponent out of range"
+            );
         }
     }
 }

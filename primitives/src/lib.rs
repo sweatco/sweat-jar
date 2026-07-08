@@ -20,6 +20,12 @@ use near_sdk::{json_types::U128, near};
 pub struct UDecimal(U128, u32);
 
 impl UDecimal {
+    /// Largest exponent for which `10u128.pow(exponent)` doesn't panic.
+    /// `UDecimal` ops (`to_f32`, `saturating_mul`, `Mul`) all compute
+    /// `10u128.pow(self.exponent())`; an exponent beyond this makes every
+    /// such op panic unconditionally, regardless of `significand`.
+    pub const MAX_EXPONENT: u32 = 38;
+
     pub fn new(significand: u128, exponent: u32) -> Self {
         Self(significand.into(), exponent)
     }
