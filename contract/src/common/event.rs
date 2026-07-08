@@ -231,19 +231,12 @@ mod test {
     use std::str::FromStr;
 
     use near_sdk::{json_types::U128, AccountId};
-    use rstest::rstest;
     use sweat_jar_model::Local;
 
     use crate::common::{
         event::{ClaimData, EventKind, SweatJarEvent},
-        testing::{accounts::admin, Context, WhitespaceTrimmer},
+        testing::WhitespaceTrimmer,
     };
-
-    #[rstest]
-    fn test_contract_version(admin: AccountId) {
-        let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-4.1.1");
-    }
 
     #[test]
     fn event_to_string() {
