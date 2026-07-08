@@ -260,7 +260,7 @@ fn get_interest_after_withdraw(
 
 #[rstest]
 #[should_panic(expected = "Insufficient permissions")]
-fn unlock_not_by_manager(
+fn unlock_not_by_maintainer(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -280,7 +280,7 @@ fn unlock_not_by_manager(
 }
 
 #[rstest]
-fn unlock_by_manager(
+fn unlock_by_maintainer(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -317,7 +317,7 @@ fn unlock_by_manager(
 
 #[rstest]
 #[should_panic(expected = "Insufficient permissions")]
-fn set_timezone_by_not_manager(
+fn set_timezone_by_not_oracle(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -331,7 +331,7 @@ fn set_timezone_by_not_manager(
 }
 
 #[rstest]
-fn set_timezone_by_manager(
+fn set_timezone_by_oracle(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -350,7 +350,7 @@ fn set_timezone_by_manager(
 }
 
 #[rstest]
-fn set_timezone_by_manager_when_timezone_already_set(
+fn set_timezone_by_oracle_when_timezone_already_set(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,

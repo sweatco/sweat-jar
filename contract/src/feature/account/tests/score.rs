@@ -31,7 +31,7 @@ mod score_tests {
 
     #[rstest]
     #[should_panic(expected = "Insufficient permissions")]
-    fn record_score_by_non_manager(admin: AccountId) {
+    fn record_score_by_non_oracle(admin: AccountId) {
         let mut context = Context::new(admin);
 
         context.switch_account(alice());
