@@ -166,13 +166,15 @@ impl Contract {
         builder: impl RequestBuilder,
     ) -> Request {
         let product_id = ticket.product_id.clone();
-        self.get_product(&product_id).assert_enabled();
+        let product = self.get_product(&product_id);
+        product.assert_enabled();
 
         let request = builder.build(self);
 
         if request.deposit.amount == 0 {
             env::panic_str("Nothing to restake");
         }
+        product.assert_cap(request.deposit.amount);
         self.verify(
             Purpose::Restake,
             &request.account_id,
