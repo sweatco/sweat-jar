@@ -18,10 +18,8 @@ use crate::{
     Contract, ContractExt,
 };
 
-/// Hard cap on jars processed by a single `claim_total` call. `after_claim`'s
-/// gas budget scales with the actual jar count in the call (see `gas`
-/// module below), but an unbounded jar count would still need an unbounded
-/// gas budget — this bounds it to a value gas measurements are trusted for.
+/// Hard cap on jars per `claim_total` call: the `after_claim` gas budget
+/// scales with jar count, so it must stay within measured territory.
 pub(super) const MAX_JARS_PER_CLAIM: usize = 200;
 
 #[cfg(not(test))]
@@ -36,9 +34,8 @@ mod gas {
     /// `measure_after_claim_gas` (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     pub(super) const ADDITIONAL_AFTER_CLAIM_JAR_COST: Gas = Gas::from_ggas(80);
 
-    /// Gas to reserve for `after_claim` given `jar_count` jars are being
-    /// claimed in this call (`jar_count` is enforced elsewhere to be
-    /// `<= MAX_JARS_PER_CLAIM`, so this can't run away unbounded).
+    /// Gas to reserve for `after_claim` with `jar_count` jars
+    /// (bounded by `MAX_JARS_PER_CLAIM`).
     pub(super) fn gas_for_after_claim(jar_count: u64) -> Gas {
         INITIAL_GAS_FOR_AFTER_CLAIM.saturating_add(Gas::from_gas(ADDITIONAL_AFTER_CLAIM_JAR_COST.as_gas() * jar_count))
     }
@@ -82,9 +79,8 @@ impl ClaimApi for Contract {
                 continue;
             }
 
-            // Only jars that actually get claimed (locked + cache mutated below)
-            // need a rollback entry — this keeps `after_claim`'s workload and
-            // payload aligned with the gas budget, which scales with `jar_count`.
+            // Only claimed jars need rollback entries; the extras would bloat
+            // `after_claim`'s workload past its jar_count-scaled gas budget.
             rollback_jars.insert(product_id.clone(), jar.to_rollback());
             interest_per_jar.insert(product_id.clone(), (interest, remainder));
             accumulator.add(product_id, interest);

@@ -29,13 +29,11 @@ use crate::{
 
 #[near]
 impl Contract {
-    /// Turns migration acceptance off: re-points `previous_version_account_id`
-    /// at `"system"` — a reserved NEAR account no signed transaction can ever
-    /// have as its `predecessor_account_id` — so `migrate_products`/
-    /// `FtMessage::Migrate` reject every caller until a Maintainer turns it
-    /// back on via `enable_migration`. Together the pair forms a switch that
-    /// bounds the blast radius of a compromised previous-version account:
-    /// once migration is complete, keep it off.
+    /// Turns migration acceptance off by pointing `previous_version_account_id`
+    /// at `"system"` — a reserved account no signed transaction can have as its
+    /// predecessor — so `migrate_products`/`FtMessage::Migrate` reject every
+    /// caller until `enable_migration` turns it back on. Keep it off once
+    /// migration is complete.
     #[access_control_any(roles(Roles::Maintainer))]
     #[payable]
     pub fn disable_migration(&mut self) {
@@ -76,30 +74,19 @@ impl Contract {
 
     /// One-shot migration for the already-deployed contract: drops the
     /// `manager` field from the Borsh layout and bootstraps `AccessControllable`
-    /// storage. `super_admin`/`roles` are explicit, required arguments — this
-    /// method does not fall back to `old.manager` for any role. `old.manager`
-    /// remains part of `OldContract` (required to correctly parse the old
-    /// Borsh layout) but is intentionally never read here: whoever runs this
-    /// migration decides explicitly who holds which role, even if that means
-    /// passing the same account that used to be `manager` into several
-    /// `RoleAssignments` fields.
-    /// No `&self`/`&mut self` param — near-sdk must not try to auto-deserialize
-    /// the *new* struct shape from the *old* on-chain bytes before this body
-    /// runs; `env::state_read` does that manually against `OldContract` instead.
-    /// `OldContract` and this method are one-shot: delete them in a follow-up
-    /// cleanup commit once this has actually run against the live contract.
+    /// storage. `old.manager` is deliberately never read — whoever runs this
+    /// decides explicitly who holds which role via `roles`.
     ///
-    /// `#[init(ignore_state)]` is required (not just `#[private]`): `near-sdk`
-    /// 5.x forbids returning `Self` from a plain `Call`/`View` method, and a
-    /// bare `#[init]` would refuse to run because state already exists on the
-    /// already-deployed contract this migration targets.
+    /// Takes no `&self`: near-sdk must not auto-deserialize the new struct
+    /// shape from the old on-chain bytes; `env::state_read` parses them
+    /// against `OldContract` instead. `#[init(ignore_state)]` is required —
+    /// a bare `#[init]` refuses to run when state already exists, and near-sdk
+    /// forbids returning `Self` from a plain method. A second invocation after
+    /// success still reverts: the new state doesn't parse as `OldContract`,
+    /// and `init_authority` rejects an already-bootstrapped ACL.
     ///
-    /// `#[init(ignore_state)]` also means near-sdk itself will not stop a
-    /// second invocation after a successful migration — but one still reverts
-    /// deterministically: `env::state_read` parses the (new, 6-field) state
-    /// against the 7-field `OldContract` mirror and fails, and even if the
-    /// bytes ever happened to parse, `init_authority`'s bootstrap `require!`
-    /// rejects re-initializing an ACL whose super admin is already set.
+    /// Delete this method and `OldContract` once it has run against the live
+    /// contract.
     #[init(ignore_state)]
     #[private]
     pub fn migrate(super_admin: AccountId, roles: RoleAssignments) -> Self {
@@ -115,21 +102,16 @@ impl Contract {
             previous_version_account_id: old.previous_version_account_id,
         };
 
-        // See `init_authority`'s doc comment (contract/src/lib.rs) for why this bootstrap-
-        // then-transfer dance is needed and why it's shared with `InitApi::init`.
         contract.init_authority(super_admin, roles);
 
         contract
     }
 }
 
-/// Mirrors the on-chain Borsh layout of `Contract` as it exists before this
-/// migration runs (7 fields, including `manager`). Field order must match the
-/// old, already-deployed struct exactly — Borsh deserializes by position, not
-/// by name. `pub(crate)` (not private) so `migration::tests` can construct one
-/// directly for the unit test in Step 1. Derives `BorshSerialize` too (not just
-/// `BorshDeserialize`, which is all `migrate` itself needs) so
-/// that test can write old-shaped bytes into storage via `env::state_write`.
+/// Mirrors the on-chain Borsh layout of `Contract` before `migrate` runs
+/// (7 fields, including `manager`); Borsh deserializes by position, so field
+/// order must match the deployed struct exactly. Also derives `BorshSerialize`
+/// so tests can write old-shaped state via `env::state_write`.
 #[near(serializers=[borsh])]
 pub(crate) struct OldContract {
     pub token_account_id: AccountId,
@@ -153,13 +135,10 @@ pub(crate) fn store_account_raw(account_id: AccountId, account_bytes: Base64VecU
     env::storage_write(&account_storage_key(&account_id), &account_bytes.0);
 }
 
-/// True if `account_id` has no account state yet, or has one that's still
-/// entirely default. Reads storage directly via `env::storage_read` rather
-/// than through `Contract::accounts` (a cached `LookupMap`) — deliberately,
-/// since a normal typed read here would cache a `None` for a not-yet-existing
-/// account, and that stale cache entry would then hide `store_account_raw`'s
-/// subsequent raw write from every read for the rest of this execution (the
-/// cache has no way to know storage changed underneath it).
+/// True if `account_id` has no account state yet, or one that's still entirely
+/// default. Deliberately reads raw storage, not `Contract::accounts`: the
+/// `LookupMap` would cache the `None` and then hide `store_account_raw`'s
+/// subsequent raw write from every typed read in this execution.
 pub(crate) fn is_new_or_empty_account(account_id: &AccountId) -> bool {
     match env::storage_read(&account_storage_key(account_id)) {
         None => true,

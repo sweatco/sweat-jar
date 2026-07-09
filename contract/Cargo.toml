@@ -6,9 +6,7 @@ edition = "2021"
 repository = "https://github.com/sweatco/sweat-jar"
 
 [lib]
-# `rlib` in addition to the wasm `cdylib` so test crates (notably the
-# integration-tests workspace) can use this crate's types — `Roles`,
-# `RoleAssignments` — instead of duplicating role-name strings.
+# `rlib` so test crates can use this crate's types (`Roles`, `RoleAssignments`).
 crate-type = ["cdylib", "rlib"]
 
 [package.metadata.near.reproducible_build]

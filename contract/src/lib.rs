@@ -23,15 +23,12 @@ pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Roles for `near_plugins`' `AccessControllable`. `StagingManager`/`UpgradeManager`
-/// are kept separate from the operational roles above them: code-deployment is a
-/// materially more dangerous capability than unlocking jars or toggling feature
-/// flags, so an account holding `Maintainer` must not automatically gain it.
+/// are deliberately separate from `Maintainer`: code-deployment is a more
+/// dangerous capability than the operational roles and must not come bundled.
 ///
-/// Must be defined in the same module as the `#[access_control]`-annotated
-/// `Contract` struct: the `AccessControlRole` derive generates a private
-/// `RoleFlags` type here that the `access_control` expansion refers to by
-/// name. Test crates use this enum too (the contract builds as an `rlib` in
-/// addition to the wasm `cdylib`) so role names have a single source of truth.
+/// Must live in the same module as the `#[access_control]`-annotated struct:
+/// the `AccessControlRole` derive generates a private `RoleFlags` type that
+/// the `access_control` expansion refers to by name.
 #[near(serializers = [json])]
 #[derive(AccessControlRole, Copy, Clone, Debug, PartialEq, Eq, Hash, EnumIter)]
 pub enum Roles {
@@ -51,12 +48,9 @@ impl Roles {
     }
 }
 
-/// Initial holders for each `near_plugins` `AccessControllable` role, passed
-/// explicitly to `init`/`migrate` rather than defaulting to any particular
-/// account. Each role accepts multiple initial holders; granting a role to
-/// further accounts later is still possible via the standard `acl_grant_role`
-/// method, unaffected by this map. Roles absent from the map get no initial
-/// holders.
+/// Initial holders for each role, passed explicitly to `init`/`migrate`.
+/// Roles absent from the map get no initial holders; further accounts can
+/// always be granted later via the standard `acl_grant_role`.
 pub type RoleAssignments = HashMap<Roles, Vec<AccountId>>;
 
 /// Convenience for the common case: one account holding every role.
@@ -76,10 +70,9 @@ pub trait InitApi {
 
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 ///
-/// The layout is identical in production and integration-test builds. The
-/// integration-test time scale is persisted under its own raw storage key
-/// (see `sweat_jar_model::time_scale`), the same pattern `near_plugins`'
-/// `AccessControllable` uses for its `__acl` storage, so it needs no field here.
+/// The layout is identical in production and integration-test builds: the
+/// integration-test time scale lives under its own raw storage key
+/// (see `sweat_jar_model::time_scale`), not in a field here.
 #[near(contract_state)]
 #[derive(PanicOnDefault, Upgradable)]
 #[access_control(role_type(Roles))]
@@ -146,57 +139,34 @@ impl InitApi for Contract {
     }
 }
 
-// Deliberately NOT `#[near]`-annotated: these are internal helpers, not
-// contract methods, and the `#[near]` macro would force them `pub`.
+// Not `#[near]`-annotated: the macro would force these helpers `pub`.
 impl Contract {
-    /// Bootstraps the contract's own account as a temporary super-admin (required
-    /// because `acl_grant_role`/`acl_transfer_super_admin` both check
-    /// `env::predecessor_account_id()` for permission, not the account being
-    /// granted/named), grants every role in `roles`, then transfers super-admin
-    /// status to `super_admin`. The contract's own account retains no admin power
-    /// once this returns, unless `super_admin` is the contract's own account.
-    ///
-    /// `acl_grant_role` (used by `grant_role_assignments`) only succeeds when the
-    /// predecessor already holds admin permission for the role being granted, and a
-    /// fresh `AccessControllable` storage has no admins yet. So the predecessor
-    /// (forced to equal `current_account_id` by `#[private]` at both call sites) is
-    /// bootstrapped as the first super-admin to perform the grants, then handed off
-    /// to the caller-supplied `super_admin` via `acl_transfer_super_admin`, which
-    /// adds `super_admin` and revokes the bootstrap account in one step (a no-op if
-    /// they're the same account). Shared by `InitApi::init` (fresh deploys) and
-    /// `migrate` (the already-deployed contract) so both entry points behave
-    /// identically here instead of duplicating this security-critical sequence.
+    /// One-shot ACL bootstrap shared by `init` and `migrate`: the predecessor
+    /// (the contract's own account, forced by `#[private]` at both call sites)
+    /// becomes a temporary super-admin so it can perform the grants — a fresh
+    /// ACL has no admins, and `acl_grant_role`/`acl_transfer_super_admin`
+    /// authorize by predecessor — then hands super-admin off to `super_admin`,
+    /// retaining no power itself. Every step is `require!`d: a silent ACL
+    /// failure must abort the whole transaction, never complete init/migrate
+    /// with a mis-provisioned ACL. This also makes an accidental second run of
+    /// `migrate` a deterministic revert (super admin already initialized).
     pub(crate) fn init_authority(&mut self, super_admin: AccountId, roles: RoleAssignments) {
-        // `acl_init_super_admin` returns `false` iff a super admin already
-        // exists — i.e. this ACL storage was bootstrapped before. Failing loudly
-        // here (rather than continuing with silently no-op'd grants) also makes
-        // any accidental second run of `migrate` a deterministic revert.
         require!(
             self.acl_init_super_admin(env::predecessor_account_id()),
             "ACL bootstrap failed: super admin is already initialized"
         );
         self.grant_role_assignments(roles);
-        // `None` means the predecessor is not a super admin — must be impossible
-        // right after the bootstrap above, but a silent failure here would leave
-        // the contract without its intended super admin, so verify.
         require!(
             self.acl_transfer_super_admin(super_admin).is_some(),
             "ACL bootstrap failed: could not transfer super admin"
         );
     }
 
-    /// Grants every account listed in `roles` its corresponding `AccessControllable`
-    /// role. Used internally by `init_authority`, which is itself shared by
-    /// `InitApi::init` (fresh deploys) and `migrate` (the already-deployed
-    /// contract), so both entry points assign roles identically instead of
-    /// duplicating this loop.
     pub(crate) fn grant_role_assignments(&mut self, roles: RoleAssignments) {
         for (role, account_ids) in roles {
             for account_id in account_ids {
-                // `None` means the predecessor lacks admin permission for this
-                // role; a grant silently not happening must fail the whole
-                // bootstrap instead of leaving a partially-provisioned ACL.
-                // (`Some(false)` — account already held the role — is fine.)
+                // `None` = predecessor lacks admin permission for the role;
+                // `Some(false)` (account already held it) is fine.
                 require!(
                     self.acl_grant_role(role.into(), account_id).is_some(),
                     "ACL bootstrap failed: could not grant role"

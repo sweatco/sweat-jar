@@ -91,9 +91,7 @@ impl ProductAssertions for Product {
 
         let fee_ok = match fee {
             WithdrawalFee::Fix(amount) => amount.0 < self.cap.min(),
-            // `Percent` is fractional (e.g. 0.10 = 10%), so a fee is only sane
-            // below 1.0 (100%) — not 100.0, which would let a fee exceed the
-            // full withdrawn amount.
+            // `Percent` is fractional: 1.0 = 100%.
             WithdrawalFee::Percent(percent) => percent.to_f32() < 1.0,
         };
 
@@ -109,12 +107,9 @@ impl ProductAssertions for Product {
         }
     }
 
-    /// `UDecimal` ops panic unconditionally once `exponent` exceeds
-    /// `UDecimal::MAX_EXPONENT` (`10u128.pow` overflows), regardless of
-    /// `significand` — so a product stored with an out-of-range exponent
-    /// anywhere would panic on every `apy`/fee computation from then on.
-    /// Checks every `UDecimal` this product carries: both `apy` tiers on
-    /// `Fixed`/`Flexible` terms, and a `Percent` withdrawal fee.
+    /// A product stored with an exponent beyond `UDecimal::MAX_EXPONENT`
+    /// would panic on every subsequent `apy`/fee computation, so reject it
+    /// up front — checking every `UDecimal` the product carries.
     fn assert_udecimal_exponents_in_range(&self) {
         let mut decimals: Vec<&UDecimal> = Vec::new();
 

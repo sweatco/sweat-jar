@@ -65,17 +65,13 @@ impl DailyScore {
         Self { value, booster: 0 }
     }
 
-    /// Converts this record to an APY, enforcing the compound-score invariant.
-    /// This is the single place that invariant lives — every score-based APY
-    /// path (`TieredScoreBasedProductTerms::get_apy`, settled interest) must
-    /// go through here.
+    /// Converts this record to an APY, enforcing the compound-score invariant;
+    /// every score-based APY path must go through here.
     ///
-    /// - `value` is capped by the product's `cap`; `booster` is added on top
-    ///   and is deliberately NOT subject to `cap`.
-    /// - The compound `min(value, cap) + booster` may reach [`Self::MAX`]
-    ///   (100% APY) exactly, and is hard-capped there — it can never exceed
-    ///   100%. The sum is computed in `u32`, so it cannot wrap at `u16::MAX`
-    ///   on the way to the cap.
+    /// `value` is capped by the product's `cap`; `booster` is added on top and
+    /// is deliberately not subject to `cap`. The compound sum may reach
+    /// [`Self::MAX`] (100% APY) exactly and is hard-capped there, computed in
+    /// `u32` so it can't wrap at `u16::MAX`.
     pub fn to_capped_apy(&self, cap: Score, include_booster: bool) -> UDecimal {
         let capped_score = self.value.min(cap);
 

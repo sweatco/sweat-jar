@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-// `require` is only used by the `#[cfg(not(test))]` `net_amount`.
 #[cfg(not(test))]
 use near_sdk::require;
 use near_sdk::{env::panic_str, ext_contract, near, PromiseOrValue};
@@ -59,10 +58,7 @@ impl WithdrawalDto {
     #[cfg(not(test))]
     #[mutants::skip] // Covered by integration tests
     pub fn net_amount(&self) -> TokenAmount {
-        // Defense-in-depth: `assert_fee_amount` already rejects a Percent fee
-        // >= 100% at product-registration time, so this should never trip in
-        // practice — but a misconfigured/migrated product must fail loudly
-        // here rather than underflow.
+        // A misconfigured/migrated product must fail loudly, not underflow.
         require!(self.fee <= self.amount, "Fee exceeds amount");
         self.amount - self.fee
     }
