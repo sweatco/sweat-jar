@@ -273,10 +273,6 @@ impl Contract {
         if jar.should_close() {
             self.get_account_mut(account_id).jars.remove(&request.product_id);
         }
-
-        if self.get_account(account_id).is_empty() {
-            self.accounts.remove(account_id);
-        }
     }
 }
 

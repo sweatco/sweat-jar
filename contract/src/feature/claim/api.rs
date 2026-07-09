@@ -197,13 +197,7 @@ impl Contract {
                 }
             }
 
-            let account_is_empty = account.is_empty();
-
             emit(event);
-
-            if account_is_empty {
-                self.accounts.remove(&account_id);
-            }
 
             claimed_amount
         } else {

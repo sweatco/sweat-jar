@@ -123,7 +123,7 @@ fn dont_delete_jar_on_all_interest_claim(
 }
 
 #[rstest]
-#[should_panic(expected = "Account alice.near is not found in smart cotract")]
+#[should_panic(expected = "Jar for product product_3_years_20_percent is not found")]
 fn claim_all_withdraw_all_and_delete_jar(
     alice: AccountId,
     admin: AccountId,
@@ -161,7 +161,7 @@ fn claim_all_withdraw_all_and_delete_jar(
 }
 
 #[rstest]
-#[should_panic(expected = "Account alice.near is not found in smart cotract")]
+#[should_panic(expected = "Jar for product product_2_years_10_percent is not found")]
 fn withdraw_all_claim_all_and_delete_jar(
     alice: AccountId,
     admin: AccountId,

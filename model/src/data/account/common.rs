@@ -31,8 +31,7 @@ pub trait FeaturesAccess {
 impl Account {
     /// True iff this account has never received a deposit, score, feature
     /// flag, or timezone. Used to guard the one-shot account migration
-    /// against overwriting an account that already has real state, and to
-    /// prune storage once an account's last jar is gone.
+    /// against overwriting an account that already has real state.
     ///
     /// Can't compare against `Self::default()` directly: `AccountScore`'s
     /// `Default` impl stamps `updated_at` with the current block timestamp,
