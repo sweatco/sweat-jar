@@ -29,13 +29,13 @@ use crate::{
 
 #[near]
 impl Contract {
-    /// One-shot: retires the `previous_version_account_id` privilege so
-    /// `migrate_products`/`FtMessage::Migrate` can never be called again,
-    /// bounding the blast radius of a future compromise of that account.
-    /// Idempotent — calling more than once is a harmless no-op, since
-    /// `"system"` is a reserved NEAR account no signed transaction can ever
-    /// have as its `predecessor_account_id`.
-    /// Reversible via `enable_migration`.
+    /// Turns migration acceptance off: re-points `previous_version_account_id`
+    /// at `"system"` — a reserved NEAR account no signed transaction can ever
+    /// have as its `predecessor_account_id` — so `migrate_products`/
+    /// `FtMessage::Migrate` reject every caller until a Maintainer turns it
+    /// back on via `enable_migration`. Together the pair forms a switch that
+    /// bounds the blast radius of a compromised previous-version account:
+    /// once migration is complete, keep it off.
     #[access_control_any(roles(Roles::Maintainer))]
     #[payable]
     pub fn disable_migration(&mut self) {
@@ -93,6 +93,13 @@ impl Contract {
     /// 5.x forbids returning `Self` from a plain `Call`/`View` method, and a
     /// bare `#[init]` would refuse to run because state already exists on the
     /// already-deployed contract this migration targets.
+    ///
+    /// `#[init(ignore_state)]` also means near-sdk itself will not stop a
+    /// second invocation after a successful migration — but one still reverts
+    /// deterministically: `env::state_read` parses the (new, 6-field) state
+    /// against the 7-field `OldContract` mirror and fails, and even if the
+    /// bytes ever happened to parse, `init_authority`'s bootstrap `require!`
+    /// rejects re-initializing an ACL whose super admin is already set.
     #[init(ignore_state)]
     #[private]
     pub fn migrate(super_admin: AccountId, roles: RoleAssignments) -> Self {
@@ -140,7 +147,6 @@ fn account_storage_key(account_id: &AccountId) -> Vec<u8> {
         account_id.as_bytes(),
         &mut Vec::new(),
     )
-    .clone()
 }
 
 pub(crate) fn store_account_raw(account_id: AccountId, account_bytes: Base64VecU8) {

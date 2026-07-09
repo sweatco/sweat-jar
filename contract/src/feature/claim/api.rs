@@ -75,8 +75,6 @@ impl ClaimApi for Contract {
                 continue;
             }
 
-            rollback_jars.insert(product_id.clone(), jar.to_rollback());
-
             let product = self.get_product(product_id);
             let (interest, remainder) = product.terms.get_interest(account, jar, now);
 
@@ -84,6 +82,10 @@ impl ClaimApi for Contract {
                 continue;
             }
 
+            // Only jars that actually get claimed (locked + cache mutated below)
+            // need a rollback entry — this keeps `after_claim`'s workload and
+            // payload aligned with the gas budget, which scales with `jar_count`.
+            rollback_jars.insert(product_id.clone(), jar.to_rollback());
             interest_per_jar.insert(product_id.clone(), (interest, remainder));
             accumulator.add(product_id, interest);
         }
