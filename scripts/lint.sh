@@ -1,8 +1,6 @@
 #!/bin/bash
 set -eox pipefail
 
-rustup component add clippy
-
 cargo clippy -p sweat_jar --target wasm32-unknown-unknown \
     -- \
     \
