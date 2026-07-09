@@ -31,7 +31,7 @@ fn get_boosted_score_reflects_booster_only_after_finalization(
     #[from(tiered_score_based_product)] product: Product,
 ) {
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     context
         .contract()
@@ -62,7 +62,7 @@ fn claim_from_tiered_score_jar_only_with_booster(
     #[from(tiered_score_based_product)] product: Product,
 ) {
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     context
         .contract()
@@ -116,7 +116,7 @@ fn claim_from_tiered_score_jar_with_mixed_regular_and_boosted_score(
     test_env_ext::set_test_log_events(false);
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     let start_time = MS_IN_DAY * 2_000;
 
@@ -196,7 +196,7 @@ fn claim_from_tiered_score_jar_with_delayed_booster_claim(
     test_env_ext::set_test_log_events(false);
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     context
         .contract()
@@ -242,7 +242,7 @@ fn booster_is_not_applied_when_too_old(admin: AccountId, alice: AccountId) {
     test_env_ext::set_test_log_events(false);
 
     let mut context = Context::new(admin.clone());
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     context
         .contract()
@@ -279,7 +279,7 @@ fn get_apy_does_not_panic_when_score_cap_plus_booster_exceeds_u16(
     }));
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     context
         .contract()
@@ -360,7 +360,7 @@ fn interest_at_exactly_100_percent_compound_score(
     }));
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     context
         .contract()
@@ -407,7 +407,7 @@ fn interest_is_hard_capped_at_100_percent_compound_score(
     }));
 
     let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
 
     context
         .contract()

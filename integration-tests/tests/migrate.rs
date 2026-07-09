@@ -1,6 +1,7 @@
 use anyhow::Result;
 use near_workspaces::{operations::Function, types::NearToken};
 use serde_json::json;
+use sweat_jar::{all_roles_to, Roles};
 
 mod common;
 use common::{prepare::jar_wasm_bytes, product::RegisterProductCommand};
@@ -10,7 +11,7 @@ use common::{prepare::jar_wasm_bytes, product::RegisterProductCommand};
 /// role-based ACL). This is the exact pre-migration Borsh layout
 /// `contract::migration::api::OldContract` mirrors — deploying and
 /// initializing this real binary (rather than constructing synthetic state
-/// in a unit test) is what proves `migrate_access_control` actually works
+/// in a unit test) is what proves `migrate` actually works
 /// against a real prior release, not just against bytes we assembled by hand
 /// to match our own assumptions about the old layout.
 const PRE_ACL_WASM: &[u8] = include_bytes!("../fixtures/sweat_jar_pre_acl_v4.1.1.wasm");
@@ -27,14 +28,14 @@ async fn create_user(root: &near_workspaces::Account, name: &str) -> Result<near
 /// Deploys the real pre-PROD-3639 wasm, initializes it with the old 4-arg
 /// `init(token_account_id, fee_account_id, manager, previous_version_account_id)`
 /// signature, registers a product to give the contract real state to lose,
-/// then deploys the current code and calls `migrate_access_control` in the
+/// then deploys the current code and calls `migrate` in the
 /// same batched transaction (signed by the contract's own account, matching
 /// `#[private]`) — proving both that a real binary-to-binary migration
 /// succeeds and that pre-migration state and roles come out the other side
 /// correctly.
 #[tokio::test]
 #[tracing::instrument]
-async fn migrate_access_control_from_real_pre_acl_deployment() -> Result<()> {
+async fn migrate_from_real_pre_acl_deployment() -> Result<()> {
     common::prepare::init_tracing();
 
     let worker = near_workspaces::sandbox().await?;
@@ -80,17 +81,10 @@ async fn migrate_access_control_from_real_pre_acl_deployment() -> Result<()> {
     jar.batch()
         .deploy(&current_wasm)
         .call(
-            Function::new("migrate_access_control")
+            Function::new("migrate")
                 .args_json(json!({
                     "super_admin": new_super_admin.id(),
-                    "roles": {
-                        "oracle": [operator.id()],
-                        "product_manager": [operator.id()],
-                        "fee_manager": [operator.id()],
-                        "maintainer": [operator.id()],
-                        "staging_manager": [operator.id()],
-                        "upgrade_manager": [operator.id()],
-                    },
+                    "roles": all_roles_to(operator.id()),
                 }))
                 .max_gas(),
         )
@@ -102,14 +96,8 @@ async fn migrate_access_control_from_real_pre_acl_deployment() -> Result<()> {
     assert_eq!(1, products_after.len(), "product registered before migration must survive it");
     assert_eq!(products_before[0].id, products_after[0].id);
 
-    for role in [
-        "Oracle",
-        "ProductManager",
-        "FeeManager",
-        "Maintainer",
-        "StagingManager",
-        "UpgradeManager",
-    ] {
+    for role in Roles::all() {
+        let role = String::from(role);
         let has_role: bool = jar
             .view("acl_has_role")
             .args_json(json!({ "role": role, "account_id": operator.id() }))

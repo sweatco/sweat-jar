@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "CZyy6REujcwXBM5zPSHqR4AJhBJP8f8TiUytjsDHLYNd"
+    "wasm_hash": "FH3ptgXm26KBMB547UhRKcphAthTkWAt3bzHbBbBQjR1"
   },
   "body": {
     "functions": [
@@ -816,11 +816,31 @@
       },
       {
         "name": "disable_migration",
-        "doc": " One-shot: retires the `previous_version_account_id` privilege so\n `migrate_products`/`FtMessage::Migrate` can never be called again,\n bounding the blast radius of a future compromise of that account.\n Idempotent — calling more than once is a harmless no-op, since\n `\"system\"` is a reserved NEAR account no signed transaction can ever\n have as its `predecessor_account_id`.",
+        "doc": " One-shot: retires the `previous_version_account_id` privilege so\n `migrate_products`/`FtMessage::Migrate` can never be called again,\n bounding the blast radius of a future compromise of that account.\n Idempotent — calling more than once is a harmless no-op, since\n `\"system\"` is a reserved NEAR account no signed transaction can ever\n have as its `predecessor_account_id`.\n Reversible via `enable_migration`.",
         "kind": "call",
         "modifiers": [
           "payable"
         ]
+      },
+      {
+        "name": "enable_migration",
+        "doc": " Symmetric to `disable_migration`: (re-)points migration acceptance at\n `previous_version_account_id`, so `migrate_products`/`FtMessage::Migrate`\n accept calls from that account again.",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "previous_version_account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        }
       },
       {
         "name": "ft_on_transfer",
@@ -1072,7 +1092,14 @@
             {
               "name": "roles",
               "type_schema": {
-                "$ref": "#/definitions/RoleAssignments"
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                    "type": "string"
+                  }
+                }
               }
             }
           ]
@@ -1101,7 +1128,7 @@
         }
       },
       {
-        "name": "migrate_access_control",
+        "name": "migrate",
         "doc": " One-shot migration for the already-deployed contract: drops the\n `manager` field from the Borsh layout and bootstraps `AccessControllable`\n storage. `super_admin`/`roles` are explicit, required arguments — this\n method does not fall back to `old.manager` for any role. `old.manager`\n remains part of `OldContract` (required to correctly parse the old\n Borsh layout) but is intentionally never read here: whoever runs this\n migration decides explicitly who holds which role, even if that means\n passing the same account that used to be `manager` into several\n `RoleAssignments` fields.\n No `&self`/`&mut self` param — near-sdk must not try to auto-deserialize\n the *new* struct shape from the *old* on-chain bytes before this body\n runs; `env::state_read` does that manually against `OldContract` instead.\n `OldContract` and this method are one-shot: delete them in a follow-up\n cleanup commit once this has actually run against the live contract.\n\n `#[init(ignore_state)]` is required (not just `#[private]`): `near-sdk`\n 5.x forbids returning `Self` from a plain `Call`/`View` method, and a\n bare `#[init]` would refuse to run because state already exists on the\n already-deployed contract this migration targets.",
         "kind": "call",
         "modifiers": [
@@ -1121,7 +1148,14 @@
             {
               "name": "roles",
               "type_schema": {
-                "$ref": "#/definitions/RoleAssignments"
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": {
+                    "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                    "type": "string"
+                  }
+                }
               }
             }
           ]
@@ -2573,6 +2607,25 @@
               ],
               "properties": {
                 "data": {
+                  "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                  "type": "string"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "migration_enabled"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
                   "type": "array",
                   "items": [
                     {
@@ -3141,62 +3194,6 @@
             },
             "withdrawn": {
               "type": "string"
-            }
-          }
-        },
-        "RoleAssignments": {
-          "description": "Initial holders for each `near_plugins` `AccessControllable` role, passed explicitly to `init`/`migrate_access_control` rather than defaulting to any particular account. Each role accepts multiple initial holders; granting a role to further accounts later is still possible via the standard `acl_grant_role` method, unaffected by this struct.",
-          "type": "object",
-          "required": [
-            "fee_manager",
-            "maintainer",
-            "oracle",
-            "product_manager",
-            "staging_manager",
-            "upgrade_manager"
-          ],
-          "properties": {
-            "fee_manager": {
-              "type": "array",
-              "items": {
-                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                "type": "string"
-              }
-            },
-            "maintainer": {
-              "type": "array",
-              "items": {
-                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                "type": "string"
-              }
-            },
-            "oracle": {
-              "type": "array",
-              "items": {
-                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                "type": "string"
-              }
-            },
-            "product_manager": {
-              "type": "array",
-              "items": {
-                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                "type": "string"
-              }
-            },
-            "staging_manager": {
-              "type": "array",
-              "items": {
-                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                "type": "string"
-              }
-            },
-            "upgrade_manager": {
-              "type": "array",
-              "items": {
-                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                "type": "string"
-              }
             }
           }
         },

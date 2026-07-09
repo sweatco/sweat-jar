@@ -40,7 +40,7 @@ use crate::{
 fn set_timezone_before_deposit(admin: AccountId, alice: AccountId) {
     let mut context = Context::new(admin);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.contract().set_timezone(alice.clone(), 1.into());
 
     let alice = context.contract().get_account(&alice).clone();
@@ -51,7 +51,7 @@ fn set_timezone_before_deposit(admin: AccountId, alice: AccountId) {
 fn enable_feature_before_deposit(admin: AccountId, alice: AccountId) {
     let mut context = Context::new(admin);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context
         .contract()
         .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
@@ -170,7 +170,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
         .with_products(&[product.clone()])
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context
         .contract()
         .set_feature_enabled(alice.clone(), Feature::IncreasedApy, true);
@@ -205,7 +205,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied(
     let products = context.contract().get_products();
     assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Tier(_)));
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context
         .contract()
         .set_feature_enabled(alice.clone(), Feature::IncreasedApy, true);
@@ -305,7 +305,7 @@ fn unlock_by_maintainer_only_unlocks_specified_products(
         .get_jar_mut(&product_b.id)
         .is_locked = true;
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context
         .contract()
         .unlock_jars_for_account(alice.clone(), vec![product_a.id.clone()]);
@@ -348,7 +348,7 @@ fn set_timezone_by_oracle(
 
     let timezone = 360_000;
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.contract().set_timezone(alice.clone(), I64(timezone));
 
     assert_eq!(context.contract().get_timezone(alice).unwrap().0, timezone);
@@ -368,7 +368,7 @@ fn set_timezone_by_oracle_when_timezone_already_set(
     let timezone = 360_000;
     context.contract().get_account_mut(&alice).timezone = Timezone::new(timezone);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.contract().set_timezone(alice.clone(), I64(0));
 
     assert_eq!(context.contract().get_timezone(alice).unwrap().0, timezone);
@@ -614,7 +614,7 @@ mod signature_tests {
     ) {
         let mut context = Context::new(admin.clone());
 
-        context.switch_account_to_manager();
+        context.switch_account_to_operator();
 
         let amount = 500_000;
         let ticket = DepositTicket {

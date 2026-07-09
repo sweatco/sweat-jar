@@ -15,7 +15,6 @@ use near_sdk::{
     AccountId, IntoStorageKey,
 };
 use sweat_jar_model::{
-    api::RoleAssignments,
     data::{
         account::versioned::AccountVersioned,
         product::{Product, ProductAssertions, ProductId},
@@ -25,7 +24,7 @@ use sweat_jar_model::{
 
 use crate::{
     common::event::{emit, EventKind},
-    init_authority, Contract, ContractExt, Roles, StorageKey,
+    Contract, ContractExt, RoleAssignments, Roles, StorageKey,
 };
 
 #[near]
@@ -36,12 +35,24 @@ impl Contract {
     /// Idempotent — calling more than once is a harmless no-op, since
     /// `"system"` is a reserved NEAR account no signed transaction can ever
     /// have as its `predecessor_account_id`.
+    /// Reversible via `enable_migration`.
     #[access_control_any(roles(Roles::Maintainer))]
     #[payable]
     pub fn disable_migration(&mut self) {
         assert_one_yocto();
         self.previous_version_account_id = "system".parse().unwrap();
         emit(EventKind::MigrationDisabled);
+    }
+
+    /// Symmetric to `disable_migration`: (re-)points migration acceptance at
+    /// `previous_version_account_id`, so `migrate_products`/`FtMessage::Migrate`
+    /// accept calls from that account again.
+    #[access_control_any(roles(Roles::Maintainer))]
+    #[payable]
+    pub fn enable_migration(&mut self, previous_version_account_id: AccountId) {
+        assert_one_yocto();
+        self.previous_version_account_id = previous_version_account_id.clone();
+        emit(EventKind::MigrationEnabled(previous_version_account_id));
     }
 
     pub fn migrate_products(&mut self, products: Vec<Product>) {
@@ -84,7 +95,7 @@ impl Contract {
     /// already-deployed contract this migration targets.
     #[init(ignore_state)]
     #[private]
-    pub fn migrate_access_control(super_admin: AccountId, roles: RoleAssignments) -> Self {
+    pub fn migrate(super_admin: AccountId, roles: RoleAssignments) -> Self {
         let old: OldContract = env::state_read().expect("failed to read old state");
 
         let mut contract = Self {
@@ -99,7 +110,7 @@ impl Contract {
 
         // See `init_authority`'s doc comment (contract/src/lib.rs) for why this bootstrap-
         // then-transfer dance is needed and why it's shared with `InitApi::init`.
-        init_authority(&mut contract, super_admin, roles);
+        contract.init_authority(super_admin, roles);
 
         contract
     }
@@ -110,7 +121,7 @@ impl Contract {
 /// old, already-deployed struct exactly — Borsh deserializes by position, not
 /// by name. `pub(crate)` (not private) so `migration::tests` can construct one
 /// directly for the unit test in Step 1. Derives `BorshSerialize` too (not just
-/// `BorshDeserialize`, which is all `migrate_access_control` itself needs) so
+/// `BorshDeserialize`, which is all `migrate` itself needs) so
 /// that test can write old-shaped bytes into storage via `env::state_write`.
 #[near(serializers=[borsh])]
 pub(crate) struct OldContract {

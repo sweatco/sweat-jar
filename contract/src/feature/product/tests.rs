@@ -35,7 +35,7 @@ use crate::{
 fn add_product_to_list_by_admin(admin: AccountId, product: Product) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 
     let products = context.contract().get_products();
@@ -58,7 +58,7 @@ fn disable_product_when_enabled(admin: AccountId, product: Product) {
     let mut product = context.contract().get_product(&product.id);
     assert!(product.is_enabled);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| {
         context.contract().set_enabled(product.id.to_string(), false);
     });
@@ -77,7 +77,7 @@ fn enable_product_when_enabled(admin: AccountId, product: Product) {
     let product = context.contract().get_product(&product.id);
     assert!(product.is_enabled);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| {
         context.contract().set_enabled(product.id.to_string(), true);
     });
@@ -103,7 +103,7 @@ fn register_downgradable_product(
 ) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product));
 
     let product = context.contract().get_products().first().unwrap().clone();
@@ -127,7 +127,7 @@ fn register_product_with_too_high_fixed_fee(
 ) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product));
 }
 
@@ -141,7 +141,7 @@ fn register_product_with_too_high_percent_fee(
 ) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product));
 }
 
@@ -161,7 +161,7 @@ fn register_product_with_percent_fee_over_100_percent(
 
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product));
 }
 
@@ -173,7 +173,7 @@ fn register_product_with_fee(
 ) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product_with_fixed_fee));
 
     let product = context.contract().get_products().first().unwrap().clone();
@@ -181,7 +181,7 @@ fn register_product_with_fee(
 
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| {
         context.contract().register_product(product_with_percent_fee);
     });
@@ -197,7 +197,7 @@ fn register_product_with_fee(
 fn register_product_with_flexible_terms(admin: AccountId, #[from(product_flexible_10_percent)] product: Product) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product));
 
     let product = context.contract().get_products().first().unwrap().clone();
@@ -215,7 +215,7 @@ fn set_public_key(
     let new_signer = MessageSigner::new();
     let new_pk = new_signer.public_key();
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| {
         context
             .contract()
@@ -323,7 +323,7 @@ fn register_score_based_product_with_signature(
 ) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 
     assert_eq!(product.id, context.contract().get_products().first().unwrap().id);
@@ -337,7 +337,7 @@ fn register_score_based_product_without_signature(
 ) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 }
 
@@ -349,7 +349,7 @@ fn register_tiered_score_based_product_without_signature(
 ) {
     let mut context = Context::new(admin.clone());
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 }
 
@@ -359,7 +359,7 @@ fn register_product_with_inverted_cap(admin: AccountId, #[from(product_1_year_12
     let mut context = Context::new(admin.clone());
     let product = product.with_cap(1_000_000, 100);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 }
 
@@ -375,6 +375,6 @@ fn register_product_with_out_of_range_apy_exponent(admin: AccountId, #[from(prod
         apy: Apy::Constant(UDecimal::new(1, 100)),
     }));
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().register_product(product.clone()));
 }

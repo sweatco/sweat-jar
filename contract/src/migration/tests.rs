@@ -96,7 +96,7 @@ fn disable_migration_blocks_further_migration(
     let mut context = Context::new(admin);
     let previous_version_account_id = context.contract().previous_version_account_id.clone();
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.with_deposit_yocto(1, |context| context.contract().disable_migration());
 
     assert_ne!(
@@ -114,13 +114,54 @@ fn disable_migration_blocks_further_migration(
     assert!(result.is_err(), "migrate_products must fail after disable_migration");
 }
 
+#[rstest]
+#[should_panic(expected = "Insufficient permissions")]
+fn enable_migration_by_non_maintainer_panics(admin: AccountId, alice: AccountId) {
+    let mut context = Context::new(admin);
+    let previous_version_account_id = context.contract().previous_version_account_id.clone();
+
+    context.switch_account(&alice);
+    context.with_deposit_yocto(1, |context| {
+        context.contract().enable_migration(previous_version_account_id);
+    });
+}
+
+#[rstest]
+fn enable_migration_reopens_migration_after_disable(
+    #[from(admin)] admin: AccountId,
+    #[from(product_1_year_apy_10_percent)] product: Product,
+) {
+    let mut context = Context::new(admin);
+    let previous_version_account_id = context.contract().previous_version_account_id.clone();
+
+    context.switch_account_to_operator();
+    context.with_deposit_yocto(1, |context| context.contract().disable_migration());
+
+    let restored_id = previous_version_account_id.clone();
+    context.with_deposit_yocto(1, |context| context.contract().enable_migration(restored_id));
+
+    assert_eq!(
+        previous_version_account_id,
+        context.contract().previous_version_account_id
+    );
+
+    let events = context.get_events();
+    let EventKind::MigrationEnabled(enabled_for) = events.last().unwrap() else {
+        panic!("Expected MigrationEnabled event");
+    };
+    assert_eq!(&previous_version_account_id, enabled_for);
+
+    context.switch_account(&previous_version_account_id);
+    context.contract().migrate_products(vec![product]);
+    assert_eq!(1, context.contract().products.len());
+}
+
 #[test]
-fn migrate_access_control_grants_all_roles_and_drops_manager() {
+fn migrate_grants_all_roles_and_drops_manager() {
     use near_plugins::AccessControllable;
     use near_sdk::{collections::UnorderedMap, env, store::LookupMap, test_utils::VMContextBuilder, testing_env};
-    use sweat_jar_model::api::RoleAssignments;
 
-    use crate::{migration::api::OldContract, Contract, StorageKey};
+    use crate::{all_roles_to, migration::api::OldContract, Contract, Roles, StorageKey};
 
     let owner: AccountId = "owner".to_string().try_into().unwrap();
     let super_admin: AccountId = "super_admin".to_string().try_into().unwrap();
@@ -147,31 +188,16 @@ fn migrate_access_control_grants_all_roles_and_drops_manager() {
     };
     env::state_write(&old_state);
 
-    let roles = RoleAssignments {
-        oracle: vec![operator.clone()],
-        product_manager: vec![operator.clone()],
-        fee_manager: vec![operator.clone()],
-        maintainer: vec![operator.clone()],
-        staging_manager: vec![operator.clone()],
-        upgrade_manager: vec![operator.clone()],
-    };
+    let contract = Contract::migrate(super_admin.clone(), all_roles_to(&operator));
 
-    let contract = Contract::migrate_access_control(super_admin.clone(), roles);
-
-    for role in [
-        "Oracle",
-        "ProductManager",
-        "FeeManager",
-        "Maintainer",
-        "StagingManager",
-        "UpgradeManager",
-    ] {
+    for role in Roles::all() {
+        let role = String::from(role);
         assert!(
-            contract.acl_has_role(role.to_string(), operator.clone()),
+            contract.acl_has_role(role.clone(), operator.clone()),
             "expected operator to hold role {role}"
         );
         assert!(
-            !contract.acl_has_role(role.to_string(), old_manager.clone()),
+            !contract.acl_has_role(role.clone(), old_manager.clone()),
             "old manager should not automatically hold role {role} anymore"
         );
     }
