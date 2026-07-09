@@ -9,8 +9,9 @@ use sweat_jar_model::{
         deposit::DepositTicket,
         product::{Product, Terms, TieredScoreBasedProductTerms},
     },
-    ConfigurableValue, Timezone, ValueTier, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
+    ConfigurableValue, DailyScore, Timezone, ValueTier, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
 };
+use sweat_jar_primitives::UDecimal;
 
 use crate::{
     common::{
@@ -307,4 +308,132 @@ fn get_apy_does_not_panic_when_score_cap_plus_booster_exceeds_u16(
     context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
     let interest = context.contract().get_total_interest(alice.clone());
     assert!(interest.amount.total.0 > 0, "expected nonzero interest, not a panic");
+}
+
+/// The compound-score invariant of `DailyScore::to_capped_apy` (the single
+/// enforcement point every score-based APY path goes through): the compound
+/// `min(value, cap) + booster` may reach exactly `DailyScore::MAX` (100% APY),
+/// never exceeds it, and `booster` is not subject to the product's score cap.
+#[rstest]
+fn compound_score_reaches_and_never_exceeds_100_percent() {
+    let hundred_percent = UDecimal::new(DailyScore::MAX.into(), 5);
+
+    // Reaches exactly 100%: 40_000 (under a 50_000 cap) + 60_000 = 100_000.
+    let score = DailyScore {
+        value: 40_000,
+        booster: 60_000,
+    };
+    assert_eq!(score.to_capped_apy(50_000, true), hundred_percent);
+
+    // Hard cap: 65_535 + 65_535 = 131_070 clamps to exactly 100%, and the
+    // u32 sum can't wrap at u16::MAX on the way there.
+    let score = DailyScore {
+        value: u16::MAX,
+        booster: u16::MAX,
+    };
+    assert_eq!(score.to_capped_apy(u16::MAX, true), hundred_percent);
+
+    // Booster is exempt from the product cap: value clamps to 10_000, the
+    // full 30_000 booster still counts → 40% APY, not 20%.
+    let score = DailyScore {
+        value: 25_000,
+        booster: 30_000,
+    };
+    assert_eq!(score.to_capped_apy(10_000, true), UDecimal::new(40_000, 5));
+}
+
+/// End-to-end proof through real interest accrual that a compound score of
+/// exactly `DailyScore::MAX` yields 100% APY: with a 365k principal, one
+/// finalized day at 100% accrues principal/365 = exactly 1_000 tokens.
+#[rstest]
+fn interest_at_exactly_100_percent_compound_score(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(tiered_score_based_product)] base_product: Product,
+) {
+    let product = base_product.with_terms(Terms::TieredScoreBased(TieredScoreBasedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        score_cap: ConfigurableValue::Tier(ValueTier {
+            default: 50_000,
+            fallback: 50_000,
+        }),
+    }));
+
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+    context.switch_account_to_manager();
+
+    context
+        .contract()
+        .accounts
+        .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+    context.contract().set_timezone(alice.clone(), 0.into());
+    context.contract().deposit(
+        alice.clone(),
+        DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: MS_IN_YEAR.into(),
+            timezone: Some(Timezone::hour_shift(0)),
+        },
+        365_000.to_otto(),
+        None,
+    );
+
+    context.set_block_timestamp_in_ms(0);
+    context
+        .contract()
+        .record_score(vec![(alice.clone(), vec![(40_000, 0.into())])]);
+    context.contract().apply_booster(vec![alice.clone()], 60_000, 0.into());
+
+    context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
+    let interest = context.contract().get_total_interest(alice.clone());
+    assert_eq!(1_000.to_otto(), interest.amount.total.0);
+}
+
+/// End-to-end proof of the hard cap: a compound score of 120_000 must accrue
+/// exactly the same interest as one of 100_000 — the excess is discarded, so
+/// APY can never exceed 100%.
+#[rstest]
+fn interest_is_hard_capped_at_100_percent_compound_score(
+    admin: AccountId,
+    alice: AccountId,
+    #[from(tiered_score_based_product)] base_product: Product,
+) {
+    let product = base_product.with_terms(Terms::TieredScoreBased(TieredScoreBasedProductTerms {
+        lockup_term: MS_IN_YEAR.into(),
+        score_cap: ConfigurableValue::Tier(ValueTier {
+            default: 60_000,
+            fallback: 60_000,
+        }),
+    }));
+
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+    context.switch_account_to_manager();
+
+    context
+        .contract()
+        .accounts
+        .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+    context.contract().set_timezone(alice.clone(), 0.into());
+    context.contract().deposit(
+        alice.clone(),
+        DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: MS_IN_YEAR.into(),
+            timezone: Some(Timezone::hour_shift(0)),
+        },
+        365_000.to_otto(),
+        None,
+    );
+
+    context.set_block_timestamp_in_ms(0);
+    context
+        .contract()
+        .record_score(vec![(alice.clone(), vec![(60_000, 0.into())])]);
+    context.contract().apply_booster(vec![alice.clone()], 60_000, 0.into());
+
+    // Compound is 60_000 + 60_000 = 120_000 → clamped to 100_000 → the day
+    // must accrue exactly the 100%-APY figure, not 120% of it.
+    context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
+    let interest = context.contract().get_total_interest(alice.clone());
+    assert_eq!(1_000.to_otto(), interest.amount.total.0);
 }
