@@ -148,7 +148,7 @@ impl Contract {
     /// authorize by predecessor — then hands super-admin off to `super_admin`,
     /// retaining no power itself. Every step is `require!`d: a silent ACL
     /// failure must abort the whole transaction, never complete init/migrate
-    /// with a mis-provisioned ACL. This also makes an accidental second run of
+    /// with a misconfigured ACL. This also makes an accidental second run of
     /// `migrate` a deterministic revert (super admin already initialized).
     pub(crate) fn init_authority(&mut self, super_admin: AccountId, roles: RoleAssignments) {
         require!(
