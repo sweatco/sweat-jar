@@ -29,7 +29,6 @@ impl IntegrationTestMethods for Contract {
 
     #[access_control_any(roles(Roles::Maintainer))]
     fn set_time_scale(&mut self, time_scale: f64) {
-        self.time_scale = time_scale;
         sweat_jar_model::set_global_time_scale(time_scale);
     }
 
