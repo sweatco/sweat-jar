@@ -42,67 +42,9 @@ pub async fn init(
     Ok(())
 }
 
-/// JSON shape matching the contract's `RoleAssignments` — one list of account
-/// IDs per `AccessControllable` role. Used as the `init`/migration argument.
-#[derive(serde::Serialize)]
-pub struct RoleAssignments {
-    pub oracle: Vec<AccountId>,
-    pub product_manager: Vec<AccountId>,
-    pub fee_manager: Vec<AccountId>,
-    pub maintainer: Vec<AccountId>,
-    pub staging_manager: Vec<AccountId>,
-    pub upgrade_manager: Vec<AccountId>,
-}
-
-/// Convenience for the common case: one account holding every role, matching
-/// the previous `grant_all_roles` behavior but granted atomically at `init`
-/// time instead of via a separate post-init call.
-pub fn all_roles_to(account_id: &AccountId) -> RoleAssignments {
-    RoleAssignments {
-        oracle: vec![account_id.clone()],
-        product_manager: vec![account_id.clone()],
-        fee_manager: vec![account_id.clone()],
-        maintainer: vec![account_id.clone()],
-        staging_manager: vec![account_id.clone()],
-        upgrade_manager: vec![account_id.clone()],
-    }
-}
-
-/// Grants all 4 original `AccessControllable` roles to `account_id`, self-signed
-/// by the jar contract account. Only succeeds if the jar contract itself
-/// currently holds admin power for those roles — since `init`'s `super_admin`
-/// argument is explicit and typically names a different account (see
-/// `jar::init`/`all_roles_to`), the jar contract usually does NOT retain admin
-/// power after init, so this self-signed call will silently no-op in that case
-/// (`acl_grant_role` returns `None` rather than panicking on insufficient
-/// permission). Prefer granting roles at `init` time via `RoleAssignments`, or
-/// have the actual super-admin account sign the `acl_grant_role` call directly.
-pub async fn grant_all_roles(jar: &Contract, account_id: &AccountId) -> Result<()> {
-    for role in ["Oracle", "ProductManager", "FeeManager", "Maintainer"] {
-        jar.call("acl_grant_role")
-            .args_json(json!({ "role": role, "account_id": account_id }))
-            .max_gas()
-            .transact()
-            .await?
-            .into_result()?;
-    }
-    Ok(())
-}
-
-/// Grants a single `AccessControllable` role to `account_id`, self-signed by
-/// the jar contract account. Unlike `grant_all_roles`, this lets a test hold
-/// exactly one role and verify the other is still denied — but is subject to
-/// the same caveat: it only succeeds if the jar contract itself currently
-/// holds admin power for that role (see `grant_all_roles`'s doc comment).
-pub async fn grant_role(jar: &Contract, role: &str, account_id: &AccountId) -> Result<()> {
-    jar.call("acl_grant_role")
-        .args_json(json!({ "role": role, "account_id": account_id }))
-        .max_gas()
-        .transact()
-        .await?
-        .into_result()?;
-    Ok(())
-}
+// The contract crate's own role types — single source of truth for role
+// names; tests must never spell them as strings.
+pub use sweat_jar::{all_roles_to, RoleAssignments};
 
 pub async fn get_products(jar: &Contract) -> Result<Vec<Product>> {
     Ok(jar.view("get_products").await?.json()?)

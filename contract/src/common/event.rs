@@ -33,6 +33,7 @@ pub enum EventKind {
     JarsMerge(AccountId),
     MigrateProducts(Vec<ProductId>),
     MigrationDisabled,
+    MigrationEnabled(AccountId),
     SetFeatureEnabled(AccountId, Feature, bool),
     BatchSetFeatureEnabled(Vec<AccountId>, Feature, bool),
     ApplyBooster(ApplyBoosterData),

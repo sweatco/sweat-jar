@@ -6,7 +6,10 @@ edition = "2021"
 repository = "https://github.com/sweatco/sweat-jar"
 
 [lib]
-crate-type = ["cdylib"]
+# `rlib` in addition to the wasm `cdylib` so test crates (notably the
+# integration-tests workspace) can use this crate's types — `Roles`,
+# `RoleAssignments` — instead of duplicating role-name strings.
+crate-type = ["cdylib", "rlib"]
 
 [package.metadata.near.reproducible_build]
 image = "sourcescan/cargo-near:0.21.1-rust-1.93.0"
@@ -36,6 +39,7 @@ near-sdk = { workspace = true, features = ["unit-testing"] }
 near-contract-standards = { workspace = true }
 near-plugins = { workspace = true }
 primitive-types = { workspace = true }
+strum = { workspace = true }
 
 sweat-jar-model = { workspace = true }
 sweat-jar-primitives = { workspace = true }

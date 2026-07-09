@@ -1,4 +1,5 @@
 use serde_json::json;
+use sweat_jar::Roles;
 
 mod common;
 use common::{
@@ -57,7 +58,7 @@ async fn upgrade_access_control() -> anyhow::Result<()> {
     context
         .manager
         .call(context.jar.id(), "acl_grant_role")
-        .args_json(json!({ "role": "StagingManager", "account_id": context.alice.id() }))
+        .args_json(json!({ "role": String::from(Roles::StagingManager), "account_id": context.alice.id() }))
         .max_gas()
         .transact()
         .await?

@@ -190,7 +190,7 @@ mod score_tests {
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
-        context.switch_account_to_manager();
+        context.switch_account_to_operator();
         context
             .contract()
             .record_score(vec![(alice.clone(), vec![(0, 10_000.into())])]);
@@ -332,7 +332,7 @@ mod score_tests {
 
         // STEP 1: record score_1: score_1 < score_cap
         {
-            ctx.switch_account_to_manager();
+            ctx.switch_account_to_operator();
             ctx.contract()
                 .record_score(vec![(alice.clone(), vec![(15_000, record_timestamp.into())])]);
 
@@ -345,7 +345,7 @@ mod score_tests {
 
         // STEP 2: record score_2: (score_1 + score_2) > score_cap
         {
-            ctx.switch_account_to_manager();
+            ctx.switch_account_to_operator();
             ctx.contract()
                 .record_score(vec![(alice.clone(), vec![(15_000, record_timestamp.into())])]);
 
@@ -384,7 +384,7 @@ mod score_tests {
 
         // STEP 1: record score_1: score_1 < score_cap
         {
-            ctx.switch_account_to_manager();
+            ctx.switch_account_to_operator();
             ctx.contract()
                 .record_score(vec![(alice.clone(), vec![(7_000, recording_time.into())])]);
 
@@ -395,7 +395,7 @@ mod score_tests {
 
         // STEP 2: record score_2: (score_1 + score_2) > score_cap
         {
-            ctx.switch_account_to_manager();
+            ctx.switch_account_to_operator();
             ctx.contract()
                 .record_score(vec![(alice.clone(), vec![(5_000, recording_time.into())])]);
 
@@ -430,7 +430,7 @@ mod score_tests {
 
         // STEP 1: record score and claim
         {
-            ctx.switch_account_to_manager();
+            ctx.switch_account_to_operator();
             ctx.contract().record_score(vec![(
                 alice.clone(),
                 vec![(5_000, (action_time - 5 * MS_IN_HOUR).into())],
@@ -483,7 +483,7 @@ mod score_tests {
 
         // STEP 1: record score and claim
         {
-            ctx.switch_account_to_manager();
+            ctx.switch_account_to_operator();
             ctx.contract()
                 .record_score(vec![(alice.clone(), vec![(5_000, recording_time.into())])]);
             ctx.contract()
@@ -533,7 +533,7 @@ mod score_tests {
             .deposit(&product.id, 1_000_000, start_time.into());
 
         // Record score for day 0
-        ctx.switch_account_to_manager();
+        ctx.switch_account_to_operator();
         ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
 
         // Move to day 1 and claim - this will set claim_remainder
@@ -627,7 +627,7 @@ mod score_tests {
             .get_or_create_account_mut(&alice)
             .try_set_timezone(Timezone::new(0).into());
 
-        ctx.switch_account_to_manager();
+        ctx.switch_account_to_operator();
         ctx.record_score(&alice, (day0_start + 6 * MS_IN_HOUR).into(), 10_000);
 
         // Create deposit at MID-DAY of day 1 (12 hours into day 1)
@@ -714,7 +714,7 @@ mod score_tests {
             .deposit(&product.id, deposit_amount * 2, start_time.into());
 
         // Record same score for both
-        ctx.switch_account_to_manager();
+        ctx.switch_account_to_operator();
         ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
         ctx.record_score(&bob, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
 
@@ -766,7 +766,7 @@ mod score_tests {
             .deposit(&product.id, 7_000_000, start_time.into());
 
         // Record scores for two days
-        ctx.switch_account_to_manager();
+        ctx.switch_account_to_operator();
         ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
         ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
         ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
@@ -933,7 +933,7 @@ mod account_score_tests {
         #[from(tiered_score_based_product)] product: Product,
     ) {
         let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-        context.switch_account_to_manager();
+        context.switch_account_to_operator();
 
         context
             .contract()
@@ -976,7 +976,7 @@ mod account_score_tests {
         #[from(tiered_score_based_product)] product: Product,
     ) {
         let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
-        context.switch_account_to_manager();
+        context.switch_account_to_operator();
 
         context
             .contract()
@@ -1036,7 +1036,7 @@ mod account_score_tests {
             .deposit(&product.id, 365_000_000_000_000_000_000, star_time.into());
 
         {
-            ctx.switch_account_to_manager();
+            ctx.switch_account_to_operator();
             ctx.record_score(&alice, (star_time - 6 * MS_IN_HOUR).into(), 10_000);
 
             ctx.set_block_timestamp_in_ms(star_time + 2 * MS_IN_HOUR);

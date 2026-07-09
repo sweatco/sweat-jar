@@ -14,7 +14,6 @@ use near_sdk::{
     PromiseOrValue,
 };
 use sweat_jar_model::{
-    api::{InitApi, RoleAssignments},
     data::{
         account::{v1::AccountV1, versioned::AccountVersioned, Account},
         jar::Jar,
@@ -24,7 +23,7 @@ use sweat_jar_model::{
 };
 
 use super::{env::test_env_ext, event::EventKind};
-use crate::{migration::api::store_account_raw, Contract};
+use crate::{all_roles_to, migration::api::store_account_raw, Contract, InitApi};
 
 pub mod accounts {
     use near_sdk::AccountId;
@@ -56,12 +55,15 @@ pub(crate) struct Context {
     pub owner: AccountId,
     pub ft_contract_id: AccountId,
     pub legacy_jar_contract_id: AccountId,
-    pub manager: AccountId,
+    /// Holds every `Roles` variant and is the ACL super-admin — there is no
+    /// "manager" role in the glossary, so this is named for what it is: the
+    /// operational account tests act through for role-gated calls.
+    pub operator: AccountId,
     builder: VMContextBuilder,
 }
 
 impl Context {
-    pub(crate) fn new(manager: AccountId) -> Self {
+    pub(crate) fn new(operator: AccountId) -> Self {
         let owner: AccountId = "owner".to_string().try_into().unwrap();
         let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
         let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();
@@ -80,15 +82,8 @@ impl Context {
             ft_contract_id.clone(),
             fee_account_id,
             legacy_jar_contract_id.clone(),
-            manager.clone(),
-            RoleAssignments {
-                oracle: vec![manager.clone()],
-                product_manager: vec![manager.clone()],
-                fee_manager: vec![manager.clone()],
-                maintainer: vec![manager.clone()],
-                staging_manager: vec![manager.clone()],
-                upgrade_manager: vec![manager.clone()],
-            },
+            operator.clone(),
+            all_roles_to(&operator),
         );
 
         Self {
@@ -96,7 +91,7 @@ impl Context {
             ft_contract_id,
             builder,
             legacy_jar_contract_id,
-            manager,
+            operator,
             contract: Arc::new(Mutex::new(contract)),
         }
     }
@@ -182,9 +177,9 @@ impl Context {
         self.switch_account(self.ft_contract_id.clone());
     }
 
-    pub(crate) fn switch_account_to_manager(&mut self) {
-        let manager = self.manager.clone();
-        self.switch_account(manager);
+    pub(crate) fn switch_account_to_operator(&mut self) {
+        let operator = self.operator.clone();
+        self.switch_account(operator);
     }
 
     pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
@@ -309,7 +304,7 @@ mod tests {
         expect_panic(&Ctx, "Something went wrong", || {});
     }
 
-    /// Mirrors `migrate_access_control_grants_all_roles_and_drops_manager` in
+    /// Mirrors `migrate_grants_all_roles_and_drops_manager` in
     /// `migration::tests`, but for the `init()` path: `Context::new` deploys the
     /// contract with `current_account_id` = "owner" and `super_admin` = the
     /// distinct `manager` account it's given, so this verifies the deploying

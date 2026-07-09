@@ -3410,6 +3410,7 @@ dependencies = [
  "near-sdk",
  "primitive-types",
  "rstest",
+ "strum 0.27.2",
  "sweat-jar-model",
  "sweat-jar-primitives",
 ]

@@ -5,6 +5,11 @@ publish = false
 edition = "2021"
 
 [dev-dependencies]
+# The contract crate itself (host rlib build) — the single source of truth for
+# `Roles`/`RoleAssignments`, so tests never duplicate role-name strings. The
+# near-sdk build guard for non-wasm builds is satisfied by the
+# `non-contract-usage` feature below via feature unification.
+sweat_jar = { path = "../contract" }
 near-workspaces = "0.22"
 anyhow = "1.0"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
