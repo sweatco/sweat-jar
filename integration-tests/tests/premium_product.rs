@@ -5,7 +5,7 @@ use sweat_jar_model::{
         product::Product,
     },
     signer::test_utils::MessageSigner,
-    TokenAmount,
+    TokenAmount, MS_IN_DAY,
 };
 use tracing::info;
 
@@ -38,7 +38,9 @@ async fn premium_product() -> anyhow::Result<()> {
         .into_result()?;
 
     let product_id = &product.id;
-    let valid_until = 55_012_170_000_000;
+    // Signed tickets must satisfy the on-chain upper bound on `valid_until`
+    // (at most 7 real days from now), so anchor it to the chain's clock.
+    let valid_until = jar::block_timestamp_ms(&context.jar).await? + MS_IN_DAY;
     let amount = 3_000_000;
     let deposit_message = DepositMessage::new(
         Purpose::Deposit,
