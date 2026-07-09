@@ -145,10 +145,9 @@ fn sweat_wasm_path() -> PathBuf {
     wasm_path(SWEAT_WASM_ENV, repo_path("res", "sweat.wasm"))
 }
 
-/// The integration-test-featured build lives in `res-integration/` (written by
-/// `make build-integration`), NOT in `res/` — that directory holds the
-/// committed production wasm, which lacks the `IntegrationTestMethods`
-/// (`set_time_scale`, `bulk_create_jars`, `seed_accounts`) these tests need.
+/// `res-integration/` (written by `make build-integration`), NOT `res/`:
+/// the committed production wasm there lacks the `IntegrationTestMethods`
+/// these tests need.
 fn sweat_jar_wasm_path() -> PathBuf {
     wasm_path(SWEAT_JAR_WASM_ENV, repo_path("res-integration", "sweat_jar.wasm"))
 }

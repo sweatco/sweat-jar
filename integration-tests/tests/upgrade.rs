@@ -45,16 +45,9 @@ async fn upgrade_access_control() -> anyhow::Result<()> {
         .await?;
     assert!(result.into_result().has_panic(&insufficient_permissions("up_deploy_code")));
 
-    // StagingManager only: can stage, still cannot deploy.
-    //
-    // `jar::grant_role` self-signs as the jar contract account, which held
-    // implicit super-admin under the old `init()`. Since PROD-3696 made
-    // super-admin an explicit `init` param (see `prepare_contract`, which now
-    // names `manager` as super-admin), the jar contract itself holds no admin
-    // power after init — a self-signed `acl_grant_role` call silently no-ops
-    // (near_plugins returns `None`/`false` rather than panicking) instead of
-    // actually granting the role. `manager` is the real super-admin now, so
-    // it must be the one signing this grant.
+    // StagingManager only: can stage, still cannot deploy. The grant must be
+    // signed by `manager` (the super-admin) — the jar contract account holds
+    // no admin power after init.
     context
         .manager
         .call(context.jar.id(), "acl_grant_role")

@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "5Zmp9nHvr5zrQfcMnYvjEj2HFatbFy8ZTnjDgjGzqMav"
+    "wasm_hash": "8Bsj5S2rPeoh3p6fi5NLtnFhQK92C7cTfeYUPqJYcHHN"
   },
   "body": {
     "functions": [
@@ -816,7 +816,7 @@
       },
       {
         "name": "disable_migration",
-        "doc": " Turns migration acceptance off: re-points `previous_version_account_id`\n at `\"system\"` — a reserved NEAR account no signed transaction can ever\n have as its `predecessor_account_id` — so `migrate_products`/\n `FtMessage::Migrate` reject every caller until a Maintainer turns it\n back on via `enable_migration`. Together the pair forms a switch that\n bounds the blast radius of a compromised previous-version account:\n once migration is complete, keep it off.",
+        "doc": " Turns migration acceptance off by pointing `previous_version_account_id`\n at `\"system\"` — a reserved account no signed transaction can have as its\n predecessor — so `migrate_products`/`FtMessage::Migrate` reject every\n caller until `enable_migration` turns it back on. Keep it off once\n migration is complete.",
         "kind": "call",
         "modifiers": [
           "payable"
@@ -1129,7 +1129,7 @@
       },
       {
         "name": "migrate",
-        "doc": " One-shot migration for the already-deployed contract: drops the\n `manager` field from the Borsh layout and bootstraps `AccessControllable`\n storage. `super_admin`/`roles` are explicit, required arguments — this\n method does not fall back to `old.manager` for any role. `old.manager`\n remains part of `OldContract` (required to correctly parse the old\n Borsh layout) but is intentionally never read here: whoever runs this\n migration decides explicitly who holds which role, even if that means\n passing the same account that used to be `manager` into several\n `RoleAssignments` fields.\n No `&self`/`&mut self` param — near-sdk must not try to auto-deserialize\n the *new* struct shape from the *old* on-chain bytes before this body\n runs; `env::state_read` does that manually against `OldContract` instead.\n `OldContract` and this method are one-shot: delete them in a follow-up\n cleanup commit once this has actually run against the live contract.\n\n `#[init(ignore_state)]` is required (not just `#[private]`): `near-sdk`\n 5.x forbids returning `Self` from a plain `Call`/`View` method, and a\n bare `#[init]` would refuse to run because state already exists on the\n already-deployed contract this migration targets.\n\n `#[init(ignore_state)]` also means near-sdk itself will not stop a\n second invocation after a successful migration — but one still reverts\n deterministically: `env::state_read` parses the (new, 6-field) state\n against the 7-field `OldContract` mirror and fails, and even if the\n bytes ever happened to parse, `init_authority`'s bootstrap `require!`\n rejects re-initializing an ACL whose super admin is already set.",
+        "doc": " One-shot migration for the already-deployed contract: drops the\n `manager` field from the Borsh layout and bootstraps `AccessControllable`\n storage. `old.manager` is deliberately never read — whoever runs this\n decides explicitly who holds which role via `roles`.\n\n Takes no `&self`: near-sdk must not auto-deserialize the new struct\n shape from the old on-chain bytes; `env::state_read` parses them\n against `OldContract` instead. `#[init(ignore_state)]` is required —\n a bare `#[init]` refuses to run when state already exists, and near-sdk\n forbids returning `Self` from a plain method. A second invocation after\n success still reverts: the new state doesn't parse as `OldContract`,\n and `init_authority` rejects an already-bootstrapped ACL.\n\n Delete this method and `OldContract` once it has run against the live\n contract.",
         "kind": "call",
         "modifiers": [
           "init",

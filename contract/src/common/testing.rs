@@ -54,20 +54,16 @@ pub(crate) struct Context {
     pub owner: AccountId,
     pub ft_contract_id: AccountId,
     pub legacy_jar_contract_id: AccountId,
-    /// Holds every `Roles` variant and is the ACL super-admin — there is no
-    /// "manager" role in the glossary, so this is named for what it is: the
-    /// operational account tests act through for role-gated calls.
+    /// Holds every `Roles` variant and is the ACL super-admin.
     pub operator: AccountId,
     builder: VMContextBuilder,
 }
 
 impl Context {
     pub(crate) fn new(operator: AccountId) -> Self {
-        // `testing_env!` deliberately carries storage over between invocations
-        // in the same thread — so a second `Context` in one test would inherit
-        // the previous contract's raw storage (ACL grants, accounts written via
-        // `store_account_raw`, ...). `init_authority` require!'s a virgin ACL,
-        // so start every Context from genuinely clean storage.
+        // `testing_env!` carries storage across invocations in a thread, so a
+        // second `Context` in one test would inherit the previous contract's
+        // raw storage (ACL grants, raw-written accounts). Start clean.
         near_sdk::mock::with_mocked_blockchain(|blockchain| {
             blockchain.take_storage();
         });

@@ -29,11 +29,8 @@ use crate::{
 pub(crate) mod gas {
     use near_sdk::Gas;
 
-    /// Value is measured with `measure_after_restake_remainder_gas`
-    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs).
-    /// Total transaction gas measured ~7.83 `TGas`, flat across principals —
-    /// same profile as `withdraw`'s ~7.6 `TGas` total, which calibrates
-    /// `GAS_FOR_AFTER_WITHDRAW` to 4 `TGas`. 4 here too, for the same reason.
+    /// Measured with `measure_after_restake_remainder_gas` (`make measure-gas`):
+    /// same gas profile as withdraw, so same 4 `TGas` as `GAS_FOR_AFTER_WITHDRAW`.
     pub(crate) const GAS_FOR_AFTER_TRANSFER_REMAINDER: Gas = Gas::from_tgas(4);
 }
 
@@ -323,12 +320,9 @@ impl DepositDto {
     }
 }
 
-/// `ceil(a * b / c)`, widening the intermediate product to `U256` so `a * b`
-/// can't overflow `u128` even when the final result does fit back into one
-/// (guaranteed at the call site here since `b <= c`, so the true result is
-/// bounded by `a`). A plain `(a * b).div_ceil(c)` panics on overflow for
-/// realistic SWEAT amounts well before hitting any economically meaningful
-/// edge case.
+/// `ceil(a * b / c)` with a `U256` intermediate, since `a * b` overflows
+/// `u128` for realistic SWEAT amounts. The result fits `u128` because the
+/// call site guarantees `b <= c`, bounding it by `a`.
 fn mul_div_ceil(a: TokenAmount, b: TokenAmount, c: TokenAmount) -> TokenAmount {
     let numerator = U256::from(a) * U256::from(b);
     let denominator = U256::from(c);
@@ -347,12 +341,8 @@ mod tests {
 
     #[test]
     fn does_not_overflow_for_realistic_large_amounts() {
-        // total_fee and withdrawal_amount both ~10^26 yocto (a few hundred
-        // thousand SWEAT, an entirely ordinary jar size): their naive product
-        // overflows u128::MAX (~3.4 * 10^38) by many orders of magnitude, but
-        // the true mul_div_ceil result is bounded by total_fee since
-        // withdrawal_amount <= total_mature_balance, so this must not panic.
-        // Regression test for PROD-3727 (L-2).
+        // ~10^26 yocto operands: the naive product overflows u128, but the
+        // true result is bounded by total_fee. Regression test for PROD-3727 (L-2).
         let total_fee: u128 = 500_000 * 10u128.pow(21);
         let withdrawal_amount: u128 = 900_000 * 10u128.pow(21);
         let total_mature_balance: u128 = 1_000_000 * 10u128.pow(21);

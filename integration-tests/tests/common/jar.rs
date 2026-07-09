@@ -42,8 +42,6 @@ pub async fn init(
     Ok(())
 }
 
-// The contract crate's own role types — single source of truth for role
-// names; tests must never spell them as strings.
 pub use sweat_jar::{all_roles_to, RoleAssignments};
 
 pub async fn get_products(jar: &Contract) -> Result<Vec<Product>> {
