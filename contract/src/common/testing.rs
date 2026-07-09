@@ -8,7 +8,6 @@ use std::{
 };
 
 use near_contract_standards::fungible_token::Balance;
-use near_plugins::AccessControllable;
 use near_sdk::{
     borsh::to_vec, json_types::Base64VecU8, test_utils::VMContextBuilder, testing_env, AccountId, NearToken,
     PromiseOrValue,
@@ -64,6 +63,15 @@ pub(crate) struct Context {
 
 impl Context {
     pub(crate) fn new(operator: AccountId) -> Self {
+        // `testing_env!` deliberately carries storage over between invocations
+        // in the same thread — so a second `Context` in one test would inherit
+        // the previous contract's raw storage (ACL grants, accounts written via
+        // `store_account_raw`, ...). `init_authority` require!'s a virgin ACL,
+        // so start every Context from genuinely clean storage.
+        near_sdk::mock::with_mocked_blockchain(|blockchain| {
+            blockchain.take_storage();
+        });
+
         let owner: AccountId = "owner".to_string().try_into().unwrap();
         let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
         let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();

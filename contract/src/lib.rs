@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::HashMap};
 
 use near_plugins::{access_control, AccessControlRole, AccessControllable, Upgradable};
 use near_sdk::{
-    borsh::BorshDeserialize, collections::UnorderedMap, env, json_types::Base64VecU8, near, store::LookupMap,
+    borsh::BorshDeserialize, collections::UnorderedMap, env, json_types::Base64VecU8, near, require, store::LookupMap,
     AccountId, BorshStorageKey, PanicOnDefault,
 };
 use strum::{EnumIter, IntoEnumIterator};
@@ -167,9 +167,22 @@ impl Contract {
     /// `migrate` (the already-deployed contract) so both entry points behave
     /// identically here instead of duplicating this security-critical sequence.
     pub(crate) fn init_authority(&mut self, super_admin: AccountId, roles: RoleAssignments) {
-        self.acl_init_super_admin(env::predecessor_account_id());
+        // `acl_init_super_admin` returns `false` iff a super admin already
+        // exists — i.e. this ACL storage was bootstrapped before. Failing loudly
+        // here (rather than continuing with silently no-op'd grants) also makes
+        // any accidental second run of `migrate` a deterministic revert.
+        require!(
+            self.acl_init_super_admin(env::predecessor_account_id()),
+            "ACL bootstrap failed: super admin is already initialized"
+        );
         self.grant_role_assignments(roles);
-        self.acl_transfer_super_admin(super_admin);
+        // `None` means the predecessor is not a super admin — must be impossible
+        // right after the bootstrap above, but a silent failure here would leave
+        // the contract without its intended super admin, so verify.
+        require!(
+            self.acl_transfer_super_admin(super_admin).is_some(),
+            "ACL bootstrap failed: could not transfer super admin"
+        );
     }
 
     /// Grants every account listed in `roles` its corresponding `AccessControllable`
@@ -180,7 +193,14 @@ impl Contract {
     pub(crate) fn grant_role_assignments(&mut self, roles: RoleAssignments) {
         for (role, account_ids) in roles {
             for account_id in account_ids {
-                self.acl_grant_role(role.into(), account_id);
+                // `None` means the predecessor lacks admin permission for this
+                // role; a grant silently not happening must fail the whole
+                // bootstrap instead of leaving a partially-provisioned ACL.
+                // (`Some(false)` — account already held the role — is fine.)
+                require!(
+                    self.acl_grant_role(role.into(), account_id).is_some(),
+                    "ACL bootstrap failed: could not grant role"
+                );
             }
         }
     }

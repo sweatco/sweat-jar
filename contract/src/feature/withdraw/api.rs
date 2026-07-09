@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use near_sdk::{env::panic_str, ext_contract, near, require, PromiseOrValue};
+// `require` is only used by the `#[cfg(not(test))]` `net_amount`.
+#[cfg(not(test))]
+use near_sdk::require;
+use near_sdk::{env::panic_str, ext_contract, near, PromiseOrValue};
 use sweat_jar_model::{
     api::WithdrawApi,
     data::{
