@@ -137,16 +137,20 @@ fn wasm_path(env_var: &str, default: PathBuf) -> PathBuf {
     std::env::var_os(env_var).map(PathBuf::from).unwrap_or(default)
 }
 
-fn res_path(file: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("res").join(file)
+fn repo_path(dir: &str, file: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join(dir).join(file)
 }
 
 fn sweat_wasm_path() -> PathBuf {
-    wasm_path(SWEAT_WASM_ENV, res_path("sweat.wasm"))
+    wasm_path(SWEAT_WASM_ENV, repo_path("res", "sweat.wasm"))
 }
 
+/// The integration-test-featured build lives in `res-integration/` (written by
+/// `make build-integration`), NOT in `res/` — that directory holds the
+/// committed production wasm, which lacks the `IntegrationTestMethods`
+/// (`set_time_scale`, `bulk_create_jars`, `seed_accounts`) these tests need.
 fn sweat_jar_wasm_path() -> PathBuf {
-    wasm_path(SWEAT_JAR_WASM_ENV, res_path("sweat_jar.wasm"))
+    wasm_path(SWEAT_JAR_WASM_ENV, repo_path("res-integration", "sweat_jar.wasm"))
 }
 
 /// Reads the same sweat_jar wasm bytes the sandbox already deployed via
