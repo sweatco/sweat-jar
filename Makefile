@@ -34,12 +34,12 @@ cov: ##@Testing Run unit tests with coverage.
 test: ##@Testing Run unit tests.
 	cargo test
 
-integration: ##@Testing Run integration tests.
+integration: build-integration ##@Testing Run integration tests.
 	cd integration-tests && cargo test
 
 int: integration ##@Testing Shorthand for `integration`
 
-measure-gas: ##@Testing Run gas-measurement integration tests and print TGas figures.
+measure-gas: build-integration ##@Testing Run gas-measurement integration tests and print TGas figures.
 	cd integration-tests && cargo test --test measure_gas -- --ignored --nocapture
 
 fmt: ##@Chores Format the code using rustfmt nightly.
