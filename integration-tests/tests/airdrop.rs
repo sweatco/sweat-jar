@@ -2,6 +2,7 @@ use anyhow::Result;
 use sweat_jar_model::{
     data::{deposit::AirdropMessage, product::Product},
     signer::test_utils::MessageSigner,
+    MS_IN_DAY,
 };
 use tracing::info;
 
@@ -56,7 +57,9 @@ async fn airdrop_score_based_sets_timezone() -> Result<()> {
 
     let amount_per_receiver = 1_000_000u128;
     let timezone = 3;
-    let valid_until = 49_012_505_000_000u64;
+    // Signed tickets must satisfy the on-chain upper bound on `valid_until`
+    // (at most 7 real days from now), so anchor it to the chain's clock.
+    let valid_until = jar::block_timestamp_ms(&context.jar).await? + MS_IN_DAY;
     let receivers = [context.alice.clone(), context.bob.clone()];
 
     let airdrop_message = AirdropMessage::new(
@@ -162,7 +165,9 @@ async fn airdrop_with_booster() -> Result<()> {
 
     let amount_per_receiver = 1_000_000u128;
     let timezone = 0;
-    let valid_until = 49_012_505_000_000u64;
+    // Signed tickets must satisfy the on-chain upper bound on `valid_until`
+    // (at most 7 real days from now), so anchor it to the chain's clock.
+    let valid_until = jar::block_timestamp_ms(&context.jar).await? + MS_IN_DAY;
     let booster = 5_000u16;
 
     let receivers = [context.alice.clone()];

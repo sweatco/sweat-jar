@@ -7,6 +7,7 @@ use sweat_jar_model::{
         product::{Cap, Product, Terms, TieredScoreBasedProductTerms},
     },
     signer::test_utils::MessageSigner,
+    MS_IN_DAY,
 };
 use tracing::info;
 
@@ -157,13 +158,17 @@ impl MultiDayBoosterScenario {
             bob: ParticipantState::new(context.bob.clone(), base_deposit),
         };
 
+        // Signed tickets must satisfy the on-chain upper bound on `valid_until`
+        // (at most 7 real days from now), so anchor it to the chain's clock.
+        let valid_until = jar::block_timestamp_ms(&context.jar).await? + MS_IN_DAY;
+
         let mut scenario = Self {
             context,
             signer,
             product_id,
             accounts,
             booster_scores: BoosterScores::new(1_000, 1_500),
-            valid_until: 49_012_505_000_000u64,
+            valid_until,
             interest_log: InterestLog::new(),
         };
 
