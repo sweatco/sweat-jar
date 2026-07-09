@@ -1,8 +1,6 @@
 use std::{cell::RefCell, collections::HashMap};
 
 use near_plugins::{access_control, AccessControlRole, AccessControllable, Upgradable};
-#[cfg(feature = "integration-test")]
-use near_sdk::borsh::BorshSerialize;
 use near_sdk::{
     borsh::BorshDeserialize, collections::UnorderedMap, env, json_types::Base64VecU8, near, store::LookupMap,
     AccountId, BorshStorageKey, PanicOnDefault,
@@ -39,7 +37,11 @@ pub enum Roles {
 }
 
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
-#[cfg(not(feature = "integration-test"))]
+///
+/// The layout is identical in production and integration-test builds. The
+/// integration-test time scale is persisted under its own raw storage key
+/// (see `sweat_jar_model::time_scale`), the same pattern `near_plugins`'
+/// `AccessControllable` uses for its `__acl` storage, so it needs no field here.
 #[near(contract_state)]
 #[derive(PanicOnDefault, Upgradable)]
 #[access_control(role_type(Roles))]
@@ -72,93 +74,6 @@ pub struct Contract {
     pub previous_version_account_id: AccountId,
 }
 
-/// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
-/// Integration test version with custom BorshSerialize/Deserialize that syncs time_scale to thread-local storage.
-#[cfg(feature = "integration-test")]
-#[near(contract_state, serializers = [])]
-#[derive(PanicOnDefault, Upgradable)]
-#[access_control(role_type(Roles))]
-#[upgradable(access_control_roles(
-    code_stagers(Roles::StagingManager),
-    code_deployers(Roles::UpgradeManager),
-    duration_initializers(Roles::UpgradeManager),
-    duration_update_stagers(Roles::UpgradeManager),
-    duration_update_appliers(Roles::UpgradeManager),
-))]
-pub struct Contract {
-    /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
-    pub token_account_id: AccountId,
-
-    /// The account ID where fees for applicable operations are directed.
-    pub fee_account_id: AccountId,
-
-    /// A collection of products, each representing terms for specific deposit jars.
-    pub products: UnorderedMap<ProductId, Product>,
-
-    /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub accounts: LookupMap<AccountId, AccountVersioned>,
-
-    /// Cache to make access to products faster.
-    /// Is not stored in contract state (not serialized in custom BorshSerialize impl).
-    pub products_cache: RefCell<HashMap<ProductId, Product>>,
-
-    pub fee_amount: TokenAmount,
-    pub previous_version_account_id: AccountId,
-
-    /// Time scale for integration tests, stored in blockchain state.
-    /// This value is persisted and automatically synced to global thread-local storage on deserialization.
-    /// The actual time scale is accessed in code via ms_in_day()/ms_in_year() functions.
-    ///
-    /// Examples:
-    /// - `1.0` - Normal time (1 day = 24 hours)
-    /// - `1.0/24.0` - Accelerated 24x (1 day = 1 hour)
-    /// - `1.0/365.0` - Accelerated 365x (1 year = 1 day)
-    pub time_scale: f64,
-}
-
-#[cfg(feature = "integration-test")]
-#[mutants::skip]
-impl BorshSerialize for Contract {
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        self.token_account_id.serialize(writer)?;
-        self.fee_account_id.serialize(writer)?;
-        self.products.serialize(writer)?;
-        self.accounts.serialize(writer)?;
-        self.fee_amount.serialize(writer)?;
-        self.previous_version_account_id.serialize(writer)?;
-        self.time_scale.serialize(writer)?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "integration-test")]
-#[mutants::skip]
-impl BorshDeserialize for Contract {
-    fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
-        let token_account_id = AccountId::deserialize_reader(reader)?;
-        let fee_account_id = AccountId::deserialize_reader(reader)?;
-        let products = UnorderedMap::deserialize_reader(reader)?;
-        let accounts = LookupMap::deserialize_reader(reader)?;
-        let fee_amount = TokenAmount::deserialize_reader(reader)?;
-        let previous_version_account_id = AccountId::deserialize_reader(reader)?;
-        let time_scale = f64::deserialize_reader(reader)?;
-
-        // Sync time scale to global thread-local storage automatically on deserialization
-        sweat_jar_model::set_global_time_scale(time_scale);
-
-        Ok(Self {
-            token_account_id,
-            fee_account_id,
-            products,
-            accounts,
-            products_cache: RefCell::new(HashMap::new()),
-            fee_amount,
-            previous_version_account_id,
-            time_scale,
-        })
-    }
-}
-
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
@@ -185,8 +100,6 @@ impl InitApi for Contract {
             accounts: LookupMap::new(StorageKey::Accounts),
             fee_amount: 0,
             previous_version_account_id,
-            #[cfg(feature = "integration-test")]
-            time_scale: 1.0,
         };
 
         init_authority(&mut contract, super_admin, roles);

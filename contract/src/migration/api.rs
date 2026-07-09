@@ -95,8 +95,6 @@ impl Contract {
             products_cache: RefCell::default(),
             fee_amount: old.fee_amount,
             previous_version_account_id: old.previous_version_account_id,
-            #[cfg(feature = "integration-test")]
-            time_scale: 1.0,
         };
 
         // See `init_authority`'s doc comment (contract/src/lib.rs) for why this bootstrap-
