@@ -8,13 +8,15 @@ use common::{prepare::jar_wasm_bytes, product::RegisterProductCommand};
 
 /// The wasm binary as built from commit `2f8c645` (the tip of PROD-3638, the
 /// last commit before PROD-3639 replaced the `manager: AccountId` field with
-/// role-based ACL). This is the exact pre-migration Borsh layout
-/// `contract::migration::api::OldContract` mirrors — deploying and
-/// initializing this real binary (rather than constructing synthetic state
-/// in a unit test) is what proves `migrate` actually works
-/// against a real prior release, not just against bytes we assembled by hand
-/// to match our own assumptions about the old layout.
+/// role-based ACL).
 const PRE_ACL_WASM: &[u8] = include_bytes!("../fixtures/sweat_jar_pre_acl_v4.1.1.wasm");
+
+/// The exact binary running on `v2.jars.sweat` (mainnet), fetched via
+/// `view_code` — sha256 `aba15bc7…`, matching the on-chain code hash
+/// `CYyRWesovLcRtLrv81PN6ujJ9g26h2hbu6NUFVAjsKkA` and the `res/sweat_jar.wasm`
+/// committed at `b91847f` (source rev `9ab8189`, v4.1.1, near-sdk 5.14).
+/// Migrating from this fixture rehearses the real mainnet upgrade.
+const MAINNET_WASM: &[u8] = include_bytes!("../fixtures/sweat_jar_mainnet_v4_1_1_9ab8189.wasm");
 
 async fn create_user(root: &near_workspaces::Account, name: &str) -> Result<near_workspaces::Account> {
     Ok(root
@@ -25,23 +27,20 @@ async fn create_user(root: &near_workspaces::Account, name: &str) -> Result<near
         .into_result()?)
 }
 
-/// Deploys the real pre-PROD-3639 wasm, initializes it with the old 4-arg
+/// Deploys a real pre-PROD-3639 wasm, initializes it with the old 4-arg
 /// `init(token_account_id, fee_account_id, manager, previous_version_account_id)`
 /// signature, registers a product to give the contract real state to lose,
-/// then deploys the current code and calls `migrate` in the
-/// same batched transaction (signed by the contract's own account, matching
-/// `#[private]`) — proving both that a real binary-to-binary migration
-/// succeeds and that pre-migration state and roles come out the other side
-/// correctly.
-#[tokio::test]
-#[tracing::instrument]
-async fn migrate_from_real_pre_acl_deployment() -> Result<()> {
+/// then deploys the current code and calls `migrate` in the same batched
+/// transaction (signed by the contract's own account, matching `#[private]`)
+/// — proving both that a real binary-to-binary migration succeeds and that
+/// pre-migration state and roles come out the other side correctly.
+async fn run_migration_rehearsal(old_wasm: &[u8]) -> Result<()> {
     common::prepare::init_tracing();
 
     let worker = near_workspaces::sandbox().await?;
     let root = worker.root_account()?;
 
-    let jar = worker.dev_deploy(PRE_ACL_WASM).await?;
+    let jar = worker.dev_deploy(old_wasm).await?;
 
     let token = create_user(&root, "token_longer_name_to_be_closer_to_real").await?;
     let fee = create_user(&root, "fee_longer_name_to_be_closer_to_real").await?;
@@ -124,4 +123,16 @@ async fn migrate_from_real_pre_acl_deployment() -> Result<()> {
     );
 
     Ok(())
+}
+
+#[tokio::test]
+#[tracing::instrument]
+async fn migrate_from_real_pre_acl_deployment() -> Result<()> {
+    run_migration_rehearsal(PRE_ACL_WASM).await
+}
+
+#[tokio::test]
+#[tracing::instrument]
+async fn migrate_from_exact_mainnet_binary() -> Result<()> {
+    run_migration_rehearsal(MAINNET_WASM).await
 }
