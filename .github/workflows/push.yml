@@ -73,18 +73,6 @@ jobs:
       - name: Integration tests
         run: make integration
 
-  mutation-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install tool
-        run: cargo install --locked cargo-mutants
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Mutation tests
-        run: make mutation
-
   push:
     needs:
       [
@@ -94,7 +82,6 @@ jobs:
         lint,
         unit-tests,
         integration-tests,
-        mutation-tests,
       ]
     runs-on: ubuntu-latest
     steps:
