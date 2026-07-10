@@ -4,11 +4,18 @@ use fake::Fake;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, AccountId, PromiseOrValue};
 use rstest::{fixture, rstest};
+use std::collections::HashMap;
+
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
-    data::{claim::ClaimedAmountView, jar::Jar, product::Product},
+    data::{
+        account::Account,
+        claim::ClaimedAmountView,
+        jar::{Jar, JarCompanion},
+        product::Product,
+    },
     interest::InterestCalculator,
-    TokenAmount, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
+    Timezone, TokenAmount, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
 };
 
 use crate::{
@@ -19,10 +26,25 @@ use crate::{
     },
     feature::{
         account::model::test_utils::{jar, JarBuilder},
-        claim::api::MAX_JARS_PER_CLAIM,
+        claim::api::{claim_rollback, MAX_JARS_PER_CLAIM},
         product::model::test_utils::*,
     },
 };
+
+/// Guards `claim_rollback`'s field coverage: a field dropped from the snapshot
+/// would silently leak its mutation when the claim transfer fails.
+#[rstest]
+fn claim_rollback_snapshots_all_mutated_state() {
+    let mut account = Account::default();
+    account.timezone = Timezone::hour_shift(3);
+
+    let jars = HashMap::from([("product".to_string(), JarCompanion::default())]);
+    let rollback = claim_rollback(&account, jars.clone());
+
+    assert_eq!(rollback.timezone, Some(account.timezone));
+    assert_eq!(rollback.score, Some(account.score));
+    assert_eq!(rollback.jars, Some(jars));
+}
 
 #[rstest]
 fn claim_total_when_nothing_to_claim(

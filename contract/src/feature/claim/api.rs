@@ -3,7 +3,12 @@ use std::collections::HashMap;
 use near_sdk::{env, ext_contract, json_types::U128, near, require, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi,
-    data::{account::AccountCompanion, claim::ClaimedAmountView, jar::AggregatedTokenAmountView, product::ProductId},
+    data::{
+        account::{Account, AccountCompanion},
+        claim::ClaimedAmountView,
+        jar::{AggregatedTokenAmountView, JarCompanion},
+        product::ProductId,
+    },
     interest::InterestCalculator,
     TokenAmount,
 };
@@ -100,12 +105,7 @@ impl ClaimApi for Contract {
             event_data.add((product_id.clone(), interest.into()));
         }
 
-        let account_rollback = AccountCompanion {
-            score: account.score.into(),
-            jars: rollback_jars.into(),
-            timezone: account.timezone.into(),
-            ..AccountCompanion::default()
-        };
+        let account_rollback = claim_rollback(account, rollback_jars);
 
         // TODO: add test for 0 case and replace `gt` with `>`
         if accumulator.get_total().0.gt(&0) {
@@ -119,6 +119,19 @@ impl ClaimApi for Contract {
         } else {
             PromiseOrValue::Value(accumulator)
         }
+    }
+}
+
+/// Snapshot for `after_claim`'s failure branch. Must cover every piece of
+/// account state `claim_total` mutates before dispatch — a field missing here
+/// silently leaks its mutation when the transfer fails (guarded by
+/// `claim_rollback_snapshots_all_mutated_state`).
+pub(super) fn claim_rollback(account: &Account, rollback_jars: HashMap<ProductId, JarCompanion>) -> AccountCompanion {
+    AccountCompanion {
+        score: account.score.into(),
+        jars: rollback_jars.into(),
+        timezone: account.timezone.into(),
+        ..AccountCompanion::default()
     }
 }
 
