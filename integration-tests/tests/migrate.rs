@@ -34,7 +34,7 @@ async fn create_user(root: &near_workspaces::Account, name: &str) -> Result<near
 /// transaction (signed by the contract's own account, matching `#[private]`)
 /// — proving both that a real binary-to-binary migration succeeds and that
 /// pre-migration state and roles come out the other side correctly.
-async fn run_migration_rehearsal(old_wasm: &[u8]) -> Result<()> {
+async fn run_migration_rehearsal(old_wasm: &[u8], new_wasm: &[u8]) -> Result<()> {
     common::prepare::init_tracing();
 
     let worker = near_workspaces::sandbox().await?;
@@ -75,10 +75,8 @@ async fn run_migration_rehearsal(old_wasm: &[u8]) -> Result<()> {
     assert_eq!(1, products_before.len(), "product should exist before migration");
     assert_eq!(RegisterProductCommand::Locked12Months12Percents.id(), products_before[0].id);
 
-    let current_wasm = jar_wasm_bytes()?;
-
     jar.batch()
-        .deploy(&current_wasm)
+        .deploy(new_wasm)
         .call(
             Function::new("migrate")
                 .args_json(json!({
@@ -128,11 +126,30 @@ async fn run_migration_rehearsal(old_wasm: &[u8]) -> Result<()> {
 #[tokio::test]
 #[tracing::instrument]
 async fn migrate_from_real_pre_acl_deployment() -> Result<()> {
-    run_migration_rehearsal(PRE_ACL_WASM).await
+    run_migration_rehearsal(PRE_ACL_WASM, &jar_wasm_bytes()?).await
 }
 
 #[tokio::test]
 #[tracing::instrument]
 async fn migrate_from_exact_mainnet_binary() -> Result<()> {
-    run_migration_rehearsal(MAINNET_WASM).await
+    run_migration_rehearsal(MAINNET_WASM, &jar_wasm_bytes()?).await
+}
+
+/// Live-network rehearsal: fetches the binary currently RELEASED on mainnet
+/// (`v2.jars.sweat`) and the new build currently DEPLOYED on testnet
+/// (`v11.jar.sweatty.testnet`) via `view_code`, then runs the released -> new
+/// migration in the local sandbox. `#[ignore]`d so plain `make integration`
+/// stays hermetic; run explicitly with
+/// `cargo test --test migrate -- --ignored`.
+#[tokio::test]
+#[ignore]
+#[tracing::instrument]
+async fn migrate_from_released_mainnet_to_deployed_testnet_build() -> Result<()> {
+    let mainnet = near_workspaces::mainnet().await?;
+    let released_wasm = mainnet.view_code(&"v2.jars.sweat".parse()?).await?;
+
+    let testnet = near_workspaces::testnet().await?;
+    let new_wasm = testnet.view_code(&"v11.jar.sweatty.testnet".parse()?).await?;
+
+    run_migration_rehearsal(&released_wasm, &new_wasm).await
 }
