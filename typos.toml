@@ -1,3 +1,7 @@
+[default]
+# Base58 blobs (NEAR code hashes, account keys) are not words.
+extend-ignore-re = ["[1-9A-HJ-NP-Za-km-z]{32,}"]
+
 [default.extend-words]
 # TGE - Token Generation Event
 tge = "tge"
