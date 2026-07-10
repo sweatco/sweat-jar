@@ -33,7 +33,7 @@ integration-test = [
 [dependencies]
 mutants = { workspace = true }
 
-near-sdk = { workspace = true, features = ["unit-testing"] }
+near-sdk = { workspace = true }
 near-contract-standards = { workspace = true }
 near-plugins = { workspace = true }
 primitive-types = { workspace = true }
@@ -48,3 +48,8 @@ anyhow = { workspace = true }
 itertools = { workspace = true }
 sweat-jar-model = { workspace = true, features = ["testing"] }
 rstest = { workspace = true }
+
+# unit-testing pulls near-vm-runner/near-crypto (wasmtime, C-compiled
+# secp256k1) — dev-only so the wasm build never needs a wasm32-capable
+# C toolchain.
+near-sdk = { workspace = true, features = ["unit-testing"] }
