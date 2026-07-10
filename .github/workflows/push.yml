@@ -2,7 +2,10 @@ name: Push
 
 on:
   push:
-    branches: [main*]
+    branches: [main, main-v2]
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -11,23 +14,22 @@ jobs:
   typos:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: crate-ci/typos@v1.21.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: crate-ci/typos@bee27e3a4fd1ea2111cf90ab89cd076c870fce14 # v1.48.0
 
   unused-dependencies:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Install cargo-machete
+        uses: ./.github/actions/install-cargo-machete
       - name: Check for unused dependencies
-        run: |
-          rustup install nightly
-          cargo +nightly install cargo-machete --locked
-          cargo machete
+        run: cargo machete
 
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Lint
         run: make lint
@@ -35,20 +37,17 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install tools
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.21.1/cargo-near-installer.sh | sh
-
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Actor
-        run: echo ${{ github.actor }}
+      - name: Install cargo-near CLI
+        uses: ./.github/actions/install-cargo-near
 
       - name: Build
         run: make build-reproducible
 
       - name: Upload binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: sweat-jar
           path: res/sweat_jar.wasm
@@ -56,7 +55,7 @@ jobs:
   unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Unit tests
         run: make test
@@ -65,42 +64,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Install cargo-near CLI
-        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/download/cargo-near-v0.21.1/cargo-near-installer.sh | sh
+        uses: ./.github/actions/install-cargo-near
 
       - name: Integration tests
         run: make integration
-
-  push:
-    needs:
-      [
-        build,
-        typos,
-        unused-dependencies,
-        lint,
-        unit-tests,
-        integration-tests,
-      ]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
-          fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-
-      - name: Download binary
-        uses: actions/download-artifact@v3
-        with:
-          name: sweat-jar
-          path: res/
-
-      - name: Commit & Push changes
-        if: ${{ github.actor != 'sweatcoin' }}
-        uses: actions-js/push@master
-        with:
-          message: Updated binary
-          branch: main
-          github_token: ${{ secrets.ACTIONS_TOKEN }}
