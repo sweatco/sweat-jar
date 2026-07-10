@@ -1,0 +1,19 @@
+name: Install cargo-near
+description: Download the cargo-near CLI release binary and verify its checksum before installing.
+
+runs:
+  using: composite
+  steps:
+    - name: Download, verify and install cargo-near
+      shell: bash
+      env:
+        VERSION: 0.21.1
+        SHA256: 7c63b0a7367e16d5b30ab0764eb1907e49333d48388ada31656ee0cfd181d89e
+      run: |
+        cd "$RUNNER_TEMP"
+        curl --proto '=https' --tlsv1.2 -fsSL --retry 3 -o cargo-near.tar.gz \
+          "https://github.com/near/cargo-near/releases/download/cargo-near-v${VERSION}/cargo-near-x86_64-unknown-linux-gnu.tar.gz"
+        echo "${SHA256}  cargo-near.tar.gz" | sha256sum -c -
+        tar -xzf cargo-near.tar.gz
+        install -m 755 cargo-near-x86_64-unknown-linux-gnu/cargo-near "$HOME/.cargo/bin/cargo-near"
+        cargo near --version
