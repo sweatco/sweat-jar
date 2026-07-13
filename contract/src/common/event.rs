@@ -235,9 +235,12 @@ mod test {
     use near_sdk::{json_types::U128, AccountId};
     use sweat_jar_model::Local;
 
-    use crate::common::{
-        event::{ClaimData, EventKind, SweatJarEvent},
-        testing::WhitespaceTrimmer,
+    use crate::{
+        common::{
+            event::{ClaimData, EventKind, SweatJarEvent},
+            testing::WhitespaceTrimmer,
+        },
+        VERSION,
     };
 
     #[test]
@@ -255,7 +258,7 @@ mod test {
         .to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
-          "version": "4.1.1",
+          "version": "{VERSION}",
           "event": "claim",
           "data": [
             "someone.near",
@@ -264,17 +267,19 @@ mod test {
               "items": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
             }
           ]
-        }"#;
+        }"#
+        .replace("{VERSION}", VERSION);
 
         assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());
 
         let event = SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
-          "version": "4.1.1",
+          "version": "{VERSION}",
           "event": "old_score_warning",
           "data": [ 111, 5 ]
-        }"#;
+        }"#
+        .replace("{VERSION}", VERSION);
 
         assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());
     }
