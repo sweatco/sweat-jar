@@ -43,7 +43,7 @@ fn withdraw_locked_jar_before_maturity_by_not_owner() {
     let (_, _, context) = prepare_jar(&Product::new());
 
     expect_panic(&context, "Account 'owner' doesn't exist", || {
-        context.contract().withdraw(U32(0), None);
+        let _ = context.contract().withdraw(U32(0), None);
     });
 
     assert_eq!(context.contract().withdraw_all(None).unwrap().total_amount.0, 0);
@@ -58,7 +58,7 @@ fn withdraw_locked_jar_before_maturity_by_owner() {
     context.switch_account(&alice);
 
     expect_panic(&context, "The jar is not mature yet", || {
-        context.contract().withdraw(U32(jar.id), None);
+        let _ = context.contract().withdraw(U32(jar.id), None);
     });
 
     assert!(context.contract().withdraw_all(None).unwrap().jars.is_empty());
@@ -72,7 +72,7 @@ fn withdraw_locked_jar_after_maturity_by_not_owner() {
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
 
     expect_panic(&context, "Account 'owner' doesn't exist", || {
-        context.contract().withdraw(U32(jar.id), None);
+        let _ = context.contract().withdraw(U32(jar.id), None);
     });
 
     assert_eq!(context.contract().withdraw_all(None).unwrap().total_amount.0, 0);
@@ -85,7 +85,7 @@ fn withdraw_locked_jar_after_maturity_by_owner() {
 
     context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
     context.switch_account(&alice);
-    context.contract().withdraw(U32(jar.id), None);
+    let _ = context.contract().withdraw(U32(jar.id), None);
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn withdraw_flexible_jar_by_not_owner() {
     let (_, jar, mut context) = prepare_jar(&product);
 
     context.set_block_timestamp_in_days(1);
-    context.contract().withdraw(U32(jar.id), None);
+    let _ = context.contract().withdraw(U32(jar.id), None);
 }
 
 #[test]
@@ -130,7 +130,7 @@ fn withdraw_flexible_jar_by_owner_full() {
     context.set_block_timestamp_in_days(1);
     context.switch_account(&alice);
 
-    context.contract().withdraw(U32(reference_jar.id), None);
+    let _ = context.contract().withdraw(U32(reference_jar.id), None);
 
     let interest = context
         .contract()
@@ -152,7 +152,7 @@ fn withdraw_flexible_jar_by_owner_with_sufficient_balance() {
     context.set_block_timestamp_in_days(1);
     context.switch_account(&alice);
 
-    context.contract().withdraw(U32(0), Some(U128(100_000)));
+    let _ = context.contract().withdraw(U32(0), Some(U128(100_000)));
     let jar = context.contract().get_jar(alice.clone(), U32(reference_jar.id));
     assert_eq!(900_000, jar.principal.0);
 }
@@ -166,7 +166,7 @@ fn withdraw_flexible_jar_by_owner_with_insufficient_balance() {
     context.switch_account(&alice);
 
     expect_panic(&context, "Insufficient balance", || {
-        context.contract().withdraw(U32(jar.id), Some(U128(2_000_000)));
+        let _ = context.contract().withdraw(U32(jar.id), Some(U128(2_000_000)));
     });
 
     let withdrawn = context.contract().withdraw_all(None).unwrap();
@@ -366,7 +366,7 @@ fn withdraw_all() {
 
     context.switch_account(&alice);
 
-    context.contract().claim_total(None);
+    let _ = context.contract().claim_total(None);
 
     let withdrawn_jars = context.contract().withdraw_all(None).unwrap();
 
@@ -411,7 +411,7 @@ fn batch_withdraw_all() {
 
     context.switch_account(&alice);
 
-    context.contract().claim_total(None);
+    let _ = context.contract().claim_total(None);
 
     let withdrawn_jars = context
         .contract()

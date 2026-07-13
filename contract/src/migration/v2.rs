@@ -8,8 +8,10 @@ use near_sdk::{
     near, require,
     serde_json::{self, json},
     store::{LookupMap, LookupSet},
-    AccountId, Gas, NearToken, PanicOnDefault, Promise, PromiseOrValue,
+    AccountId, Gas, PanicOnDefault, PromiseOrValue,
 };
+#[cfg(not(test))]
+use near_sdk::{NearToken, Promise};
 use sweat_jar_model::{
     account::{v1::AccountScore, versioned::AccountVersioned, Account},
     api::MigrationToV2,
@@ -305,7 +307,7 @@ mod tests {
             .create_jars(alice.clone(), "product".to_string(), 3 * 10u128.pow(18), 450);
 
         context.switch_account(alice.clone());
-        context.contract().force_migrate_account(alice);
+        let _ = context.contract().force_migrate_account(alice);
     }
 
     #[test]

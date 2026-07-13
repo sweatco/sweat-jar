@@ -1,7 +1,3 @@
-#[cfg(feature = "integration-api")]
-use nitka::near_sdk;
-use nitka_proc::make_integration_version;
-
 use crate::{
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
@@ -10,12 +6,6 @@ use crate::{
     ProductId, Score, UTC,
 };
 
-#[cfg(feature = "integration-test")]
-pub struct SweatJarContract<'a> {
-    pub contract: &'a near_workspaces::Contract,
-}
-
-#[make_integration_version]
 pub trait InitApi {
     fn init(
         token_account_id: ::near_sdk::AccountId,
@@ -26,15 +16,14 @@ pub trait InitApi {
 }
 
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
-#[make_integration_version]
 pub trait ClaimApi {
     /// Claims available interest from up to 100 jars with the most interest for the calling account.
     /// If the calling account has more than 100 jars, the user will need to call this method multiple times
     /// to claim interest from all jars.
     ///
     /// * `detailed` – An optional boolean value specifying if the method must return only total amount of claimed tokens
-    ///                or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
-    ///                or `None` it returns only the total claimed amount.
+    ///   or detailed summary for each claimed jar. Set it `true` to get a detailed result. In case of `false`
+    ///   or `None` it returns only the total claimed amount.
     ///
     /// # Returns
     ///
@@ -45,7 +34,6 @@ pub trait ClaimApi {
 }
 
 /// The `JarApi` trait defines methods for managing deposit jars and their associated data within the smart contract.
-#[make_integration_version]
 pub trait JarApi {
     /// Retrieves information about a specific deposit jar by its index.
     ///
@@ -86,7 +74,7 @@ pub trait JarApi {
     /// # Arguments
     ///
     /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
-    ///                   principal is being retrieved.
+    ///   principal is being retrieved.
     ///
     /// * `account_id` - The `AccountId` of the account for which the principal is being retrieved.
     ///
@@ -112,7 +100,7 @@ pub trait JarApi {
     /// # Arguments
     ///
     /// * `jar_ids` - A `Vec<JarIdView>` containing the IDs of the deposit jars for which the
-    ///                   interest is being retrieved.
+    ///   interest is being retrieved.
     ///
     /// # Returns
     ///
@@ -144,22 +132,18 @@ pub trait JarApi {
     fn unlock_jars_for_account(&mut self, account_id: ::near_sdk::AccountId);
 }
 
-#[make_integration_version]
 pub trait MigrationToClaimRemainder {
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<::near_sdk::AccountId>);
 }
 
-#[make_integration_version]
 pub trait MigratonToNearSdk5 {
     fn migrate_state_to_near_sdk_5() -> Self;
 }
 
-#[make_integration_version]
 pub trait MigrationToStepJars {
     fn migrate_state_to_step_jars() -> Self;
 }
 
-#[make_integration_version]
 pub trait MigrationToV2 {
     fn migrate_state_to_v2_ready(new_version_account_id: ::near_sdk::AccountId) -> Self;
     fn force_migrate_account(
@@ -173,7 +157,6 @@ pub trait MigrationToV2 {
 }
 
 /// The `PenaltyApi` trait provides methods for applying or canceling penalties on premium jars within the smart contract.
-#[make_integration_version]
 pub trait PenaltyApi {
     /// Sets the penalty status for a specified jar.
     ///
@@ -206,9 +189,7 @@ pub trait PenaltyApi {
 }
 
 /// The `ProductApi` trait defines methods for managing products within the smart contract.
-#[make_integration_version]
 pub trait ProductApi {
-    #[deposit_one_yocto]
     /// Registers a new product in the contract. This function can only be called by the administrator.
     ///
     /// # Arguments
@@ -220,7 +201,6 @@ pub trait ProductApi {
     /// This method will panic if a product with the same id already exists.
     fn register_product(&mut self, command: RegisterProductCommand);
 
-    #[deposit_one_yocto]
     /// Sets the enabled status of a specific product.
     ///
     /// This method allows modifying the enabled status of a product, which determines whether users can create
@@ -237,7 +217,6 @@ pub trait ProductApi {
     /// This method will panic if the provided `is_enabled` value matches the current enabled status of the product.
     fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool);
 
-    #[deposit_one_yocto]
     /// Sets a new public key for the specified product.
     ///
     /// This method allows replacing the existing public key associated with a product. This might be necessary
@@ -258,7 +237,6 @@ pub trait ProductApi {
 }
 
 /// The `WithdrawApi` trait defines methods for withdrawing tokens from specific deposit jars within the smart contract.
-#[make_integration_version]
 pub trait WithdrawApi {
     /// Allows the owner of a deposit jar to withdraw a specified amount of tokens from it.
     ///
@@ -266,7 +244,7 @@ pub trait WithdrawApi {
     ///
     /// * `jar_id` - The ID of the deposit jar from which the withdrawal is being made.
     /// * `amount` - An optional `U128` value indicating the amount of tokens to withdraw. If `None` is provided,
-    ///              the entire balance of the jar will be withdrawn.
+    ///   the entire balance of the jar will be withdrawn.
     ///
     /// # Returns
     ///
@@ -291,7 +269,6 @@ pub trait WithdrawApi {
     fn withdraw_all(&mut self, jars: Option<Vec<JarIdView>>) -> ::near_sdk::PromiseOrValue<BulkWithdrawView>;
 }
 
-#[make_integration_version]
 pub trait ScoreApi {
     /// Records the score for a batch of accounts and updates their jars score accordingly.
     ///
@@ -315,17 +292,4 @@ pub trait ScoreApi {
 
     /// Returns current active score interest if user has any step jars
     fn get_score_interest(&self, account_id: ::near_sdk::AccountId) -> Option<::near_sdk::json_types::U128>;
-}
-
-#[cfg(feature = "integration-methods")]
-#[make_integration_version]
-pub trait IntegrationTestMethods {
-    fn block_timestamp_ms(&self) -> near_sdk::Timestamp;
-    fn bulk_create_jars(
-        &mut self,
-        account_id: ::near_sdk::AccountId,
-        product_id: ProductId,
-        principal: u128,
-        number_of_jars: u16,
-    );
 }

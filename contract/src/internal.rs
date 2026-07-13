@@ -134,7 +134,7 @@ mod test {
     fn self_update_without_access() {
         let admin = admin();
         let context = Context::new(admin);
-        context.contract().update_contract(vec![], None);
+        let _ = context.contract().update_contract(vec![], None);
     }
 
     #[test]

@@ -23,7 +23,7 @@ impl Contract {
             self.accounts.insert(account_id.clone(), jars.into());
         } else if let Some(jars) = self.account_jars_non_versioned.remove(account_id) {
             self.accounts.insert(account_id.clone(), jars.into());
-        };
+        }
     }
 }
 

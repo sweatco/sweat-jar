@@ -26,7 +26,6 @@ mod common;
 mod event;
 mod ft_interface;
 mod ft_receiver;
-mod integration_test;
 mod internal;
 mod jar;
 mod migration;
@@ -87,7 +86,7 @@ pub(crate) enum StorageKey {
     AccountsLegacyV1,
     /// Jars with claim remainder
     AccountsLegacyV2,
-    /// Products migrated to near_sdk 5
+    /// Products migrated to `near_sdk` 5
     _ProductsLegacyV2,
     /// Products migrated to step jars
     Products,

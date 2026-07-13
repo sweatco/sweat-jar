@@ -268,13 +268,13 @@ impl Contract {
         let fee = Self::get_fee(&product, jar);
 
         self.ft_contract()
-            .ft_transfer(account_id, amount, "withdraw", &self.make_fee(fee))
+            .ft_transfer(account_id, amount, "withdraw", self.make_fee(fee).as_ref())
             .then(Self::after_withdraw_call(
                 account_id.clone(),
                 jar.id,
                 close_jar,
                 amount,
-                &self.make_fee(fee),
+                self.make_fee(fee).as_ref(),
             ))
             .into()
     }
@@ -306,7 +306,7 @@ impl Contract {
         );
 
         self.ft_contract()
-            .ft_transfer(account_id, total_amount, "bulk_withdraw", &total_fee)
+            .ft_transfer(account_id, total_amount, "bulk_withdraw", total_fee.as_ref())
             .then(Self::after_bulk_withdraw_call(account_id.clone(), jars))
             .into()
     }
@@ -316,11 +316,11 @@ impl Contract {
         jar_id: JarId,
         close_jar: bool,
         withdrawn_balance: TokenAmount,
-        fee: &Option<Fee>,
+        fee: Option<&Fee>,
     ) -> near_sdk::Promise {
         ext_self::ext(env::current_account_id())
             .with_static_gas(crate::common::gas_data::GAS_FOR_AFTER_WITHDRAW)
-            .after_withdraw(account_id, jar_id, close_jar, withdrawn_balance, fee.clone())
+            .after_withdraw(account_id, jar_id, close_jar, withdrawn_balance, fee.cloned())
     }
 
     fn after_bulk_withdraw_call(account_id: AccountId, jars: Vec<JarWithdraw>) -> near_sdk::Promise {

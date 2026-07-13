@@ -10,19 +10,11 @@ name = "sweat_jar_model"
 
 [features]
 default = []
-integration-methods = []
-integration-test = ["dep:nitka", "dep:near-workspaces"]
-integration-api = ["dep:nitka", "dep:near-workspaces"]
 release-api = []
 
 
 [dependencies]
 near-sdk = { workspace = true }
-
-nitka-proc = { workspace = true }
-nitka = { workspace = true, optional = true }
-
-near-workspaces = { workspace = true, optional = true }
 
 [dev-dependencies]
 fake = { workspace = true }

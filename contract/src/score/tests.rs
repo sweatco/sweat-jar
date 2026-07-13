@@ -481,7 +481,7 @@ fn test_steps_and_migration() {
     );
 
     ctx.switch_account_to_ft_contract_account();
-    ctx.contract().ft_on_transfer(
+    let _ = ctx.contract().ft_on_transfer(
         alice(),
         10_000.into(),
         json!({

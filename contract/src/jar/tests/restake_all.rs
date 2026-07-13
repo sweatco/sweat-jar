@@ -132,7 +132,7 @@ fn batch_restake_all() {
 
     context.switch_account(&alice);
 
-    context.contract().claim_total(None);
+    let _ = context.contract().claim_total(None);
 
     let restaked: Vec<_> = context
         .contract()

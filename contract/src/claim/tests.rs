@@ -122,7 +122,7 @@ fn dont_delete_jar_on_all_interest_claim() {
     context.set_block_timestamp_in_days(365);
 
     context.switch_account(&alice);
-    context.contract().claim_total(None);
+    let _ = context.contract().claim_total(None);
 
     let jar = context.contract().get_jar_internal(&alice, jar.id);
     assert_eq!(200_000, jar.claimed_balance);

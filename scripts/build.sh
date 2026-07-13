@@ -1,9 +1,6 @@
 #!/bin/bash
 set -eox pipefail
 
-echo ">> Building contract"
-
-rustup target add wasm32-unknown-unknown
-cargo build -p sweat_jar --target wasm32-unknown-unknown --profile=contract
-
-cp ./target/wasm32-unknown-unknown/contract/sweat_jar.wasm res/sweat_jar.wasm
+# --no-abi: legacy model types (e.g. numbers::U32) use hand-written serde
+# and don't implement JsonSchema, so ABI generation can't run here.
+cargo near build non-reproducible-wasm --no-abi --locked --out-dir res --manifest-path contract/Cargo.toml
