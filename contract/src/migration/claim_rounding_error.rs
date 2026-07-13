@@ -1,11 +1,11 @@
 #![allow(deprecated)]
 
-use near_sdk::{near_bindgen, AccountId};
+use near_sdk::{near, AccountId};
 use sweat_jar_model::api::MigrationToClaimRemainder;
 
 use crate::{Contract, ContractExt};
 
-#[near_bindgen]
+#[near]
 impl MigrationToClaimRemainder for Contract {
     #[mutants::skip]
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>) {

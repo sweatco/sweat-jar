@@ -1,4 +1,4 @@
-use near_sdk::{env, near_bindgen, AccountId};
+use near_sdk::{env, near, AccountId};
 use sweat_jar_model::{api::PenaltyApi, jar::JarIdView};
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     Contract, ContractExt, JarsStorage,
 };
 
-#[near_bindgen]
+#[near]
 impl PenaltyApi for Contract {
     fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
         self.assert_manager();

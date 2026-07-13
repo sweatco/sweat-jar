@@ -1,6 +1,6 @@
 #![cfg(not(test))]
 
-use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Gas, NearToken, Promise};
+use near_sdk::{near, serde_json, serde_json::json, AccountId, Gas, NearToken, Promise};
 use sweat_jar_model::{withdraw::Fee, TokenAmount};
 
 use crate::{Contract, ContractExt};
@@ -16,7 +16,7 @@ impl FungibleTokenContract {
     }
 }
 
-#[near_bindgen]
+#[near]
 impl Contract {
     #[cfg(not(test))]
     pub(crate) fn ft_contract(&self) -> impl FungibleTokenInterface {

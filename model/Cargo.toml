@@ -16,5 +16,10 @@ release-api = []
 [dependencies]
 near-sdk = { workspace = true }
 
+# Host-only, like near-sdk's own schemars dependency: the cargo-near ABI
+# pass is a host build, and the wasm artifact must not pull schemars in.
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+schemars = "0.8.22"
+
 [dev-dependencies]
 fake = { workspace = true }

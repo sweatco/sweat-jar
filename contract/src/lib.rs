@@ -95,7 +95,7 @@ pub(crate) enum StorageKey {
     Migration,
 }
 
-#[near_bindgen]
+#[near]
 impl InitApi for Contract {
     #[init]
     #[private]

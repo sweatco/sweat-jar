@@ -17,7 +17,6 @@ container_build_command = [
     "near",
     "build",
     "non-reproducible-wasm",
-    "--no-abi",
     "--locked",
 ]
 

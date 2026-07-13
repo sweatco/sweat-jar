@@ -1,10 +1,4 @@
-use near_sdk::{
-    ext_contract,
-    json_types::U128,
-    near_bindgen,
-    serde::{Deserialize, Serialize},
-    PromiseOrValue,
-};
+use near_sdk::{ext_contract, json_types::U128, near, PromiseOrValue};
 use sweat_jar_model::{
     api::WithdrawApi,
     jar::{JarId, JarIdView},
@@ -14,8 +8,8 @@ use sweat_jar_model::{
 
 use crate::internal::is_promise_success;
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(crate = "near_sdk::serde")]
+#[near(serializers=[json])]
+#[derive(Debug)]
 pub struct JarWithdraw {
     pub jar: Jar,
     pub should_be_closed: bool,
@@ -56,7 +50,7 @@ pub trait WithdrawCallbacks {
     fn after_bulk_withdraw(&mut self, account_id: AccountId, jars: Vec<JarWithdraw>) -> BulkWithdrawView;
 }
 
-#[near_bindgen]
+#[near]
 impl WithdrawApi for Contract {
     fn withdraw(&mut self, jar_id: JarIdView, amount: Option<U128>) -> PromiseOrValue<WithdrawView> {
         let account_id = env::predecessor_account_id();
@@ -369,7 +363,7 @@ impl Contract {
     }
 }
 
-#[near_bindgen]
+#[near]
 #[mutants::skip] // Covered by integration tests
 impl WithdrawCallbacks for Contract {
     #[private]

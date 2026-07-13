@@ -1,4 +1,4 @@
-use near_sdk::{env, ext_contract, json_types::U128, near_bindgen, AccountId, PromiseOrValue};
+use near_sdk::{env, ext_contract, json_types::U128, near, AccountId, PromiseOrValue};
 use sweat_jar_model::{
     api::ClaimApi, claimed_amount_view::ClaimedAmountView, jar::AggregatedTokenAmountView, TokenAmount, JAR_BATCH_SIZE,
 };
@@ -25,7 +25,7 @@ pub trait ClaimCallbacks {
     ) -> ClaimedAmountView;
 }
 
-#[near_bindgen]
+#[near]
 impl ClaimApi for Contract {
     fn claim_total(&mut self, detailed: Option<bool>) -> PromiseOrValue<ClaimedAmountView> {
         let account_id = env::predecessor_account_id();
@@ -235,7 +235,7 @@ impl Contract {
     }
 }
 
-#[near_bindgen]
+#[near]
 impl ClaimCallbacks for Contract {
     #[private]
     fn after_claim(

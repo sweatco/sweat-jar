@@ -33,3 +33,16 @@ impl<'de> Deserialize<'de> for U32 {
         ))
     }
 }
+
+/// `U32` serializes as a decimal string, so its ABI schema is a string,
+/// mirroring near-sdk's `json_types` integers.
+#[cfg(not(target_arch = "wasm32"))]
+impl schemars::JsonSchema for U32 {
+    fn schema_name() -> String {
+        "U32".to_string()
+    }
+
+    fn json_schema(generator: &mut schemars::r#gen::SchemaGenerator) -> schemars::schema::Schema {
+        String::json_schema(generator)
+    }
+}

@@ -393,8 +393,10 @@ mod product_v2 {
         Apy as ApyLegacy, Product as ProductLegacy, Terms as TermsLegacy, WithdrawalFee as WithdrawalFeeLegacy,
     };
 
-    #[near(serializers=[json])]
-    #[derive(Clone, Debug)]
+    // `Apy` serializes manually and has no ABI schema, so the types containing
+    // it use plain serde; they only build the outgoing migration payload.
+    #[derive(Serialize, Deserialize, Clone, Debug)]
+    #[serde(crate = "near_sdk::serde")]
     pub(super) struct Product {
         id: ProductId,
         cap: Cap,
@@ -419,8 +421,8 @@ mod product_v2 {
         Percent(UDecimal),
     }
 
-    #[near(serializers=[json])]
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+    #[serde(crate = "near_sdk::serde")]
     #[serde(tag = "type", content = "data", rename_all = "snake_case")]
     enum Terms {
         Fixed(FixedProductTerms),
@@ -428,15 +430,15 @@ mod product_v2 {
         ScoreBased(ScoreBasedProductTerms),
     }
 
-    #[near(serializers=[json])]
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+    #[serde(crate = "near_sdk::serde")]
     struct FixedProductTerms {
         lockup_term: U64,
         apy: Apy,
     }
 
-    #[near(serializers=[json])]
-    #[derive(Clone, Debug, PartialEq)]
+    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+    #[serde(crate = "near_sdk::serde")]
     struct FlexibleProductTerms {
         apy: Apy,
     }

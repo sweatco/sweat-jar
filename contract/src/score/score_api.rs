@@ -2,7 +2,7 @@ use near_sdk::{
     env,
     env::block_timestamp_ms,
     json_types::{I64, U128},
-    near_bindgen, AccountId,
+    near, AccountId,
 };
 use sweat_jar_model::{api::ScoreApi, Score, U32, UTC};
 
@@ -12,7 +12,7 @@ use crate::{
     Contract, ContractExt,
 };
 
-#[near_bindgen]
+#[near]
 impl ScoreApi for Contract {
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
         self.assert_manager();
