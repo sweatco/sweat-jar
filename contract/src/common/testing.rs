@@ -13,7 +13,6 @@ use near_sdk::{
     PromiseOrValue,
 };
 use sweat_jar_model::{
-    api::InitApi,
     data::{
         account::{v1::AccountV1, versioned::AccountVersioned, Account},
         jar::Jar,
@@ -23,7 +22,7 @@ use sweat_jar_model::{
 };
 
 use super::{env::test_env_ext, event::EventKind};
-use crate::{migration::api::store_account_raw, Contract};
+use crate::{all_roles_to, migration::api::store_account_raw, Contract, InitApi};
 
 pub mod accounts {
     use near_sdk::AccountId;
@@ -55,11 +54,20 @@ pub(crate) struct Context {
     pub owner: AccountId,
     pub ft_contract_id: AccountId,
     pub legacy_jar_contract_id: AccountId,
+    /// Holds every `Roles` variant and is the ACL super-admin.
+    pub operator: AccountId,
     builder: VMContextBuilder,
 }
 
 impl Context {
-    pub(crate) fn new(manager: AccountId) -> Self {
+    pub(crate) fn new(operator: AccountId) -> Self {
+        // `testing_env!` carries storage across invocations in a thread, so a
+        // second `Context` in one test would inherit the previous contract's
+        // raw storage (ACL grants, raw-written accounts). Start clean.
+        near_sdk::mock::with_mocked_blockchain(|blockchain| {
+            blockchain.take_storage();
+        });
+
         let owner: AccountId = "owner".to_string().try_into().unwrap();
         let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
         let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();
@@ -77,8 +85,9 @@ impl Context {
         let contract = Contract::init(
             ft_contract_id.clone(),
             fee_account_id,
-            manager,
             legacy_jar_contract_id.clone(),
+            operator.clone(),
+            all_roles_to(&operator),
         );
 
         Self {
@@ -86,6 +95,7 @@ impl Context {
             ft_contract_id,
             builder,
             legacy_jar_contract_id,
+            operator,
             contract: Arc::new(Mutex::new(contract)),
         }
     }
@@ -171,9 +181,9 @@ impl Context {
         self.switch_account(self.ft_contract_id.clone());
     }
 
-    pub(crate) fn switch_account_to_manager(&mut self) {
-        let manager = self.contract().manager.clone();
-        self.switch_account(manager);
+    pub(crate) fn switch_account_to_operator(&mut self) {
+        let operator = self.operator.clone();
+        self.switch_account(operator);
     }
 
     pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
@@ -278,11 +288,10 @@ impl<T> UnwrapPromise<T> for PromiseOrValue<T> {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::AccountId;
-    use rstest::rstest;
+    use near_plugins::AccessControllable;
+    use near_sdk::env;
 
-    use super::{accounts::admin, Context};
-    use crate::common::testing::{expect_panic, AfterCatchUnwind};
+    use crate::common::testing::{accounts::admin, expect_panic, AfterCatchUnwind, Context};
 
     #[test]
     #[should_panic(expected = "Contract didn't panic when expected to.\nExpected message: Something went wrong")]
@@ -299,117 +308,18 @@ mod tests {
         expect_panic(&Ctx, "Something went wrong", || {});
     }
 
-    #[rstest]
-    #[should_panic(expected = r#"Can be performed only by admin"#)]
-    fn self_update_without_access(admin: AccountId) {
-        let context = Context::new(admin);
-        context.contract().update_contract(vec![], None);
-    }
-}
+    /// Mirrors `migrate_grants_all_roles_and_drops_manager` in
+    /// `migration::tests`, but for the `init()` path: `Context::new` deploys the
+    /// contract with `current_account_id` = "owner" and `super_admin` = the
+    /// distinct `manager` account it's given, so this verifies the deploying
+    /// account (the contract's own account) doesn't retain super-admin power
+    /// after `init` bootstraps then transfers it away.
+    #[test]
+    fn init_leaves_super_admin_only_with_requested_account() {
+        let super_admin = admin();
+        let context = Context::new(super_admin.clone());
 
-#[cfg(feature = "integration-test")]
-mod integration_tests {
-    use std::{cell::RefCell, collections::HashMap};
-
-    use near_sdk::{
-        borsh::{BorshDeserialize, BorshSerialize},
-        collections::UnorderedMap,
-        near,
-        store::LookupMap,
-        AccountId,
-    };
-    use sweat_jar_model::{
-        data::{
-            account::versioned::AccountVersioned,
-            product::{Product, ProductId},
-        },
-        TokenAmount,
-    };
-
-    use crate::{feature::booster::model::Boosters, Contract};
-
-    #[near]
-    impl InitApi for Contract {
-        #[init]
-        #[private]
-        fn init(
-            token_account_id: AccountId,
-            fee_account_id: AccountId,
-            manager: AccountId,
-            previous_version_account_id: AccountId,
-        ) -> Self {
-            Self {
-                token_account_id,
-                fee_account_id,
-                manager,
-                products: UnorderedMap::new(StorageKey::Products),
-                products_cache: HashMap::default().into(),
-                accounts: LookupMap::new(StorageKey::Accounts),
-                fee_amount: 0,
-                previous_version_account_id,
-                boosters: Boosters::new(
-                    env::block_timestamp_ms(),
-                    StorageKey::BoostersIndex,
-                    StorageKey::BoostersItems,
-                ),
-                time_scale: 1.0,
-            }
-        }
-    }
-    #[near(serializers=[borsh])]
-    struct ContractSerdeHelper {
-        token_account_id: AccountId,
-        fee_account_id: AccountId,
-        manager: AccountId,
-        products: UnorderedMap<ProductId, Product>,
-        accounts: LookupMap<AccountId, AccountVersioned>,
-        fee_amount: TokenAmount,
-        previous_version_account_id: AccountId,
-        boosters: Boosters,
-        time_scale: f64,
-    }
-
-    impl From<ContractSerdeHelper> for Contract {
-        fn from(value: ContractSerdeHelper) -> Self {
-            Self {
-                token_account_id: value.token_account_id,
-                fee_account_id: value.fee_account_id,
-                manager: value.manager,
-                products: value.products,
-                accounts: value.accounts,
-                products_cache: RefCell::new(HashMap::new()),
-                fee_amount: value.fee_amount,
-                previous_version_account_id: value.previous_version_account_id,
-                boosters: value.boosters,
-                time_scale: value.time_scale,
-            }
-        }
-    }
-
-    impl BorshSerialize for Contract {
-        fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-            // Directly serialize all fields in the same order as ContractSerdeHelper
-            self.token_account_id.serialize(writer)?;
-            self.fee_account_id.serialize(writer)?;
-            self.manager.serialize(writer)?;
-            self.products.serialize(writer)?;
-            self.accounts.serialize(writer)?;
-            self.fee_amount.serialize(writer)?;
-            self.previous_version_account_id.serialize(writer)?;
-            self.boosters.serialize(writer)?;
-            self.time_scale.serialize(writer)?;
-            Ok(())
-        }
-    }
-
-    impl BorshDeserialize for Contract {
-        fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
-            let state = ContractSerdeHelper::deserialize_reader(reader)?;
-
-            // Sync time scale to global thread-local storage automatically on deserialization
-            sweat_jar_model::set_global_time_scale(state.time_scale);
-
-            Ok(state.into())
-        }
+        assert!(context.contract().acl_is_super_admin(super_admin));
+        assert!(!context.contract().acl_is_super_admin(env::current_account_id()));
     }
 }

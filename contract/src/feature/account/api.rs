@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, collections::HashMap, convert::Into};
 
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{
     env::{self, panic_str},
     json_types::{I64, U128},
@@ -15,13 +16,13 @@ use sweat_jar_model::{
         score::Score,
     },
     interest::{get_interest, InterestCalculator},
-    ms_in_day, start_of_the_day, DailyScore, DaysOffset, ScoreIncrementProcessor, TimeHelper, Timestamp, Timezone,
-    TokenAmount, UTC,
+    ms_in_day, start_of_the_day, DailyScore, DailyScoreView, DaysOffset, ScoreIncrementProcessor, TimeHelper,
+    Timestamp, Timezone, TokenAmount, UTC,
 };
 
 use crate::{
     common::event::{emit, ApplyBoosterData, EventKind, ScoreData},
-    Contract, ContractExt,
+    Contract, ContractExt, Roles,
 };
 
 impl Contract {
@@ -75,18 +76,18 @@ impl AccountApi for Contract {
         self.get_total_interest_for_account(&account_id)
     }
 
-    fn unlock_jars_for_account(&mut self, account_id: AccountId) {
-        self.assert_manager();
-
+    #[access_control_any(roles(Roles::Maintainer))]
+    fn unlock_jars_for_account(&mut self, account_id: AccountId, product_ids: Vec<ProductId>) {
         let account = self.get_account_mut(&account_id);
-        for jar in account.jars.values_mut() {
-            jar.is_pending_withdraw = false;
+        for product_id in &product_ids {
+            if let Some(jar) = account.jars.get_mut(product_id) {
+                jar.is_locked = false;
+            }
         }
     }
 
+    #[access_control_any(roles(Roles::Oracle))]
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
-        self.assert_manager();
-
         let mut event = vec![];
 
         for (account_id, increments) in batch {
@@ -112,9 +113,8 @@ impl AccountApi for Contract {
         emit(EventKind::RecordScore(event));
     }
 
+    #[access_control_any(roles(Roles::Oracle))]
     fn apply_booster(&mut self, account_ids: Vec<AccountId>, score: Score, timestamp: UTC) {
-        self.assert_manager();
-
         let mut applied = vec![];
         let mut rejected = vec![];
 
@@ -149,21 +149,31 @@ impl AccountApi for Contract {
     }
 
     fn get_score(&self, account_id: AccountId) -> Option<U128> {
-        let account = self.get_account(&account_id);
+        let account = self.try_get_account(&account_id)?;
+        if !account.timezone.is_valid() {
+            return None;
+        }
 
         Some(u128::from(account.score.get_last_finalized_record(account.timezone).value).into())
     }
 
-    fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {
-        self.assert_manager();
+    fn get_boosted_score(&self, account_id: AccountId) -> Option<DailyScoreView> {
+        let account = self.try_get_account(&account_id)?;
+        if !account.timezone.is_valid() {
+            return None;
+        }
 
+        Some(account.score.get_last_finalized_record(account.timezone).into())
+    }
+
+    #[access_control_any(roles(Roles::Oracle))]
+    fn set_timezone(&mut self, account_id: AccountId, timezone: I64) {
         let account = self.get_or_create_account_mut(&account_id);
         account.try_set_timezone(Some(Timezone::new(timezone.0)));
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn set_feature_enabled(&mut self, account_id: AccountId, feature: Feature, enabled: bool) {
-        self.assert_manager();
-
         if self.accounts.contains_key(&account_id) {
             self.update_account_cache(&account_id, None);
         }
@@ -174,9 +184,8 @@ impl AccountApi for Contract {
         emit(EventKind::SetFeatureEnabled(account_id, feature, enabled));
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn batch_set_feature_enabled(&mut self, account_ids: Vec<AccountId>, feature: Feature, enabled: bool) {
-        self.assert_manager();
-
         for account_id in &account_ids {
             self.update_account_cache(account_id, None);
 

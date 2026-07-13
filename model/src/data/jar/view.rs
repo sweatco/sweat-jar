@@ -5,12 +5,11 @@ use near_sdk::{
     near, Timestamp,
 };
 
+use super::{Deposit, Jar, JarCache};
 use crate::{
     data::{account::Account, product::ProductId},
     TokenAmount,
 };
-
-use super::{Deposit, Jar, JarCache};
 
 #[near(serializers=[json])]
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -151,7 +150,7 @@ impl From<Jar> for JarView {
         JarView {
             deposits: value.deposits.into_iter().map(DepositView::from).collect(),
             cache: value.cache.map(JarCacheView::from),
-            is_pending_withdraw: value.is_pending_withdraw,
+            is_pending_withdraw: value.is_locked,
             claim_remainder: value.claim_remainder.into(),
         }
     }

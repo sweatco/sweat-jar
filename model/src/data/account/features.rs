@@ -85,12 +85,12 @@ mod tests {
         let features = Features::with_features(false, true);
         assert!(!features.is_feature_enabled(&Feature::IncreasedApy));
         assert!(features.is_feature_enabled(&Feature::IncreasedScoreCap));
-        assert_eq!(features.raw_value(), 0x00000010);
+        assert_eq!(features.raw_value(), 0b00000010);
 
         let features = Features::with_features(true, true);
         assert!(features.is_feature_enabled(&Feature::IncreasedApy));
         assert!(features.is_feature_enabled(&Feature::IncreasedScoreCap));
-        assert_eq!(features.raw_value(), 0x00000011);
+        assert_eq!(features.raw_value(), 0b00000011);
     }
 
     #[test]
@@ -115,7 +115,7 @@ mod tests {
         features.set_feature_enabled(&Feature::IncreasedScoreCap, true);
         assert!(!features.is_feature_enabled(&Feature::IncreasedApy));
         assert!(features.is_feature_enabled(&Feature::IncreasedScoreCap));
-        assert_eq!(features.raw_value(), 0x00000010);
+        assert_eq!(features.raw_value(), 0b00000010);
 
         features.set_feature_enabled(&Feature::IncreasedScoreCap, false);
         assert!(!features.is_feature_enabled(&Feature::IncreasedApy));
@@ -132,13 +132,13 @@ mod tests {
         features.set_feature_enabled(&Feature::IncreasedScoreCap, true);
         assert!(features.is_feature_enabled(&Feature::IncreasedApy));
         assert!(features.is_feature_enabled(&Feature::IncreasedScoreCap));
-        assert_eq!(features.raw_value(), 0x00000011);
+        assert_eq!(features.raw_value(), 0b00000011);
 
         // Disable one feature
         features.set_feature_enabled(&Feature::IncreasedApy, false);
         assert!(!features.is_feature_enabled(&Feature::IncreasedApy));
         assert!(features.is_feature_enabled(&Feature::IncreasedScoreCap));
-        assert_eq!(features.raw_value(), 0x00000010);
+        assert_eq!(features.raw_value(), 0b00000010);
 
         // Disable the other feature
         features.set_feature_enabled(&Feature::IncreasedScoreCap, false);

@@ -48,7 +48,7 @@ fn plot_year(
         );
     ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(3);
 
-    ctx.switch_account_to_manager();
+    ctx.switch_account_to_operator();
 
     for day in 1..400 {
         ctx.set_block_timestamp_in_days(day);
@@ -112,7 +112,7 @@ fn plot_first_week(
 
         let score: Score = (0..1000).fake();
 
-        ctx.switch_account_to_manager();
+        ctx.switch_account_to_operator();
         ctx.record_score(&alice, UTC(day * MS_IN_DAY), score);
         ctx.record_score(&bob, UTC(day * MS_IN_DAY), score);
 

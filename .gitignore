@@ -46,3 +46,7 @@ mutants.out*
 
 /res/sweat_jar_main.wasm
 /res/sweat_jar_commit.wasm
+
+# Integration-test-featured contract build (make build-integration) — never commit;
+# res/ holds the committed production artifacts.
+/res-integration

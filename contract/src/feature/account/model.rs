@@ -14,18 +14,18 @@ pub(crate) mod test_utils {
                 .map(|(created_at, principal)| Deposit::new(created_at, principal))
                 .collect(),
             cache: None,
-            is_pending_withdraw: false,
+            is_locked: false,
             claim_remainder: 0,
         }
     }
 
     pub(crate) trait JarBuilder {
-        fn with_pending_withdraw(self) -> Self;
+        fn with_locked(self) -> Self;
     }
 
     impl JarBuilder for Jar {
-        fn with_pending_withdraw(mut self) -> Self {
-            self.is_pending_withdraw = true;
+        fn with_locked(mut self) -> Self {
+            self.is_locked = true;
             self
         }
     }

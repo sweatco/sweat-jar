@@ -6,11 +6,12 @@ edition = "2021"
 repository = "https://github.com/sweatco/sweat-jar"
 
 [lib]
-crate-type = ["cdylib"]
+# `rlib` so test crates can use this crate's types (`Roles`, `RoleAssignments`).
+crate-type = ["cdylib", "rlib"]
 
 [package.metadata.near.reproducible_build]
-image = "sourcescan/cargo-near:0.16.0-rust-1.86.0"
-image_digest = "sha256:3220302ebb7036c1942e772810f21edd9381edf9a339983da43487c77fbad488"
+image = "sourcescan/cargo-near:0.21.1-rust-1.93.0"
+image_digest = "sha256:79b789c81ba19ec30794a6b1046b02dcaf5c055994b22cc7c9af67ab5096b095"
 passed_env = []
 container_build_command = [
     "cargo",
@@ -28,14 +29,15 @@ integration-test = [
     "sweat-jar-model/release-api",
     "integration-methods",
 ]
-integration-api = ["sweat-jar-model/integration-api"]
 
 [dependencies]
 mutants = { workspace = true }
 
-near-sdk = { workspace = true, features = ["unit-testing"] }
-near-self-update-proc = { workspace = true }
+near-sdk = { workspace = true }
 near-contract-standards = { workspace = true }
+near-plugins = { workspace = true }
+primitive-types = { workspace = true }
+strum = { workspace = true }
 
 sweat-jar-model = { workspace = true }
 sweat-jar-primitives = { workspace = true }
@@ -46,3 +48,8 @@ anyhow = { workspace = true }
 itertools = { workspace = true }
 sweat-jar-model = { workspace = true, features = ["testing"] }
 rstest = { workspace = true }
+
+# unit-testing pulls near-vm-runner/near-crypto (wasmtime, C-compiled
+# secp256k1) — dev-only so the wasm build never needs a wasm32-capable
+# C toolchain.
+near-sdk = { workspace = true, features = ["unit-testing"] }

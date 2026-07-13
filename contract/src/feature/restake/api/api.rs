@@ -4,12 +4,13 @@ use near_sdk::{
     near, require, AccountId, PromiseOrValue,
     PromiseOrValue::Value,
 };
+use primitive_types::U256;
 use sweat_jar_model::{
     api::RestakeApi,
     data::{
         deposit::{DepositTicket, Purpose},
         jar::Assertions,
-        product::{ProductAssertions, ProductId, ProductModelApi, Terms},
+        product::{ProductAssertions, ProductId, ProductModelApi},
     },
     TokenAmount,
 };
@@ -22,6 +23,16 @@ use crate::{
     feature::withdraw::api::WithdrawalDto,
     Contract, ContractExt,
 };
+
+#[cfg(not(test))]
+#[mutants::skip] // Covered by integration tests
+pub(crate) mod gas {
+    use near_sdk::Gas;
+
+    /// Measured with `measure_after_restake_remainder_gas` (`make measure-gas`):
+    /// same gas profile as withdraw, so same 4 `TGas` as `GAS_FOR_AFTER_WITHDRAW`.
+    pub(crate) const GAS_FOR_AFTER_TRANSFER_REMAINDER: Gas = Gas::from_tgas(4);
+}
 
 #[derive(Debug)]
 #[near(serializers=[json])]
@@ -78,7 +89,6 @@ pub(super) trait RemainderTransfer {
     fn transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
 }
 
-#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub(super) trait RemainderTransferCallback {
     fn after_transfer_remainder(&mut self, request: Request) -> PromiseOrValue<()>;
@@ -128,7 +138,7 @@ impl Contract {
         }
 
         let product = self.get_product(&ticket.product_id);
-        if matches!(product.terms, Terms::ScoreBased(_)) {
+        if product.terms.is_score_based() {
             self.get_account_mut(&request.account_id)
                 .try_set_timezone(ticket.timezone);
         }
@@ -154,13 +164,15 @@ impl Contract {
         builder: impl RequestBuilder,
     ) -> Request {
         let product_id = ticket.product_id.clone();
-        self.get_product(&product_id).assert_enabled();
+        let product = self.get_product(&product_id);
+        product.assert_enabled();
 
         let request = builder.build(self);
 
         if request.deposit.amount == 0 {
             env::panic_str("Nothing to restake");
         }
+        product.assert_cap(request.deposit.amount);
         self.verify(
             Purpose::Restake,
             &request.account_id,
@@ -240,7 +252,7 @@ impl RequestBuilder for RestakeAllRequestBuilder {
         let mut total_fee = 0;
 
         for (product_id, jar) in &contract.get_account(&self.account_id).jars {
-            if jar.is_pending_withdraw {
+            if jar.is_locked {
                 continue;
             }
 
@@ -262,7 +274,7 @@ impl RequestBuilder for RestakeAllRequestBuilder {
         let withdrawal = if withdrawal_amount.gt(&0) {
             Some(WithdrawalDto {
                 amount: withdrawal_amount,
-                fee: (total_fee * withdrawal_amount).div_ceil(total_mature_balance),
+                fee: mul_div_ceil(total_fee, withdrawal_amount, total_mature_balance),
             })
         } else {
             None
@@ -305,5 +317,40 @@ impl DepositDto {
             product_id,
             amount: target_amount,
         }
+    }
+}
+
+/// `ceil(a * b / c)` with a `U256` intermediate, since `a * b` overflows
+/// `u128` for realistic SWEAT amounts. The result fits `u128` because the
+/// call site guarantees `b <= c`, bounding it by `a`.
+fn mul_div_ceil(a: TokenAmount, b: TokenAmount, c: TokenAmount) -> TokenAmount {
+    let numerator = U256::from(a) * U256::from(b);
+    let denominator = U256::from(c);
+    ((numerator + denominator - U256::one()) / denominator).as_u128()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::mul_div_ceil;
+
+    #[test]
+    fn matches_naive_formula_for_small_values() {
+        assert_eq!(mul_div_ceil(100, 30, 40), (100u128 * 30).div_ceil(40));
+        assert_eq!(mul_div_ceil(7, 3, 5), (7u128 * 3).div_ceil(5));
+    }
+
+    #[test]
+    fn does_not_overflow_for_realistic_large_amounts() {
+        // ~10^26 yocto operands: the naive product overflows u128, but the
+        // true result is bounded by total_fee. Regression test for PROD-3727 (L-2).
+        let total_fee: u128 = 500_000 * 10u128.pow(21);
+        let withdrawal_amount: u128 = 900_000 * 10u128.pow(21);
+        let total_mature_balance: u128 = 1_000_000 * 10u128.pow(21);
+
+        let fee = mul_div_ceil(total_fee, withdrawal_amount, total_mature_balance);
+
+        assert!(fee > 0);
+        assert!(fee <= total_fee);
+        assert_eq!(fee, 450_000 * 10u128.pow(21));
     }
 }

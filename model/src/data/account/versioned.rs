@@ -5,9 +5,8 @@ use std::{
 
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 
-use crate::data::{account::v1::AccountV1, account::v2::AccountV2};
-
 use super::Account;
+use crate::data::account::{v1::AccountV1, v2::AccountV2};
 
 #[derive(BorshSerialize, Debug, PartialEq, Clone)]
 #[borsh(crate = "near_sdk::borsh")]

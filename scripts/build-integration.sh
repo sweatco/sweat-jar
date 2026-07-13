@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eox pipefail
 
-rustup target add wasm32-unknown-unknown
-cargo near build non-reproducible-wasm --out-dir res --features integration-test --manifest-path contract/Cargo.toml
+# NOT `res/` — that holds the committed production artifacts; integration
+# tests read from `res-integration/` (see tests/common/prepare.rs).
+cargo near build non-reproducible-wasm --locked --out-dir res-integration --features integration-test --manifest-path contract/Cargo.toml

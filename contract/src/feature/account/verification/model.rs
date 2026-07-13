@@ -5,7 +5,7 @@ use sweat_jar_model::{
         product::ProductModelApi,
     },
     signer::MessageVerifier,
-    TokenAmount,
+    TokenAmount, MS_IN_DAY,
 };
 
 use crate::Contract;
@@ -71,13 +71,23 @@ impl Contract {
     }
 }
 
+/// Signer is trusted to issue short-lived tickets (backend uses ~2-minute
+/// windows), but nothing on-chain capped how far in the future `valid_until`
+/// could be. Bounding it here caps the blast radius of a compromised/buggy
+/// signer to at most this window rather than an unlimited one.
+const MAX_TICKET_LIFETIME_MS: u64 = 7 * MS_IN_DAY;
+
 trait JarTicketVerifier {
     fn verify_expiration_date(&self);
 }
 
 impl JarTicketVerifier for DepositTicket {
     fn verify_expiration_date(&self) {
-        let is_time_valid = env::block_timestamp_ms() <= self.valid_until.0;
-        require!(is_time_valid, "Ticket is outdated");
+        let now = env::block_timestamp_ms();
+        require!(now <= self.valid_until.0, "Ticket is outdated");
+        require!(
+            self.valid_until.0 <= now + MAX_TICKET_LIFETIME_MS,
+            "Ticket valid_until is too far in the future"
+        );
     }
 }

@@ -2,6 +2,10 @@ use std::collections::HashMap;
 
 use near_sdk::near;
 
+use super::{
+    features::{Feature, Features},
+    v1::AccountV1,
+};
 use crate::{
     data::{
         jar::{Jar, JarCompanion},
@@ -9,11 +13,6 @@ use crate::{
         score::AccountScore,
     },
     Timezone,
-};
-
-use super::{
-    features::{Feature, Features},
-    v1::AccountV1,
 };
 
 #[near]
@@ -31,6 +30,7 @@ pub struct AccountV2 {
 pub struct AccountV2Companion {
     pub nonce: Option<u32>,
     pub jars: Option<HashMap<ProductId, JarCompanion>>,
+    pub timezone: Option<Timezone>,
     pub score: Option<AccountScore>,
     pub features: Option<Features>,
 }

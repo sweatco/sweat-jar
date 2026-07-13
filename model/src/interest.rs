@@ -158,7 +158,7 @@ impl InterestCalculator for TieredScoreBasedProductTerms {
         let score = account.score.get_last_finalized_record(account.timezone);
         let score_cap = self.get_score_cap(account.features.is_feature_enabled(&Feature::IncreasedScoreCap));
 
-        (score.value.min(score_cap) + score.booster).to_apy()
+        score.to_capped_apy(score_cap, true)
     }
 
     fn get_interest_calculation_term(

@@ -1,16 +1,18 @@
-use super::features::{Feature, Features};
 use near_sdk::env::{self, panic_str};
 
+use super::{
+    features::{Feature, Features},
+    Account, AccountCompanion,
+};
 use crate::{
     data::{
         jar::{Deposit, Jar},
         product::{Product, ProductId},
+        score::DailyScore,
     },
     interest::InterestCalculator,
     Timestamp, Timezone, TokenAmount,
 };
-
-use super::{Account, AccountCompanion};
 
 pub trait FeaturesAccess {
     fn features(&self) -> &Features;
@@ -27,6 +29,22 @@ pub trait FeaturesAccess {
 }
 
 impl Account {
+    /// True iff this account has never received a deposit, score, feature
+    /// flag, or timezone. Used to guard the one-shot account migration
+    /// against overwriting an account that already has real state.
+    ///
+    /// Can't compare against `Self::default()` directly: `AccountScore`'s
+    /// `Default` impl stamps `updated_at` with the current block timestamp,
+    /// so a struct-equality check would spuriously return `false` for a
+    /// genuinely empty account once time has moved on since it was created.
+    pub fn is_empty(&self) -> bool {
+        self.nonce == 0
+            && self.jars.is_empty()
+            && !self.timezone.is_valid()
+            && self.features == Features::default()
+            && self.score.history.iter().all(|daily| *daily == DailyScore::default())
+    }
+
     pub fn get_total_principal(&self) -> TokenAmount {
         self.jars
             .iter()
@@ -73,6 +91,10 @@ impl Account {
                 let jar = self.jars.get_mut(product_id).expect("Jar is not found");
                 jar.apply(jar_companion);
             }
+        }
+
+        if let Some(timezone) = companion.timezone {
+            self.timezone = timezone;
         }
 
         if let Some(score) = companion.score {

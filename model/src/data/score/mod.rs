@@ -2,7 +2,6 @@ use near_sdk::{
     env::{block_timestamp_ms, panic_str},
     near,
 };
-
 use sweat_jar_primitives::UDecimal;
 
 use crate::{Day, DaysOffset, Local, TimeHelper, Timestamp, Timezone, UTC};
@@ -58,12 +57,21 @@ impl From<DailyScore> for DailyScoreView {
 }
 
 impl DailyScore {
+    /// The compound score corresponding to 100% APY (1000 score = 1%, see
+    /// [`ToAPY`]). This is the hard ceiling on `score + booster`.
     pub const MAX: u32 = 100_000;
 
     pub fn new(value: Score) -> Self {
         Self { value, booster: 0 }
     }
 
+    /// Converts this record to an APY, enforcing the compound-score invariant;
+    /// every score-based APY path must go through here.
+    ///
+    /// `value` is capped by the product's `cap`; `booster` is added on top and
+    /// is deliberately not subject to `cap`. The compound sum may reach
+    /// [`Self::MAX`] (100% APY) exactly and is hard-capped there, computed in
+    /// `u32` so it can't wrap at `u16::MAX`.
     pub fn to_capped_apy(&self, cap: Score, include_booster: bool) -> UDecimal {
         let capped_score = self.value.min(cap);
 

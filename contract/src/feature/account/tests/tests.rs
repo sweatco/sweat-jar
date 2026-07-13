@@ -29,7 +29,8 @@ use crate::{
         account::model::test_utils::jar,
         product::model::test_utils::{
             product_1_hour_apy_downgradable_23_10_percent_protected, product_1_year_12_percent,
-            product_1_year_apy_downgradable_20_10_percent_protected, product_disabled, BaseApy, ProtectedProduct,
+            product_1_year_20_percent, product_1_year_apy_downgradable_20_10_percent_protected, product_disabled,
+            BaseApy, ProtectedProduct,
         },
     },
     Contract,
@@ -39,7 +40,7 @@ use crate::{
 fn set_timezone_before_deposit(admin: AccountId, alice: AccountId) {
     let mut context = Context::new(admin);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.contract().set_timezone(alice.clone(), 1.into());
 
     let alice = context.contract().get_account(&alice).clone();
@@ -50,7 +51,7 @@ fn set_timezone_before_deposit(admin: AccountId, alice: AccountId) {
 fn enable_feature_before_deposit(admin: AccountId, alice: AccountId) {
     let mut context = Context::new(admin);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context
         .contract()
         .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
@@ -169,7 +170,7 @@ fn get_total_interest_for_premium_with_penalty_after_half_term(
         .with_products(&[product.clone()])
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context
         .contract()
         .set_feature_enabled(alice.clone(), Feature::IncreasedApy, true);
@@ -204,7 +205,7 @@ fn get_total_interest_for_premium_with_multiple_penalties_applied(
     let products = context.contract().get_products();
     assert!(matches!(products.first().unwrap().get_base_apy(), Apy::Tier(_)));
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context
         .contract()
         .set_feature_enabled(alice.clone(), Feature::IncreasedApy, true);
@@ -259,8 +260,8 @@ fn get_interest_after_withdraw(
 }
 
 #[rstest]
-#[should_panic(expected = "Can be performed only by admin")]
-fn unlock_not_by_manager(
+#[should_panic(expected = "Insufficient permissions")]
+fn unlock_not_by_maintainer(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -273,51 +274,55 @@ fn unlock_not_by_manager(
         .contract()
         .get_account_mut(&alice)
         .get_jar_mut(&product.id)
-        .is_pending_withdraw = true;
+        .is_locked = true;
 
     context.switch_account(&alice);
-    context.contract().unlock_jars_for_account(alice);
+    context.contract().unlock_jars_for_account(alice, vec![product.id]);
 }
 
 #[rstest]
-fn unlock_by_manager(
+fn unlock_by_maintainer_only_unlocks_specified_products(
     admin: AccountId,
     alice: AccountId,
-    #[from(product_1_year_12_percent)] product: Product,
+    #[from(product_1_year_12_percent)] product_a: Product,
+    #[from(product_1_year_20_percent)] product_b: Product,
     #[with(vec![(0, 300_000_000)])] jar: Jar,
 ) {
     let mut context = Context::new(admin.clone())
-        .with_products(&[product.clone()])
-        .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
+        .with_products(&[product_a.clone(), product_b.clone()])
+        .with_latest_account(
+            &alice,
+            &[(product_a.id.clone(), jar.clone()), (product_b.id.clone(), jar.clone())],
+        );
     context
         .contract()
         .get_account_mut(&alice)
-        .get_jar_mut(&product.id)
-        .is_pending_withdraw = true;
+        .get_jar_mut(&product_a.id)
+        .is_locked = true;
+    context
+        .contract()
+        .get_account_mut(&alice)
+        .get_jar_mut(&product_b.id)
+        .is_locked = true;
+
+    context.switch_account_to_operator();
+    context
+        .contract()
+        .unlock_jars_for_account(alice.clone(), vec![product_a.id.clone()]);
 
     assert!(
-        context
-            .contract()
-            .get_account(&alice)
-            .get_jar(&product.id)
-            .is_pending_withdraw
+        !context.contract().get_account(&alice).get_jar(&product_a.id).is_locked,
+        "product_a was named in product_ids, must be unlocked"
     );
-
-    context.switch_account_to_manager();
-    context.contract().unlock_jars_for_account(alice.clone());
-
     assert!(
-        !context
-            .contract()
-            .get_account(&alice)
-            .get_jar(&product.id)
-            .is_pending_withdraw
+        context.contract().get_account(&alice).get_jar(&product_b.id).is_locked,
+        "product_b was not named in product_ids, must stay locked"
     );
 }
 
 #[rstest]
-#[should_panic(expected = "Can be performed only by admin")]
-fn set_timezone_by_not_manager(
+#[should_panic(expected = "Insufficient permissions")]
+fn set_timezone_by_not_oracle(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -331,7 +336,7 @@ fn set_timezone_by_not_manager(
 }
 
 #[rstest]
-fn set_timezone_by_manager(
+fn set_timezone_by_oracle(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -343,14 +348,14 @@ fn set_timezone_by_manager(
 
     let timezone = 360_000;
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.contract().set_timezone(alice.clone(), I64(timezone));
 
     assert_eq!(context.contract().get_timezone(alice).unwrap().0, timezone);
 }
 
 #[rstest]
-fn set_timezone_by_manager_when_timezone_already_set(
+fn set_timezone_by_oracle_when_timezone_already_set(
     admin: AccountId,
     alice: AccountId,
     #[from(product_1_year_12_percent)] product: Product,
@@ -363,7 +368,7 @@ fn set_timezone_by_manager_when_timezone_already_set(
     let timezone = 360_000;
     context.contract().get_account_mut(&alice).timezone = Timezone::new(timezone);
 
-    context.switch_account_to_manager();
+    context.switch_account_to_operator();
     context.contract().set_timezone(alice.clone(), I64(0));
 
     assert_eq!(context.contract().get_timezone(alice).unwrap().0, timezone);
@@ -609,7 +614,7 @@ mod signature_tests {
     ) {
         let mut context = Context::new(admin.clone());
 
-        context.switch_account_to_manager();
+        context.switch_account_to_operator();
 
         let amount = 500_000;
         let ticket = DepositTicket {

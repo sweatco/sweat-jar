@@ -1,21 +1,18 @@
 use std::{cell::RefCell, collections::HashMap};
 
+use near_plugins::{access_control, AccessControlRole, AccessControllable, Upgradable};
 use near_sdk::{
-    collections::UnorderedMap, env, json_types::Base64VecU8, near, near_bindgen, store::LookupMap, AccountId,
-    BorshStorageKey, PanicOnDefault,
+    borsh::BorshDeserialize, collections::UnorderedMap, env, json_types::Base64VecU8, near, require, store::LookupMap,
+    AccountId, BorshStorageKey, PanicOnDefault,
 };
-use near_self_update_proc::SelfUpdate;
+use strum::{EnumIter, IntoEnumIterator};
 use sweat_jar_model::{
-    api::InitApi,
     data::{
         account::versioned::AccountVersioned,
         product::{Product, ProductId},
     },
     TokenAmount,
 };
-
-#[cfg(feature = "integration-test")]
-use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 
 mod common;
 mod doc;
@@ -25,19 +22,73 @@ mod migration;
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Roles for `near_plugins`' `AccessControllable`. `StagingManager`/`UpgradeManager`
+/// are deliberately separate from `Maintainer`: code-deployment is a more
+/// dangerous capability than the operational roles and must not come bundled.
+///
+/// Must live in the same module as the `#[access_control]`-annotated struct:
+/// the `AccessControlRole` derive generates a private `RoleFlags` type that
+/// the `access_control` expansion refers to by name.
+#[near(serializers = [json])]
+#[derive(AccessControlRole, Copy, Clone, Debug, PartialEq, Eq, Hash, EnumIter)]
+pub enum Roles {
+    Oracle,
+    ProductManager,
+    FeeManager,
+    Maintainer,
+    StagingManager,
+    UpgradeManager,
+}
+
+impl Roles {
+    /// All role variants, without consumers needing to import strum's
+    /// `IntoEnumIterator` trait.
+    pub fn all() -> impl Iterator<Item = Self> {
+        Self::iter()
+    }
+}
+
+/// Initial holders for each role, passed explicitly to `init`/`migrate`.
+/// Roles absent from the map get no initial holders; further accounts can
+/// always be granted later via the standard `acl_grant_role`.
+pub type RoleAssignments = HashMap<Roles, Vec<AccountId>>;
+
+/// Convenience for the common case: one account holding every role.
+pub fn all_roles_to(account_id: &AccountId) -> RoleAssignments {
+    Roles::all().map(|role| (role, vec![account_id.clone()])).collect()
+}
+
+pub trait InitApi {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        previous_version_account_id: AccountId,
+        super_admin: AccountId,
+        roles: RoleAssignments,
+    ) -> Self;
+}
+
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
-#[cfg(not(feature = "integration-test"))]
+///
+/// The layout is identical in production and integration-test builds: the
+/// integration-test time scale lives under its own raw storage key
+/// (see `sweat_jar_model::time_scale`), not in a field here.
 #[near(contract_state)]
-#[derive(PanicOnDefault, SelfUpdate)]
+#[derive(PanicOnDefault, Upgradable)]
+#[access_control(role_type(Roles))]
+#[upgradable(access_control_roles(
+    code_stagers(Roles::StagingManager),
+    code_deployers(Roles::UpgradeManager),
+    duration_initializers(Roles::UpgradeManager),
+    duration_update_stagers(Roles::UpgradeManager),
+    duration_update_appliers(Roles::UpgradeManager),
+))]
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
     pub token_account_id: AccountId,
 
     /// The account ID where fees for applicable operations are directed.
     pub fee_account_id: AccountId,
-
-    /// The account ID authorized to perform sensitive operations on the contract.
-    pub manager: AccountId,
 
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
@@ -54,91 +105,6 @@ pub struct Contract {
     pub previous_version_account_id: AccountId,
 }
 
-/// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
-/// Integration test version with custom BorshSerialize/Deserialize that syncs time_scale to thread-local storage.
-#[cfg(feature = "integration-test")]
-#[near(contract_state, serializers = [])]
-#[derive(PanicOnDefault, SelfUpdate)]
-pub struct Contract {
-    /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
-    pub token_account_id: AccountId,
-
-    /// The account ID where fees for applicable operations are directed.
-    pub fee_account_id: AccountId,
-
-    /// The account ID authorized to perform sensitive operations on the contract.
-    pub manager: AccountId,
-
-    /// A collection of products, each representing terms for specific deposit jars.
-    pub products: UnorderedMap<ProductId, Product>,
-
-    /// A lookup map that associates account IDs with sets of jars owned by each account.
-    pub accounts: LookupMap<AccountId, AccountVersioned>,
-
-    /// Cache to make access to products faster.
-    /// Is not stored in contract state (not serialized in custom BorshSerialize impl).
-    pub products_cache: RefCell<HashMap<ProductId, Product>>,
-
-    pub fee_amount: TokenAmount,
-    pub previous_version_account_id: AccountId,
-
-    /// Time scale for integration tests, stored in blockchain state.
-    /// This value is persisted and automatically synced to global thread-local storage on deserialization.
-    /// The actual time scale is accessed in code via ms_in_day()/ms_in_year() functions.
-    ///
-    /// Examples:
-    /// - `1.0` - Normal time (1 day = 24 hours)
-    /// - `1.0/24.0` - Accelerated 24x (1 day = 1 hour)
-    /// - `1.0/365.0` - Accelerated 365x (1 year = 1 day)
-    pub time_scale: f64,
-}
-
-#[cfg(feature = "integration-test")]
-#[mutants::skip]
-impl BorshSerialize for Contract {
-    fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        self.token_account_id.serialize(writer)?;
-        self.fee_account_id.serialize(writer)?;
-        self.manager.serialize(writer)?;
-        self.products.serialize(writer)?;
-        self.accounts.serialize(writer)?;
-        self.fee_amount.serialize(writer)?;
-        self.previous_version_account_id.serialize(writer)?;
-        self.time_scale.serialize(writer)?;
-        Ok(())
-    }
-}
-
-#[cfg(feature = "integration-test")]
-#[mutants::skip]
-impl BorshDeserialize for Contract {
-    fn deserialize_reader<R: std::io::Read>(reader: &mut R) -> std::io::Result<Self> {
-        let token_account_id = AccountId::deserialize_reader(reader)?;
-        let fee_account_id = AccountId::deserialize_reader(reader)?;
-        let manager = AccountId::deserialize_reader(reader)?;
-        let products = UnorderedMap::deserialize_reader(reader)?;
-        let accounts = LookupMap::deserialize_reader(reader)?;
-        let fee_amount = TokenAmount::deserialize_reader(reader)?;
-        let previous_version_account_id = AccountId::deserialize_reader(reader)?;
-        let time_scale = f64::deserialize_reader(reader)?;
-
-        // Sync time scale to global thread-local storage automatically on deserialization
-        sweat_jar_model::set_global_time_scale(time_scale);
-
-        Ok(Self {
-            token_account_id,
-            fee_account_id,
-            manager,
-            products,
-            accounts,
-            products_cache: RefCell::new(HashMap::new()),
-            fee_amount,
-            previous_version_account_id,
-            time_scale,
-        })
-    }
-}
-
 #[near]
 #[derive(BorshStorageKey)]
 pub(crate) enum StorageKey {
@@ -153,20 +119,59 @@ impl InitApi for Contract {
     fn init(
         token_account_id: AccountId,
         fee_account_id: AccountId,
-        manager: AccountId,
         previous_version_account_id: AccountId,
+        super_admin: AccountId,
+        roles: RoleAssignments,
     ) -> Self {
-        Self {
+        let mut contract = Self {
             token_account_id,
             fee_account_id,
-            manager,
             products: UnorderedMap::new(StorageKey::Products),
             products_cache: HashMap::default().into(),
             accounts: LookupMap::new(StorageKey::Accounts),
             fee_amount: 0,
             previous_version_account_id,
-            #[cfg(feature = "integration-test")]
-            time_scale: 1.0,
+        };
+
+        contract.init_authority(super_admin, roles);
+
+        contract
+    }
+}
+
+// Not `#[near]`-annotated: the macro would force these helpers `pub`.
+impl Contract {
+    /// One-shot ACL bootstrap shared by `init` and `migrate`: the predecessor
+    /// (the contract's own account, forced by `#[private]` at both call sites)
+    /// becomes a temporary super-admin so it can perform the grants — a fresh
+    /// ACL has no admins, and `acl_grant_role`/`acl_transfer_super_admin`
+    /// authorize by predecessor — then hands super-admin off to `super_admin`,
+    /// retaining no power itself. Every step is `require!`d: a silent ACL
+    /// failure must abort the whole transaction, never complete init/migrate
+    /// with a misconfigured ACL. This also makes an accidental second run of
+    /// `migrate` a deterministic revert (super admin already initialized).
+    pub(crate) fn init_authority(&mut self, super_admin: AccountId, roles: RoleAssignments) {
+        require!(
+            self.acl_init_super_admin(env::predecessor_account_id()),
+            "ACL bootstrap failed: super admin is already initialized"
+        );
+        self.grant_role_assignments(roles);
+        require!(
+            self.acl_transfer_super_admin(super_admin).is_some(),
+            "ACL bootstrap failed: could not transfer super admin"
+        );
+    }
+
+    pub(crate) fn grant_role_assignments(&mut self, roles: RoleAssignments) {
+        for (role, account_ids) in roles {
+            for account_id in account_ids {
+                // `None` = predecessor lacks admin permission for the role;
+                // `Some(false)` (account already held it) is fine.
+                require!(
+                    self.acl_grant_role(role.into(), account_id).is_some(),
+                    "ACL bootstrap failed: could not grant role"
+                );
+            }
         }
     }
 }
