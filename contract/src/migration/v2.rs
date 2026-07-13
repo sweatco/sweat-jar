@@ -385,7 +385,6 @@ mod product_v2 {
     use near_sdk::{
         json_types::{Base64VecU8, U128, U64},
         near,
-        serde::{Deserialize, Deserializer, Serialize, Serializer},
     };
     use sweat_jar_model::{ProductId, Score, UDecimal as UDecimalLegacy};
 
@@ -393,10 +392,8 @@ mod product_v2 {
         Apy as ApyLegacy, Product as ProductLegacy, Terms as TermsLegacy, WithdrawalFee as WithdrawalFeeLegacy,
     };
 
-    // `Apy` serializes manually and has no ABI schema, so the types containing
-    // it use plain serde; they only build the outgoing migration payload.
-    #[derive(Serialize, Deserialize, Clone, Debug)]
-    #[serde(crate = "near_sdk::serde")]
+    #[near(serializers=[json])]
+    #[derive(Clone, Debug)]
     pub(super) struct Product {
         id: ProductId,
         cap: Cap,
@@ -421,8 +418,8 @@ mod product_v2 {
         Percent(UDecimal),
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-    #[serde(crate = "near_sdk::serde")]
+    #[near(serializers=[json])]
+    #[derive(Clone, Debug, PartialEq)]
     #[serde(tag = "type", content = "data", rename_all = "snake_case")]
     enum Terms {
         Fixed(FixedProductTerms),
@@ -430,15 +427,15 @@ mod product_v2 {
         ScoreBased(ScoreBasedProductTerms),
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-    #[serde(crate = "near_sdk::serde")]
+    #[near(serializers=[json])]
+    #[derive(Clone, Debug, PartialEq)]
     struct FixedProductTerms {
         lockup_term: U64,
         apy: Apy,
     }
 
-    #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
-    #[serde(crate = "near_sdk::serde")]
+    #[near(serializers=[json])]
+    #[derive(Clone, Debug, PartialEq)]
     struct FlexibleProductTerms {
         apy: Apy,
     }
@@ -454,27 +451,26 @@ mod product_v2 {
     #[derive(Copy, Clone, Default, Debug, PartialEq)]
     struct UDecimal(U128, u32);
 
-    #[derive(Clone, Debug, PartialEq)]
-    enum Apy {
-        Constant(UDecimal),
-        Downgradable(DowngradableApy),
-    }
-
+    /// A constant APY has no `fallback`; a downgradable one carries both rates.
     #[near(serializers=[json])]
     #[derive(Clone, Debug, PartialEq)]
-    struct DowngradableApy {
+    struct Apy {
         default: UDecimal,
-        fallback: UDecimal,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        fallback: Option<UDecimal>,
     }
 
     impl From<ApyLegacy> for Apy {
         fn from(value: ApyLegacy) -> Self {
             match value {
-                ApyLegacy::Constant(value) => Apy::Constant(value.into()),
-                ApyLegacy::Downgradable(value) => Apy::Downgradable(DowngradableApy {
+                ApyLegacy::Constant(value) => Self {
+                    default: value.into(),
+                    fallback: None,
+                },
+                ApyLegacy::Downgradable(value) => Self {
                     default: value.default.into(),
-                    fallback: value.fallback.into(),
-                }),
+                    fallback: Some(value.fallback.into()),
+                },
             }
         }
     }
@@ -482,53 +478,6 @@ mod product_v2 {
     impl From<UDecimalLegacy> for UDecimal {
         fn from(value: UDecimalLegacy) -> Self {
             UDecimal(value.significand.into(), value.exponent)
-        }
-    }
-
-    #[near(serializers=[json])]
-    struct ApyHelper {
-        default: UDecimal,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        fallback: Option<UDecimal>,
-    }
-
-    impl From<Apy> for ApyHelper {
-        fn from(apy: Apy) -> Self {
-            match apy {
-                Apy::Constant(value) => Self {
-                    default: value,
-                    fallback: None,
-                },
-                Apy::Downgradable(value) => Self {
-                    default: value.default,
-                    fallback: Some(value.fallback),
-                },
-            }
-        }
-    }
-
-    impl Serialize for Apy {
-        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
-        {
-            ApyHelper::from(self.clone()).serialize(serializer)
-        }
-    }
-
-    impl<'de> Deserialize<'de> for Apy {
-        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let helper = ApyHelper::deserialize(deserializer)?;
-            Ok(match helper.fallback {
-                Some(fallback) => Apy::Downgradable(DowngradableApy {
-                    default: helper.default,
-                    fallback,
-                }),
-                None => Apy::Constant(helper.default),
-            })
         }
     }
 
