@@ -1,0 +1,2709 @@
+{
+  "schema_version": "0.4.0",
+  "metadata": {
+    "name": "sweat_jar",
+    "version": "3.5.2",
+    "authors": [
+      "Sweat Economy"
+    ],
+    "build": {
+      "compiler": "rustc 1.93.1",
+      "builder": "cargo-near cargo-near-build 0.11.3"
+    },
+    "wasm_hash": "HrSVRgb9tSv1zGLiyvdwXRQvg4DjSYQokupUGTqLRwV8"
+  },
+  "body": {
+    "functions": [
+      {
+        "name": "after_account_transferred",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueTuple_of_AccountId_and_Boolean"
+          }
+        }
+      },
+      {
+        "name": "after_bulk_withdraw",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "jars",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/JarWithdraw"
+                }
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/BulkWithdrawView"
+          }
+        }
+      },
+      {
+        "name": "after_claim",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "claimed_amount",
+              "type_schema": {
+                "$ref": "#/definitions/ClaimedAmountView"
+              }
+            },
+            {
+              "name": "jars_before_transfer",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/JarVersioned"
+                }
+              }
+            },
+            {
+              "name": "score_before_transfer",
+              "type_schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/AccountScore"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            {
+              "name": "event",
+              "type_schema": {
+                "$ref": "#/definitions/EventKind"
+              }
+            },
+            {
+              "name": "now",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/ClaimedAmountView"
+          }
+        }
+      },
+      {
+        "name": "after_products_migrated",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueNull"
+          }
+        }
+      },
+      {
+        "name": "after_withdraw",
+        "kind": "call",
+        "modifiers": [
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "jar_id",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            },
+            {
+              "name": "close_jar",
+              "type_schema": {
+                "type": "boolean"
+              }
+            },
+            {
+              "name": "withdrawn_amount",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint128",
+                "minimum": 0.0
+              }
+            },
+            {
+              "name": "fee",
+              "type_schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/Fee"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/WithdrawView"
+          }
+        }
+      },
+      {
+        "name": "batch_set_penalty",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "jars",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/U32"
+                      }
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                }
+              }
+            },
+            {
+              "name": "value",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "claim_total",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "detailed",
+              "type_schema": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueClaimedAmountView"
+          }
+        }
+      },
+      {
+        "name": "contract_source_metadata",
+        "kind": "view"
+      },
+      {
+        "name": "contract_version",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "string"
+          }
+        }
+      },
+      {
+        "name": "force_migrate_account",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueTuple_of_AccountId_and_Boolean"
+          }
+        }
+      },
+      {
+        "name": "ft_on_transfer",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "sender_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "amount",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "msg",
+              "type_schema": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueString"
+          }
+        }
+      },
+      {
+        "name": "get_interest",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "jar_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/U32"
+                }
+              }
+            },
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/AggregatedInterestView"
+          }
+        }
+      },
+      {
+        "name": "get_jar",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "jar_id",
+              "type_schema": {
+                "$ref": "#/definitions/U32"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/JarView"
+          }
+        }
+      },
+      {
+        "name": "get_jars_for_account",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/JarView"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_principal",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "jar_ids",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/U32"
+                }
+              }
+            },
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/AggregatedTokenAmountView"
+          }
+        }
+      },
+      {
+        "name": "get_products",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ProductView"
+            }
+          }
+        }
+      },
+      {
+        "name": "get_score_interest",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_timezone",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_total_interest",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/AggregatedInterestView"
+          }
+        }
+      },
+      {
+        "name": "get_total_principal",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/AggregatedTokenAmountView"
+          }
+        }
+      },
+      {
+        "name": "init",
+        "kind": "call",
+        "modifiers": [
+          "init",
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "token_account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "fee_account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "manager",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "new_version_account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "is_account_locked",
+        "kind": "view",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "boolean"
+          }
+        }
+      },
+      {
+        "name": "migrate_account",
+        "kind": "call",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueTuple_of_AccountId_and_Boolean"
+          }
+        }
+      },
+      {
+        "name": "migrate_accounts_to_claim_remainder",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "accounts",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                  "type": "string"
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "migrate_products",
+        "kind": "call",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueNull"
+          }
+        }
+      },
+      {
+        "name": "migrate_state_to_v2_ready",
+        "kind": "call",
+        "modifiers": [
+          "init",
+          "private"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "new_version_account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "record_score",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "batch",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "items": [
+                          {
+                            "type": "integer",
+                            "format": "uint16",
+                            "minimum": 0.0
+                          },
+                          {
+                            "$ref": "#/definitions/UTC"
+                          }
+                        ],
+                        "maxItems": 2,
+                        "minItems": 2
+                      }
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "register_product",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "command",
+              "type_schema": {
+                "$ref": "#/definitions/RegisterProductCommand"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "restake",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "jar_id",
+              "type_schema": {
+                "$ref": "#/definitions/U32"
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/JarView"
+          }
+        }
+      },
+      {
+        "name": "restake_all",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "jars",
+              "type_schema": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/definitions/U32"
+                }
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/JarView"
+            }
+          }
+        }
+      },
+      {
+        "name": "set_enabled",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "is_enabled",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "set_penalty",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            },
+            {
+              "name": "jar_id",
+              "type_schema": {
+                "$ref": "#/definitions/U32"
+              }
+            },
+            {
+              "name": "value",
+              "type_schema": {
+                "type": "boolean"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "set_public_key",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "product_id",
+              "type_schema": {
+                "type": "string"
+              }
+            },
+            {
+              "name": "public_key",
+              "type_schema": {
+                "$ref": "#/definitions/Base64VecU8"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "unlock_account",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "unlock_jars_for_account",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "account_id",
+              "type_schema": {
+                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                "type": "string"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "update_contract",
+        "kind": "call",
+        "modifiers": [
+          "payable"
+        ],
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "code",
+              "type_schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "uint8",
+                  "minimum": 0.0
+                }
+              }
+            },
+            {
+              "name": "callback",
+              "type_schema": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/Promise"
+          }
+        }
+      },
+      {
+        "name": "withdraw",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "jar_id",
+              "type_schema": {
+                "$ref": "#/definitions/U32"
+              }
+            },
+            {
+              "name": "amount",
+              "type_schema": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueWithdrawView"
+          }
+        }
+      },
+      {
+        "name": "withdraw_all",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "jars",
+              "type_schema": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "$ref": "#/definitions/U32"
+                }
+              }
+            }
+          ]
+        },
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/PromiseOrValueBulkWithdrawView"
+          }
+        }
+      }
+    ],
+    "root_schema": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "String",
+      "type": "string",
+      "definitions": {
+        "AccountScore": {
+          "type": "object",
+          "required": [
+            "scores",
+            "scores_history",
+            "timezone",
+            "updated"
+          ],
+          "properties": {
+            "scores": {
+              "description": "Scores buffer used for interest calculation. Can be invalidated on claim.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              },
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "scores_history": {
+              "description": "Score history values used for displaying it in application. Will not be invalidated during claim.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint16",
+                "minimum": 0.0
+              },
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "timezone": {
+              "$ref": "#/definitions/Timezone"
+            },
+            "updated": {
+              "$ref": "#/definitions/UTC"
+            }
+          }
+        },
+        "AggregatedInterestView": {
+          "type": "object",
+          "required": [
+            "amount",
+            "timestamp"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/AggregatedTokenAmountView"
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "AggregatedTokenAmountView": {
+          "type": "object",
+          "required": [
+            "detailed",
+            "total"
+          ],
+          "properties": {
+            "detailed": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "total": {
+              "type": "string"
+            }
+          }
+        },
+        "Apy": {
+          "description": "The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.",
+          "oneOf": [
+            {
+              "description": "Describes a constant APY, where the interest remains the same throughout the product's term.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/UDecimal"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "constant"
+                  ]
+                }
+              }
+            },
+            {
+              "description": "Describes a downgradable APY, where an oracle can set a penalty if a user violates the product's terms.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/DowngradableApy"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "downgradable"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "ApyView": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "Constant"
+              ],
+              "properties": {
+                "Constant": {
+                  "type": "number",
+                  "format": "float"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "Downgradable"
+              ],
+              "properties": {
+                "Downgradable": {
+                  "$ref": "#/definitions/DowngradableApyView"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "Base64VecU8": {
+          "description": "Helper class to serialize/deserialize `Vec<u8>` to base64 string.\n\n# Example ```rust use near_sdk::{json_types::Base64VecU8, near};\n\n#[near(serializers=[json])] struct NewStruct { field: Base64VecU8, } ```",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "uint8",
+            "minimum": 0.0
+          }
+        },
+        "BatchPenaltyData": {
+          "type": "object",
+          "required": [
+            "is_applied",
+            "jars",
+            "timestamp"
+          ],
+          "properties": {
+            "is_applied": {
+              "type": "boolean"
+            },
+            "jars": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "BulkWithdrawView": {
+          "type": "object",
+          "required": [
+            "jars",
+            "total_amount"
+          ],
+          "properties": {
+            "jars": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/WithdrawView"
+              }
+            },
+            "total_amount": {
+              "type": "string"
+            }
+          }
+        },
+        "Cap": {
+          "description": "The `Cap` struct defines the capacity of a deposit jar in terms of the minimum and maximum allowed principal amounts.",
+          "type": "object",
+          "required": [
+            "max",
+            "min"
+          ],
+          "properties": {
+            "max": {
+              "description": "The maximum amount of tokens that can be stored in the jar.",
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "min": {
+              "description": "The minimum amount of tokens that can be stored in the jar.",
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            }
+          }
+        },
+        "CapView": {
+          "type": "object",
+          "required": [
+            "max",
+            "min"
+          ],
+          "properties": {
+            "max": {
+              "type": "string"
+            },
+            "min": {
+              "type": "string"
+            }
+          }
+        },
+        "ChangeProductPublicKeyData": {
+          "type": "object",
+          "required": [
+            "pk",
+            "product_id"
+          ],
+          "properties": {
+            "pk": {
+              "$ref": "#/definitions/Base64VecU8"
+            },
+            "product_id": {
+              "type": "string"
+            }
+          }
+        },
+        "ClaimedAmountView": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/AggregatedTokenAmountView"
+            }
+          ]
+        },
+        "DowngradableApy": {
+          "description": "The `DowngradableApy` struct describes an APY that can be downgraded by an oracle.",
+          "type": "object",
+          "required": [
+            "default",
+            "fallback"
+          ],
+          "properties": {
+            "default": {
+              "description": "The default APY value if the user meets all the terms of the product.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/UDecimal"
+                }
+              ]
+            },
+            "fallback": {
+              "description": "The fallback APY value if the user violates some of the terms of the product.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/UDecimal"
+                }
+              ]
+            }
+          }
+        },
+        "DowngradableApyView": {
+          "type": "object",
+          "required": [
+            "default",
+            "fallback"
+          ],
+          "properties": {
+            "default": {
+              "type": "number",
+              "format": "float"
+            },
+            "fallback": {
+              "type": "number",
+              "format": "float"
+            }
+          }
+        },
+        "EnableProductData": {
+          "type": "object",
+          "required": [
+            "id",
+            "is_enabled"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "is_enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "EventJar": {
+          "type": "object",
+          "required": [
+            "account_id",
+            "claimed_balance",
+            "created_at",
+            "id",
+            "is_penalty_applied",
+            "is_pending_withdraw",
+            "principal",
+            "product_id"
+          ],
+          "properties": {
+            "account_id": {
+              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+              "type": "string"
+            },
+            "cache": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/JarCache"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claimed_balance": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "created_at": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "is_penalty_applied": {
+              "type": "boolean"
+            },
+            "is_pending_withdraw": {
+              "type": "boolean"
+            },
+            "principal": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "product_id": {
+              "type": "string"
+            }
+          }
+        },
+        "EventKind": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/Product"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "register_product"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/EventJar"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "create_jar"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0.0
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ],
+                    "maxItems": 2,
+                    "minItems": 2
+                  }
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "claim"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "integer",
+                      "format": "uint32",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "string"
+                    }
+                  ],
+                  "maxItems": 3,
+                  "minItems": 3
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "withdraw"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0.0
+                      },
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ],
+                    "maxItems": 3,
+                    "minItems": 3
+                  }
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "withdraw_all"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/MigrationEventItem"
+                  }
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "migration"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "integer",
+                      "format": "uint32",
+                      "minimum": 0.0
+                    },
+                    {
+                      "type": "integer",
+                      "format": "uint32",
+                      "minimum": 0.0
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "restake"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "array",
+                    "items": [
+                      {
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0.0
+                      },
+                      {
+                        "type": "integer",
+                        "format": "uint32",
+                        "minimum": 0.0
+                      }
+                    ],
+                    "maxItems": 2,
+                    "minItems": 2
+                  }
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "restake_all"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/PenaltyData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "apply_penalty"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/BatchPenaltyData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "batch_apply_penalty"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/EnableProductData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "enable_product"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/ChangeProductPublicKeyData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "change_product_public_key"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/TopUpData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "top_up"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/ScoreData"
+                  }
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "record_score"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "integer",
+                      "format": "uint16",
+                      "minimum": 0.0
+                    },
+                    {
+                      "$ref": "#/definitions/Local"
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "old_score_warning"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+                  "type": "string"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "jars_merge"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "Fee": {
+          "type": "object",
+          "required": [
+            "amount",
+            "beneficiary_id"
+          ],
+          "properties": {
+            "amount": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "beneficiary_id": {
+              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+              "type": "string"
+            }
+          }
+        },
+        "FixedProductTerms": {
+          "description": "The `FixedProductTerms` struct contains terms specific to Fixed products.",
+          "type": "object",
+          "required": [
+            "allows_restaking",
+            "allows_top_up",
+            "lockup_term"
+          ],
+          "properties": {
+            "allows_restaking": {
+              "description": "Indicates whether a user can restake the jar after maturity.",
+              "type": "boolean"
+            },
+            "allows_top_up": {
+              "description": "Indicates whether a user can refill the jar.",
+              "type": "boolean"
+            },
+            "lockup_term": {
+              "description": "The maturity term of the jar, during which it yields interest. After this period, the user can withdraw principal or potentially restake the jar.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "FixedProductTermsDto": {
+          "type": "object",
+          "required": [
+            "allows_restaking",
+            "allows_top_up",
+            "lockup_term"
+          ],
+          "properties": {
+            "allows_restaking": {
+              "type": "boolean"
+            },
+            "allows_top_up": {
+              "type": "boolean"
+            },
+            "lockup_term": {
+              "type": "string"
+            }
+          }
+        },
+        "FixedProductTermsView": {
+          "type": "object",
+          "required": [
+            "allows_restaking",
+            "allows_top_up",
+            "lockup_term"
+          ],
+          "properties": {
+            "allows_restaking": {
+              "type": "boolean"
+            },
+            "allows_top_up": {
+              "type": "boolean"
+            },
+            "lockup_term": {
+              "type": "string"
+            }
+          }
+        },
+        "JarCache": {
+          "description": "A cached value that stores calculated interest based on the current state of the jar. This cache is updated whenever properties that impact interest calculation change, allowing for efficient interest calculations between state changes.",
+          "type": "object",
+          "required": [
+            "interest",
+            "updated_at"
+          ],
+          "properties": {
+            "interest": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "updated_at": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "JarV1": {
+          "description": "The `Jar` struct represents a deposit jar within the smart contract.",
+          "type": "object",
+          "required": [
+            "account_id",
+            "claim_remainder",
+            "claimed_balance",
+            "created_at",
+            "id",
+            "is_penalty_applied",
+            "is_pending_withdraw",
+            "principal",
+            "product_id"
+          ],
+          "properties": {
+            "account_id": {
+              "description": "The account ID of the owner of the jar.",
+              "type": "string"
+            },
+            "cache": {
+              "description": "A cached value that stores calculated interest based on the current state of the jar. This cache is updated whenever properties that impact interest calculation change, allowing for efficient interest calculations between state changes.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/JarCache"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "claim_remainder": {
+              "description": "Remainder of claim operation. Needed to negate rounding error when user claims very often. See `Jar::get_interest` method for implementation of this logic.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "claimed_balance": {
+              "description": "The amount of tokens that have been claimed from the jar up to the present moment.",
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "created_at": {
+              "description": "The timestamp of when the jar was created, measured in milliseconds since Unix epoch.",
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "id": {
+              "description": "The unique identifier for the jar.",
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "is_penalty_applied": {
+              "description": "Indicates whether a penalty has been applied to the jar's owner due to violating product terms.",
+              "type": "boolean"
+            },
+            "is_pending_withdraw": {
+              "description": "Indicates whether an operation involving cross-contract calls is in progress for this jar.",
+              "type": "boolean"
+            },
+            "principal": {
+              "description": "The principal amount of the deposit stored in the jar.",
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "product_id": {
+              "description": "The product ID that describes the terms of the deposit associated with the jar.",
+              "type": "string"
+            }
+          }
+        },
+        "JarVersioned": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "v1"
+              ],
+              "properties": {
+                "v1": {
+                  "$ref": "#/definitions/JarV1"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "JarView": {
+          "type": "object",
+          "required": [
+            "account_id",
+            "claimed_balance",
+            "created_at",
+            "id",
+            "is_penalty_applied",
+            "principal",
+            "product_id"
+          ],
+          "properties": {
+            "account_id": {
+              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+              "type": "string"
+            },
+            "claimed_balance": {
+              "type": "string"
+            },
+            "created_at": {
+              "type": "string"
+            },
+            "id": {
+              "$ref": "#/definitions/U32"
+            },
+            "is_penalty_applied": {
+              "type": "boolean"
+            },
+            "is_pending_withdraw": {
+              "default": false,
+              "type": "boolean"
+            },
+            "principal": {
+              "type": "string"
+            },
+            "product_id": {
+              "type": "string"
+            }
+          }
+        },
+        "JarWithdraw": {
+          "type": "object",
+          "required": [
+            "amount",
+            "jar",
+            "should_be_closed"
+          ],
+          "properties": {
+            "amount": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "fee": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint128",
+              "minimum": 0.0
+            },
+            "jar": {
+              "$ref": "#/definitions/JarVersioned"
+            },
+            "should_be_closed": {
+              "type": "boolean"
+            }
+          }
+        },
+        "Local": {
+          "description": "Timestamp in Local user timezone",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "MigrationEventItem": {
+          "type": "object",
+          "required": [
+            "account_id",
+            "id",
+            "original_id"
+          ],
+          "properties": {
+            "account_id": {
+              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+              "type": "string"
+            },
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "original_id": {
+              "type": "string"
+            }
+          }
+        },
+        "PenaltyData": {
+          "type": "object",
+          "required": [
+            "id",
+            "is_applied",
+            "timestamp"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "is_applied": {
+              "type": "boolean"
+            },
+            "timestamp": {
+              "type": "integer",
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
+        },
+        "Product": {
+          "description": "The `Product` struct describes the terms of a deposit jar. It can be of Flexible or Fixed type.",
+          "type": "object",
+          "required": [
+            "apy",
+            "cap",
+            "id",
+            "is_enabled",
+            "score_cap",
+            "terms"
+          ],
+          "properties": {
+            "apy": {
+              "description": "The Annual Percentage Yield (APY) associated with the product.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Apy"
+                }
+              ]
+            },
+            "cap": {
+              "description": "The capacity boundaries of the deposit jar, specifying the minimum and maximum principal amount.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Cap"
+                }
+              ]
+            },
+            "id": {
+              "description": "The unique identifier of the product.",
+              "type": "string"
+            },
+            "is_enabled": {
+              "description": "Indicates whether it's possible to create a new jar for this product.",
+              "type": "boolean"
+            },
+            "public_key": {
+              "description": "An optional ed25519 public key used for authorization to create a jar for this product.",
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            },
+            "score_cap": {
+              "description": "TODO: document 0 - non step jar",
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "terms": {
+              "description": "The terms specific to the product, which can be either Flexible or Fixed.",
+              "allOf": [
+                {
+                  "$ref": "#/definitions/Terms"
+                }
+              ]
+            },
+            "withdrawal_fee": {
+              "description": "Describes whether a withdrawal fee is applicable and, if so, its details.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WithdrawalFee"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "ProductView": {
+          "type": "object",
+          "required": [
+            "apy",
+            "cap",
+            "id",
+            "is_enabled",
+            "terms"
+          ],
+          "properties": {
+            "apy": {
+              "$ref": "#/definitions/ApyView"
+            },
+            "cap": {
+              "$ref": "#/definitions/CapView"
+            },
+            "id": {
+              "type": "string"
+            },
+            "is_enabled": {
+              "type": "boolean"
+            },
+            "score_cap": {
+              "default": 0,
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "terms": {
+              "$ref": "#/definitions/TermsView"
+            },
+            "withdrawal_fee": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WithdrawalFeeView"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "Promise": true,
+        "PromiseOrValueBulkWithdrawView": {
+          "type": "object",
+          "required": [
+            "jars",
+            "total_amount"
+          ],
+          "properties": {
+            "jars": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/WithdrawView"
+              }
+            },
+            "total_amount": {
+              "type": "string"
+            }
+          }
+        },
+        "PromiseOrValueClaimedAmountView": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/AggregatedTokenAmountView"
+            }
+          ]
+        },
+        "PromiseOrValueNull": {
+          "type": "null"
+        },
+        "PromiseOrValueString": {
+          "type": "string"
+        },
+        "PromiseOrValueTuple_of_AccountId_and_Boolean": {
+          "type": "array",
+          "items": [
+            {
+              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            }
+          ],
+          "maxItems": 2,
+          "minItems": 2
+        },
+        "PromiseOrValueWithdrawView": {
+          "description": "The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.",
+          "type": "object",
+          "required": [
+            "fee",
+            "withdrawn_amount"
+          ],
+          "properties": {
+            "fee": {
+              "description": "The possible fee that a user must pay for withdrawal, if it's defined by the associated Product.",
+              "type": "string"
+            },
+            "withdrawn_amount": {
+              "description": "The amount of tokens that has been transferred to the user's account as part of the withdrawal.",
+              "type": "string"
+            }
+          }
+        },
+        "RegisterProductCommand": {
+          "type": "object",
+          "required": [
+            "apy_default",
+            "cap_max",
+            "cap_min",
+            "id",
+            "is_enabled",
+            "score_cap",
+            "terms"
+          ],
+          "properties": {
+            "apy_default": {
+              "type": "array",
+              "items": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer",
+                  "format": "uint32",
+                  "minimum": 0.0
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "apy_fallback": {
+              "type": [
+                "array",
+                "null"
+              ],
+              "items": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer",
+                  "format": "uint32",
+                  "minimum": 0.0
+                }
+              ],
+              "maxItems": 2,
+              "minItems": 2
+            },
+            "cap_max": {
+              "type": "string"
+            },
+            "cap_min": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "is_enabled": {
+              "type": "boolean"
+            },
+            "public_key": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/Base64VecU8"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "score_cap": {
+              "type": "integer",
+              "format": "uint16",
+              "minimum": 0.0
+            },
+            "terms": {
+              "$ref": "#/definitions/TermsDto"
+            },
+            "withdrawal_fee": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/WithdrawalFeeDto"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "ScoreData": {
+          "type": "object",
+          "required": [
+            "account_id",
+            "score"
+          ],
+          "properties": {
+            "account_id": {
+              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+              "type": "string"
+            },
+            "score": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": [
+                  {
+                    "$ref": "#/definitions/U32"
+                  },
+                  {
+                    "$ref": "#/definitions/UTC"
+                  }
+                ],
+                "maxItems": 2,
+                "minItems": 2
+              }
+            }
+          }
+        },
+        "Terms": {
+          "description": "The `Terms` enum describes additional terms specific to either Flexible or Fixed products.",
+          "oneOf": [
+            {
+              "description": "Describes additional terms for Fixed products.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/FixedProductTerms"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fixed"
+                  ]
+                }
+              }
+            },
+            {
+              "description": "Describes additional terms for Flexible products.",
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "flexible"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "TermsDto": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/FixedProductTermsDto"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fixed"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "flexible"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "TermsView": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/FixedProductTermsView"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fixed"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "type"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "flexible"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "Timezone": {
+          "description": "Timezone described as time shift from UTC in ms",
+          "type": "integer",
+          "format": "int64"
+        },
+        "TopUpData": {
+          "type": "object",
+          "required": [
+            "amount",
+            "id"
+          ],
+          "properties": {
+            "amount": {
+              "type": "string"
+            },
+            "id": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            }
+          }
+        },
+        "U32": {
+          "type": "string"
+        },
+        "UDecimal": {
+          "description": "`UDecimal` represents a scientific representation of decimals.\n\nThe decimal number is represented in the form of `significand` divided by (10 raised to the power of `exponent`). The `significand` and `exponent` are both positive integers. The key components of this structure include:\n\n* `significand`: The parts of the decimal number that holds significant digits, i.e., all digits including and following the leftmost nonzero digit.\n\n* `exponent`: The part of the decimal number that represents the power to which 10 must be raised to yield the original number.",
+          "type": "object",
+          "required": [
+            "exponent",
+            "significand"
+          ],
+          "properties": {
+            "exponent": {
+              "type": "integer",
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "significand": {
+              "type": "integer",
+              "format": "uint128",
+              "minimum": 0.0
+            }
+          }
+        },
+        "UTC": {
+          "description": "Timestamp in UTC timezone",
+          "type": "integer",
+          "format": "uint64",
+          "minimum": 0.0
+        },
+        "WithdrawView": {
+          "description": "The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.",
+          "type": "object",
+          "required": [
+            "fee",
+            "withdrawn_amount"
+          ],
+          "properties": {
+            "fee": {
+              "description": "The possible fee that a user must pay for withdrawal, if it's defined by the associated Product.",
+              "type": "string"
+            },
+            "withdrawn_amount": {
+              "description": "The amount of tokens that has been transferred to the user's account as part of the withdrawal.",
+              "type": "string"
+            }
+          }
+        },
+        "WithdrawalFee": {
+          "description": "The `WithdrawalFee` enum describes withdrawal fee details, which can be either a fixed amount or a percentage of the withdrawal.",
+          "oneOf": [
+            {
+              "description": "Describes a fixed amount of tokens that a user must pay as a fee on withdrawal.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "type": "integer",
+                  "format": "uint128",
+                  "minimum": 0.0
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fix"
+                  ]
+                }
+              }
+            },
+            {
+              "description": "Describes a percentage of the withdrawal amount that a user must pay as a fee on withdrawal.",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/UDecimal"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "percent"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "WithdrawalFeeDto": {
+          "oneOf": [
+            {
+              "description": "Fixed amount of tokens which a user will pay on tokens withdraw",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fix"
+                  ]
+                }
+              }
+            },
+            {
+              "description": "Decimal representation of a percent that a user will pay on tokens withdraw: 1. First element is significand as a string 2. Second element is exponent as an integer I.e. \"0.12\" becomes (\"12\", 2): 12 * 10^-2",
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "type": "array",
+                  "items": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "integer",
+                      "format": "uint32",
+                      "minimum": 0.0
+                    }
+                  ],
+                  "maxItems": 2,
+                  "minItems": 2
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "percent"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "WithdrawalFeeView": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "fix"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "type"
+              ],
+              "properties": {
+                "data": {
+                  "type": "number",
+                  "format": "float"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "percent"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

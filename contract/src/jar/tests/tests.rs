@@ -5,7 +5,9 @@ use near_sdk::Timestamp;
 use sweat_jar_model::{ScoreRecord, UDecimal, MS_IN_YEAR};
 
 use crate::{
-    jar::model::JarCache, product::model::{Apy, Product}, Jar
+    jar::model::JarCache,
+    product::model::{Apy, Product},
+    Jar,
 };
 
 #[test]
@@ -38,9 +40,7 @@ fn get_interest_at_maturity_moment() {
         interest: 10,
     });
 
-    let interest = jar
-        .get_interest(&ScoreRecord::default(), &product, now)
-        .0;
+    let interest = jar.get_interest(&ScoreRecord::default(), &product, now).0;
     assert_eq!(10, interest);
 }
 

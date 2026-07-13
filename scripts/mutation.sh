@@ -3,5 +3,5 @@ set -eox pipefail
 
 echo ">> Mutation tests"
 
-cargo install --locked cargo-mutants
-cargo mutants -p sweat_jar -- --release
+cargo install --locked cargo-mutants@26.0.0
+cargo mutants -p sweat_jar

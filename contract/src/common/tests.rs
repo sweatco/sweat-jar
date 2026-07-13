@@ -48,7 +48,7 @@ impl Context {
         }
     }
 
-    pub(crate) fn contract(&self) -> MutexGuard<Contract> {
+    pub(crate) fn contract(&self) -> MutexGuard<'_, Contract> {
         self.contract.try_lock().expect("Contract is already locked")
     }
 

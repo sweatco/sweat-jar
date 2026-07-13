@@ -1,6 +1,6 @@
 #![cfg(not(test))]
 
-use near_sdk::{near_bindgen, serde_json, serde_json::json, AccountId, Gas, NearToken, Promise};
+use near_sdk::{near, serde_json, serde_json::json, AccountId, Gas, NearToken, Promise};
 use sweat_jar_model::{withdraw::Fee, TokenAmount};
 
 use crate::{Contract, ContractExt};
@@ -16,7 +16,7 @@ impl FungibleTokenContract {
     }
 }
 
-#[near_bindgen]
+#[near]
 impl Contract {
     #[cfg(not(test))]
     pub(crate) fn ft_contract(&self) -> impl FungibleTokenInterface {
@@ -25,13 +25,13 @@ impl Contract {
 }
 
 pub(crate) trait FungibleTokenInterface {
-    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise;
+    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: Option<&Fee>) -> Promise;
     fn ft_transfer_call(&self, receiver_id: &AccountId, amount: u128, memo: &str, msg: &str, tgas: u64) -> Promise;
 }
 
 impl FungibleTokenInterface for FungibleTokenContract {
     #[mutants::skip] // Covered by integration tests
-    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: &Option<Fee>) -> Promise {
+    fn ft_transfer(&self, receiver_id: &AccountId, amount: u128, memo: &str, fee: Option<&Fee>) -> Promise {
         if let Some(fee) = fee {
             Promise::new(self.address.clone())
                 .ft_transfer(receiver_id, amount - fee.amount, Some(memo.to_string()))

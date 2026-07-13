@@ -6,11 +6,8 @@ install: ##@Miscellaneous Install dependencies
 	@npm i near-cli
 	@cargo build
 
-measure: ##@Miscellaneous Measure gas cost.
-	./scripts/measure.sh
-
 check: ##@Miscellaneous Run all checks.
-	make fmt && make lint && make build && make test && make int && make mutation
+	make fmt && make lint && make build && make test && make mutation
 
 mutation: ##@Miscellaneous Run mutation test.
 	./scripts/mutation.sh
@@ -18,13 +15,8 @@ mutation: ##@Miscellaneous Run mutation test.
 build: ##@Build Build the contract locally.
 	./scripts/build.sh
 
-build-integration: ##@Build Build the contract for integration tests.
-	./scripts/build-integration.sh
-
-build-in-docker: ##@Build Build reproducible artifact in Docker.
-	./scripts/build-in-docker.sh
-
-dock: build-in-docker ##@Build Shorthand for `build-in-docker`
+build-reproducible: ##@Build Build reproducible artifact in Docker.
+	./scripts/build-reproducible.sh
 
 deploy: ##@Deploy Deploy the contract to dev account on Testnet.
 	./scripts/deploy.sh
@@ -37,13 +29,7 @@ cov: ##@Testing Run unit tests with coverage.
 	cargo llvm-cov --hide-instantiations --open --ignore-filename-regex tests.rs
 
 test: ##@Testing Run unit tests.
-	cargo test --package sweat-jar-model --features=release-api --release && \
-	cargo test --package sweat_jar --release
-
-integration: ##@Testing Run integration tests.
-	cargo test --package integration-tests
-
-int: integration ##@Testing Shorthand for `integration`
+	cargo test
 
 fmt: ##@Chores Format the code using rustfmt nightly.
 	cargo +nightly fmt --all

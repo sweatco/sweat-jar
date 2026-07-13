@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use near_sdk::{env, env::panic_str, json_types::U128, near_bindgen, require, AccountId};
+use near_sdk::{env, env::panic_str, json_types::U128, near, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarId, JarIdView, JarView},
@@ -70,7 +70,7 @@ impl Contract {
     }
 }
 
-#[near_bindgen]
+#[near]
 impl JarApi for Contract {
     // TODO: restore previous version after V2 migration
     #[mutants::skip]

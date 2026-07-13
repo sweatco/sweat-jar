@@ -2,7 +2,7 @@ use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
 use sweat_jar_model::jar::{CeFiJar, JarId};
 
-use crate::{jar::model::JarTicket, near_bindgen, Base64VecU8, Contract, ContractExt};
+use crate::{jar::model::JarTicket, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -32,7 +32,7 @@ pub struct StakeMessage {
     receiver_id: Option<AccountId>,
 }
 
-#[near_bindgen]
+#[near]
 impl FungibleTokenReceiver for Contract {
     fn ft_on_transfer(&mut self, sender_id: AccountId, amount: U128, msg: String) -> PromiseOrValue<U128> {
         self.assert_from_ft_contract();
@@ -100,7 +100,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
 
@@ -143,7 +143,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
@@ -196,7 +196,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice.clone(), U128(ticket_amount), msg.to_string());
 
@@ -225,7 +225,7 @@ mod tests {
 
         context.switch_account_to_ft_contract_account();
         let top_up_amount = 700;
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
@@ -253,7 +253,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
+        let _ = context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
     }
 
     #[test]
@@ -278,7 +278,7 @@ mod tests {
         context.switch_account_to_ft_contract_account();
 
         let top_up_amount = 1_000;
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice.clone(), U128(top_up_amount), msg.to_string());
 
@@ -321,7 +321,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(admin, U128(amount_alice + amount_bob), msg.to_string());
 
@@ -360,7 +360,7 @@ mod tests {
         });
 
         context.switch_account_to_ft_contract_account();
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice, U128(amount_alice), msg.to_string());
     }
@@ -374,7 +374,7 @@ mod tests {
         let mut context = Context::new(admin);
 
         context.switch_account_to_ft_contract_account();
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice, U128(300), "something".to_string());
     }
@@ -388,7 +388,7 @@ mod tests {
         let mut context = Context::new(admin);
 
         context.switch_account(&alice);
-        context
+        let _ = context
             .contract()
             .ft_on_transfer(alice.clone(), U128(300), "something".to_string());
     }

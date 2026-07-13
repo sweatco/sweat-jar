@@ -1,4 +1,4 @@
-use near_sdk::{assert_one_yocto, env::panic_str, near_bindgen, require};
+use near_sdk::{assert_one_yocto, env::panic_str, near, require};
 use sweat_jar_model::{
     api::ProductApi,
     product::{ProductView, RegisterProductCommand},
@@ -11,7 +11,7 @@ use crate::{
     Base64VecU8, Contract, ContractExt,
 };
 
-#[near_bindgen]
+#[near]
 impl ProductApi for Contract {
     #[payable]
     fn register_product(&mut self, command: RegisterProductCommand) {

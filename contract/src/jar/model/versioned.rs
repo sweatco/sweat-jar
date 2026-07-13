@@ -6,7 +6,7 @@ use near_sdk::{
         BorshDeserialize, BorshSerialize,
     },
     serde::{Deserialize, Serialize},
-    AccountId,
+    AccountId, NearSchema,
 };
 use sweat_jar_model::{jar::JarId, ProductId, ScoreRecord, TokenAmount};
 
@@ -18,7 +18,9 @@ use crate::{
 
 pub type Jar = JarVersioned;
 
-#[derive(Clone, Debug, Serialize, Deserialize, BorshSerialize, PartialEq)]
+// NearSchema: the manual `BorshDeserialize` below rules out `#[near]`.
+#[derive(Clone, Debug, Serialize, Deserialize, BorshSerialize, PartialEq, NearSchema)]
+#[abi(json, borsh)]
 #[serde(crate = "near_sdk::serde", rename_all = "snake_case")]
 #[borsh(crate = "near_sdk::borsh")]
 pub enum JarVersioned {

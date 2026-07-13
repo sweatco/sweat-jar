@@ -1,3 +1,7 @@
 [toolchain]
-channel = "1.81"
-components = ["rust-analyzer", "rustfmt"]
+channel = "1.93"
+components = ["rust-analyzer", "rustfmt", "clippy"]
+# The contract compiles (and is clippy-checked, see scripts/lint.sh) for
+# wasm32; declaring it here makes rustup provision it with the toolchain on
+# any machine, including CI runners.
+targets = ["wasm32-unknown-unknown"]
