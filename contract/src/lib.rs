@@ -48,7 +48,7 @@ impl Roles {
     }
 }
 
-/// Initial holders for each role, passed explicitly to `init`/`migrate`.
+/// Initial holders for each role, passed explicitly to `init`.
 /// Roles absent from the map get no initial holders; further accounts can
 /// always be granted later via the standard `acl_grant_role`.
 pub type RoleAssignments = HashMap<Roles, Vec<AccountId>>;
@@ -141,15 +141,13 @@ impl InitApi for Contract {
 
 // Not `#[near]`-annotated: the macro would force these helpers `pub`.
 impl Contract {
-    /// One-shot ACL bootstrap shared by `init` and `migrate`: the predecessor
-    /// (the contract's own account, forced by `#[private]` at both call sites)
-    /// becomes a temporary super-admin so it can perform the grants — a fresh
-    /// ACL has no admins, and `acl_grant_role`/`acl_transfer_super_admin`
-    /// authorize by predecessor — then hands super-admin off to `super_admin`,
-    /// retaining no power itself. Every step is `require!`d: a silent ACL
-    /// failure must abort the whole transaction, never complete init/migrate
-    /// with a misconfigured ACL. This also makes an accidental second run of
-    /// `migrate` a deterministic revert (super admin already initialized).
+    /// One-shot ACL bootstrap for `init`: the predecessor (the contract's own
+    /// account, forced by `#[private]`) becomes a temporary super-admin so it
+    /// can perform the grants — a fresh ACL has no admins, and
+    /// `acl_grant_role`/`acl_transfer_super_admin` authorize by predecessor —
+    /// then hands super-admin off to `super_admin`, retaining no power itself.
+    /// Every step is `require!`d: a silent ACL failure must abort the whole
+    /// transaction, never complete init with a misconfigured ACL.
     pub(crate) fn init_authority(&mut self, super_admin: AccountId, roles: RoleAssignments) {
         require!(
             self.acl_init_super_admin(env::predecessor_account_id()),
