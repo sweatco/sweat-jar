@@ -228,15 +228,17 @@ impl Contract {
         withdrawal_result
     }
 
-    fn get_fee(product: &Product, jar: &Jar) -> Option<TokenAmount> {
+    /// `amount` is the amount actually being withdrawn — a percentage fee is a
+    /// percentage of that, not of the jar's whole principal.
+    fn get_fee(product: &Product, amount: TokenAmount) -> Option<TokenAmount> {
         let fee = product.withdrawal_fee.as_ref()?;
 
-        let amount = match fee {
-            WithdrawalFee::Fix(amount) => *amount,
-            WithdrawalFee::Percent(percent) => percent * jar.principal,
+        let fee_amount = match fee {
+            WithdrawalFee::Fix(fee) => *fee,
+            WithdrawalFee::Percent(percent) => percent * amount,
         };
 
-        amount.into()
+        fee_amount.into()
     }
 
     fn make_fee(&self, amount: Option<TokenAmount>) -> Option<Fee> {
@@ -259,7 +261,7 @@ impl Contract {
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = Self::get_fee(&product, jar);
+        let fee = Self::get_fee(&product, amount);
 
         self.ft_contract()
             .ft_transfer(account_id, amount, "withdraw", self.make_fee(fee).as_ref())
@@ -282,7 +284,7 @@ impl Contract {
             .iter()
             .filter_map(|j| {
                 let product = self.get_product(&j.jar.product_id);
-                Self::get_fee(&product, &j.jar)
+                Self::get_fee(&product, j.amount)
             })
             .sum();
 
@@ -334,7 +336,7 @@ impl Contract {
         close_jar: bool,
     ) -> PromiseOrValue<WithdrawView> {
         let product = self.get_product(&jar.product_id);
-        let fee = Self::get_fee(&product, jar);
+        let fee = Self::get_fee(&product, amount);
 
         let withdrawn = self.after_withdraw_internal(
             account_id.clone(),

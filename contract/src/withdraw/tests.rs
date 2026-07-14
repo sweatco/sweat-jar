@@ -240,13 +240,43 @@ fn product_with_percent_fee() {
         .withdraw(U32(0), Some(U128(withdrawn_amount)))
         .unwrap();
 
-    let reference_fee = fee_value * initial_principal;
+    // A percent fee is charged on the amount actually withdrawn, not the jar's
+    // full principal — `withdrawn_amount` (100_000) is only a tenth of the jar.
+    let reference_fee = fee_value * withdrawn_amount;
     assert_eq!(withdraw.withdrawn_amount, U128(withdrawn_amount - reference_fee));
     assert_eq!(withdraw.fee, U128(reference_fee));
 
     let jar = context.contract().get_jar(alice, U32(reference_jar.id));
 
     assert_eq!(jar.principal, U128(initial_principal - withdrawn_amount));
+}
+
+/// Withdrawing far less than the principal must produce a fee proportional to
+/// the withdrawn amount. Under the old "fee on full principal" logic a 5% fee
+/// on a 1_000_000 jar was 50_000 regardless of the amount, which exceeded a
+/// small withdrawal and underflowed `amount - fee` in the transfer.
+#[test]
+fn percent_fee_scales_with_small_withdrawal() {
+    let fee_value = UDecimal::new(5, 2); // 5%
+    let product = Product::new().with_withdrawal_fee(WithdrawalFee::Percent(fee_value.clone()));
+    let (alice, reference_jar, mut context) = prepare_jar(&product);
+
+    context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+    context.switch_account(&alice);
+
+    let withdrawn_amount = 100;
+    let withdraw = context
+        .contract()
+        .withdraw(U32(reference_jar.id), Some(U128(withdrawn_amount)))
+        .unwrap();
+
+    let reference_fee = fee_value * withdrawn_amount; // 5% of 100 = 5
+    assert_eq!(withdraw.fee, U128(reference_fee));
+    assert!(
+        withdraw.fee.0 < withdrawn_amount,
+        "fee must not exceed the withdrawn amount"
+    );
+    assert_eq!(withdraw.withdrawn_amount, U128(withdrawn_amount - reference_fee));
 }
 
 #[test]
