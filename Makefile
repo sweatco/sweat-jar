@@ -21,9 +21,6 @@ build-integration: ##@Build Build the contract for integration tests.
 build-reproducible: ##@Build Build reproducible artifact in Docker.
 	./scripts/build-reproducible.sh
 
-deploy: ##@Deploy Deploy the contract to dev account on Testnet.
-	./scripts/deploy.sh
-
 testnet-deploy: ##@Test Deploy the contract to dev account on Testnet.
 	make build
 	near deploy v8.jar.sweatty.testnet ./res/sweat_jar.wasm --force

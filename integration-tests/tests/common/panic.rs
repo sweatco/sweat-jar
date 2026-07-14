@@ -1,4 +1,4 @@
-use near_workspaces::result::{ExecutionFailure, ExecutionResult, ExecutionSuccess};
+use near_workspaces::result::{ExecutionFailure, ExecutionFinalResult, ExecutionResult, ExecutionSuccess};
 
 /// Checks whether a transaction outcome panicked with a message containing `message`.
 pub trait PanicFinder {
@@ -11,6 +11,12 @@ impl PanicFinder for Result<ExecutionSuccess, ExecutionFailure> {
             Ok(ok) => ok.has_panic(message),
             Err(err) => err.has_panic(message),
         }
+    }
+}
+
+impl PanicFinder for ExecutionFinalResult {
+    fn has_panic(&self, message: &str) -> bool {
+        self.clone().into_result().has_panic(message)
     }
 }
 

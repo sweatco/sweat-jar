@@ -1,21 +1,15 @@
 use std::{collections::HashMap, fmt::Display};
 
+use near_plugins::AccessControllable;
 use near_sdk::require;
 use sweat_jar_model::{
     jar::{JarId, JarIdView},
     ProductId,
 };
 
-use crate::{env, jar::model::Jar, AccountId, Contract, Product};
+use crate::{env, jar::model::Jar, AccountId, Contract, Product, Roles};
 
 impl Contract {
-    pub(crate) fn assert_manager(&self) {
-        require!(
-            self.manager == env::predecessor_account_id(),
-            "Can be performed only by admin"
-        );
-    }
-
     pub(crate) fn assert_from_ft_contract(&self) {
         require!(
             env::predecessor_account_id() == self.token_account_id,
@@ -24,7 +18,14 @@ impl Contract {
     }
 
     pub(crate) fn assert_account_can_update(&self) {
-        self.assert_manager();
+        require!(
+            self.acl_has_any_role(vec![Roles::UpgradeManager.into()], env::predecessor_account_id()),
+            format!(
+                "Insufficient permissions for method update_contract restricted by access control. \
+                 Requires one of these roles: {:?}",
+                vec![Roles::UpgradeManager]
+            )
+        );
     }
 
     pub(crate) fn assert_account_is_not_migrating(&self, account_id: &AccountId) {
@@ -130,7 +131,7 @@ mod test {
     };
 
     #[test]
-    #[should_panic(expected = r#"Can be performed only by admin"#)]
+    #[should_panic(expected = "Insufficient permissions for method update_contract")]
     fn self_update_without_access() {
         let admin = admin();
         let context = Context::new(admin);

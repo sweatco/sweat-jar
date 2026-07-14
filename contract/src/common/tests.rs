@@ -9,9 +9,9 @@ use std::{
 
 use near_contract_standards::fungible_token::Balance;
 use near_sdk::{env::block_timestamp_ms, test_utils::VMContextBuilder, testing_env, AccountId, NearToken};
-use sweat_jar_model::{api::InitApi, jar::JarId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
+use sweat_jar_model::{jar::JarId, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE};
 
-use crate::{jar::model::Jar, product::model::Product, test_utils::AfterCatchUnwind, Contract};
+use crate::{all_roles_to, jar::model::Jar, product::model::Product, test_utils::AfterCatchUnwind, Contract, InitApi};
 
 pub(crate) struct Context {
     contract: Arc<Mutex<Contract>>,
@@ -35,9 +35,22 @@ impl Context {
             .predecessor_account_id(owner.clone())
             .block_timestamp(0);
 
+        // `testing_env!` carries mock storage over from the previous call on this
+        // thread (so `switch_account`, which also calls it, keeps this contract's
+        // storage intact). A fresh `Context` must not inherit another Context's
+        // storage — e.g. leftover ACL state would make `init_authority` panic
+        // with "super admin is already initialized" — so drain it first.
+        near_sdk::mock::with_mocked_blockchain(near_sdk::MockedBlockchain::take_storage);
+
         testing_env!(builder.build());
 
-        let contract = Contract::init(ft_contract_id.clone(), fee_account_id, manager, owner_v2);
+        let contract = Contract::init(
+            ft_contract_id.clone(),
+            fee_account_id,
+            owner_v2,
+            manager.clone(),
+            all_roles_to(&manager),
+        );
 
         Self {
             owner,

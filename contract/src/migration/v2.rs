@@ -1,50 +1,28 @@
-use std::{cell::RefCell, collections::HashMap};
-
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{
     borsh::to_vec,
-    collections::UnorderedMap,
     env::{self, log_str, panic_str},
     json_types::Base64VecU8,
     near, require,
     serde_json::{self, json},
-    store::{LookupMap, LookupSet},
-    AccountId, Gas, PanicOnDefault, PromiseOrValue,
+    AccountId, Gas, PromiseOrValue,
 };
 #[cfg(not(test))]
 use near_sdk::{NearToken, Promise};
 use sweat_jar_model::{
     account::{v1::AccountScore, versioned::AccountVersioned, Account},
     api::MigrationToV2,
-    jar::JarId,
-    ProductId, ScoreRecord, TokenAmount,
+    ScoreRecord, TokenAmount,
 };
 
-use super::account_jars_non_versioned::AccountJarsNonVersioned;
 #[cfg(not(test))]
 use crate::ft_interface::FungibleTokenInterface;
 use crate::{
     assert::assert_not_locked,
     event::{emit, EventKind},
     internal::{assert_gas, is_promise_success},
-    jar::{account::versioned::Account as LegacyAccount, model::AccountJarsLegacy},
-    product::model::Product,
-    Contract, ContractExt, MigrationState, StorageKey,
+    Contract, ContractExt, Roles,
 };
-
-#[near]
-#[derive(PanicOnDefault)]
-pub struct ContractBeforeMigration {
-    pub token_account_id: AccountId,
-    pub fee_account_id: AccountId,
-    pub manager: AccountId,
-    pub products: UnorderedMap<ProductId, Product>,
-    pub last_jar_id: JarId,
-    pub accounts: LookupMap<AccountId, LegacyAccount>,
-    pub account_jars_non_versioned: LookupMap<AccountId, AccountJarsNonVersioned>,
-    pub account_jars_v1: LookupMap<AccountId, AccountJarsLegacy>,
-    #[borsh(skip)]
-    pub products_cache: RefCell<HashMap<ProductId, Product>>,
-}
 
 const TGAS_FOR_MIGRATION_TRANSFER: u64 = 100;
 const TGAS_FOR_MIGRATION_CALLBACK: u64 = 10;
@@ -52,30 +30,8 @@ const TGAS_FOR_MIGRATION_CALLBACK: u64 = 10;
 #[near]
 #[mutants::skip]
 impl MigrationToV2 for Contract {
-    #[private]
-    #[init(ignore_state)]
-    fn migrate_state_to_v2_ready(new_version_account_id: AccountId) -> Self {
-        let old_state: ContractBeforeMigration = env::state_read().expect("Failed to extract old contract state.");
-
-        Contract {
-            token_account_id: old_state.token_account_id,
-            fee_account_id: old_state.fee_account_id,
-            manager: old_state.manager,
-            products: old_state.products,
-            last_jar_id: old_state.last_jar_id,
-            accounts: old_state.accounts,
-            account_jars_non_versioned: old_state.account_jars_non_versioned,
-            account_jars_v1: old_state.account_jars_v1,
-            products_cache: old_state.products_cache,
-            migration: MigrationState {
-                new_version_account_id,
-                migrating_accounts: LookupSet::new(StorageKey::Migration),
-            },
-        }
-    }
-
+    #[access_control_any(roles(Roles::Maintainer))]
     fn force_migrate_account(&mut self, account_id: AccountId) -> PromiseOrValue<(AccountId, bool)> {
-        self.assert_manager();
         self.migrate_account_inner(account_id)
     }
 
@@ -88,14 +44,13 @@ impl MigrationToV2 for Contract {
         self.migration.migrating_accounts.contains(&account_id)
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn unlock_account(&mut self, account_id: AccountId) {
-        self.assert_manager();
         self.migration.migrating_accounts.remove(&account_id);
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn migrate_products(&mut self) -> PromiseOrValue<()> {
-        self.assert_manager();
-
         let products: Vec<product_v2::Product> = self.products.values().map(Into::into).collect();
         let args = json!({
             "products": products
@@ -285,12 +240,13 @@ impl Contract {
 #[mutants::skip]
 mod tests {
     use near_sdk::test_utils::test_env::alice;
+    use sweat_jar_model::ProductId;
 
     use super::*;
-    use crate::{common::tests::Context, jar::model::Jar, test_utils::admin};
+    use crate::{common::tests::Context, jar::model::Jar, product::model::Product, test_utils::admin};
 
     #[test]
-    #[should_panic(expected = r#"Can be performed only by admin"#)]
+    #[should_panic(expected = "Insufficient permissions for method force_migrate_account")]
     fn force_migrate_by_unauthorized_account() {
         let admin = admin();
         let alice = alice();

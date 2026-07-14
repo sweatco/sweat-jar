@@ -1,16 +1,18 @@
 use std::{cell::RefCell, collections::HashMap};
 
+use near_plugins::{access_control, AccessControlRole, AccessControllable};
 use near_sdk::{
     collections::UnorderedMap,
     env,
     json_types::Base64VecU8,
-    near, near_bindgen,
+    near, near_bindgen, require,
     store::{LookupMap, LookupSet},
     AccountId, BorshStorageKey, PanicOnDefault,
 };
 use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
-use sweat_jar_model::{api::InitApi, jar::JarId, ProductId};
+use strum::{EnumIter, IntoEnumIterator};
+use sweat_jar_model::{jar::JarId, ProductId};
 
 use crate::{
     jar::{
@@ -41,8 +43,30 @@ mod withdraw;
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[near(serializers = [json])]
+#[derive(AccessControlRole, Copy, Clone, Debug, PartialEq, Eq, Hash, EnumIter)]
+pub enum Roles {
+    Oracle,
+    ProductManager,
+    Maintainer,
+    UpgradeManager,
+}
+
+impl Roles {
+    pub fn all() -> impl Iterator<Item = Self> {
+        Self::iter()
+    }
+}
+
+pub type RoleAssignments = HashMap<Roles, Vec<AccountId>>;
+
+pub fn all_roles_to(account_id: &AccountId) -> RoleAssignments {
+    Roles::all().map(|role| (role, vec![account_id.clone()])).collect()
+}
+
 #[near(contract_state)]
 #[derive(PanicOnDefault, SelfUpdate)]
+#[access_control(role_type(Roles))]
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
@@ -50,9 +74,6 @@ pub struct Contract {
 
     /// The account ID where fees for applicable operations are directed.
     pub fee_account_id: AccountId,
-
-    /// The account ID authorized to perform sensitive operations on the contract.
-    pub manager: AccountId,
 
     /// A collection of products, each representing terms for specific deposit jars.
     pub products: UnorderedMap<ProductId, Product>,
@@ -96,6 +117,16 @@ pub(crate) enum StorageKey {
     Migration,
 }
 
+pub trait InitApi {
+    fn init(
+        token_account_id: AccountId,
+        fee_account_id: AccountId,
+        new_version_account_id: AccountId,
+        super_admin: AccountId,
+        roles: RoleAssignments,
+    ) -> Self;
+}
+
 #[near]
 impl InitApi for Contract {
     #[init]
@@ -103,13 +134,13 @@ impl InitApi for Contract {
     fn init(
         token_account_id: AccountId,
         fee_account_id: AccountId,
-        manager: AccountId,
         new_version_account_id: AccountId,
+        super_admin: AccountId,
+        roles: RoleAssignments,
     ) -> Self {
-        Self {
+        let mut contract = Self {
             token_account_id,
             fee_account_id,
-            manager,
             products: UnorderedMap::new(StorageKey::_ProductsLegacyV2),
             account_jars_non_versioned: LookupMap::new(StorageKey::AccountsLegacyV2),
             account_jars_v1: LookupMap::new(StorageKey::AccountsLegacyV1),
@@ -120,6 +151,35 @@ impl InitApi for Contract {
                 new_version_account_id,
                 migrating_accounts: LookupSet::new(StorageKey::Migration),
             },
+        };
+
+        contract.init_authority(super_admin, roles);
+
+        contract
+    }
+}
+
+impl Contract {
+    pub(crate) fn init_authority(&mut self, super_admin: AccountId, roles: RoleAssignments) {
+        require!(
+            self.acl_init_super_admin(env::predecessor_account_id()),
+            "ACL bootstrap failed: super admin is already initialized"
+        );
+        self.grant_role_assignments(roles);
+        require!(
+            self.acl_transfer_super_admin(super_admin).is_some(),
+            "ACL bootstrap failed: could not transfer super admin"
+        );
+    }
+
+    pub(crate) fn grant_role_assignments(&mut self, roles: RoleAssignments) {
+        for (role, account_ids) in roles {
+            for account_id in account_ids {
+                require!(
+                    self.acl_grant_role(role.into(), account_id).is_some(),
+                    "ACL bootstrap failed: could not grant role"
+                );
+            }
         }
     }
 }

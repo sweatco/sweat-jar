@@ -6,15 +6,6 @@ use crate::{
     ProductId, Score, UTC,
 };
 
-pub trait InitApi {
-    fn init(
-        token_account_id: ::near_sdk::AccountId,
-        fee_account_id: ::near_sdk::AccountId,
-        manager: ::near_sdk::AccountId,
-        new_version_account_id: ::near_sdk::AccountId,
-    ) -> Self;
-}
-
 /// The `ClaimApi` trait defines methods for claiming interest from jars within the smart contract.
 pub trait ClaimApi {
     /// Claims available interest from up to 100 jars with the most interest for the calling account.
@@ -145,7 +136,6 @@ pub trait MigrationToStepJars {
 }
 
 pub trait MigrationToV2 {
-    fn migrate_state_to_v2_ready(new_version_account_id: ::near_sdk::AccountId) -> Self;
     fn force_migrate_account(
         &mut self,
         account_id: ::near_sdk::AccountId,

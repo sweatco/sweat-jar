@@ -1,3 +1,4 @@
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{assert_one_yocto, env::panic_str, near, require};
 use sweat_jar_model::{
     api::ProductApi,
@@ -8,14 +9,14 @@ use sweat_jar_model::{
 use crate::{
     event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
     product::model::{Apy, Product, Terms},
-    Base64VecU8, Contract, ContractExt,
+    Base64VecU8, Contract, ContractExt, Roles,
 };
 
 #[near]
 impl ProductApi for Contract {
     #[payable]
+    #[access_control_any(roles(Roles::ProductManager))]
     fn register_product(&mut self, command: RegisterProductCommand) {
-        self.assert_manager();
         assert_one_yocto();
 
         assert!(self.products.get(&command.id).is_none(), "Product already exists");
@@ -43,8 +44,8 @@ impl ProductApi for Contract {
     }
 
     #[payable]
+    #[access_control_any(roles(Roles::ProductManager))]
     fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool) {
-        self.assert_manager();
         assert_one_yocto();
 
         let mut product = self.get_product(&product_id);
@@ -62,8 +63,8 @@ impl ProductApi for Contract {
     }
 
     #[payable]
+    #[access_control_any(roles(Roles::ProductManager))]
     fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8) {
-        self.assert_manager();
         assert_one_yocto();
 
         let mut product = self.get_product(&product_id);

@@ -1,3 +1,4 @@
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{env, near, AccountId};
 use sweat_jar_model::{api::PenaltyApi, jar::JarIdView};
 
@@ -8,14 +9,13 @@ use crate::{
         PenaltyData,
     },
     product::model::Apy,
-    Contract, ContractExt, JarsStorage,
+    Contract, ContractExt, JarsStorage, Roles,
 };
 
 #[near]
 impl PenaltyApi for Contract {
+    #[access_control_any(roles(Roles::Maintainer))]
     fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
-        self.assert_manager();
-
         self.migrate_account_if_needed(&account_id);
 
         let jar_id = jar_id.0;
@@ -35,9 +35,8 @@ impl PenaltyApi for Contract {
         }));
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn batch_set_penalty(&mut self, jars: Vec<(AccountId, Vec<JarIdView>)>, value: bool) {
-        self.assert_manager();
-
         let mut applied_jars = vec![];
 
         let now = env::block_timestamp_ms();
