@@ -73,8 +73,6 @@ pub(crate) fn should_log_events() -> bool {
     value.parse().unwrap()
 }
 
-/// Simulates the token amount the v2 contract accepted on a migration transfer.
-/// When unset, the migration is treated as accepting the full principal.
 pub(crate) fn set_test_migration_used_amount(amount: u128) {
     let mut data = data();
     let map = data.entry(thread_name()).or_default();

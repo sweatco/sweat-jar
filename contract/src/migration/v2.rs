@@ -96,14 +96,7 @@ impl Contract {
             .into()
     }
 
-    /// `ft_transfer_call` resolves to the number of tokens the v2 contract actually
-    /// accepted. Migration is only complete when the full `principal` was used; a
-    /// partial acceptance refunds the remainder to this contract, so clearing the
-    /// account then would orphan the user's funds. Any failure (call reverted,
-    /// unparseable, or short of `principal`) is treated as incomplete.
     fn migration_fully_transferred(principal: TokenAmount) -> bool {
-        // The result is a JSON-encoded U128 (a short decimal string); bound the read
-        // so a misbehaving v2 contract can't force an out-of-gas on the reply.
         env::promise_result_checked(0, 128)
             .ok()
             .and_then(|value| serde_json::from_slice::<U128>(&value).ok())
@@ -128,9 +121,6 @@ impl Contract {
         PromiseOrValue::Value(())
     }
 
-    /// Test stand-in for the promise-result inspection: a failed transfer never
-    /// completes, and an accepted amount can be overridden to simulate the v2
-    /// contract using less than the full principal (defaults to the full amount).
     fn migration_fully_transferred(principal: TokenAmount) -> bool {
         if !is_promise_success() {
             return false;
