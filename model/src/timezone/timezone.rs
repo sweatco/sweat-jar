@@ -19,6 +19,10 @@ impl Timezone {
         self.0 != i64::MIN
     }
 
+    pub fn is_within_valid_range(&self) -> bool {
+        (Self::hour_shift(-12).0..=Self::hour_shift(14).0).contains(&self.0)
+    }
+
     pub const fn hour_shift(hour: i64) -> Self {
         // MS_IN_HOUR won't wrap
         #[allow(clippy::cast_possible_wrap)]
