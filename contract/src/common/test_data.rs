@@ -25,6 +25,7 @@ static DATA: TestDataStorage = TestDataStorage {
 
 const FUTURE_SUCCESS_KEY: &str = "FUTURE_SUCCESS_KEY";
 const LOG_EVENTS_KEY: &str = "LOG_EVENTS_KEY";
+const MIGRATION_USED_AMOUNT_KEY: &str = "MIGRATION_USED_AMOUNT_KEY";
 
 fn data() -> MutexGuard<'static, Map> {
     DATA.data.lock().unwrap()
@@ -70,6 +71,20 @@ pub(crate) fn should_log_events() -> bool {
     };
 
     value.parse().unwrap()
+}
+
+/// Simulates the token amount the v2 contract accepted on a migration transfer.
+/// When unset, the migration is treated as accepting the full principal.
+pub(crate) fn set_test_migration_used_amount(amount: u128) {
+    let mut data = data();
+    let map = data.entry(thread_name()).or_default();
+    map.insert(MIGRATION_USED_AMOUNT_KEY.to_owned(), amount.to_string());
+}
+
+pub(crate) fn get_test_migration_used_amount() -> Option<u128> {
+    let data = data();
+    let value = data.get(&thread_name())?.get(MIGRATION_USED_AMOUNT_KEY)?;
+    Some(value.parse().unwrap())
 }
 
 fn thread_name() -> String {

@@ -2,7 +2,7 @@ use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{
     borsh::to_vec,
     env::{self, log_str, panic_str},
-    json_types::Base64VecU8,
+    json_types::{Base64VecU8, U128},
     near, require,
     serde_json::{self, json},
     AccountId, Gas, PromiseOrValue,
@@ -80,7 +80,7 @@ impl Contract {
                 msg.as_str(),
                 TGAS_FOR_MIGRATION_TRANSFER,
             )
-            .then(Self::ext(env::current_account_id()).after_account_transferred(account_id.clone()))
+            .then(Self::ext(env::current_account_id()).after_account_transferred(account_id.clone(), U128(principal)))
             .into()
     }
 
@@ -95,6 +95,20 @@ impl Contract {
             .then(Self::ext(env::current_account_id()).after_products_migrated())
             .into()
     }
+
+    /// `ft_transfer_call` resolves to the number of tokens the v2 contract actually
+    /// accepted. Migration is only complete when the full `principal` was used; a
+    /// partial acceptance refunds the remainder to this contract, so clearing the
+    /// account then would orphan the user's funds. Any failure (call reverted,
+    /// unparseable, or short of `principal`) is treated as incomplete.
+    fn migration_fully_transferred(principal: TokenAmount) -> bool {
+        // The result is a JSON-encoded U128 (a short decimal string); bound the read
+        // so a misbehaving v2 contract can't force an out-of-gas on the reply.
+        env::promise_result_checked(0, 128)
+            .ok()
+            .and_then(|value| serde_json::from_slice::<U128>(&value).ok())
+            .is_some_and(|used| used.0 == principal)
+    }
 }
 
 #[cfg(test)]
@@ -103,23 +117,39 @@ impl Contract {
     fn transfer_account(
         &mut self,
         account_id: &AccountId,
-        _principal: TokenAmount,
+        principal: TokenAmount,
         _memo: String,
         _msg: String,
     ) -> PromiseOrValue<(AccountId, bool)> {
-        self.after_account_transferred(account_id.clone())
+        self.after_account_transferred(account_id.clone(), U128(principal))
     }
 
     fn transfer_products(&mut self, _args: Vec<u8>) -> PromiseOrValue<()> {
         PromiseOrValue::Value(())
+    }
+
+    /// Test stand-in for the promise-result inspection: a failed transfer never
+    /// completes, and an accepted amount can be overridden to simulate the v2
+    /// contract using less than the full principal (defaults to the full amount).
+    fn migration_fully_transferred(principal: TokenAmount) -> bool {
+        if !is_promise_success() {
+            return false;
+        }
+
+        crate::common::test_data::get_test_migration_used_amount().unwrap_or(principal) == principal
     }
 }
 
 #[near]
 impl Contract {
     #[private]
-    pub fn after_account_transferred(&mut self, account_id: AccountId) -> PromiseOrValue<(AccountId, bool)> {
-        self.finalize_migration(account_id, is_promise_success())
+    pub fn after_account_transferred(
+        &mut self,
+        account_id: AccountId,
+        principal: U128,
+    ) -> PromiseOrValue<(AccountId, bool)> {
+        let fully_transferred = Self::migration_fully_transferred(principal.0);
+        self.finalize_migration(account_id, fully_transferred)
     }
 
     #[private]
@@ -314,6 +344,60 @@ mod tests {
         println!("principal: {principal}");
         println!("memo: {memo}");
         println!("msg: {msg}");
+    }
+
+    /// A context with `alice` holding three 1_000_000 jars (3_000_000 principal
+    /// total) and `admin` (a Maintainer) set as the caller, ready to migrate.
+    fn context_ready_to_migrate() -> (AccountId, Context) {
+        let admin = admin();
+        let alice = alice();
+        let product = Product {
+            id: "product".to_string(),
+            ..Product::new()
+        };
+
+        let mut context = Context::new(admin.clone()).with_products(&[product]);
+        context
+            .contract()
+            .create_jars(alice.clone(), "product".to_string(), 1_000_000, 3);
+        context.switch_account(admin);
+
+        (alice, context)
+    }
+
+    #[test]
+    fn migrate_account_clears_it_when_full_principal_is_accepted() {
+        let (alice, context) = context_ready_to_migrate();
+
+        crate::common::test_data::set_test_future_success(true);
+        let _ = context.contract().force_migrate_account(alice.clone());
+
+        assert!(context.contract().accounts.get(&alice).is_none());
+    }
+
+    #[test]
+    fn migrate_account_keeps_it_when_only_part_is_accepted() {
+        let (alice, context) = context_ready_to_migrate();
+
+        // The transfer promise resolves, but the v2 contract accepts less than the
+        // full 3_000_000 principal — the account must not be cleared.
+        crate::common::test_data::set_test_future_success(true);
+        crate::common::test_data::set_test_migration_used_amount(2_999_999);
+        let _ = context.contract().force_migrate_account(alice.clone());
+
+        assert!(context.contract().accounts.get(&alice).is_some());
+        assert!(!context.contract().migration.migrating_accounts.contains(&alice));
+    }
+
+    #[test]
+    fn migrate_account_keeps_it_when_transfer_fails() {
+        let (alice, context) = context_ready_to_migrate();
+
+        crate::common::test_data::set_test_future_success(false);
+        let _ = context.contract().force_migrate_account(alice.clone());
+
+        assert!(context.contract().accounts.get(&alice).is_some());
+        assert!(!context.contract().migration.migrating_accounts.contains(&alice));
     }
 
     impl Contract {
