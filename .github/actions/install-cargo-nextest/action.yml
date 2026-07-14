@@ -1,0 +1,19 @@
+name: Install cargo-nextest
+description: Download the cargo-nextest CLI release binary and verify its checksum before installing.
+
+runs:
+  using: composite
+  steps:
+    - name: Download, verify and install cargo-nextest
+      shell: bash
+      env:
+        VERSION: 0.9.140
+        SHA256: 4ee9aaa0d0171a985a5d0eb735b87355894c1c455972e9674fb9fdbd1387c9a3
+      run: |
+        cd "$RUNNER_TEMP"
+        curl --proto '=https' --tlsv1.2 -fsSL --retry 3 -o cargo-nextest.tar.gz \
+          "https://github.com/nextest-rs/nextest/releases/download/cargo-nextest-${VERSION}/cargo-nextest-${VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+        echo "${SHA256}  cargo-nextest.tar.gz" | sha256sum -c -
+        tar -xzf cargo-nextest.tar.gz
+        install -m 755 cargo-nextest "$HOME/.cargo/bin/cargo-nextest"
+        cargo nextest --version

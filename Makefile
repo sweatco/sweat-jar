@@ -35,7 +35,7 @@ test: ##@Testing Run unit tests.
 	cargo test
 
 integration: build-integration ##@Testing Run integration tests.
-	cd integration-tests && cargo test
+	cd integration-tests && $(if $(shell command -v cargo-nextest),cargo nextest run,cargo test)
 
 int: integration ##@Testing Shorthand for `integration`
 

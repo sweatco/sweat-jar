@@ -24,7 +24,8 @@ async fn test_fixed_withdraw_fee() -> Result<()> {
     let mut alice_balance = ft::ft_balance_of(&context.ft, alice.id()).await?;
     assert_eq!(99_000_000, alice_balance);
 
-    context.fast_forward_hours(1).await?;
+    // Product lockup is 10 minutes; forward just past maturity.
+    context.fast_forward_minutes(11).await?;
 
     let withdraw_result = jar::withdraw(&context.jar, alice, U32(1), None).await?;
 
@@ -60,7 +61,8 @@ async fn test_percent_withdraw_fee() -> Result<()> {
     let mut alice_balance = ft::ft_balance_of(&context.ft, alice.id()).await?;
     assert_eq!(99_000_000, alice_balance);
 
-    context.fast_forward_hours(1).await?;
+    // Product lockup is 10 minutes; forward just past maturity.
+    context.fast_forward_minutes(11).await?;
 
     let withdraw_result = jar::withdraw(&context.jar, alice, U32(1), None).await?;
 

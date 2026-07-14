@@ -18,7 +18,8 @@ async fn restake() -> Result<()> {
     let jars = jar::get_jars_for_account(&context.jar, alice.id()).await?;
     let original_jar_id = jars.first().unwrap().id;
 
-    context.fast_forward_hours(1).await?;
+    // Product lockup is 10 minutes; forward just past maturity.
+    context.fast_forward_minutes(11).await?;
 
     jar::restake(&context.jar, alice, original_jar_id).await?;
 
