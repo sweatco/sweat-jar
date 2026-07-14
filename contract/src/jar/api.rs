@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{env, env::panic_str, json_types::U128, near, require, AccountId};
 use sweat_jar_model::{
     api::JarApi,
@@ -11,7 +12,7 @@ use crate::{
     event::{emit, EventKind},
     jar::model::Jar,
     score::AccountScore,
-    Contract, ContractExt, JarsStorage,
+    Contract, ContractExt, JarsStorage, Roles,
 };
 
 impl Contract {
@@ -222,9 +223,9 @@ impl JarApi for Contract {
         result
     }
 
+    #[access_control_any(roles(Roles::Maintainer))]
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_account_is_not_migrating(&account_id);
-        self.assert_manager();
         self.migrate_account_if_needed(&account_id);
 
         let jars = self.accounts.get_mut(&account_id).expect("Account doesn't have jars");

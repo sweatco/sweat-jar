@@ -17,10 +17,13 @@ base64 = "0.22"
 sha2 = "0.10"
 
 sweat-jar-model = { path = "../model" }
+# Host rlib build of the contract, for its Roles/RoleAssignments types.
+sweat_jar = { path = "../contract" }
 # near-sdk 5.28's build guard requires one of a fixed set of cfgs/features for
-# any non-wasm32 build; sweat-jar-model (a transitive dep here) doesn't get
-# `cfg(test)`, so this crate requests the guard's escape hatch for non-contract
-# usage. Feature unification activates it for the shared near-sdk instance.
+# any non-wasm32 build; sweat-jar-model/sweat_jar (transitive deps here) don't
+# get `cfg(test)`, so this crate requests the guard's escape hatch for
+# non-contract usage. Feature unification activates it for the shared near-sdk
+# instance.
 near-sdk = { version = "5.28.3", features = ["non-contract-usage"] }
 
 # near-sdk is needed only for its `non-contract-usage` feature (see above);

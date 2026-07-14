@@ -17,8 +17,9 @@ const SWEAT_WASM_ENV: &str = "SWEAT_WASM";
 /// A booted sandbox with the SWEAT token, the sweat_jar contract, and an
 /// (uninitialized) v2 jar contract deployed and wired together. The jar is
 /// initialized with `jar_v2`'s account as `new_version_account_id`;
-/// `alice`/`bob`/`manager` are funded and registered with the token, `fee` is
-/// the jar's fee-collection account.
+/// `manager` is a test account granted every ACL role (there is no "manager"
+/// role — see `RoleAssignments`/`all_roles_to`); `alice`/`bob` are funded and
+/// registered with the token, `fee` is the jar's fee-collection account.
 pub struct Context {
     // Held to keep the sandbox alive for the test's lifetime.
     pub worker: Worker<Sandbox>,
@@ -47,7 +48,15 @@ pub async fn prepare_contract(products: impl IntoIterator<Item = RegisterProduct
     let fee = create_user(&root, "fee_longer_name_to_be_closer_to_real").await?;
 
     ft::new(&ft, ".u.sweat.testnet").await?;
-    jar::init(&jar, ft.id(), fee.id(), manager.id(), jar_v2.id()).await?;
+    jar::init(
+        &jar,
+        ft.id(),
+        fee.id(),
+        jar_v2.id(),
+        manager.id(),
+        &jar::all_roles_to(manager.id()),
+    )
+    .await?;
 
     ft::storage_deposit(&ft, jar.id()).await?;
     ft::storage_deposit(&ft, jar_v2.id()).await?;

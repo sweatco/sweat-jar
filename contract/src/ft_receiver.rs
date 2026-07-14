@@ -1,8 +1,9 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
+use near_plugins::AccessControllable;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
 use sweat_jar_model::jar::{CeFiJar, JarId};
 
-use crate::{jar::model::JarTicket, Base64VecU8, Contract, ContractExt};
+use crate::{jar::model::JarTicket, Base64VecU8, Contract, ContractExt, Roles};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -45,7 +46,14 @@ impl FungibleTokenReceiver for Contract {
                 self.create_jar(receiver_id, message.ticket, amount, message.signature);
             }
             FtMessage::Migrate(jars) => {
-                require!(sender_id == self.manager, "Migration can be performed only by admin");
+                // `sender_id` is who initiated the `ft_transfer_call`, not the
+                // predecessor (the token contract) — `#[access_control_any]`
+                // checks the predecessor, so this branch of `ft_on_transfer`
+                // needs the same manual check `airdrop` uses upstream.
+                require!(
+                    self.acl_has_any_role(vec![Roles::Maintainer.into()], sender_id),
+                    "Only accounts with the Maintainer role can migrate jars"
+                );
 
                 self.migrate_jars(jars, amount);
             }
@@ -335,7 +343,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Migration can be performed only by admin")]
+    #[should_panic(expected = "Only accounts with the Maintainer role can migrate jars")]
     fn transfer_with_migration_message_by_not_admin() {
         let alice = alice();
         let admin = admin();

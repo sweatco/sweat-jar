@@ -1,6 +1,7 @@
 use anyhow::Result;
 use near_workspaces::{result::ExecutionFinalResult, types::NearToken, Account, AccountId, Contract};
 use serde_json::{json, Value};
+pub use sweat_jar::{all_roles_to, RoleAssignments};
 use sweat_jar_model::{
     claimed_amount_view::ClaimedAmountView,
     jar::{AggregatedInterestView, AggregatedTokenAmountView, JarIdView, JarView},
@@ -15,15 +16,17 @@ pub async fn init(
     jar: &Contract,
     token_account_id: &AccountId,
     fee_account_id: &AccountId,
-    manager: &AccountId,
     new_version_account_id: &AccountId,
+    super_admin: &AccountId,
+    roles: &RoleAssignments,
 ) -> Result<()> {
     jar.call("init")
         .args_json(json!({
             "token_account_id": token_account_id,
             "fee_account_id": fee_account_id,
-            "manager": manager,
             "new_version_account_id": new_version_account_id,
+            "super_admin": super_admin,
+            "roles": roles,
         }))
         .max_gas()
         .transact()
@@ -322,6 +325,42 @@ pub async fn set_penalty(
         .await?)
 }
 
+pub async fn batch_set_penalty(
+    jar: &Contract,
+    caller: &Account,
+    jars: Vec<(&AccountId, Vec<JarIdView>)>,
+    value: bool,
+) -> Result<ExecutionFinalResult> {
+    Ok(caller
+        .call(jar.id(), "batch_set_penalty")
+        .args_json(json!({ "jars": jars, "value": value }))
+        .max_gas()
+        .transact()
+        .await?)
+}
+
+pub async fn unlock_jars_for_account(
+    jar: &Contract,
+    caller: &Account,
+    account_id: &AccountId,
+) -> Result<ExecutionFinalResult> {
+    Ok(caller
+        .call(jar.id(), "unlock_jars_for_account")
+        .args_json(json!({ "account_id": account_id }))
+        .max_gas()
+        .transact()
+        .await?)
+}
+
+pub async fn update_contract(jar: &Contract, caller: &Account) -> Result<ExecutionFinalResult> {
+    Ok(caller
+        .call(jar.id(), "update_contract")
+        .args_json(json!({ "code": Vec::<u8>::new(), "callback": Option::<String>::None }))
+        .max_gas()
+        .transact()
+        .await?)
+}
+
 pub async fn record_score(
     jar: &Contract,
     manager: &Account,
@@ -368,4 +407,26 @@ pub async fn migrate_products(jar: &Contract, manager: &Account) -> Result<Execu
 
 pub async fn migrate_account(jar: &Contract, user: &Account) -> Result<ExecutionFinalResult> {
     Ok(user.call(jar.id(), "migrate_account").max_gas().transact().await?)
+}
+
+pub async fn force_migrate_account(
+    jar: &Contract,
+    caller: &Account,
+    account_id: &AccountId,
+) -> Result<ExecutionFinalResult> {
+    Ok(caller
+        .call(jar.id(), "force_migrate_account")
+        .args_json(json!({ "account_id": account_id }))
+        .max_gas()
+        .transact()
+        .await?)
+}
+
+pub async fn unlock_account(jar: &Contract, caller: &Account, account_id: &AccountId) -> Result<ExecutionFinalResult> {
+    Ok(caller
+        .call(jar.id(), "unlock_account")
+        .args_json(json!({ "account_id": account_id }))
+        .max_gas()
+        .transact()
+        .await?)
 }

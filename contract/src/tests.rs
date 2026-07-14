@@ -39,7 +39,7 @@ fn add_product_to_list_by_admin() {
 }
 
 #[test]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions for method register_product")]
 fn add_product_to_list_by_not_admin() {
     let admin = admin();
     let mut context = Context::new(admin);
@@ -375,7 +375,7 @@ fn get_interest_after_withdraw() {
 }
 
 #[test]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions for method unlock_jars_for_account")]
 fn unlock_not_by_manager() {
     let alice = alice();
     let admin = admin();

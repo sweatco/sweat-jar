@@ -244,7 +244,7 @@ fn set_public_key() {
 }
 
 #[test]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions for method set_public_key")]
 fn set_public_key_by_not_admin() {
     let alice = alice();
     let admin = admin();

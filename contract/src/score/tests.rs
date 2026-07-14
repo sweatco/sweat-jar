@@ -28,7 +28,7 @@ use crate::{
 };
 
 #[test]
-#[should_panic(expected = "Can be performed only by admin")]
+#[should_panic(expected = "Insufficient permissions for method record_score")]
 fn record_score_by_non_manager() {
     let ctx = TestBuilder::new().build();
     ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);

@@ -1,3 +1,4 @@
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{
     env,
     env::block_timestamp_ms,
@@ -9,14 +10,13 @@ use sweat_jar_model::{api::ScoreApi, Score, U32, UTC};
 use crate::{
     event::{emit, EventKind, ScoreData},
     jar::model::JarCache,
-    Contract, ContractExt,
+    Contract, ContractExt, Roles,
 };
 
 #[near]
 impl ScoreApi for Contract {
+    #[access_control_any(roles(Roles::Oracle))]
     fn record_score(&mut self, batch: Vec<(AccountId, Vec<(Score, UTC)>)>) {
-        self.assert_manager();
-
         let mut event = vec![];
 
         let now = block_timestamp_ms();
