@@ -12,7 +12,7 @@ use crate::{
     event::{emit, EventKind},
     jar::model::Jar,
     score::AccountScore,
-    Contract, ContractExt, JarsStorage, Roles,
+    Contract, ContractExt, Roles,
 };
 
 impl Contract {
@@ -76,34 +76,7 @@ impl JarApi for Contract {
     // TODO: restore previous version after V2 migration
     #[mutants::skip]
     fn get_jar(&self, account_id: AccountId, jar_id: JarIdView) -> JarView {
-        if let Some(record) = self.account_jars_v1.get(&account_id) {
-            let jar: Jar = record
-                .jars
-                .iter()
-                .find(|jar| jar.id == jar_id.0)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
-                .clone()
-                .into();
-
-            return jar.into();
-        }
-
-        if let Some(record) = self.account_jars_non_versioned.get(&account_id) {
-            let jar: Jar = record
-                .jars
-                .iter()
-                .find(|jar| jar.id == jar_id.0)
-                .unwrap_or_else(|| env::panic_str(&format!("Jar with id: {} doesn't exist", jar_id.0)))
-                .clone();
-
-            return jar.into();
-        }
-
-        self.accounts
-            .get(&account_id)
-            .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")))
-            .get_jar(jar_id.0)
-            .into()
+        self.get_jar_internal(&account_id, jar_id.0).into()
     }
 
     fn get_jars_for_account(&self, account_id: AccountId) -> Vec<JarView> {

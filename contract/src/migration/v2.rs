@@ -246,6 +246,18 @@ mod tests {
     use crate::{common::tests::Context, jar::model::Jar, product::model::Product, test_utils::admin};
 
     #[test]
+    fn is_account_locked_reflects_migration_state() {
+        let admin = admin();
+        let alice = alice();
+        let context = Context::new(admin);
+
+        assert!(!context.contract().is_account_locked(alice.clone()));
+
+        context.contract().migration.migrating_accounts.insert(alice.clone());
+        assert!(context.contract().is_account_locked(alice));
+    }
+
+    #[test]
     #[should_panic(expected = "Insufficient permissions for method force_migrate_account")]
     fn force_migrate_by_unauthorized_account() {
         let admin = admin();

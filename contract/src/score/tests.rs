@@ -35,6 +35,14 @@ fn record_score_by_non_manager() {
 }
 
 #[test]
+#[should_panic(expected = "doesn't have score jars")]
+fn record_score_for_account_without_score_jars() {
+    let mut ctx = TestBuilder::new().build();
+    ctx.switch_account(&admin());
+    ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
+}
+
+#[test]
 fn create_invalid_step_product() {
     let mut ctx = TestBuilder::new().build();
 
