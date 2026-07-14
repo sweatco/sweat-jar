@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 
 pub mod ft;
+pub mod interest;
 pub mod jar;
 pub mod panic;
 pub mod prepare;
