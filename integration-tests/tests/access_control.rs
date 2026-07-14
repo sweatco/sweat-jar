@@ -108,16 +108,9 @@ async fn maintainer_gate() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-async fn upgrade_manager_gate() -> Result<()> {
-    let context = prepare_contract([]).await?;
-    let nobody = &context.bob;
-
-    let result = jar::update_contract(&context.jar, nobody).await?;
-    assert!(result.has_panic(&insufficient_permissions("update_contract")));
-
-    Ok(())
-}
+// StagingManager/UpgradeManager (near-plugins' Upgradable: up_stage_code /
+// up_deploy_code) are covered in upgrade.rs, alongside the real redeploy test —
+// same structure dev-v2 uses.
 
 /// Granting a role via `acl_grant_role` (the standard near-plugins method,
 /// exercised here directly rather than through `all_roles_to`) unblocks the

@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "2fu22AP7xdQSFNnY12usK31jU22iPb6pbLBDEeTV2G8S"
+    "wasm_hash": "68aWSN5BgqRYNNtwbNH9s3Ck3W67KPsVLScqhjaN95By"
   },
   "body": {
     "functions": [
@@ -1207,7 +1207,6 @@
       },
       {
         "name": "migrate_state_to_acl",
-        "doc": " One-shot migration from the manual `manager: AccountId` field to ACL.\n `old_state.manager` is intentionally unused: the caller decides\n explicitly who gets which role via `roles`, rather than the old\n manager silently inheriting every permission.",
         "kind": "call",
         "modifiers": [
           "init",
@@ -1461,31 +1460,31 @@
         }
       },
       {
-        "name": "update_contract",
+        "name": "up_apply_update_staging_duration",
+        "kind": "call"
+      },
+      {
+        "name": "up_deploy_code",
         "kind": "call",
-        "modifiers": [
-          "payable"
-        ],
         "params": {
           "serialization_type": "json",
           "args": [
             {
-              "name": "code",
+              "name": "hash",
               "type_schema": {
-                "type": "array",
-                "items": {
-                  "type": "integer",
-                  "format": "uint8",
-                  "minimum": 0.0
-                }
+                "type": "string"
               }
             },
             {
-              "name": "callback",
+              "name": "function_call_args",
               "type_schema": {
-                "type": [
-                  "string",
-                  "null"
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/FunctionCallArgs"
+                  },
+                  {
+                    "type": "null"
+                  }
                 ]
               }
             }
@@ -1497,6 +1496,131 @@
             "$ref": "#/definitions/Promise"
           }
         }
+      },
+      {
+        "name": "up_get_delay_status",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "$ref": "#/definitions/UpgradableDurationStatus"
+          }
+        }
+      },
+      {
+        "name": "up_init_staging_duration",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "staging_duration",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "up_stage_code",
+        "kind": "call"
+      },
+      {
+        "name": "up_stage_update_staging_duration",
+        "kind": "call",
+        "params": {
+          "serialization_type": "json",
+          "args": [
+            {
+              "name": "staging_duration",
+              "type_schema": {
+                "type": "integer",
+                "format": "uint64",
+                "minimum": 0.0
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "up_staged_code",
+        "kind": "view",
+        "result": {
+          "serialization_type": "borsh",
+          "type_schema": {
+            "declaration": "Option<Vec<u8>>",
+            "definitions": {
+              "()": {
+                "Primitive": 0
+              },
+              "Option<Vec<u8>>": {
+                "Enum": {
+                  "tag_width": 1,
+                  "variants": [
+                    [
+                      0,
+                      "None",
+                      "()"
+                    ],
+                    [
+                      1,
+                      "Some",
+                      "Vec<u8>"
+                    ]
+                  ]
+                }
+              },
+              "Vec<u8>": {
+                "Sequence": {
+                  "length_width": 4,
+                  "length_range": {
+                    "start": 0,
+                    "end": 4294967295
+                  },
+                  "elements": "u8"
+                }
+              },
+              "u8": {
+                "Primitive": 1
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "up_staged_code_hash",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      {
+        "name": "up_storage_prefix",
+        "kind": "view",
+        "result": {
+          "serialization_type": "json",
+          "type_schema": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "uint8",
+              "minimum": 0.0
+            }
+          }
+        }
+      },
+      {
+        "name": "up_verify_state",
+        "kind": "view"
       },
       {
         "name": "withdraw",
@@ -2409,6 +2533,39 @@
             }
           }
         },
+        "FunctionCallArgs": {
+          "description": "Specifies a function call to be appended to the actions of a promise via [`near_sdk::Promise::function_call`]).",
+          "type": "object",
+          "required": [
+            "amount",
+            "arguments",
+            "function_name",
+            "gas"
+          ],
+          "properties": {
+            "amount": {
+              "description": "The amount of tokens to transfer to the receiver.",
+              "type": "string"
+            },
+            "arguments": {
+              "description": "The arguments to pass to the function.",
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint8",
+                "minimum": 0.0
+              }
+            },
+            "function_name": {
+              "description": "The name of the function to call.",
+              "type": "string"
+            },
+            "gas": {
+              "description": "The gas limit for the function call.",
+              "type": "string"
+            }
+          }
+        },
         "JarCache": {
           "description": "A cached value that stores calculated interest based on the current state of the jar. This cache is updated whenever properties that impact interest calculation change, allowing for efficient interest calculations between state changes.",
           "type": "object",
@@ -3152,6 +3309,43 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "UpgradableDurationStatus": {
+          "type": "object",
+          "properties": {
+            "new_staging_duration": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "new_staging_duration_timestamp": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "staging_duration": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            },
+            "staging_timestamp": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint64",
+              "minimum": 0.0
+            }
+          }
         },
         "WithdrawView": {
           "description": "The `WithdrawView` struct represents the result of a deposit jar withdrawal operation.",

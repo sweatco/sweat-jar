@@ -178,17 +178,18 @@ mod test {
     use sweat_jar_model::Local;
 
     use crate::{
-        common::tests::Context,
         event::{EventKind, ScoreData, SweatJarEvent, TopUpData},
         jar::model::{Jar, JarLastVersion},
-        test_utils::admin,
+        PACKAGE_NAME, VERSION,
     };
 
     #[test]
     fn test_contract_version() {
-        let admin = admin();
-        let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-3.5.2");
+        assert_eq!(format!("{PACKAGE_NAME}-{VERSION}"), "sweat_jar-3.5.2");
+    }
+
+    fn expected_event(body: &str) -> String {
+        format!("EVENT_JSON:{{\n  \"standard\": \"{PACKAGE_NAME}\",\n  \"version\": \"{VERSION}\",\n{body}\n}}")
     }
 
     #[test]
@@ -199,15 +200,13 @@ mod test {
                 amount: U128(50),
             }))
             .to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.5.2",
-  "event": "top_up",
+            expected_event(
+                r#"  "event": "top_up",
   "data": {
     "id": 10,
     "amount": "50"
-  }
-}"#
+  }"#
+            )
         );
 
         assert_eq!(
@@ -227,10 +226,8 @@ mod test {
                 .into()
             ))
             .to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.5.2",
-  "event": "create_jar",
+            expected_event(
+                r#"  "event": "create_jar",
   "data": {
     "id": 555,
     "account_id": "bob.near",
@@ -241,16 +238,14 @@ mod test {
     "claimed_balance": 4324,
     "is_pending_withdraw": false,
     "is_penalty_applied": false
-  }
-}"#
+  }"#
+            )
         );
 
         assert_eq!(
             SweatJarEvent::from(EventKind::Claim(vec![(1, 1.into()), (2, 2.into())])).to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.5.2",
-  "event": "claim",
+            expected_event(
+                r#"  "event": "claim",
   "data": [
     [
       1,
@@ -260,8 +255,8 @@ mod test {
       2,
       "2"
     ]
-  ]
-}"#
+  ]"#
+            )
         );
 
         assert_eq!(
@@ -276,10 +271,8 @@ mod test {
                 }
             ]))
             .to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.5.2",
-  "event": "record_score",
+            expected_event(
+                r#"  "event": "record_score",
   "data": [
     {
       "account_id": "alice.near",
@@ -299,21 +292,19 @@ mod test {
         ]
       ]
     }
-  ]
-}"#
+  ]"#
+            )
         );
 
         assert_eq!(
             SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string(),
-            r#"EVENT_JSON:{
-  "standard": "sweat_jar",
-  "version": "3.5.2",
-  "event": "old_score_warning",
+            expected_event(
+                r#"  "event": "old_score_warning",
   "data": [
     111,
     5
-  ]
-}"#
+  ]"#
+            )
         );
     }
 }

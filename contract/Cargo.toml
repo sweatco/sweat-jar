@@ -34,7 +34,6 @@ ed25519-dalek = { workspace = true }
 mutants = { workspace = true }
 
 near-sdk = { workspace = true }
-near-self-update-proc = { workspace = true }
 near-contract-standards = { workspace = true }
 near-plugins = { workspace = true }
 strum = { workspace = true }
