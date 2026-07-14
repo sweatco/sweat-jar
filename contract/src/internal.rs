@@ -1,30 +1,18 @@
 use std::{collections::HashMap, fmt::Display};
 
-use near_plugins::AccessControllable;
 use near_sdk::require;
 use sweat_jar_model::{
     jar::{JarId, JarIdView},
     ProductId,
 };
 
-use crate::{env, jar::model::Jar, AccountId, Contract, Product, Roles};
+use crate::{env, jar::model::Jar, AccountId, Contract, Product};
 
 impl Contract {
     pub(crate) fn assert_from_ft_contract(&self) {
         require!(
             env::predecessor_account_id() == self.token_account_id,
             format!("Can receive tokens only from {}", self.token_account_id)
-        );
-    }
-
-    pub(crate) fn assert_account_can_update(&self) {
-        require!(
-            self.acl_has_any_role(vec![Roles::UpgradeManager.into()], env::predecessor_account_id()),
-            format!(
-                "Insufficient permissions for method update_contract restricted by access control. \
-                 Requires one of these roles: {:?}",
-                vec![Roles::UpgradeManager]
-            )
         );
     }
 
@@ -124,19 +112,7 @@ pub(crate) fn assert_gas<Message: Display>(gas_needed: u64, error: impl FnOnce()
 mod test {
     use near_sdk::env;
 
-    use crate::{
-        common::tests::Context,
-        internal::assert_gas,
-        test_utils::{admin, expect_panic},
-    };
-
-    #[test]
-    #[should_panic(expected = "Insufficient permissions for method update_contract")]
-    fn self_update_without_access() {
-        let admin = admin();
-        let context = Context::new(admin);
-        let _ = context.contract().update_contract(vec![], None);
-    }
+    use crate::{internal::assert_gas, test_utils::expect_panic};
 
     #[test]
     fn test_assert_gas() {

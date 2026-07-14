@@ -352,10 +352,25 @@ pub async fn unlock_jars_for_account(
         .await?)
 }
 
-pub async fn update_contract(jar: &Contract, caller: &Account) -> Result<ExecutionFinalResult> {
+/// `up_stage_code` (near-plugins `Upgradable`) reads raw `env::input()`, not a
+/// JSON arg — empty bytes clears any previously staged code.
+pub async fn up_stage_code(jar: &Contract, caller: &Account, code: Vec<u8>) -> Result<ExecutionFinalResult> {
     Ok(caller
-        .call(jar.id(), "update_contract")
-        .args_json(json!({ "code": Vec::<u8>::new(), "callback": Option::<String>::None }))
+        .call(jar.id(), "up_stage_code")
+        .args(code)
+        .max_gas()
+        .transact()
+        .await?)
+}
+
+pub async fn up_staged_code_hash(jar: &Contract) -> Result<Option<String>> {
+    Ok(jar.view("up_staged_code_hash").await?.json()?)
+}
+
+pub async fn up_deploy_code(jar: &Contract, caller: &Account, hash: &str) -> Result<ExecutionFinalResult> {
+    Ok(caller
+        .call(jar.id(), "up_deploy_code")
+        .args_json(json!({ "hash": hash, "function_call_args": Option::<Value>::None }))
         .max_gas()
         .transact()
         .await?)

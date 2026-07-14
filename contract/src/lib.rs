@@ -1,15 +1,15 @@
 use std::{cell::RefCell, collections::HashMap};
 
-use near_plugins::{access_control, AccessControlRole, AccessControllable};
+use near_plugins::{access_control, AccessControlRole, AccessControllable, Upgradable};
 use near_sdk::{
+    borsh::BorshDeserialize,
     collections::UnorderedMap,
     env,
     json_types::Base64VecU8,
-    near, near_bindgen, require,
+    near, require,
     store::{LookupMap, LookupSet},
     AccountId, BorshStorageKey, PanicOnDefault,
 };
-use near_self_update_proc::SelfUpdate;
 use product::model::{Apy, Product};
 use strum::{EnumIter, IntoEnumIterator};
 use sweat_jar_model::{jar::JarId, ProductId};
@@ -49,6 +49,7 @@ pub enum Roles {
     Oracle,
     ProductManager,
     Maintainer,
+    StagingManager,
     UpgradeManager,
 }
 
@@ -65,8 +66,15 @@ pub fn all_roles_to(account_id: &AccountId) -> RoleAssignments {
 }
 
 #[near(contract_state)]
-#[derive(PanicOnDefault, SelfUpdate)]
+#[derive(PanicOnDefault, Upgradable)]
 #[access_control(role_type(Roles))]
+#[upgradable(access_control_roles(
+    code_stagers(Roles::StagingManager),
+    code_deployers(Roles::UpgradeManager),
+    duration_initializers(Roles::UpgradeManager),
+    duration_update_stagers(Roles::UpgradeManager),
+    duration_update_appliers(Roles::UpgradeManager),
+))]
 /// The `Contract` struct represents the state of the smart contract managing fungible token deposit jars.
 pub struct Contract {
     /// The account ID of the fungible token contract (NEP-141) that this jars contract interacts with.
