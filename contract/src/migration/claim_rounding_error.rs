@@ -1,13 +1,15 @@
 #![allow(deprecated)]
 
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{near, AccountId};
 use sweat_jar_model::api::MigrationToClaimRemainder;
 
-use crate::{Contract, ContractExt};
+use crate::{Contract, ContractExt, Roles};
 
 #[near]
 impl MigrationToClaimRemainder for Contract {
     #[mutants::skip]
+    #[access_control_any(roles(Roles::Maintainer))]
     fn migrate_accounts_to_claim_remainder(&mut self, accounts: Vec<AccountId>) {
         for account in accounts {
             self.migrate_account_if_needed(&account);
@@ -30,6 +32,7 @@ impl Contract {
 #[cfg(test)]
 mod test {
     use near_sdk::test_utils::test_env::alice;
+    use sweat_jar_model::api::MigrationToClaimRemainder;
 
     use crate::{
         common::tests::Context,
@@ -40,6 +43,23 @@ mod test {
         migration::account_jars_non_versioned::AccountJarsNonVersioned,
         test_utils::admin,
     };
+
+    #[test]
+    #[should_panic(expected = "Insufficient permissions for method migrate_accounts_to_claim_remainder")]
+    fn migrate_accounts_to_claim_remainder_by_non_maintainer() {
+        let context = Context::new(admin());
+        // The default caller ("owner") holds no roles.
+        context.contract().migrate_accounts_to_claim_remainder(vec![alice()]);
+    }
+
+    #[test]
+    fn migrate_accounts_to_claim_remainder_by_maintainer() {
+        let admin = admin();
+        let mut context = Context::new(admin.clone());
+        context.switch_account(&admin);
+
+        context.contract().migrate_accounts_to_claim_remainder(vec![alice()]);
+    }
 
     #[test]
     fn account_jars_legacy_migration() {
