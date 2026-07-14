@@ -7,13 +7,16 @@ install: ##@Miscellaneous Install dependencies
 	@cargo build
 
 check: ##@Miscellaneous Run all checks.
-	make fmt && make lint && make build && make test && make mutation
+	make fmt && make lint && make build && make test && make int && make mutation
 
 mutation: ##@Miscellaneous Run mutation test.
 	./scripts/mutation.sh
 
 build: ##@Build Build the contract locally.
 	./scripts/build.sh
+
+build-integration: ##@Build Build the contract for integration tests.
+	./scripts/build-integration.sh
 
 build-reproducible: ##@Build Build reproducible artifact in Docker.
 	./scripts/build-reproducible.sh
@@ -30,6 +33,14 @@ cov: ##@Testing Run unit tests with coverage.
 
 test: ##@Testing Run unit tests.
 	cargo test
+
+integration: build-integration ##@Testing Run integration tests.
+	cd integration-tests && $(if $(shell command -v cargo-nextest),cargo nextest run,cargo test)
+
+int: integration ##@Testing Shorthand for `integration`
+
+measure-gas: build-integration ##@Testing Run gas-measurement integration tests and print TGas figures.
+	cd integration-tests && cargo test --test measure_gas -- --ignored --nocapture
 
 fmt: ##@Chores Format the code using rustfmt nightly.
 	cargo +nightly fmt --all

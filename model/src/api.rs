@@ -293,3 +293,15 @@ pub trait ScoreApi {
     /// Returns current active score interest if user has any step jars
     fn get_score_interest(&self, account_id: ::near_sdk::AccountId) -> Option<::near_sdk::json_types::U128>;
 }
+
+#[cfg(feature = "integration-methods")]
+pub trait IntegrationTestMethods {
+    fn block_timestamp_ms(&self) -> ::near_sdk::Timestamp;
+    fn bulk_create_jars(
+        &mut self,
+        account_id: ::near_sdk::AccountId,
+        product_id: ProductId,
+        principal: u128,
+        number_of_jars: u16,
+    );
+}

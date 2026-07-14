@@ -59,3 +59,21 @@ To obtain an identical build artifact on any machine, matching the one deployed 
 ```shell
 make build-reproducible
 ```
+
+## 3. Integration tests
+
+Integration tests live in `./integration-tests`, a standalone cargo workspace, and run the contract
+in a NEAR sandbox via `near-workspaces`:
+
+```shell
+make integration
+```
+
+This first builds the contract with the `integration-test` feature into `res-integration/`
+(see `make build-integration`), then runs the suite — via `cargo-nextest` if installed
+(runs test binaries in parallel; each spins up its own sandbox), falling back to plain
+`cargo test` otherwise. To print gas consumption figures for batched operations:
+
+```shell
+make measure-gas
+```

@@ -1,0 +1,33 @@
+[package]
+name = "integration-tests"
+version = "1.0.0"
+publish = false
+edition = "2021"
+
+[dev-dependencies]
+near-workspaces = "0.22"
+anyhow = "1.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+ed25519-dalek = { version = "2", features = ["rand_core"] }
+rand = "0.8"
+base64 = "0.22"
+sha2 = "0.10"
+
+sweat-jar-model = { path = "../model" }
+# near-sdk 5.28's build guard requires one of a fixed set of cfgs/features for
+# any non-wasm32 build; sweat-jar-model (a transitive dep here) doesn't get
+# `cfg(test)`, so this crate requests the guard's escape hatch for non-contract
+# usage. Feature unification activates it for the shared near-sdk instance.
+near-sdk = { version = "5.28.3", features = ["non-contract-usage"] }
+
+# near-sdk is needed only for its `non-contract-usage` feature (see above);
+# no code imports it directly.
+[package.metadata.cargo-machete]
+ignored = ["near-sdk"]
+
+# Empty `[workspace]` makes this crate its own workspace root, detached from the
+# parent so it can use its own `rust-toolchain.toml` and dependency lock.
+[workspace]
