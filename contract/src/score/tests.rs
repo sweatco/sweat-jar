@@ -43,6 +43,20 @@ fn record_score_for_account_without_score_jars() {
 }
 
 #[test]
+#[should_panic(expected = "Account is migrating")]
+fn record_score_while_migrating_is_rejected() {
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(0, JarField::Timezone(Timezone::hour_shift(0)))
+        .build();
+
+    ctx.contract().migration.migrating_accounts.insert(alice());
+
+    ctx.switch_account(&admin());
+    ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
+}
+
+#[test]
 fn create_invalid_step_product() {
     let mut ctx = TestBuilder::new().build();
 

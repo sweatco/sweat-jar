@@ -16,6 +16,7 @@ use crate::{
 impl PenaltyApi for Contract {
     #[access_control_any(roles(Roles::Maintainer))]
     fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
+        self.assert_account_is_not_migrating(&account_id);
         self.migrate_account_if_needed(&account_id);
 
         let jar_id = jar_id.0;
@@ -42,6 +43,7 @@ impl PenaltyApi for Contract {
         let now = env::block_timestamp_ms();
 
         for (account_id, jars) in jars {
+            self.assert_account_is_not_migrating(&account_id);
             self.migrate_account_if_needed(&account_id);
 
             for jar_id in jars {

@@ -24,6 +24,7 @@ impl ScoreApi for Contract {
         let now = block_timestamp_ms();
 
         for (account, new_score) in batch {
+            self.assert_account_is_not_migrating(&account);
             self.migrate_account_if_needed(&account);
 
             let product_ids: Vec<ProductId> = {

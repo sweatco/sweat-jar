@@ -223,6 +223,31 @@ fn penalty_is_not_applicable_for_constant_apy() {
 }
 
 #[test]
+#[should_panic(expected = "Account is migrating")]
+fn set_penalty_while_migrating_is_rejected() {
+    let alice = alice();
+    let admin = admin();
+
+    let signer = MessageSigner::new();
+    let product = Product::new()
+        .apy(Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        }))
+        .public_key(signer.public_key());
+    let reference_jar = Jar::new(0).principal(100_000_000);
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product])
+        .with_jars(&[reference_jar]);
+
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.switch_account(&admin);
+    context.contract().set_penalty(alice, U32(0), true);
+}
+
+#[test]
 fn get_total_interest_for_premium_with_penalty_after_half_term() {
     let alice = alice();
     let admin = admin();
