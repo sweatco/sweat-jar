@@ -50,7 +50,7 @@ impl Contract {
         // zeroed once we know the claim actually transfers something (see below). A claim
         // that pays out nothing — every jar locked, or interest rounding to zero — must
         // leave the buffer intact instead of silently discarding that period's score.
-        let account_score_before_transfer = self.get_score(&account_id).map(|s| *s);
+        let account_score_before_transfer = self.get_score(&account_id).copied();
 
         let score = self
             .get_score(&account_id)
