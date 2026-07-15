@@ -302,3 +302,14 @@ fn assert_cap_more_than_max() {
 fn generate_product() -> Product {
     Product::new().cap(100, 100_000_000_000)
 }
+
+#[test]
+fn apy_for_score_does_not_overflow_across_days() {
+    let product = Product::new().score_cap(40_000);
+
+    // 40_000 + 40_000 = 80_000 > u16::MAX (65_535).
+    let apy = product.apy_for_score(&[40_000, 40_000]);
+
+    // 1000 score = 1%, so 80_000 score = 80% = 0.8.
+    assert_eq!(apy.to_f32(), 0.8);
+}

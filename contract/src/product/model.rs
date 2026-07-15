@@ -111,7 +111,7 @@ impl Product {
     }
 
     pub(crate) fn apy_for_score(&self, score: &[Score]) -> UDecimal {
-        let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
+        let total_score: u32 = score.iter().map(|day| u32::from(*day.min(&self.score_cap))).sum();
         total_score.to_apy()
     }
 
