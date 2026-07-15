@@ -13,6 +13,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
+    assert::assert_not_locked,
     common::Timestamp,
     event::{emit, EventKind, TopUpData},
     jar::{
@@ -265,9 +266,11 @@ impl Contract {
     }
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
+        self.assert_account_is_not_migrating(account);
         self.migrate_account_if_needed(account);
 
         let jar = self.get_jar_internal(account, jar_id).clone();
+        assert_not_locked(&jar);
         let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");

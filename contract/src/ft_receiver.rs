@@ -345,6 +345,52 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Another operation on this Jar is in progress")]
+    fn top_up_of_locked_jar_is_rejected() {
+        let alice = alice();
+        let admin = admin();
+
+        let product = Product::new().with_allows_top_up(true);
+        let reference_jar = Jar::new(0).principal(100).pending_withdraw();
+
+        let mut context = Context::new(admin)
+            .with_products(&[product])
+            .with_jars(&[reference_jar.clone()]);
+
+        let msg = json!({
+            "type": "top_up",
+            "data": reference_jar.id,
+        });
+
+        context.switch_account_to_ft_contract_account();
+        let _ = context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
+    }
+
+    #[test]
+    #[should_panic(expected = "Account is migrating")]
+    fn top_up_while_account_is_migrating_is_rejected() {
+        let alice = alice();
+        let admin = admin();
+
+        let product = Product::new().with_allows_top_up(true);
+        let reference_jar = Jar::new(0).principal(100);
+
+        let mut context = Context::new(admin)
+            .with_products(&[product])
+            .with_jars(&[reference_jar.clone()]);
+
+        context.contract().migration.migrating_accounts.insert(alice.clone());
+
+        let msg = json!({
+            "type": "top_up",
+            "data": reference_jar.id,
+        });
+
+        context.switch_account_to_ft_contract_account();
+        let _ = context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
+    }
+
+    #[test]
     fn transfer_with_migration_message() {
         let alice = alice();
         let bob = bob();
