@@ -85,7 +85,7 @@ mod tests {
             helpers::MessageSigner,
             model::{Apy, DowngradableApy, Product},
         },
-        test_utils::admin,
+        test_utils::{admin, expect_panic},
         Contract,
     };
 
@@ -210,6 +210,56 @@ mod tests {
 
         let jar = context.contract().get_jar(alice.clone(), U32(1));
         assert_eq!(jar.id.0, 1);
+    }
+
+    #[test]
+    fn step_jar_with_out_of_range_timezone_is_rejected() {
+        let alice = alice();
+        let admin = admin();
+
+        let product = Product::new().score_cap(20_000);
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
+
+        let msg = json!({
+            "type": "stake",
+            "data": {
+                "ticket": { "product_id": product.id, "valid_until": "0", "timezone": i64::MIN + 1 }
+            }
+        });
+
+        context.switch_account_to_ft_contract_account();
+        expect_panic(&context, "Timezone is outside the valid UTC range", || {
+            let _ = context
+                .contract()
+                .ft_on_transfer(alice.clone(), U128(1_000_000), msg.to_string());
+        });
+    }
+
+    // A depositor may set an in-range timezone for someone else's step jar — this
+    // is how oracle airdrops open jars on a user's behalf.
+    #[test]
+    fn third_party_can_set_step_jar_timezone() {
+        let sender = alice();
+        let receiver = bob();
+        let admin = admin();
+
+        let product = Product::new().score_cap(20_000);
+        let mut context = Context::new(admin).with_products(&[product.clone()]);
+
+        let msg = json!({
+            "type": "stake",
+            "data": {
+                "ticket": { "product_id": product.id, "valid_until": "0", "timezone": 3 },
+                "receiver_id": receiver,
+            }
+        });
+
+        context.switch_account_to_ft_contract_account();
+        let _ = context
+            .contract()
+            .ft_on_transfer(sender.clone(), U128(1_000_000), msg.to_string());
+
+        assert!(context.contract().get_score(&receiver).is_some());
     }
 
     #[test]

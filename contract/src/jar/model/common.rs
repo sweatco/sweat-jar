@@ -236,6 +236,10 @@ impl Contract {
                 // Time zone already set. No actions required.
                 (Some(_) | None, Some(_)) => (),
                 (Some(timezone), None) => {
+                    require!(
+                        timezone.is_within_valid_range(),
+                        "Timezone is outside the valid UTC range"
+                    );
                     self.accounts.entry(account_id.clone()).or_default().score = AccountScore::new(timezone);
                 }
                 (None, None) => {
