@@ -185,6 +185,15 @@ impl JarApi for Contract {
             .collect();
 
         if let Some(jars_filter) = jars_filter {
+            // An explicitly-requested jar that's locked must fail the same way a direct
+            // `restake(jar_id)` call on it would, instead of silently vanishing from the
+            // eligible-jars filter above (a no-op for any jar that already passed it).
+            for jar in &self.get_account(&account_id).jars {
+                if jars_filter.contains(&jar.id) {
+                    assert_not_locked(jar);
+                }
+            }
+
             jars.retain(|jar| jars_filter.contains(&jar.id));
         }
 

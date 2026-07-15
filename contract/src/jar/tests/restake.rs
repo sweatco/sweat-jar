@@ -202,6 +202,22 @@ fn restake_all_skips_locked_jar() {
 }
 
 #[test]
+#[should_panic(expected = "Another operation on this Jar is in progress")]
+fn restake_all_with_explicit_locked_jar_id_is_rejected() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0).pending_withdraw();
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+    context.contract().restake_all(Some(vec![jar.id.into()]));
+}
+
+#[test]
 #[should_panic(expected = "Account is migrating")]
 fn restake_while_migrating() {
     let alice = alice();
