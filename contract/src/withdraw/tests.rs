@@ -424,6 +424,46 @@ fn withdraw_all() {
     );
 }
 
+/// Bulk withdraw must report each jar's fee individually, not just the aggregate.
+/// The per-jar fee is a percentage of that jar's withdrawn principal, so jars of
+/// different sizes must surface different fees.
+#[test]
+fn withdraw_all_reports_per_jar_percent_fee() {
+    let alice = alice();
+    let admin = admin();
+
+    let fee_value = UDecimal::new(5, 2); // 5%
+    let product = Product::new().with_withdrawal_fee(WithdrawalFee::Percent(fee_value.clone()));
+
+    let big_jar = Jar::new(0).principal(1_000_000);
+    let small_jar = Jar::new(1).principal(200_000);
+
+    let mut context = Context::new(admin)
+        .with_products(&[product])
+        .with_jars(&[big_jar.clone(), small_jar.clone()]);
+
+    context.set_block_timestamp_in_days(366);
+    context.switch_account(&alice);
+
+    let withdrawn = context.contract().withdraw_all(None).unwrap();
+
+    let big_fee = fee_value * big_jar.principal;
+    let small_fee = fee_value * small_jar.principal;
+
+    assert_eq!(
+        withdrawn.jars.iter().map(|j| j.fee.0).collect::<Vec<_>>(),
+        vec![big_fee, small_fee]
+    );
+    assert_eq!(
+        withdrawn.jars.iter().map(|j| j.withdrawn_amount.0).collect::<Vec<_>>(),
+        vec![big_jar.principal - big_fee, small_jar.principal - small_fee]
+    );
+    assert_eq!(
+        withdrawn.total_amount.0,
+        (big_jar.principal - big_fee) + (small_jar.principal - small_fee)
+    );
+}
+
 #[test]
 fn batch_withdraw_all() {
     let alice = alice();

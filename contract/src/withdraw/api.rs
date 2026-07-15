@@ -134,11 +134,13 @@ impl WithdrawApi for Contract {
                 withdrawn_jar.lock();
                 *self.get_jar_mut_internal(&jar.account_id, jar.id) = withdrawn_jar;
 
+                let fee = Self::get_fee(&product, amount);
+
                 JarWithdraw {
                     jar,
                     should_be_closed,
                     amount,
-                    fee: None,
+                    fee,
                 }
             })
             .collect();
@@ -280,13 +282,7 @@ impl Contract {
         account_id: &AccountId,
         jars: Vec<JarWithdraw>,
     ) -> PromiseOrValue<BulkWithdrawView> {
-        let total_fee: TokenAmount = jars
-            .iter()
-            .filter_map(|j| {
-                let product = self.get_product(&j.jar.product_id);
-                Self::get_fee(&product, j.amount)
-            })
-            .sum();
+        let total_fee: TokenAmount = jars.iter().filter_map(|j| j.fee).sum();
 
         let total_fee = match total_fee {
             0 => None,
