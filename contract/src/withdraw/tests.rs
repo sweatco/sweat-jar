@@ -240,13 +240,43 @@ fn product_with_percent_fee() {
         .withdraw(U32(0), Some(U128(withdrawn_amount)))
         .unwrap();
 
-    let reference_fee = fee_value * initial_principal;
+    // A percent fee is charged on the amount actually withdrawn, not the jar's
+    // full principal — `withdrawn_amount` (100_000) is only a tenth of the jar.
+    let reference_fee = fee_value * withdrawn_amount;
     assert_eq!(withdraw.withdrawn_amount, U128(withdrawn_amount - reference_fee));
     assert_eq!(withdraw.fee, U128(reference_fee));
 
     let jar = context.contract().get_jar(alice, U32(reference_jar.id));
 
     assert_eq!(jar.principal, U128(initial_principal - withdrawn_amount));
+}
+
+/// Withdrawing far less than the principal must produce a fee proportional to
+/// the withdrawn amount. Under the old "fee on full principal" logic a 5% fee
+/// on a 1_000_000 jar was 50_000 regardless of the amount, which exceeded a
+/// small withdrawal and underflowed `amount - fee` in the transfer.
+#[test]
+fn percent_fee_scales_with_small_withdrawal() {
+    let fee_value = UDecimal::new(5, 2); // 5%
+    let product = Product::new().with_withdrawal_fee(WithdrawalFee::Percent(fee_value.clone()));
+    let (alice, reference_jar, mut context) = prepare_jar(&product);
+
+    context.set_block_timestamp_in_ms(product.get_lockup_term().unwrap() + 1);
+    context.switch_account(&alice);
+
+    let withdrawn_amount = 100;
+    let withdraw = context
+        .contract()
+        .withdraw(U32(reference_jar.id), Some(U128(withdrawn_amount)))
+        .unwrap();
+
+    let reference_fee = fee_value * withdrawn_amount; // 5% of 100 = 5
+    assert_eq!(withdraw.fee, U128(reference_fee));
+    assert!(
+        withdraw.fee.0 < withdrawn_amount,
+        "fee must not exceed the withdrawn amount"
+    );
+    assert_eq!(withdraw.withdrawn_amount, U128(withdrawn_amount - reference_fee));
 }
 
 #[test]
@@ -391,6 +421,46 @@ fn withdraw_all() {
     assert_eq!(
         all_jars.iter().map(|j| j.id.0).collect::<Vec<_>>(),
         vec![locked_jar.id, immature_jar.id,]
+    );
+}
+
+/// Bulk withdraw must report each jar's fee individually, not just the aggregate.
+/// The per-jar fee is a percentage of that jar's withdrawn principal, so jars of
+/// different sizes must surface different fees.
+#[test]
+fn withdraw_all_reports_per_jar_percent_fee() {
+    let alice = alice();
+    let admin = admin();
+
+    let fee_value = UDecimal::new(5, 2); // 5%
+    let product = Product::new().with_withdrawal_fee(WithdrawalFee::Percent(fee_value.clone()));
+
+    let big_jar = Jar::new(0).principal(1_000_000);
+    let small_jar = Jar::new(1).principal(200_000);
+
+    let mut context = Context::new(admin)
+        .with_products(&[product])
+        .with_jars(&[big_jar.clone(), small_jar.clone()]);
+
+    context.set_block_timestamp_in_days(366);
+    context.switch_account(&alice);
+
+    let withdrawn = context.contract().withdraw_all(None).unwrap();
+
+    let big_fee = fee_value * big_jar.principal;
+    let small_fee = fee_value * small_jar.principal;
+
+    assert_eq!(
+        withdrawn.jars.iter().map(|j| j.fee.0).collect::<Vec<_>>(),
+        vec![big_fee, small_fee]
+    );
+    assert_eq!(
+        withdrawn.jars.iter().map(|j| j.withdrawn_amount.0).collect::<Vec<_>>(),
+        vec![big_jar.principal - big_fee, small_jar.principal - small_fee]
+    );
+    assert_eq!(
+        withdrawn.total_amount.0,
+        (big_jar.principal - big_fee) + (small_jar.principal - small_fee)
     );
 }
 
