@@ -113,13 +113,12 @@ impl AccountScore {
     }
 
     /// Update on the same day - just add values
-    fn update_today(&mut self, chain: Chain) -> Vec<Score> {
+    fn update_today(&mut self, chain: Chain) {
         for (score, day) in chain {
             let day_index: usize = day.0.try_into().unwrap();
             self.scores[day_index] = self.scores[day_index].saturating_add(score);
             self.scores_history[day_index] = self.scores_history[day_index].saturating_add(score);
         }
-        vec![]
     }
 
     fn update_day(&self) -> Day {

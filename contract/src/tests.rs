@@ -356,6 +356,23 @@ fn apply_penalty_in_batch() {
 }
 
 #[test]
+#[should_panic(expected = "Account 'alice.near' doesn't exist")]
+fn batch_set_penalty_for_missing_account() {
+    let admin = admin();
+    let product = Product::new().apy(Apy::Downgradable(DowngradableApy {
+        default: UDecimal::new(20, 2),
+        fallback: UDecimal::new(10, 2),
+    }));
+
+    let mut context = Context::new(admin.clone()).with_products(&[product]);
+    context.switch_account(&admin);
+
+    context
+        .contract()
+        .batch_set_penalty(vec![(alice(), vec![U32(0)])], true);
+}
+
+#[test]
 fn get_interest_after_withdraw() {
     let alice = alice();
     let admin = admin();

@@ -15,7 +15,10 @@ use sweat_jar_model::{
 use crate::{
     common::Timestamp,
     event::{emit, EventKind, TopUpData},
-    jar::model::{Jar, JarLastVersion},
+    jar::{
+        account::versioned::Account,
+        model::{Jar, JarLastVersion},
+    },
     product::model::{Apy, Product, Terms},
     score::AccountScore,
     Contract, JarsStorage,
@@ -283,10 +286,7 @@ impl Contract {
     }
 
     pub(crate) fn delete_jar(&mut self, account_id: &AccountId, jar_id: JarId) {
-        let jars = self
-            .accounts
-            .get_mut(account_id)
-            .unwrap_or_else(|| panic_str(&format!("Account '{account_id}' doesn't exist")));
+        let jars = self.get_account_mut(account_id);
 
         require!(
             !jars.is_empty(),
@@ -301,6 +301,18 @@ impl Contract {
         jars.swap_remove(jar_position);
     }
 
+    pub(crate) fn get_account(&self, account: &AccountId) -> &Account {
+        self.accounts
+            .get(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
+    }
+
+    pub(crate) fn get_account_mut(&mut self, account: &AccountId) -> &mut Account {
+        self.accounts
+            .get_mut(account)
+            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
+    }
+
     pub(crate) fn get_score(&self, account: &AccountId) -> Option<&AccountScore> {
         self.accounts.get(account).and_then(|a| a.score())
     }
@@ -310,10 +322,7 @@ impl Contract {
     }
 
     pub(crate) fn get_jar_mut_internal(&mut self, account: &AccountId, id: JarId) -> &mut Jar {
-        self.accounts
-            .get_mut(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
-            .get_jar_mut(id)
+        self.get_account_mut(account).get_jar_mut(id)
     }
 
     #[mutants::skip]
@@ -337,11 +346,7 @@ impl Contract {
                 .clone();
         }
 
-        self.accounts
-            .get(account)
-            .unwrap_or_else(|| env::panic_str(&format!("Account '{account}' doesn't exist")))
-            .get_jar(id)
-            .clone()
+        self.get_account(account).get_jar(id).clone()
     }
 
     pub(crate) fn verify(

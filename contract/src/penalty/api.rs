@@ -9,7 +9,7 @@ use crate::{
         PenaltyData,
     },
     product::model::Apy,
-    Contract, ContractExt, JarsStorage, Roles,
+    Contract, ContractExt, Roles,
 };
 
 #[near]
@@ -44,23 +44,16 @@ impl PenaltyApi for Contract {
         for (account_id, jars) in jars {
             self.migrate_account_if_needed(&account_id);
 
-            let account_jars = self
-                .accounts
-                .get_mut(&account_id)
-                .unwrap_or_else(|| env::panic_str(&format!("Account '{account_id}' doesn't exist")));
-
             for jar_id in jars {
                 let jar_id = jar_id.0;
 
-                let jar = account_jars.get_jar_mut(jar_id);
-
-                let product = self
-                    .products
-                    .get(&jar.product_id)
-                    .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
+                let jar = self.get_jar_internal(&account_id, jar_id);
+                let product = self.get_product(&jar.product_id);
 
                 assert_penalty_apy(&product.apy);
-                jar.apply_penalty(&product, value, now);
+
+                self.get_jar_mut_internal(&account_id, jar_id)
+                    .apply_penalty(&product, value, now);
 
                 applied_jars.push(jar_id);
             }

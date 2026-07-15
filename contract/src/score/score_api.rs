@@ -1,15 +1,17 @@
+use std::collections::HashMap;
+
 use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{
-    env,
     env::block_timestamp_ms,
     json_types::{I64, U128},
     near, AccountId,
 };
-use sweat_jar_model::{api::ScoreApi, Score, U32, UTC};
+use sweat_jar_model::{api::ScoreApi, ProductId, Score, U32, UTC};
 
 use crate::{
     event::{emit, EventKind, ScoreData},
     jar::model::JarCache,
+    product::model::Product,
     Contract, ContractExt, Roles,
 };
 
@@ -24,26 +26,33 @@ impl ScoreApi for Contract {
         for (account, new_score) in batch {
             self.migrate_account_if_needed(&account);
 
+            let product_ids: Vec<ProductId> = {
+                let account_jars = self.accounts.entry(account.clone()).or_default();
+                assert!(
+                    account_jars.has_score_jars(),
+                    "Account '{account}' doesn't have score jars"
+                );
+                account_jars.jars.iter().map(|jar| jar.product_id.clone()).collect()
+            };
+            let products: HashMap<ProductId, Product> = product_ids
+                .into_iter()
+                .map(|product_id| {
+                    let product = self.get_product(&product_id);
+                    (product_id, product)
+                })
+                .collect();
+
             let account_jars = self.accounts.entry(account.clone()).or_default();
-
-            assert!(
-                account_jars.has_score_jars(),
-                "Account '{account}' doesn't have score jars"
-            );
-
             let score = account_jars.score.claim_score();
 
             for jar in &mut account_jars.jars {
-                let product = self
-                    .products
-                    .get(&jar.product_id)
-                    .unwrap_or_else(|| env::panic_str(&format!("Product '{}' doesn't exist", jar.product_id)));
+                let product = &products[&jar.product_id];
 
                 if !product.is_score_product() {
                     continue;
                 }
 
-                let (interest, remainder) = jar.get_interest(&score, &product, now);
+                let (interest, remainder) = jar.get_interest(&score, product, now);
 
                 jar.claim_remainder = remainder;
 
