@@ -10,7 +10,7 @@ use sweat_jar_model::{
 
 use crate::{
     assert::assert_not_locked,
-    event::{emit, EventKind},
+    event::{emit, EventKind, UnlockJarsData},
     jar::model::Jar,
     score::AccountScore,
     Contract, ContractExt, Roles,
@@ -203,6 +203,11 @@ impl JarApi for Contract {
         result
     }
 
+    /// Force-clears the pending-withdraw lock on every jar of an account. This is a manual
+    /// recovery tool: `is_pending_withdraw` is the mutex a claim/withdraw relies on, so it
+    /// MUST NOT be called while a claim/withdraw callback is still in flight for the account
+    /// — doing so lets a second operation run against stale state and can double-claim
+    /// interest. Emits `UnlockJars` for auditability.
     #[access_control_any(roles(Roles::Maintainer))]
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_account_is_not_migrating(&account_id);
@@ -210,8 +215,17 @@ impl JarApi for Contract {
 
         let jars = self.accounts.get_mut(&account_id).expect("Account doesn't have jars");
 
+        let mut unlocked = vec![];
         for jar in &mut jars.jars {
-            jar.is_pending_withdraw = false;
+            if jar.is_pending_withdraw {
+                jar.is_pending_withdraw = false;
+                unlocked.push(jar.id);
+            }
         }
+
+        emit(EventKind::UnlockJars(UnlockJarsData {
+            account_id,
+            jars: unlocked,
+        }));
     }
 }

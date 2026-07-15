@@ -31,6 +31,7 @@ pub enum EventKind {
     RecordScore(Vec<ScoreData>),
     OldScoreWarning((Score, Local)),
     JarsMerge(AccountId),
+    UnlockJars(UnlockJarsData),
 }
 
 #[derive(Debug)]
@@ -80,6 +81,14 @@ pub type WithdrawData = (JarId, U128, U128);
 
 /// (`old_id`, `new_id`)
 pub type RestakeData = (JarId, JarId);
+
+/// Jars force-unlocked by a manager via `unlock_jars_for_account`.
+#[derive(Debug)]
+#[near(serializers=[json])]
+pub struct UnlockJarsData {
+    pub account_id: AccountId,
+    pub jars: Vec<JarId>,
+}
 
 #[derive(Debug)]
 #[near(serializers=[json])]
