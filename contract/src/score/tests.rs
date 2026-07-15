@@ -74,6 +74,37 @@ fn create_invalid_step_product() {
     });
 }
 
+/// A claim that transfers nothing (here: the only jar is locked) must not consume the
+/// account-level score buffer — otherwise the recorded score is silently lost.
+#[test]
+fn claim_paying_out_nothing_preserves_score() {
+    const SCORE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .build();
+
+    ctx.set_block_timestamp_in_days(1);
+    ctx.record_score(UTC(MS_IN_DAY), 12_000, alice());
+
+    let score_before = ctx.score(SCORE_JAR).scores();
+    assert_ne!(score_before, (0, 0), "precondition: a score is recorded");
+
+    // Lock the only jar so the claim selects nothing and transfers zero.
+    ctx.contract().get_jar_mut_internal(&alice(), SCORE_JAR).lock();
+
+    assert_eq!(ctx.claim_total(alice()), 0);
+
+    assert_eq!(
+        ctx.score(SCORE_JAR).scores(),
+        score_before,
+        "score buffer must survive a claim that pays out nothing"
+    );
+}
+
 /// 12% jar should have the same interest as 12_000 score jar walking to the limit every day
 /// Also this method tests score cap
 #[test]
