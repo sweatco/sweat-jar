@@ -42,18 +42,73 @@ fn record_score_for_account_without_score_jars() {
     ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
 }
 
+/// A migrating account in a `record_score` batch must be skipped, not abort the whole
+/// batch — an oracle submission commonly covers many unrelated accounts, and one of them
+/// migrating must not drop every other account's score update for the day.
 #[test]
-#[should_panic(expected = "Account is migrating")]
-fn record_score_while_migrating_is_rejected() {
+fn record_score_skips_migrating_account_but_processes_others() {
+    const ALICE_JAR: JarId = 0;
+    const BOB_JAR: JarId = 1;
+
+    set_test_log_events(false);
+
     let mut ctx = TestBuilder::new()
         .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
-        .jar(0, JarField::Timezone(Timezone::hour_shift(0)))
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .jar(
+            BOB_JAR,
+            [JarField::Account(bob()), JarField::Timezone(Timezone::hour_shift(0))],
+        )
         .build();
 
     ctx.contract().migration.migrating_accounts.insert(alice());
 
+    ctx.set_block_timestamp_in_days(1);
     ctx.switch_account(&admin());
-    ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
+    ctx.contract().record_score(vec![
+        (alice(), vec![(12_000, UTC(MS_IN_DAY))]),
+        (bob(), vec![(12_000, UTC(MS_IN_DAY))]),
+    ]);
+
+    assert_eq!(
+        ctx.score(ALICE_JAR).scores(),
+        (0, 0),
+        "the migrating account's score must not be updated"
+    );
+    assert_ne!(
+        ctx.score(BOB_JAR).scores(),
+        (0, 0),
+        "a non-migrating account in the same batch must still be processed"
+    );
+}
+
+/// A jar that's mid-withdraw/claim (`is_pending_withdraw == true`) must not have its
+/// cache overwritten by `record_score` — a racing claim-failure rollback later replaces
+/// the whole jar with its pre-claim snapshot, which would silently discard the write.
+#[test]
+fn record_score_skips_locked_jar_cache() {
+    const SCORE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .build();
+
+    ctx.contract().get_jar_mut_internal(&alice(), SCORE_JAR).lock();
+
+    let cache_before = ctx.jar(SCORE_JAR).cache;
+
+    ctx.set_block_timestamp_in_days(1);
+    ctx.record_score(UTC(MS_IN_DAY), 12_000, alice());
+
+    assert_eq!(
+        ctx.jar(SCORE_JAR).cache,
+        cache_before,
+        "record_score must not mutate a locked jar's cache"
+    );
+    assert!(ctx.jar(SCORE_JAR).is_pending_withdraw, "the lock must be left in place");
 }
 
 #[test]

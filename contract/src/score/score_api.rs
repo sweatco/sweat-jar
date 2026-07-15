@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{
-    env::block_timestamp_ms,
+    env::{block_timestamp_ms, log_str},
     json_types::{I64, U128},
     near, AccountId,
 };
@@ -24,7 +24,13 @@ impl ScoreApi for Contract {
         let now = block_timestamp_ms();
 
         for (account, new_score) in batch {
-            self.assert_account_is_not_migrating(&account);
+            // Skip rather than abort: this is an oracle-submitted multi-account batch, and
+            // one account being mid v2-migration must not drop every other account's score
+            // update for the day.
+            if self.migration.migrating_accounts.contains(&account) {
+                log_str(&format!("Skipping record_score for '{account}': account is migrating"));
+                continue;
+            }
             self.migrate_account_if_needed(&account);
 
             let product_ids: Vec<ProductId> = {
@@ -49,7 +55,7 @@ impl ScoreApi for Contract {
             for jar in &mut account_jars.jars {
                 let product = &products[&jar.product_id];
 
-                if !product.is_score_product() {
+                if !product.is_score_product() || jar.is_pending_withdraw {
                     continue;
                 }
 
