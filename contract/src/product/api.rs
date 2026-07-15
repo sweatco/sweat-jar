@@ -37,6 +37,7 @@ impl ProductApi for Contract {
         }
 
         product.assert_fee_amount();
+        product.assert_public_key_valid();
 
         self.products.insert(&product.id, &product);
 
@@ -69,6 +70,7 @@ impl ProductApi for Contract {
 
         let mut product = self.get_product(&product_id);
         product.public_key = Some(public_key.0.clone());
+        product.assert_public_key_valid();
         self.products.insert(&product_id, &product);
 
         emit(EventKind::ChangeProductPublicKey(ChangeProductPublicKeyData {

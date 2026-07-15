@@ -280,6 +280,33 @@ fn set_public_key_without_deposit() {
 }
 
 #[test]
+#[should_panic(expected = "Public key must be 32 bytes")]
+fn set_public_key_with_invalid_key_is_rejected() {
+    let admin = admin();
+
+    let signer = MessageSigner::new();
+    let product = generate_product().public_key(signer.public_key());
+    let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+    context.switch_account(&admin);
+    context.with_deposit_yocto(1, |context| {
+        context
+            .contract()
+            .set_public_key(product.id.clone(), Base64VecU8(vec![0u8; 31]))
+    });
+}
+
+#[test]
+#[should_panic(expected = "Public key must be 32 bytes")]
+fn register_product_with_invalid_public_key_is_rejected() {
+    register_product(RegisterProductCommand {
+        id: "product_with_bad_key".to_string(),
+        public_key: Some(Base64VecU8(vec![0u8; 31])),
+        ..Default::default()
+    });
+}
+
+#[test]
 fn assert_cap_in_bounds() {
     let product = generate_product();
     product.assert_cap(100);

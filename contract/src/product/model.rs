@@ -1,3 +1,4 @@
+use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH};
 use near_sdk::{near, require};
 use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal};
 
@@ -145,6 +146,22 @@ impl Product {
 
     pub(crate) fn assert_enabled(&self) {
         require!(self.is_enabled, "It's not possible to create new jars for this product");
+    }
+
+    /// Ensures the configured public key (if any) is a well-formed ed25519 verifying key.
+    /// A malformed key would be stored fine but then panic in `verify_signature` on every
+    /// stake, permanently blocking deposits into the product.
+    pub(crate) fn assert_public_key_valid(&self) {
+        let Some(public_key) = &self.public_key else {
+            return;
+        };
+
+        let key_bytes: &[u8; PUBLIC_KEY_LENGTH] = public_key
+            .as_slice()
+            .try_into()
+            .unwrap_or_else(|_| env::panic_str(&format!("Public key must be {PUBLIC_KEY_LENGTH} bytes")));
+
+        VerifyingKey::from_bytes(key_bytes).unwrap_or_else(|_| env::panic_str("Public key is invalid"));
     }
 
     /// Check if fee in new product is not to high
