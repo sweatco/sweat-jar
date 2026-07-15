@@ -21,7 +21,6 @@ pub enum EventKind {
     Claim(Vec<ClaimEventItem>),
     Withdraw(WithdrawData),
     WithdrawAll(Vec<WithdrawData>),
-    Migration(Vec<MigrationEventItem>),
     Restake(RestakeData),
     RestakeAll(Vec<RestakeData>),
     ApplyPenalty(PenaltyData),
@@ -78,14 +77,6 @@ pub type ClaimEventItem = (JarId, U128);
 
 /// (id, fee, amount)
 pub type WithdrawData = (JarId, U128, U128);
-
-#[derive(Debug)]
-#[near(serializers=[json])]
-pub struct MigrationEventItem {
-    pub original_id: String,
-    pub id: JarId,
-    pub account_id: AccountId,
-}
 
 /// (`old_id`, `new_id`)
 pub type RestakeData = (JarId, JarId);
