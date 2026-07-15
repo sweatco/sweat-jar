@@ -1,6 +1,6 @@
 use std::cmp;
 
-use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
+use ed25519_dalek::{Signature, SIGNATURE_LENGTH};
 use near_sdk::{
     env,
     env::{panic_str, sha256},
@@ -13,13 +13,14 @@ use sweat_jar_model::{
 };
 
 use crate::{
+    assert::assert_not_locked,
     common::Timestamp,
     event::{emit, EventKind, TopUpData},
     jar::{
         account::versioned::Account,
         model::{Jar, JarLastVersion},
     },
-    product::model::{Apy, Product, Terms},
+    product::model::{parse_public_key, Apy, Product, Terms},
     score::AccountScore,
     Contract, JarsStorage,
 };
@@ -80,9 +81,10 @@ impl JarLastVersion {
             "Top up is not supported for score based jars"
         );
 
-        let current_interest = self.get_interest(&ScoreRecord::default(), product, now).0;
+        let (current_interest, remainder) = self.get_interest(&ScoreRecord::default(), product, now);
 
         self.principal += amount;
+        self.claim_remainder = remainder;
         self.cache = Some(JarCache {
             updated_at: now,
             interest: current_interest,
@@ -265,9 +267,11 @@ impl Contract {
     }
 
     pub(crate) fn top_up(&mut self, account: &AccountId, jar_id: JarId, amount: U128) -> U128 {
+        self.assert_account_is_not_migrating(account);
         self.migrate_account_if_needed(account);
 
         let jar = self.get_jar_internal(account, jar_id).clone();
+        assert_not_locked(&jar);
         let product = self.get_product(&jar.product_id).clone();
 
         require!(product.allows_top_up(), "The product doesn't allow top-ups");
@@ -419,12 +423,7 @@ impl Contract {
 
         let signature = Signature::from_bytes(signature_bytes);
 
-        let public_key_bytes: &[u8; PUBLIC_KEY_LENGTH] = product_public_key
-            .try_into()
-            .unwrap_or_else(|_| panic!("Public key must be {PUBLIC_KEY_LENGTH} bytes"));
-
-        VerifyingKey::from_bytes(public_key_bytes)
-            .expect("Public key is invalid")
+        parse_public_key(product_public_key)
             .verify_strict(ticket_hash, &signature)
             .is_ok()
     }

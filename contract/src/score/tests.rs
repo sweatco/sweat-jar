@@ -42,6 +42,75 @@ fn record_score_for_account_without_score_jars() {
     ctx.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
 }
 
+/// A migrating account in a `record_score` batch must be skipped, not abort the whole
+/// batch — an oracle submission commonly covers many unrelated accounts, and one of them
+/// migrating must not drop every other account's score update for the day.
+#[test]
+fn record_score_skips_migrating_account_but_processes_others() {
+    const ALICE_JAR: JarId = 0;
+    const BOB_JAR: JarId = 1;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(ALICE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .jar(
+            BOB_JAR,
+            [JarField::Account(bob()), JarField::Timezone(Timezone::hour_shift(0))],
+        )
+        .build();
+
+    ctx.contract().migration.migrating_accounts.insert(alice());
+
+    ctx.set_block_timestamp_in_days(1);
+    ctx.switch_account(&admin());
+    ctx.contract().record_score(vec![
+        (alice(), vec![(12_000, UTC(MS_IN_DAY))]),
+        (bob(), vec![(12_000, UTC(MS_IN_DAY))]),
+    ]);
+
+    assert_eq!(
+        ctx.score(ALICE_JAR).scores(),
+        (0, 0),
+        "the migrating account's score must not be updated"
+    );
+    assert_ne!(
+        ctx.score(BOB_JAR).scores(),
+        (0, 0),
+        "a non-migrating account in the same batch must still be processed"
+    );
+}
+
+/// A jar that's mid-withdraw/claim (`is_pending_withdraw == true`) must not have its
+/// cache overwritten by `record_score` — a racing claim-failure rollback later replaces
+/// the whole jar with its pre-claim snapshot, which would silently discard the write.
+#[test]
+fn record_score_skips_locked_jar_cache() {
+    const SCORE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .build();
+
+    ctx.contract().get_jar_mut_internal(&alice(), SCORE_JAR).lock();
+
+    let cache_before = ctx.jar(SCORE_JAR).cache;
+
+    ctx.set_block_timestamp_in_days(1);
+    ctx.record_score(UTC(MS_IN_DAY), 12_000, alice());
+
+    assert_eq!(
+        ctx.jar(SCORE_JAR).cache,
+        cache_before,
+        "record_score must not mutate a locked jar's cache"
+    );
+    assert!(ctx.jar(SCORE_JAR).is_pending_withdraw, "the lock must be left in place");
+}
+
 #[test]
 fn create_invalid_step_product() {
     let mut ctx = TestBuilder::new().build();
@@ -72,6 +141,76 @@ fn create_invalid_step_product() {
     expect_panic(&ctx, "Step based products do not support downgradable APY", || {
         ctx.contract().register_product(command);
     });
+}
+
+/// A claim that transfers nothing (here: the only jar is locked) must not consume the
+/// account-level score buffer — otherwise the recorded score is silently lost.
+#[test]
+fn claim_paying_out_nothing_preserves_score() {
+    const SCORE_JAR: JarId = 0;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .build();
+
+    ctx.set_block_timestamp_in_days(1);
+    ctx.record_score(UTC(MS_IN_DAY), 12_000, alice());
+
+    let score_before = ctx.score(SCORE_JAR).scores();
+    assert_ne!(score_before, (0, 0), "precondition: a score is recorded");
+
+    // Lock the only jar so the claim selects nothing and transfers zero.
+    ctx.contract().get_jar_mut_internal(&alice(), SCORE_JAR).lock();
+
+    assert_eq!(ctx.claim_total(alice()), 0);
+
+    assert_eq!(
+        ctx.score(SCORE_JAR).scores(),
+        score_before,
+        "score buffer must survive a claim that pays out nothing"
+    );
+}
+
+/// A locked score-jar's share of the score buffer must survive a claim that pays out
+/// via a *different*, unlocked, non-score jar on the same account — the score buffer
+/// is account-wide, so it must only be consumed once every score-jar has had a chance
+/// to have its interest computed against it.
+#[test]
+fn claim_preserves_locked_score_jar_when_another_jar_pays_out() {
+    const SCORE_JAR: JarId = 0;
+    const REGULAR_JAR: JarId = 1;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .product(PRODUCT, APY(12))
+        .jar(REGULAR_JAR, ())
+        .build();
+
+    ctx.set_block_timestamp_in_days(1);
+    ctx.record_score(UTC(MS_IN_DAY), 12_000, alice());
+
+    let score_before = ctx.score(SCORE_JAR).scores();
+    assert_ne!(score_before, (0, 0), "precondition: a score is recorded");
+
+    // Lock the score jar (e.g. a withdraw mid-flight on it); the regular jar stays claimable.
+    ctx.contract().get_jar_mut_internal(&alice(), SCORE_JAR).lock();
+
+    ctx.set_block_timestamp_in_days(2);
+
+    let claimed = ctx.claim_total(alice());
+    assert!(claimed > 0, "precondition: the regular jar has interest to pay out");
+
+    assert_eq!(
+        ctx.score(SCORE_JAR).scores(),
+        score_before,
+        "a claim paying out through an unrelated jar must not discard a locked score-jar's score"
+    );
 }
 
 /// 12% jar should have the same interest as 12_000 score jar walking to the limit every day

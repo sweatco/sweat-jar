@@ -48,15 +48,6 @@ pub struct AggregatedInterestView {
     pub timestamp: Timestamp,
 }
 
-#[near(serializers=[json])]
-pub struct CeFiJar {
-    pub id: String,
-    pub account_id: AccountId,
-    pub product_id: ProductId,
-    pub principal: U128,
-    pub created_at: U64,
-}
-
 // v2
 #[near(serializers=[borsh, json])]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd, Default)]

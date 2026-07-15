@@ -9,7 +9,7 @@
 mod common;
 
 use anyhow::Result;
-use common::{ft, jar, panic::PanicFinder, prepare::prepare_contract, product::RegisterProductCommand};
+use common::{jar, panic::PanicFinder, prepare::prepare_contract, product::RegisterProductCommand};
 use near_workspaces::types::NearToken;
 use serde_json::json;
 use sweat_jar_model::{jar::JarIdView, U32};
@@ -97,13 +97,6 @@ async fn maintainer_gate() -> Result<()> {
 
     let result = jar::bulk_create_jars(&context.jar, nobody, context.alice.id(), "nonexistent", 1, 1).await;
     assert!(result.is_err());
-
-    // Manual check (ft_on_transfer isn't a `#[near_bindgen]` method, so it can't
-    // carry `#[access_control_any]`): migrating CeFi jars requires Maintainer,
-    // checked against `sender_id`, not the predecessor (the token contract).
-    let msg = json!({ "type": "migrate", "data": [] });
-    let result = ft::ft_transfer_call(&context.ft, nobody, context.jar.id(), 1, msg.to_string()).await?;
-    assert!(result.has_panic("Only accounts with the Maintainer role can migrate jars"));
 
     Ok(())
 }

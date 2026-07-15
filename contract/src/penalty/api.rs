@@ -1,8 +1,9 @@
 use near_plugins::{access_control_any, AccessControllable};
-use near_sdk::{env, near, AccountId};
+use near_sdk::{env, env::log_str, near, AccountId};
 use sweat_jar_model::{api::PenaltyApi, jar::JarIdView};
 
 use crate::{
+    assert::assert_not_locked,
     event::{
         emit, BatchPenaltyData,
         EventKind::{ApplyPenalty, BatchApplyPenalty},
@@ -16,10 +17,12 @@ use crate::{
 impl PenaltyApi for Contract {
     #[access_control_any(roles(Roles::Maintainer))]
     fn set_penalty(&mut self, account_id: AccountId, jar_id: JarIdView, value: bool) {
+        self.assert_account_is_not_migrating(&account_id);
         self.migrate_account_if_needed(&account_id);
 
         let jar_id = jar_id.0;
         let jar = self.get_jar_internal(&account_id, jar_id);
+        assert_not_locked(&jar);
         let product = self.get_product(&jar.product_id).clone();
         let now = env::block_timestamp_ms();
 
@@ -42,12 +45,22 @@ impl PenaltyApi for Contract {
         let now = env::block_timestamp_ms();
 
         for (account_id, jars) in jars {
+            // Skip rather than abort: this is a maintainer-submitted multi-account batch,
+            // and one account being mid v2-migration must not drop every other account's
+            // penalty update.
+            if self.migration.migrating_accounts.contains(&account_id) {
+                log_str(&format!(
+                    "Skipping batch_set_penalty for '{account_id}': account is migrating"
+                ));
+                continue;
+            }
             self.migrate_account_if_needed(&account_id);
 
             for jar_id in jars {
                 let jar_id = jar_id.0;
 
                 let jar = self.get_jar_internal(&account_id, jar_id);
+                assert_not_locked(&jar);
                 let product = self.get_product(&jar.product_id);
 
                 assert_penalty_apy(&product.apy);

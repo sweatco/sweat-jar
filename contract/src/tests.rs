@@ -223,6 +223,112 @@ fn penalty_is_not_applicable_for_constant_apy() {
 }
 
 #[test]
+#[should_panic(expected = "Account is migrating")]
+fn set_penalty_while_migrating_is_rejected() {
+    let alice = alice();
+    let admin = admin();
+
+    let signer = MessageSigner::new();
+    let product = Product::new()
+        .apy(Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        }))
+        .public_key(signer.public_key());
+    let reference_jar = Jar::new(0).principal(100_000_000);
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product])
+        .with_jars(&[reference_jar]);
+
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.switch_account(&admin);
+    context.contract().set_penalty(alice, U32(0), true);
+}
+
+#[test]
+#[should_panic(expected = "Another operation on this Jar is in progress")]
+fn set_penalty_of_locked_jar_is_rejected() {
+    let alice = alice();
+    let admin = admin();
+
+    let signer = MessageSigner::new();
+    let product = Product::new()
+        .apy(Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        }))
+        .public_key(signer.public_key());
+    let reference_jar = Jar::new(0).principal(100_000_000).pending_withdraw();
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product])
+        .with_jars(&[reference_jar]);
+
+    context.switch_account(&admin);
+    context.contract().set_penalty(alice, U32(0), true);
+}
+
+#[test]
+#[should_panic(expected = "Another operation on this Jar is in progress")]
+fn batch_set_penalty_of_locked_jar_is_rejected() {
+    let alice = alice();
+    let admin = admin();
+
+    let signer = MessageSigner::new();
+    let product = Product::new()
+        .apy(Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        }))
+        .public_key(signer.public_key());
+    let reference_jar = Jar::new(0).principal(100_000_000).pending_withdraw();
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product])
+        .with_jars(&[reference_jar]);
+
+    context.switch_account(&admin);
+    context.contract().batch_set_penalty(vec![(alice, vec![U32(0)])], true);
+}
+
+/// A migrating account in a `batch_set_penalty` call must be skipped, not abort the
+/// whole batch — a maintainer's batch commonly covers many unrelated accounts, and one
+/// of them migrating must not drop every other account's penalty update.
+#[test]
+fn batch_set_penalty_skips_migrating_account_but_processes_others() {
+    let admin = admin();
+    let alice = alice();
+    let bob = bob();
+
+    let signer = MessageSigner::new();
+    let product = Product::new()
+        .apy(Apy::Downgradable(DowngradableApy {
+            default: UDecimal::new(20, 2),
+            fallback: UDecimal::new(10, 2),
+        }))
+        .public_key(signer.public_key());
+
+    let alice_jar = Jar::new(0).principal(100_000_000);
+    let bob_jar = Jar::new(1).account_id(&bob).principal(100_000_000);
+
+    let mut context = Context::new(admin.clone())
+        .with_products(&[product])
+        .with_jars(&[alice_jar, bob_jar]);
+
+    context.contract().migration.migrating_accounts.insert(alice.clone());
+
+    context.switch_account(&admin);
+    context
+        .contract()
+        .batch_set_penalty(vec![(alice.clone(), vec![U32(0)]), (bob.clone(), vec![U32(1)])], true);
+
+    assert!(!context.contract().get_jar(alice, U32(0)).is_penalty_applied);
+    assert!(context.contract().get_jar(bob, U32(1)).is_penalty_applied);
+}
+
+#[test]
 fn get_total_interest_for_premium_with_penalty_after_half_term() {
     let alice = alice();
     let admin = admin();

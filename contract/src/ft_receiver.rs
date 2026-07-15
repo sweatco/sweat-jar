@@ -1,9 +1,8 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
-use near_plugins::AccessControllable;
-use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::jar::{CeFiJar, JarId};
+use near_sdk::{json_types::U128, near, serde_json, AccountId, PromiseOrValue};
+use sweat_jar_model::jar::JarId;
 
-use crate::{jar::model::JarTicket, Base64VecU8, Contract, ContractExt, Roles};
+use crate::{jar::model::JarTicket, Base64VecU8, Contract, ContractExt};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -12,9 +11,6 @@ use crate::{jar::model::JarTicket, Base64VecU8, Contract, ContractExt, Roles};
 pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
-
-    /// Represents a request to create `DeFi` Jars from provided `CeFi` Jars.
-    Migrate(Vec<CeFiJar>),
 
     /// Represents a request to refill (top up) an existing jar using its `JarId`.
     TopUp(JarId),
@@ -44,18 +40,6 @@ impl FungibleTokenReceiver for Contract {
             FtMessage::Stake(message) => {
                 let receiver_id = message.receiver_id.unwrap_or(sender_id);
                 self.create_jar(receiver_id, message.ticket, amount, message.signature);
-            }
-            FtMessage::Migrate(jars) => {
-                // `sender_id` is who initiated the `ft_transfer_call`, not the
-                // predecessor (the token contract) — `#[access_control_any]`
-                // checks the predecessor, so this branch of `ft_on_transfer`
-                // needs the same manual check `airdrop` uses upstream.
-                require!(
-                    self.acl_has_any_role(vec![Roles::Maintainer.into()], sender_id),
-                    "Only accounts with the Maintainer role can migrate jars"
-                );
-
-                self.migrate_jars(jars, amount);
             }
             FtMessage::TopUp(jar_id) => {
                 self.top_up(&sender_id, jar_id, amount);
@@ -345,82 +329,49 @@ mod tests {
     }
 
     #[test]
-    fn transfer_with_migration_message() {
+    #[should_panic(expected = "Another operation on this Jar is in progress")]
+    fn top_up_of_locked_jar_is_rejected() {
         let alice = alice();
-        let bob = bob();
         let admin = admin();
 
-        let product = Product::new();
-        let reference_restakable_product = Product::new().id("restakable_product");
+        let product = Product::new().with_allows_top_up(true);
+        let reference_jar = Jar::new(0).principal(100).pending_withdraw();
 
-        let mut context =
-            Context::new(admin.clone()).with_products(&[product.clone(), reference_restakable_product.clone()]);
+        let mut context = Context::new(admin)
+            .with_products(&[product])
+            .with_jars(&[reference_jar.clone()]);
 
-        let amount_alice = 100;
-        let amount_bob = 200;
         let msg = json!({
-            "type": "migrate",
-            "data": [
-                {
-                    "id": "cefi_product_1",
-                    "account_id": alice,
-                    "product_id": product.id,
-                    "principal": amount_alice.to_string(),
-                    "created_at": "0",
-                },
-                {
-                    "id": "cefi_product_2",
-                    "account_id": bob,
-                    "product_id": reference_restakable_product.id,
-                    "principal": amount_bob.to_string(),
-                    "created_at": "0",
-                },
-            ]
+            "type": "top_up",
+            "data": reference_jar.id,
         });
 
         context.switch_account_to_ft_contract_account();
-        let _ = context
-            .contract()
-            .ft_on_transfer(admin, U128(amount_alice + amount_bob), msg.to_string());
-
-        let alice_jars = context.contract().get_jars_for_account(alice);
-        assert_eq!(alice_jars.len(), 1);
-        assert_eq!(alice_jars.first().unwrap().principal.0, amount_alice);
-
-        let bob_jars = context.contract().get_jars_for_account(bob);
-        assert_eq!(bob_jars.len(), 1);
-        assert_eq!(bob_jars.first().unwrap().principal.0, amount_bob);
+        let _ = context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
     }
 
     #[test]
-    #[should_panic(expected = "Only accounts with the Maintainer role can migrate jars")]
-    fn transfer_with_migration_message_by_not_admin() {
+    #[should_panic(expected = "Account is migrating")]
+    fn top_up_while_account_is_migrating_is_rejected() {
         let alice = alice();
         let admin = admin();
 
-        let product = Product::new();
-        let reference_restakable_product = Product::new().id("restakable_product");
+        let product = Product::new().with_allows_top_up(true);
+        let reference_jar = Jar::new(0).principal(100);
 
-        let mut context = Context::new(admin).with_products(&[product.clone(), reference_restakable_product]);
+        let mut context = Context::new(admin)
+            .with_products(&[product])
+            .with_jars(&[reference_jar.clone()]);
 
-        let amount_alice = 1_000;
+        context.contract().migration.migrating_accounts.insert(alice.clone());
+
         let msg = json!({
-            "type": "migrate",
-            "data": [
-                {
-                    "id": "cefi_product_3",
-                    "account_id": alice,
-                    "product_id": product.id,
-                    "principal": amount_alice.to_string(),
-                    "created_at": "0",
-                },
-            ]
+            "type": "top_up",
+            "data": reference_jar.id,
         });
 
         context.switch_account_to_ft_contract_account();
-        let _ = context
-            .contract()
-            .ft_on_transfer(alice, U128(amount_alice), msg.to_string());
+        let _ = context.contract().ft_on_transfer(alice, U128(100), msg.to_string());
     }
 
     #[test]

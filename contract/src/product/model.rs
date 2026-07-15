@@ -1,3 +1,4 @@
+use ed25519_dalek::{VerifyingKey, PUBLIC_KEY_LENGTH};
 use near_sdk::{near, require};
 use sweat_jar_model::{ProductId, Score, ToAPY, TokenAmount, UDecimal};
 
@@ -147,6 +148,17 @@ impl Product {
         require!(self.is_enabled, "It's not possible to create new jars for this product");
     }
 
+    /// Ensures the configured public key (if any) is a well-formed ed25519 verifying key.
+    /// A malformed key would be stored fine but then panic in `verify_signature` on every
+    /// stake, permanently blocking deposits into the product.
+    pub(crate) fn assert_public_key_valid(&self) {
+        let Some(public_key) = &self.public_key else {
+            return;
+        };
+
+        parse_public_key(public_key);
+    }
+
     /// Check if fee in new product is not to high
     pub(crate) fn assert_fee_amount(&self) {
         let Some(ref fee) = self.withdrawal_fee else {
@@ -155,7 +167,13 @@ impl Product {
 
         let fee_ok = match fee {
             WithdrawalFee::Fix(amount) => amount < &self.cap.min,
-            WithdrawalFee::Percent(percent) => percent.to_f32() < 100.0,
+            // A percent fee is `significand / 10^exponent`; it must be below 1.0 (100%).
+            // Compare against the type's own scale instead of a lossy f32 cast (which read
+            // 1.0 as "1%" and let fees far above 100% through). On exponent overflow the
+            // scale exceeds any u128 significand, so the fee is necessarily below 100%.
+            WithdrawalFee::Percent(percent) => 10u128
+                .checked_pow(percent.exponent)
+                .is_none_or(|scale| percent.significand < scale),
         };
 
         require!(
@@ -163,6 +181,18 @@ impl Product {
             "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
         );
     }
+}
+
+/// Parses `bytes` as an ed25519 verifying key, panicking with a clear message if it isn't
+/// exactly `PUBLIC_KEY_LENGTH` bytes or isn't a valid key. Shared by product registration
+/// (`assert_public_key_valid`) and stake-ticket signature verification (`verify_signature`)
+/// so both paths reject the same malformed keys.
+pub(crate) fn parse_public_key(bytes: &[u8]) -> VerifyingKey {
+    let key_bytes: &[u8; PUBLIC_KEY_LENGTH] = bytes
+        .try_into()
+        .unwrap_or_else(|_| env::panic_str(&format!("Public key must be {PUBLIC_KEY_LENGTH} bytes")));
+
+    VerifyingKey::from_bytes(key_bytes).unwrap_or_else(|_| env::panic_str("Public key is invalid"))
 }
 
 #[cfg(test)]

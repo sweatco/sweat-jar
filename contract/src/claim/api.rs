@@ -46,11 +46,15 @@ impl Contract {
 
         let account_jars = self.account_jars(&account_id);
 
-        let account_score = self.get_score_mut(&account_id);
+        // Read the score without consuming it: the account-level score buffer is only
+        // zeroed once we know the claim actually transfers something (see below). A claim
+        // that pays out nothing — every jar locked, or interest rounding to zero — must
+        // leave the buffer intact instead of silently discarding that period's score.
+        let account_score_before_transfer = self.get_score(&account_id).copied();
 
-        let account_score_before_transfer = account_score.as_ref().map(|s| **s);
-
-        let score = account_score.map(AccountScore::claim_score).unwrap_or_default();
+        let score = account_score_before_transfer
+            .map(|s| s.claimable_score())
+            .unwrap_or_default();
 
         let mut unlocked_jars: Vec<((TokenAmount, u64), &Jar)> = account_jars
             .iter()
@@ -78,6 +82,19 @@ impl Contract {
                 accumulator.add(jar.id, *available_interest);
 
                 event_data.push((jar.id, U128(*available_interest)));
+            }
+        }
+
+        // A locked score-jar's interest was never computed against `score` in this call
+        // (it was excluded above), so its share of the score buffer isn't accounted for
+        // yet. Zeroing the buffer now would discard that jar's score once it unlocks.
+        let has_locked_score_jar = account_jars
+            .iter()
+            .any(|jar| jar.is_pending_withdraw && self.get_product(&jar.product_id).is_score_product());
+
+        if accumulator.get_total().0 > 0 && !has_locked_score_jar {
+            if let Some(account_score) = self.get_score_mut(&account_id) {
+                account_score.claim_score();
             }
         }
 

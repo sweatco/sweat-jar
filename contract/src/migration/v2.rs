@@ -197,7 +197,7 @@ impl Contract {
             emit(EventKind::JarsMerge(account_id.clone()));
         }
 
-        self.unlock_account(&account_id);
+        self.unlock_account_internal(&account_id);
 
         PromiseOrValue::Value((self.migration.new_version_account_id.clone(), is_success))
     }
@@ -245,7 +245,7 @@ impl Contract {
         self.migration.migrating_accounts.insert(account_id.clone());
     }
 
-    fn unlock_account(&mut self, account_id: &AccountId) {
+    fn unlock_account_internal(&mut self, account_id: &AccountId) {
         self.migration.migrating_accounts.remove(account_id);
     }
 

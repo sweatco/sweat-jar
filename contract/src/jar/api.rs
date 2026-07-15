@@ -9,7 +9,8 @@ use sweat_jar_model::{
 };
 
 use crate::{
-    event::{emit, EventKind},
+    assert::assert_not_locked,
+    event::{emit, EventKind, UnlockJarsData},
     jar::model::Jar,
     score::AccountScore,
     Contract, ContractExt, Roles,
@@ -18,7 +19,11 @@ use crate::{
 impl Contract {
     fn can_be_restaked(&self, jar: &Jar, now: u64) -> bool {
         let product = self.get_product(&jar.product_id);
-        !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
+        !jar.is_pending_withdraw
+            && !jar.is_empty()
+            && product.is_enabled
+            && product.allows_restaking()
+            && jar.is_liquidable(&product, now)
     }
 
     fn restake_internal(&mut self, jar_id: JarIdView) -> (JarId, JarView) {
@@ -30,6 +35,8 @@ impl Contract {
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 
         let jar = self.get_jar_internal(&account_id, jar_id);
+
+        assert_not_locked(&jar);
 
         let product = self.get_product(&jar.product_id);
 
@@ -178,6 +185,15 @@ impl JarApi for Contract {
             .collect();
 
         if let Some(jars_filter) = jars_filter {
+            // An explicitly-requested jar that's locked must fail the same way a direct
+            // `restake(jar_id)` call on it would, instead of silently vanishing from the
+            // eligible-jars filter above (a no-op for any jar that already passed it).
+            for jar in &self.get_account(&account_id).jars {
+                if jars_filter.contains(&jar.id) {
+                    assert_not_locked(jar);
+                }
+            }
+
             jars.retain(|jar| jars_filter.contains(&jar.id));
         }
 
@@ -196,6 +212,11 @@ impl JarApi for Contract {
         result
     }
 
+    /// Force-clears the pending-withdraw lock on every jar of an account. This is a manual
+    /// recovery tool: `is_pending_withdraw` is the mutex a claim/withdraw relies on, so it
+    /// MUST NOT be called while a claim/withdraw callback is still in flight for the account
+    /// — doing so lets a second operation run against stale state and can double-claim
+    /// interest. Emits `UnlockJars` for auditability.
     #[access_control_any(roles(Roles::Maintainer))]
     fn unlock_jars_for_account(&mut self, account_id: AccountId) {
         self.assert_account_is_not_migrating(&account_id);
@@ -203,8 +224,17 @@ impl JarApi for Contract {
 
         let jars = self.accounts.get_mut(&account_id).expect("Account doesn't have jars");
 
+        let mut unlocked = vec![];
         for jar in &mut jars.jars {
-            jar.is_pending_withdraw = false;
+            if jar.is_pending_withdraw {
+                jar.is_pending_withdraw = false;
+                unlocked.push(jar.id);
+            }
         }
+
+        emit(EventKind::UnlockJars(UnlockJarsData {
+            account_id,
+            jars: unlocked,
+        }));
     }
 }
