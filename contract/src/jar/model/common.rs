@@ -81,9 +81,10 @@ impl JarLastVersion {
             "Top up is not supported for score based jars"
         );
 
-        let current_interest = self.get_interest(&ScoreRecord::default(), product, now).0;
+        let (current_interest, remainder) = self.get_interest(&ScoreRecord::default(), product, now);
 
         self.principal += amount;
+        self.claim_remainder = remainder;
         self.cache = Some(JarCache {
             updated_at: now,
             interest: current_interest,

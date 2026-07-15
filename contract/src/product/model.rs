@@ -172,7 +172,13 @@ impl Product {
 
         let fee_ok = match fee {
             WithdrawalFee::Fix(amount) => amount < &self.cap.min,
-            WithdrawalFee::Percent(percent) => percent.to_f32() < 100.0,
+            // A percent fee is `significand / 10^exponent`; it must be below 1.0 (100%).
+            // Compare against the type's own scale instead of a lossy f32 cast (which read
+            // 1.0 as "1%" and let fees far above 100% through). On exponent overflow the
+            // scale exceeds any u128 significand, so the fee is necessarily below 100%.
+            WithdrawalFee::Percent(percent) => 10u128
+                .checked_pow(percent.exponent)
+                .is_none_or(|scale| percent.significand < scale),
         };
 
         require!(

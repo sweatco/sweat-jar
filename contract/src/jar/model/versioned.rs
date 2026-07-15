@@ -94,12 +94,14 @@ impl JarVersioned {
         withdrawn_amount: TokenAmount,
         now: Timestamp,
     ) -> Self {
+        let (interest, remainder) = self.get_interest(score, product, now);
         JarV1 {
             principal: self.principal - withdrawn_amount,
             cache: Some(JarCache {
                 updated_at: now,
-                interest: self.get_interest(score, product, now).0,
+                interest,
             }),
+            claim_remainder: remainder,
             ..self.deref().clone()
         }
         .into()
