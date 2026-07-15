@@ -174,6 +174,45 @@ fn claim_paying_out_nothing_preserves_score() {
     );
 }
 
+/// A locked score-jar's share of the score buffer must survive a claim that pays out
+/// via a *different*, unlocked, non-score jar on the same account — the score buffer
+/// is account-wide, so it must only be consumed once every score-jar has had a chance
+/// to have its interest computed against it.
+#[test]
+fn claim_preserves_locked_score_jar_when_another_jar_pays_out() {
+    const SCORE_JAR: JarId = 0;
+    const REGULAR_JAR: JarId = 1;
+
+    set_test_log_events(false);
+
+    let mut ctx = TestBuilder::new()
+        .product(SCORE_PRODUCT, [APY(0), ScoreCap(12_000)])
+        .jar(SCORE_JAR, JarField::Timezone(Timezone::hour_shift(0)))
+        .product(PRODUCT, APY(12))
+        .jar(REGULAR_JAR, ())
+        .build();
+
+    ctx.set_block_timestamp_in_days(1);
+    ctx.record_score(UTC(MS_IN_DAY), 12_000, alice());
+
+    let score_before = ctx.score(SCORE_JAR).scores();
+    assert_ne!(score_before, (0, 0), "precondition: a score is recorded");
+
+    // Lock the score jar (e.g. a withdraw mid-flight on it); the regular jar stays claimable.
+    ctx.contract().get_jar_mut_internal(&alice(), SCORE_JAR).lock();
+
+    ctx.set_block_timestamp_in_days(2);
+
+    let claimed = ctx.claim_total(alice());
+    assert!(claimed > 0, "precondition: the regular jar has interest to pay out");
+
+    assert_eq!(
+        ctx.score(SCORE_JAR).scores(),
+        score_before,
+        "a claim paying out through an unrelated jar must not discard a locked score-jar's score"
+    );
+}
+
 /// 12% jar should have the same interest as 12_000 score jar walking to the limit every day
 /// Also this method tests score cap
 #[test]
