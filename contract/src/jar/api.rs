@@ -9,6 +9,7 @@ use sweat_jar_model::{
 };
 
 use crate::{
+    assert::assert_not_locked,
     event::{emit, EventKind},
     jar::model::Jar,
     score::AccountScore,
@@ -18,7 +19,11 @@ use crate::{
 impl Contract {
     fn can_be_restaked(&self, jar: &Jar, now: u64) -> bool {
         let product = self.get_product(&jar.product_id);
-        !jar.is_empty() && product.is_enabled && product.allows_restaking() && jar.is_liquidable(&product, now)
+        !jar.is_pending_withdraw
+            && !jar.is_empty()
+            && product.is_enabled
+            && product.allows_restaking()
+            && jar.is_liquidable(&product, now)
     }
 
     fn restake_internal(&mut self, jar_id: JarIdView) -> (JarId, JarView) {
@@ -30,6 +35,8 @@ impl Contract {
         let restaked_jar_id = self.increment_and_get_last_jar_id();
 
         let jar = self.get_jar_internal(&account_id, jar_id);
+
+        assert_not_locked(&jar);
 
         let product = self.get_product(&jar.product_id);
 

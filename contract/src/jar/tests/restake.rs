@@ -171,6 +171,37 @@ fn restake_after_maturity_for_not_restakable_product() {
 }
 
 #[test]
+#[should_panic(expected = "Another operation on this Jar is in progress")]
+fn restake_of_locked_jar_is_rejected() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0).pending_withdraw();
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+    context.contract().restake(U32(jar.id));
+}
+
+#[test]
+fn restake_all_skips_locked_jar() {
+    let alice = alice();
+    let admin = admin();
+
+    let product = Product::new().with_allows_restaking(true);
+    let jar = Jar::new(0).pending_withdraw();
+    let mut context = Context::new(admin).with_products(&[product]).with_jars(&[jar.clone()]);
+
+    context.set_block_timestamp_in_days(366);
+
+    context.switch_account(&alice);
+    assert!(context.contract().restake_all(None).is_empty());
+}
+
+#[test]
 #[should_panic(expected = "Account is migrating")]
 fn restake_while_migrating() {
     let alice = alice();
