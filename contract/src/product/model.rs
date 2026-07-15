@@ -156,12 +156,7 @@ impl Product {
             return;
         };
 
-        let key_bytes: &[u8; PUBLIC_KEY_LENGTH] = public_key
-            .as_slice()
-            .try_into()
-            .unwrap_or_else(|_| env::panic_str(&format!("Public key must be {PUBLIC_KEY_LENGTH} bytes")));
-
-        VerifyingKey::from_bytes(key_bytes).unwrap_or_else(|_| env::panic_str("Public key is invalid"));
+        parse_public_key(public_key);
     }
 
     /// Check if fee in new product is not to high
@@ -186,6 +181,18 @@ impl Product {
             "Fee for this product is too high. It is possible for customer to pay more in fees than he staked."
         );
     }
+}
+
+/// Parses `bytes` as an ed25519 verifying key, panicking with a clear message if it isn't
+/// exactly `PUBLIC_KEY_LENGTH` bytes or isn't a valid key. Shared by product registration
+/// (`assert_public_key_valid`) and stake-ticket signature verification (`verify_signature`)
+/// so both paths reject the same malformed keys.
+pub(crate) fn parse_public_key(bytes: &[u8]) -> VerifyingKey {
+    let key_bytes: &[u8; PUBLIC_KEY_LENGTH] = bytes
+        .try_into()
+        .unwrap_or_else(|_| env::panic_str(&format!("Public key must be {PUBLIC_KEY_LENGTH} bytes")));
+
+    VerifyingKey::from_bytes(key_bytes).unwrap_or_else(|_| env::panic_str("Public key is invalid"))
 }
 
 #[cfg(test)]

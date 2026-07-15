@@ -1,6 +1,6 @@
 use std::cmp;
 
-use ed25519_dalek::{Signature, VerifyingKey, PUBLIC_KEY_LENGTH, SIGNATURE_LENGTH};
+use ed25519_dalek::{Signature, SIGNATURE_LENGTH};
 use near_sdk::{
     env,
     env::{panic_str, sha256},
@@ -20,7 +20,7 @@ use crate::{
         account::versioned::Account,
         model::{Jar, JarLastVersion},
     },
-    product::model::{Apy, Product, Terms},
+    product::model::{parse_public_key, Apy, Product, Terms},
     score::AccountScore,
     Contract, JarsStorage,
 };
@@ -423,12 +423,7 @@ impl Contract {
 
         let signature = Signature::from_bytes(signature_bytes);
 
-        let public_key_bytes: &[u8; PUBLIC_KEY_LENGTH] = product_public_key
-            .try_into()
-            .unwrap_or_else(|_| panic!("Public key must be {PUBLIC_KEY_LENGTH} bytes"));
-
-        VerifyingKey::from_bytes(public_key_bytes)
-            .expect("Public key is invalid")
+        parse_public_key(product_public_key)
             .verify_strict(ticket_hash, &signature)
             .is_ok()
     }
