@@ -205,20 +205,39 @@ impl Contract {
     fn map_legacy_account(&self, account_id: AccountId) -> (Account, TokenAmount) {
         let now = env::block_timestamp_ms();
 
-        let score = self
-            .get_score(&account_id)
-            .map_or_else(ScoreRecord::default, crate::score::AccountScore::claimable_score);
+        // The interest cached below already includes this score. Consume it on the
+        // account copy sent to v2 so the destination cannot use the same score to
+        // calculate interest a second time. The source state stays untouched until
+        // the cross-contract transfer has fully succeeded.
+        let mut migrated_score = self.get_score(&account_id).copied().unwrap_or_default();
+        if migrated_score.is_valid() {
+            let score = migrated_score.claimable_score();
+            migrated_score.claim_score();
+            self.map_legacy_account_with_score(account_id, now, migrated_score, score)
+        } else {
+            // Accounts without score jars have the default, invalid timezone. They
+            // have no usable score to preserve, but the payload must still not carry
+            // a claimable buffer.
+            migrated_score.scores = [0; 2];
+            self.map_legacy_account_with_score(account_id, now, migrated_score, ScoreRecord::default())
+        }
+    }
 
+    fn map_legacy_account_with_score(
+        &self,
+        account_id: AccountId,
+        now: u64,
+        migrated_score: crate::score::AccountScore,
+        score: ScoreRecord,
+    ) -> (Account, TokenAmount) {
         let mut account = Account {
             nonce: 0,
-            score: self
-                .get_score(&account_id)
-                .map_or_else(AccountScore::default, |value| AccountScore {
-                    updated: value.updated,
-                    timezone: value.timezone,
-                    scores: value.scores,
-                    scores_history: value.scores_history,
-                }),
+            score: AccountScore {
+                updated: migrated_score.updated,
+                timezone: migrated_score.timezone,
+                scores: migrated_score.scores,
+                scores_history: migrated_score.scores_history,
+            },
             ..Account::default()
         };
         let mut total_principal = 0;
@@ -260,7 +279,7 @@ impl Contract {
 #[mutants::skip]
 mod tests {
     use near_sdk::test_utils::test_env::alice;
-    use sweat_jar_model::ProductId;
+    use sweat_jar_model::{ProductId, Timezone};
 
     use super::*;
     use crate::{common::tests::Context, jar::model::Jar, product::model::Product, test_utils::admin};
@@ -400,6 +419,31 @@ mod tests {
 
         assert!(context.contract().accounts.get(&alice).is_some());
         assert!(!context.contract().migration.migrating_accounts.contains(&alice));
+    }
+
+    #[test]
+    fn migration_payload_consumes_score_without_mutating_source_account() {
+        let (alice, context) = context_ready_to_migrate();
+
+        let source_score = {
+            let mut contract = context.contract();
+            let score = &mut contract.accounts.entry(alice.clone()).or_default().score;
+            score.timezone = Timezone::hour_shift(0);
+            score.scores = [111, 222];
+            score.scores_history = [333, 444];
+            *score
+        };
+        let mut expected_payload_score = source_score;
+        expected_payload_score.claim_score();
+
+        let contract = context.contract();
+        let (account, _) = contract.map_legacy_account(alice.clone());
+
+        assert_eq!(account.score.updated, expected_payload_score.updated);
+        assert_eq!(account.score.timezone, expected_payload_score.timezone);
+        assert_eq!(account.score.scores, expected_payload_score.scores);
+        assert_eq!(account.score.scores_history, expected_payload_score.scores_history);
+        assert_eq!(*contract.get_score(&alice).unwrap(), source_score);
     }
 
     impl Contract {
