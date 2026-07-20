@@ -185,7 +185,7 @@ mod test {
 
     #[test]
     fn test_contract_version() {
-        assert_eq!(format!("{PACKAGE_NAME}-{VERSION}"), "sweat_jar-3.5.2");
+        assert_eq!(format!("{PACKAGE_NAME}-{VERSION}"), "sweat_jar-3.6.0");
     }
 
     fn expected_event(body: &str) -> String {

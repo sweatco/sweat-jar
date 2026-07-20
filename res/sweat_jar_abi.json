@@ -2,7 +2,7 @@
   "schema_version": "0.4.0",
   "metadata": {
     "name": "sweat_jar",
-    "version": "3.5.2",
+    "version": "3.6.0",
     "authors": [
       "Sweat Economy"
     ],
@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "68aWSN5BgqRYNNtwbNH9s3Ck3W67KPsVLScqhjaN95By"
+    "wasm_hash": "EHXq57cF4BXKq1E8wCz8DphMWFsTsiX3iEzDBHFGtuqB"
   },
   "body": {
     "functions": [
@@ -559,6 +559,12 @@
                 "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
                 "type": "string"
               }
+            },
+            {
+              "name": "principal",
+              "type_schema": {
+                "type": "string"
+              }
             }
           ]
         },
@@ -801,16 +807,6 @@
       {
         "name": "contract_source_metadata",
         "kind": "view"
-      },
-      {
-        "name": "contract_version",
-        "kind": "view",
-        "result": {
-          "serialization_type": "json",
-          "type_schema": {
-            "type": "string"
-          }
-        }
       },
       {
         "name": "force_migrate_account",
@@ -1445,6 +1441,7 @@
       },
       {
         "name": "unlock_jars_for_account",
+        "doc": " Force-clears the pending-withdraw lock on every jar of an account. This is a manual\n recovery tool: `is_pending_withdraw` is the mutex a claim/withdraw relies on, so it\n MUST NOT be called while a claim/withdraw callback is still in flight for the account\n — doing so lets a second operation run against stale state and can double-claim\n interest. Emits `UnlockJars` for auditability.",
         "kind": "call",
         "params": {
           "serialization_type": "json",
@@ -2211,27 +2208,6 @@
               "properties": {
                 "data": {
                   "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/MigrationEventItem"
-                  }
-                },
-                "event": {
-                  "type": "string",
-                  "enum": [
-                    "migration"
-                  ]
-                }
-              }
-            },
-            {
-              "type": "object",
-              "required": [
-                "data",
-                "event"
-              ],
-              "properties": {
-                "data": {
-                  "type": "array",
                   "items": [
                     {
                       "type": "integer",
@@ -2446,6 +2422,24 @@
                   "type": "string",
                   "enum": [
                     "jars_merge"
+                  ]
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "data",
+                "event"
+              ],
+              "properties": {
+                "data": {
+                  "$ref": "#/definitions/UnlockJarsData"
+                },
+                "event": {
+                  "type": "string",
+                  "enum": [
+                    "unlock_jars"
                   ]
                 }
               }
@@ -2750,28 +2744,6 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
-        },
-        "MigrationEventItem": {
-          "type": "object",
-          "required": [
-            "account_id",
-            "id",
-            "original_id"
-          ],
-          "properties": {
-            "account_id": {
-              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-              "type": "string"
-            },
-            "id": {
-              "type": "integer",
-              "format": "uint32",
-              "minimum": 0.0
-            },
-            "original_id": {
-              "type": "string"
-            }
-          }
         },
         "PenaltyData": {
           "type": "object",
@@ -3309,6 +3281,28 @@
           "type": "integer",
           "format": "uint64",
           "minimum": 0.0
+        },
+        "UnlockJarsData": {
+          "description": "Jars force-unlocked by a manager via `unlock_jars_for_account`.",
+          "type": "object",
+          "required": [
+            "account_id",
+            "jars"
+          ],
+          "properties": {
+            "account_id": {
+              "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
+              "type": "string"
+            },
+            "jars": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "format": "uint32",
+                "minimum": 0.0
+              }
+            }
+          }
         },
         "UpgradableDurationStatus": {
           "type": "object",
