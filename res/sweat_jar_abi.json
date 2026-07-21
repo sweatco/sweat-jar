@@ -2,7 +2,7 @@
   "schema_version": "0.4.0",
   "metadata": {
     "name": "sweat_jar",
-    "version": "3.6.0",
+    "version": "3.6.1",
     "authors": [
       "Sweat Economy"
     ],
@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "EHXq57cF4BXKq1E8wCz8DphMWFsTsiX3iEzDBHFGtuqB"
+    "wasm_hash": "EETbC3UjyabDR3oacot261vgHLWJnvr1wasNrmWY3QU8"
   },
   "body": {
     "functions": [
@@ -1199,39 +1199,6 @@
           "type_schema": {
             "$ref": "#/definitions/PromiseOrValueNull"
           }
-        }
-      },
-      {
-        "name": "migrate_state_to_acl",
-        "kind": "call",
-        "modifiers": [
-          "init",
-          "private"
-        ],
-        "params": {
-          "serialization_type": "json",
-          "args": [
-            {
-              "name": "super_admin",
-              "type_schema": {
-                "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                "type": "string"
-              }
-            },
-            {
-              "name": "roles",
-              "type_schema": {
-                "type": "object",
-                "additionalProperties": {
-                  "type": "array",
-                  "items": {
-                    "description": "NEAR Account Identifier.\n\nThis is a unique, syntactically valid, human-readable account identifier on the NEAR network.\n\n[See the crate-level docs for information about validation.](index.html#account-id-rules)\n\nAlso see [Error kind precedence](AccountId#error-kind-precedence).\n\n## Examples\n\n``` use near_account_id::AccountId;\n\nlet alice: AccountId = \"alice.near\".parse().unwrap();\n\nassert!(\"ƒelicia.near\".parse::<AccountId>().is_err()); // (ƒ is not f) ```",
-                    "type": "string"
-                  }
-                }
-              }
-            }
-          ]
         }
       },
       {
