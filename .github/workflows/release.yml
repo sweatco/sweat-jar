@@ -9,6 +9,9 @@ permissions:
 
 jobs:
   release:
+    # LIVE TEST ONLY: blob-path/wasm-path point at a tiny throwaway dummy file instead of the
+    # real wasm, so store_blob has genuinely new content to accept instead of hitting
+    # ERR_ALREADY_EXISTS, and the deposit/gas cost is negligible. Do not merge this commit.
     uses: Sweat-Foundation/actions/.github/workflows/release.yml@v1
     with:
       files: |
@@ -17,9 +20,9 @@ jobs:
         res/sweat_jar_abi.zst
       dao-account-id: sweat-multisig.sputnik-dao.near
       proposer-account-id: 4a95fda44bc5fa6ff57dd742fe42a78d9889a310d188d9de9c803b1fc392f910
-      blob-path: res/sweat_jar.wasm
+      blob-path: scratch-test-blob.bin
       contract-name: sweat_jar
-      wasm-path: res/sweat_jar.wasm
+      wasm-path: scratch-test-blob.bin
     secrets:
       proposer-private-key: ${{ secrets.PROPOSER_PRIVATE_KEY }}
       slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
