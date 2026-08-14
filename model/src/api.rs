@@ -159,7 +159,7 @@ pub trait FeeApi {
 pub trait PenaltyApi {
     /// Sets the penalty status for a specified jar.
     ///
-    /// This method allows an account with the `Maintainer` role to apply or cancel a penalty for a premium jar. Premium jars are those associated
+    /// This method allows an account with the `Oracle` role to apply or cancel a penalty for a premium jar. Premium jars are those associated
     /// with products having Downgradable APY. When a user violates the terms of a premium product and a penalty is applied, the
     /// interest for the jar is calculated using a downgraded APY rate. If the terms are no longer violated, the penalty can be canceled.
     ///

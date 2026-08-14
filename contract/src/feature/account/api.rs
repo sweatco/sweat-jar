@@ -172,7 +172,7 @@ impl AccountApi for Contract {
         account.try_set_timezone(Some(Timezone::new(timezone.0)));
     }
 
-    #[access_control_any(roles(Roles::Maintainer))]
+    #[access_control_any(roles(Roles::Oracle))]
     fn set_feature_enabled(&mut self, account_id: AccountId, feature: Feature, enabled: bool) {
         if self.accounts.contains_key(&account_id) {
             self.update_account_cache(&account_id, None);
@@ -184,7 +184,7 @@ impl AccountApi for Contract {
         emit(EventKind::SetFeatureEnabled(account_id, feature, enabled));
     }
 
-    #[access_control_any(roles(Roles::Maintainer))]
+    #[access_control_any(roles(Roles::Oracle))]
     fn batch_set_feature_enabled(&mut self, account_ids: Vec<AccountId>, feature: Feature, enabled: bool) {
         for account_id in &account_ids {
             self.update_account_cache(account_id, None);

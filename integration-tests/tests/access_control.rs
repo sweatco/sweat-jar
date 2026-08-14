@@ -147,11 +147,11 @@ async fn unlock_jars_for_account_by_non_maintainer_panics() -> anyhow::Result<()
     Ok(())
 }
 
-// --- set_feature_enabled (Maintainer) ---
+// --- set_feature_enabled (Oracle) ---
 
 #[tokio::test]
 #[tracing::instrument]
-async fn set_feature_enabled_by_maintainer_succeeds() -> anyhow::Result<()> {
+async fn set_feature_enabled_by_oracle_succeeds() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([]).await?;
 
@@ -162,7 +162,7 @@ async fn set_feature_enabled_by_maintainer_succeeds() -> anyhow::Result<()> {
 
 #[tokio::test]
 #[tracing::instrument]
-async fn set_feature_enabled_by_non_maintainer_panics() -> anyhow::Result<()> {
+async fn set_feature_enabled_by_non_oracle_panics() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([]).await?;
 
@@ -179,11 +179,11 @@ async fn set_feature_enabled_by_non_maintainer_panics() -> anyhow::Result<()> {
     Ok(())
 }
 
-// --- batch_set_feature_enabled (Maintainer) ---
+// --- batch_set_feature_enabled (Oracle) ---
 
 #[tokio::test]
 #[tracing::instrument]
-async fn batch_set_feature_enabled_by_maintainer_succeeds() -> anyhow::Result<()> {
+async fn batch_set_feature_enabled_by_oracle_succeeds() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([]).await?;
 
@@ -194,7 +194,7 @@ async fn batch_set_feature_enabled_by_maintainer_succeeds() -> anyhow::Result<()
 
 #[tokio::test]
 #[tracing::instrument]
-async fn batch_set_feature_enabled_by_non_maintainer_panics() -> anyhow::Result<()> {
+async fn batch_set_feature_enabled_by_non_oracle_panics() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([]).await?;
 
@@ -358,12 +358,12 @@ async fn withdraw_fee_by_non_fee_manager_panics() -> anyhow::Result<()> {
     Ok(())
 }
 
-// --- set_penalty (Maintainer, deprecated) ---
+// --- set_penalty (Oracle, deprecated) ---
 
 #[tokio::test]
 #[tracing::instrument]
 #[allow(deprecated)]
-async fn set_penalty_by_maintainer_succeeds() -> anyhow::Result<()> {
+async fn set_penalty_by_oracle_succeeds() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([RegisterProductCommand::Locked12Months12Percents]).await?;
     let product_id = RegisterProductCommand::Locked12Months12Percents.id();
@@ -376,7 +376,7 @@ async fn set_penalty_by_maintainer_succeeds() -> anyhow::Result<()> {
 
 #[tokio::test]
 #[tracing::instrument]
-async fn set_penalty_by_non_maintainer_panics() -> anyhow::Result<()> {
+async fn set_penalty_by_non_oracle_panics() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([]).await?;
 
@@ -393,11 +393,11 @@ async fn set_penalty_by_non_maintainer_panics() -> anyhow::Result<()> {
     Ok(())
 }
 
-// --- batch_set_penalty (Maintainer, deprecated) ---
+// --- batch_set_penalty (Oracle, deprecated) ---
 
 #[tokio::test]
 #[tracing::instrument]
-async fn batch_set_penalty_by_maintainer_succeeds() -> anyhow::Result<()> {
+async fn batch_set_penalty_by_oracle_succeeds() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([]).await?;
 
@@ -416,7 +416,7 @@ async fn batch_set_penalty_by_maintainer_succeeds() -> anyhow::Result<()> {
 
 #[tokio::test]
 #[tracing::instrument]
-async fn batch_set_penalty_by_non_maintainer_panics() -> anyhow::Result<()> {
+async fn batch_set_penalty_by_non_oracle_panics() -> anyhow::Result<()> {
     common::prepare::init_tracing();
     let context = prepare_contract([]).await?;
 

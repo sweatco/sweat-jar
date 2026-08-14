@@ -16,7 +16,7 @@ use crate::{
 #[near]
 #[allow(deprecated)]
 impl PenaltyApi for Contract {
-    #[access_control_any(roles(Roles::Maintainer))]
+    #[access_control_any(roles(Roles::Oracle))]
     #[allow(deprecated)]
     fn set_penalty(&mut self, account_id: AccountId, value: bool) {
         self.update_account_cache(&account_id, None);
@@ -31,7 +31,7 @@ impl PenaltyApi for Contract {
         }));
     }
 
-    #[access_control_any(roles(Roles::Maintainer))]
+    #[access_control_any(roles(Roles::Oracle))]
     #[allow(deprecated)]
     fn batch_set_penalty(&mut self, account_ids: Vec<AccountId>, value: bool) {
         for account_id in &account_ids {
