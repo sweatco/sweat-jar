@@ -1,15 +1,18 @@
 use std::cmp;
 
+use sweat_jar_primitives::UDecimal;
+
 use crate::{
     data::{
-        account::Account,
+        account::{common::FeaturesAccess, features::Feature, Account},
         jar::{Deposit, Jar},
-        product::{FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms},
+        product::{
+            FixedProductTerms, FlexibleProductTerms, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
+        },
     },
-    Duration, Score, Timestamp, ToAPY, TokenAmount, UDecimal, MS_IN_DAY, MS_IN_YEAR,
+    start_of_the_day, Duration, Timestamp, ToAPY, TokenAmount, MS_IN_YEAR, UTC,
 };
 
-// TODO: add tests
 pub trait InterestCalculator {
     fn get_interest(&self, account: &Account, jar: &Jar, now: Timestamp) -> (TokenAmount, u64) {
         let since_date = jar.cache.map(|cache| cache.updated_at);
@@ -56,6 +59,7 @@ impl InterestCalculator for Terms {
             Terms::Fixed(terms) => terms.get_apy(account),
             Terms::Flexible(terms) => terms.get_apy(account),
             Terms::ScoreBased(terms) => terms.get_apy(account),
+            Terms::TieredScoreBased(terms) => terms.get_apy(account),
         }
     }
 
@@ -70,13 +74,17 @@ impl InterestCalculator for Terms {
             Terms::Fixed(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
             Terms::Flexible(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
             Terms::ScoreBased(terms) => terms.get_interest_calculation_term(account, now, last_cached_at, deposit),
+            Terms::TieredScoreBased(terms) => {
+                terms.get_interest_calculation_term(account, now, last_cached_at, deposit)
+            }
         }
     }
 }
 
 impl InterestCalculator for FixedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        self.apy.get_effective(account.is_penalty_applied)
+        self.apy
+            .get_effective(account.features().is_feature_enabled(&Feature::IncreasedApy))
     }
 
     fn get_interest_calculation_term(
@@ -97,7 +105,8 @@ impl InterestCalculator for FixedProductTerms {
 
 impl InterestCalculator for FlexibleProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        self.apy.get_effective(account.is_penalty_applied)
+        self.apy
+            .get_effective(account.features().is_feature_enabled(&Feature::IncreasedApy))
     }
 
     fn get_interest_calculation_term(
@@ -117,10 +126,10 @@ impl InterestCalculator for FlexibleProductTerms {
 
 impl InterestCalculator for ScoreBasedProductTerms {
     fn get_apy(&self, account: &Account) -> UDecimal {
-        let score = account.score.claimable_score().score;
-        let total_score: Score = score.iter().map(|score| score.min(&self.score_cap)).sum();
-
-        total_score.to_apy()
+        account
+            .score
+            .get_capped_finalized_score(account.timezone, self.score_cap)
+            .to_apy()
     }
 
     fn get_interest_calculation_term(
@@ -130,29 +139,55 @@ impl InterestCalculator for ScoreBasedProductTerms {
         last_cached_at: Option<Timestamp>,
         deposit: &Deposit,
     ) -> Timestamp {
-        if account.score.updated.0 < last_cached_at.unwrap_or_default() {
-            return 0;
-        }
+        let start_of_today = UTC(start_of_the_day(now));
+        let start_of_today = account.timezone.adjust(start_of_today).0;
 
-        if account.score.updated.0 < deposit.created_at {
-            return 0;
-        }
+        let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
+            cmp::max(cache_date, deposit.created_at)
+        });
+        let since_date = start_of_today.max(since_date);
 
-        let term_end = cmp::max(now, deposit.created_at + self.lockup_term.0);
-        if now >= term_end {
-            return 0;
-        }
+        let until_date = cmp::min(now, deposit.created_at + self.lockup_term.0);
 
-        MS_IN_DAY
+        until_date.saturating_sub(since_date)
     }
 }
 
-fn get_interest(principal: TokenAmount, apy: UDecimal, term: Duration) -> (TokenAmount, u64) {
+impl InterestCalculator for TieredScoreBasedProductTerms {
+    fn get_apy(&self, account: &Account) -> UDecimal {
+        let score = account.score.get_last_finalized_record(account.timezone);
+        let score_cap = self.get_score_cap(account.features.is_feature_enabled(&Feature::IncreasedScoreCap));
+
+        score.to_capped_apy(score_cap, true)
+    }
+
+    fn get_interest_calculation_term(
+        &self,
+        account: &Account,
+        now: Timestamp,
+        last_cached_at: Option<Timestamp>,
+        deposit: &Deposit,
+    ) -> Timestamp {
+        let start_of_today = UTC(start_of_the_day(now));
+        let start_of_today = account.timezone.adjust(start_of_today).0;
+
+        let since_date = last_cached_at.map_or(deposit.created_at, |cache_date| {
+            cmp::max(cache_date, deposit.created_at)
+        });
+        let since_date = start_of_today.max(since_date);
+
+        let until_date = cmp::min(now, deposit.created_at + self.lockup_term.0);
+
+        until_date.saturating_sub(since_date)
+    }
+}
+
+pub fn get_interest(principal: TokenAmount, apy: UDecimal, term: Duration) -> (TokenAmount, u64) {
     let ms_in_year: u128 = MS_IN_YEAR.into();
     let term_in_milliseconds: u128 = term.into();
 
-    let yearly_interest = apy * principal;
-    let interest = term_in_milliseconds * yearly_interest;
+    let yearly_interest = apy.saturating_mul(principal);
+    let interest = term_in_milliseconds.saturating_mul(yearly_interest);
 
     // This will never fail because `MS_IN_YEAR` is u64
     // and remainder from u64 cannot be bigger than u64 so it is safe to unwrap here.

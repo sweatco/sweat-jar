@@ -1,5 +1,6 @@
 use std::convert::Into;
 
+use near_plugins::{access_control_any, AccessControllable};
 #[cfg(not(test))]
 use near_sdk::env;
 use near_sdk::{ext_contract, json_types::U128, near, PromiseOrValue};
@@ -7,7 +8,7 @@ use sweat_jar_model::{api::FeeApi, TokenAmount};
 
 #[cfg(not(test))]
 use crate::feature::{ft_interface::FungibleTokenInterface, withdraw::api::gas::GAS_FOR_AFTER_FEE_WITHDRAW};
-use crate::{common::env::env_ext, Contract, ContractExt};
+use crate::{common::env::env_ext, Contract, ContractExt, Roles};
 
 #[near]
 impl FeeApi for Contract {
@@ -15,9 +16,8 @@ impl FeeApi for Contract {
         self.fee_amount.into()
     }
 
+    #[access_control_any(roles(Roles::FeeManager))]
     fn withdraw_fee(&mut self) -> PromiseOrValue<U128> {
-        self.assert_manager();
-
         let amount = self.fee_amount;
         self.fee_amount = 0;
 
@@ -48,7 +48,6 @@ impl Contract {
 }
 
 #[ext_contract(ext_self)]
-#[allow(dead_code)]
 trait FeeWithdrawCallback {
     fn after_fee_withdrawn(&mut self, amount: U128) -> U128;
 }

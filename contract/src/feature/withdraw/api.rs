@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+#[cfg(not(test))]
+use near_sdk::require;
 use near_sdk::{env::panic_str, ext_contract, near, PromiseOrValue};
 use sweat_jar_model::{
     api::WithdrawApi,
@@ -20,13 +22,15 @@ use crate::common::env::test_env_ext;
 pub(crate) mod gas {
     use near_sdk::Gas;
 
-    /// Value is measured with `measure_withdraw_test`
+    /// Value is measured with `measure_after_withdraw_gas`
+    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     /// Average gas for this method call don't exceed 3.4 `TGas`. 4 here just in case.
     pub(super) const GAS_FOR_AFTER_WITHDRAW: Gas = Gas::from_tgas(4);
 
     pub(crate) const GAS_FOR_AFTER_FEE_WITHDRAW: Gas = Gas::from_tgas(4);
 
-    /// Value is measured with `measure_withdraw_all`
+    /// Value is measured with `measure_bulk_withdraw_gas`
+    /// (`make measure-gas`, integration-tests/tests/measure_gas.rs)
     /// 10 `TGas` was enough for 200 jars. 15 here just in case.
     pub(super) const GAS_FOR_BULK_AFTER_WITHDRAW: Gas = Gas::from_tgas(15);
 }
@@ -54,6 +58,8 @@ impl WithdrawalDto {
     #[cfg(not(test))]
     #[mutants::skip] // Covered by integration tests
     pub fn net_amount(&self) -> TokenAmount {
+        // A misconfigured/migrated product must fail loudly, not underflow.
+        require!(self.fee <= self.amount, "Fee exceeds amount");
         self.amount - self.fee
     }
 }
@@ -82,7 +88,6 @@ use crate::{
     env, AccountId, Contract, ContractExt,
 };
 
-#[allow(dead_code)] // False positive since rust 1.78. It is used from `ext_contract` macro.
 #[ext_contract(ext_self)]
 pub(super) trait WithdrawCallbacks {
     fn after_withdraw(&mut self, account_id: AccountId, request: WithdrawalRequest) -> WithdrawView;
@@ -127,7 +132,7 @@ impl WithdrawApi for Contract {
                 .jars
                 .get(&product_id)
                 .unwrap_or_else(|| panic_str(&format!("No jar found for {product_id}")));
-            if jar.is_pending_withdraw {
+            if jar.is_locked {
                 continue;
             }
 

@@ -46,9 +46,9 @@ fn plot_year(
                 (score_based_product.id.clone(), score_based_jar),
             ],
         );
-    ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(3);
+    ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(3);
 
-    ctx.switch_account_to_manager();
+    ctx.switch_account_to_operator();
 
     for day in 1..400 {
         ctx.set_block_timestamp_in_days(day);
@@ -97,8 +97,8 @@ fn plot_first_week(
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
         .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
 
-    ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(0);
-    ctx.contract().get_account_mut(&bob).score.timezone = Timezone::hour_shift(0);
+    ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
+    ctx.contract().get_account_mut(&bob).timezone = Timezone::hour_shift(0);
 
     let mut result = vec![];
     let mut score_walked: u128;
@@ -112,7 +112,7 @@ fn plot_first_week(
 
         let score: Score = (0..1000).fake();
 
-        ctx.switch_account_to_manager();
+        ctx.switch_account_to_operator();
         ctx.record_score(&alice, UTC(day * MS_IN_DAY), score);
         ctx.record_score(&bob, UTC(day * MS_IN_DAY), score);
 

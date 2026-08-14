@@ -12,10 +12,7 @@ pub trait Assertions {
 
 impl Assertions for Jar {
     fn assert_not_locked(&self) {
-        require!(
-            !self.is_pending_withdraw,
-            "Another operation on this Jar is in progress"
-        );
+        require!(!self.is_locked, "Another operation on this Jar is in progress");
     }
 }
 
@@ -47,7 +44,7 @@ impl Jar {
     }
 
     pub fn lock(&mut self) -> &mut Self {
-        self.is_pending_withdraw = true;
+        self.is_locked = true;
 
         self
     }
@@ -58,7 +55,7 @@ impl Jar {
     }
 
     pub fn unlock(&mut self) -> &mut Self {
-        self.is_pending_withdraw = false;
+        self.is_locked = false;
 
         self
     }
@@ -102,8 +99,8 @@ impl Jar {
             self.deposits.clone_from(deposits);
         }
 
-        if let Some(is_pending_withdraw) = companion.is_pending_withdraw {
-            self.is_pending_withdraw = is_pending_withdraw;
+        if let Some(is_locked) = companion.is_locked {
+            self.is_locked = is_locked;
         }
 
         self
@@ -111,7 +108,7 @@ impl Jar {
 
     pub fn to_rollback(&self) -> JarCompanion {
         JarCompanion {
-            is_pending_withdraw: Some(false),
+            is_locked: Some(false),
             claim_remainder: Some(self.claim_remainder),
             cache: Some(self.cache),
             ..JarCompanion::default()

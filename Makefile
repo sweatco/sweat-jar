@@ -6,9 +6,6 @@ install: ##@Miscellaneous Install dependencies
 	@npm i near-cli
 	@cargo build
 
-measure: ##@Miscellaneous Measure gas cost.
-	./scripts/measure.sh
-
 check: ##@Miscellaneous Run all checks.
 	make fmt && make lint && make build && make test && make int && make mutation
 
@@ -37,10 +34,13 @@ cov: ##@Testing Run unit tests with coverage.
 test: ##@Testing Run unit tests.
 	cargo test
 
-integration: ##@Testing Run integration tests.
-	cargo test --package integration-tests
+integration: build-integration ##@Testing Run integration tests.
+	cd integration-tests && cargo test
 
 int: integration ##@Testing Shorthand for `integration`
+
+measure-gas: build-integration ##@Testing Run gas-measurement integration tests and print TGas figures.
+	cd integration-tests && cargo test --test measure_gas -- --ignored --nocapture
 
 fmt: ##@Chores Format the code using rustfmt nightly.
 	cargo +nightly fmt --all

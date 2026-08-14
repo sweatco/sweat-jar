@@ -1,0 +1,6 @@
+# Build artifacts and lockfiles: collapsed by default in GitHub PR diffs
+# and excluded from diff stats.
+res/** linguist-generated=true
+res-integration/** linguist-generated=true
+Cargo.lock linguist-generated=true
+integration-tests/Cargo.lock linguist-generated=true

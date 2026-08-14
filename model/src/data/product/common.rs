@@ -1,4 +1,5 @@
 use near_sdk::{env, json_types::Base64VecU8, require};
+use sweat_jar_primitives::UDecimal;
 
 use super::{Product, Terms, WithdrawalFee};
 use crate::{data::jar::Deposit, TokenAmount};
@@ -19,6 +20,7 @@ impl TermsApi for Terms {
             Terms::Fixed(terms) => deposit.is_liquid(now, terms.lockup_term.0),
             Terms::Flexible(_) => true,
             Terms::ScoreBased(terms) => deposit.is_liquid(now, terms.lockup_term.0),
+            Terms::TieredScoreBased(terms) => deposit.is_liquid(now, terms.lockup_term.0),
         }
     }
 }
@@ -56,6 +58,7 @@ pub trait ProductAssertions {
     fn assert_enabled(&self);
     fn assert_fee_amount(&self);
     fn assert_score_based_product_is_protected(&self);
+    fn assert_udecimal_exponents_in_range(&self);
 }
 
 impl ProductAssertions for Product {
@@ -88,7 +91,8 @@ impl ProductAssertions for Product {
 
         let fee_ok = match fee {
             WithdrawalFee::Fix(amount) => amount.0 < self.cap.min(),
-            WithdrawalFee::Percent(percent) => percent.to_f32() < 100.0,
+            // `Percent` is fractional: 1.0 = 100%.
+            WithdrawalFee::Percent(percent) => percent.to_f32() < 1.0,
         };
 
         require!(
@@ -98,8 +102,32 @@ impl ProductAssertions for Product {
     }
 
     fn assert_score_based_product_is_protected(&self) {
-        if matches!(self.terms, Terms::ScoreBased(_)) {
+        if self.terms.is_score_based() {
             require!(self.public_key.is_some(), "Score based must be protected.");
+        }
+    }
+
+    /// A product stored with an exponent beyond `UDecimal::MAX_EXPONENT`
+    /// would panic on every subsequent `apy`/fee computation, so reject it
+    /// up front — checking every `UDecimal` the product carries.
+    fn assert_udecimal_exponents_in_range(&self) {
+        let mut decimals: Vec<&UDecimal> = Vec::new();
+
+        match &self.terms {
+            Terms::Fixed(terms) => decimals.extend(terms.apy.values()),
+            Terms::Flexible(terms) => decimals.extend(terms.apy.values()),
+            Terms::ScoreBased(_) | Terms::TieredScoreBased(_) => {}
+        }
+
+        if let Some(WithdrawalFee::Percent(percent)) = &self.withdrawal_fee {
+            decimals.push(percent);
+        }
+
+        for decimal in decimals {
+            require!(
+                decimal.exponent() <= UDecimal::MAX_EXPONENT,
+                "UDecimal exponent out of range"
+            );
         }
     }
 }

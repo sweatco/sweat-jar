@@ -7,6 +7,6 @@ debug = false
 panic = "abort"
 overflow-checks = true
 
-[profile.test]
-inherits = "release"
-lto = false
+# [profile.test]
+# lto = false
+# debug = true

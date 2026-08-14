@@ -9,7 +9,7 @@ use sweat_jar_model::{
     data::{
         account::Account,
         deposit::{DepositTicket, Purpose},
-        product::{Product, ProductAssertions, ProductId, Terms},
+        product::{Product, ProductAssertions, ProductId},
     },
     TokenAmount,
 };
@@ -37,11 +37,12 @@ impl Contract {
         let account = self.get_or_create_account_mut(&account_id);
         account.nonce += 1;
 
-        if matches!(product.terms, Terms::ScoreBased(_)) {
+        if product.terms.is_score_based() {
             account.try_set_timezone(ticket.timezone);
         }
 
         account.deposit(product_id, amount, None);
+        account.update_jar_cache(&product, env::block_timestamp_ms());
 
         emit(EventKind::Deposit(account_id, (product_id.clone(), amount.into())));
     }
@@ -52,13 +53,13 @@ impl Contract {
 
     pub(crate) fn get_account(&self, account_id: &AccountId) -> &Account {
         self.try_get_account(account_id)
-            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found in smart cotract").as_str()))
     }
 
     pub(crate) fn get_account_mut(&mut self, account_id: &AccountId) -> &mut Account {
         self.accounts
             .get_mut(account_id)
-            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found").as_str()))
+            .unwrap_or_else(|| panic_str(format!("Account {account_id} is not found in smart cotract").as_str()))
             .deref_mut()
     }
 
@@ -67,6 +68,8 @@ impl Contract {
     }
 
     pub(crate) fn update_account_cache(&mut self, account_id: &AccountId, filter: Option<fn(&Product) -> bool>) {
+        self.settle_interest(account_id);
+
         let now = env::block_timestamp_ms();
         let products = self.get_products_for_account(account_id, filter);
         let account = self.get_account_mut(account_id);

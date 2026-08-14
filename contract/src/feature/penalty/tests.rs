@@ -2,9 +2,11 @@
 
 use near_sdk::AccountId;
 use rstest::rstest;
+#[allow(deprecated)]
+use sweat_jar_model::api::PenaltyApi;
 use sweat_jar_model::{
-    api::{AccountApi, PenaltyApi},
-    data::jar::Jar,
+    api::AccountApi,
+    data::{account::features::Feature, jar::Jar},
     MS_IN_YEAR,
 };
 
@@ -14,6 +16,7 @@ use crate::{
 };
 
 #[rstest]
+#[allow(deprecated)]
 fn apply_penalty_in_batch(
     admin: AccountId,
     alice: AccountId,
@@ -32,6 +35,11 @@ fn apply_penalty_in_batch(
         .with_latest_account(&alice, &[(product.id.clone(), alice_jar)])
         .with_latest_account(&bob, &[(product.id.clone(), bob_jar)]);
 
+    context.switch_account(&admin);
+    context
+        .contract()
+        .batch_set_feature_enabled(vec![alice.clone(), bob.clone()], Feature::IncreasedApy, true);
+
     context.set_block_timestamp_in_ms(MS_IN_YEAR / 2);
 
     let interest = context.contract().get_total_interest(alice.clone()).amount.total.0;
@@ -42,8 +50,6 @@ fn apply_penalty_in_batch(
 
     assert!(!context.contract().is_penalty_applied(alice.clone()));
     assert!(!context.contract().is_penalty_applied(bob.clone()));
-
-    context.switch_account(&admin);
 
     context
         .contract()

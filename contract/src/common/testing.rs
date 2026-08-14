@@ -13,17 +13,16 @@ use near_sdk::{
     PromiseOrValue,
 };
 use sweat_jar_model::{
-    api::InitApi,
     data::{
-        account::{versioned::AccountVersioned, Account},
+        account::{v1::AccountV1, versioned::AccountVersioned, Account},
         jar::Jar,
         product::{Product, ProductId},
     },
-    Timestamp, TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
+    TokenAmount, MS_IN_DAY, MS_IN_HOUR, MS_IN_MINUTE,
 };
 
 use super::{env::test_env_ext, event::EventKind};
-use crate::{migration::api::store_account_raw, Contract};
+use crate::{all_roles_to, migration::api::store_account_raw, Contract, InitApi};
 
 pub mod accounts {
     use near_sdk::AccountId;
@@ -55,11 +54,20 @@ pub(crate) struct Context {
     pub owner: AccountId,
     pub ft_contract_id: AccountId,
     pub legacy_jar_contract_id: AccountId,
+    /// Holds every `Roles` variant and is the ACL super-admin.
+    pub operator: AccountId,
     builder: VMContextBuilder,
 }
 
 impl Context {
-    pub(crate) fn new(manager: AccountId) -> Self {
+    pub(crate) fn new(operator: AccountId) -> Self {
+        // `testing_env!` carries storage across invocations in a thread, so a
+        // second `Context` in one test would inherit the previous contract's
+        // raw storage (ACL grants, raw-written accounts). Start clean.
+        near_sdk::mock::with_mocked_blockchain(|blockchain| {
+            blockchain.take_storage();
+        });
+
         let owner: AccountId = "owner".to_string().try_into().unwrap();
         let fee_account_id: AccountId = "fee".to_string().try_into().unwrap();
         let ft_contract_id: AccountId = "token".to_string().try_into().unwrap();
@@ -77,8 +85,9 @@ impl Context {
         let contract = Contract::init(
             ft_contract_id.clone(),
             fee_account_id,
-            manager,
             legacy_jar_contract_id.clone(),
+            operator.clone(),
+            all_roles_to(&operator),
         );
 
         Self {
@@ -86,12 +95,9 @@ impl Context {
             ft_contract_id,
             builder,
             legacy_jar_contract_id,
+            operator,
             contract: Arc::new(Mutex::new(contract)),
         }
-    }
-
-    pub(crate) fn now(&self) -> Timestamp {
-        self.builder.context.block_timestamp / 1_000_000
     }
 
     pub(crate) fn contract(&self) -> MutexGuard<Contract> {
@@ -107,17 +113,6 @@ impl Context {
     }
 
     pub(crate) fn with_latest_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
-        self.with_account(account_id, jars, |account| AccountVersioned::new(account))
-    }
-
-    pub(crate) fn with_v1_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
-        self.with_account(account_id, jars, |account| AccountVersioned::V1(account))
-    }
-
-    fn with_account<F>(self, account_id: &AccountId, jars: &[(ProductId, Jar)], account_factory: F) -> Self
-    where
-        F: FnOnce(Account) -> AccountVersioned,
-    {
         if jars.is_empty() {
             return self;
         }
@@ -129,7 +124,25 @@ impl Context {
 
         store_account_raw(
             account_id.clone(),
-            Base64VecU8(to_vec(&account_factory(account)).unwrap()),
+            Base64VecU8(to_vec(&AccountVersioned::new(account)).unwrap()),
+        );
+
+        self
+    }
+
+    pub(crate) fn with_v1_account(self, account_id: &AccountId, jars: &[(ProductId, Jar)]) -> Self {
+        if jars.is_empty() {
+            return self;
+        }
+
+        let mut account = AccountV1::default();
+        for (product_id, jar) in jars {
+            account.jars.insert(product_id.clone(), jar.clone());
+        }
+
+        store_account_raw(
+            account_id.clone(),
+            Base64VecU8(to_vec(&AccountVersioned::V1(account)).unwrap()),
         );
 
         self
@@ -168,9 +181,9 @@ impl Context {
         self.switch_account(self.ft_contract_id.clone());
     }
 
-    pub(crate) fn switch_account_to_manager(&mut self) {
-        let manager = self.contract().manager.clone();
-        self.switch_account(manager);
+    pub(crate) fn switch_account_to_operator(&mut self) {
+        let operator = self.operator.clone();
+        self.switch_account(operator);
     }
 
     pub(crate) fn with_deposit_yocto(&mut self, amount: Balance, f: impl FnOnce(&mut Context)) {
@@ -224,10 +237,6 @@ impl WhitespaceTrimmer for String {
     }
 }
 
-pub(crate) trait DefaultBuilder {
-    fn new() -> Self;
-}
-
 pub trait AfterCatchUnwind {
     fn after_catch_unwind(&self);
 }
@@ -279,11 +288,10 @@ impl<T> UnwrapPromise<T> for PromiseOrValue<T> {
 
 #[cfg(test)]
 mod tests {
-    use near_sdk::AccountId;
-    use rstest::rstest;
+    use near_plugins::AccessControllable;
+    use near_sdk::env;
 
-    use super::{accounts::admin, Context};
-    use crate::common::testing::{expect_panic, AfterCatchUnwind};
+    use crate::common::testing::{accounts::admin, expect_panic, AfterCatchUnwind, Context};
 
     #[test]
     #[should_panic(expected = "Contract didn't panic when expected to.\nExpected message: Something went wrong")]
@@ -300,10 +308,18 @@ mod tests {
         expect_panic(&Ctx, "Something went wrong", || {});
     }
 
-    #[rstest]
-    #[should_panic(expected = r#"Can be performed only by admin"#)]
-    fn self_update_without_access(admin: AccountId) {
-        let context = Context::new(admin);
-        context.contract().update_contract(vec![], None);
+    /// Mirrors `migrate_grants_all_roles_and_drops_manager` in
+    /// `migration::tests`, but for the `init()` path: `Context::new` deploys the
+    /// contract with `current_account_id` = "owner" and `super_admin` = the
+    /// distinct `manager` account it's given, so this verifies the deploying
+    /// account (the contract's own account) doesn't retain super-admin power
+    /// after `init` bootstraps then transfers it away.
+    #[test]
+    fn init_leaves_super_admin_only_with_requested_account() {
+        let super_admin = admin();
+        let context = Context::new(super_admin.clone());
+
+        assert!(context.contract().acl_is_super_admin(super_admin));
+        assert!(!context.contract().acl_is_super_admin(env::current_account_id()));
     }
 }

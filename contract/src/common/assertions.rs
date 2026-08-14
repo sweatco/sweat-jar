@@ -5,13 +5,6 @@ use near_sdk::{env, require, AccountId};
 use crate::Contract;
 
 impl Contract {
-    pub(crate) fn assert_manager(&self) {
-        require!(
-            self.manager == env::predecessor_account_id(),
-            "Can be performed only by admin"
-        );
-    }
-
     pub(crate) fn assert_from_ft_contract(&self) {
         require!(
             env::predecessor_account_id() == self.token_account_id,
@@ -19,14 +12,17 @@ impl Contract {
         );
     }
 
-    pub(crate) fn assert_account_can_update(&self) {
-        self.assert_manager();
-    }
-
     pub(crate) fn assert_migrate_from_previous_version(&self, account_id: &AccountId) {
         require!(
             account_id.clone() == self.previous_version_account_id,
             "Can migrate data only from previous version"
+        );
+    }
+
+    pub(crate) fn assert_timezone_is_set(&self, account_id: &AccountId) {
+        assert!(
+            self.get_account(account_id).is_timezone_set(),
+            "Timezone is not set for account '{account_id}'"
         );
     }
 }

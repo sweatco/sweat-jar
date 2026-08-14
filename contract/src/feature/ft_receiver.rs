@@ -1,8 +1,15 @@
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
+use near_plugins::AccessControllable;
 use near_sdk::{json_types::U128, near, require, serde_json, AccountId, PromiseOrValue};
-use sweat_jar_model::data::deposit::DepositTicket;
+use sweat_jar_model::{
+    data::{deposit::DepositTicket, score::Score},
+    UTC,
+};
 
-use crate::{migration::api::store_account_raw, Base64VecU8, Contract, ContractExt};
+use crate::{
+    migration::api::{is_new_or_empty_account, store_account_raw},
+    Base64VecU8, Contract, ContractExt, Roles,
+};
 
 /// The `FtMessage` enum represents various commands for actions available via transferring tokens to an account
 /// where this contract is deployed, using the payload in `ft_transfer_call`.
@@ -12,6 +19,8 @@ pub enum FtMessage {
     /// Represents a request to create a new jar for a corresponding product.
     Stake(StakeMessage),
     Migrate(AccountId, Base64VecU8),
+    /// Represents a request to airdrop an equal token amount to a list of receivers.
+    Airdrop(AirdropStakeMessage),
 }
 
 /// The `StakeMessage` struct represents a request to create a new jar for a corresponding product.
@@ -25,6 +34,28 @@ pub struct StakeMessage {
 
     /// An optional account ID representing the intended owner of the created jar.
     receiver_id: Option<AccountId>,
+}
+
+/// The `AirdropStakeMessage` struct represents a request to airdrop tokens to a batch of accounts.
+/// The total transfer amount must equal `amount_per_receiver * receivers.len()`.
+#[near(serializers=[json])]
+pub struct AirdropStakeMessage {
+    /// Ticket specifying the product, expiry, and optional timezone (required for score-based products).
+    ticket: DepositTicket,
+
+    /// An optional ed25519 signature. Required when the product has a public key set.
+    signature: Option<Base64VecU8>,
+
+    /// Accounts that will each receive a deposit of `total_amount / receivers.len()` tokens.
+    receivers: Vec<AccountId>,
+
+    /// Optional booster score. If non-zero, applied to each receiver at deposit time.
+    booster: Option<Score>,
+
+    /// Optional UTC timestamp (ms) indicating when the booster was earned.
+    /// Used to compute `days_ago` relative to each receiver's timezone.
+    /// Defaults to today (`days_ago=0`) when absent.
+    booster_timestamp: Option<UTC>,
 }
 
 #[near]
@@ -42,10 +73,36 @@ impl FungibleTokenReceiver for Contract {
             FtMessage::Migrate(account_id, account_bytes) => {
                 self.assert_migrate_from_previous_version(&sender_id);
 
+                require!(
+                    is_new_or_empty_account(&account_id),
+                    "Refusing to overwrite a non-empty account via migration"
+                );
+
                 store_account_raw(account_id.clone(), account_bytes);
                 require!(
                     self.get_account(&account_id).get_total_principal() == amount.0,
                     "Total principal mismatch"
+                );
+            }
+            FtMessage::Airdrop(message) => {
+                require!(
+                    self.acl_has_any_role(vec![Roles::Oracle.into()], sender_id),
+                    "Only accounts with the Oracle role can perform airdrops"
+                );
+                let count = message.receivers.len() as u128;
+                require!(count > 0, "Receivers list is empty");
+                require!(
+                    amount.0.is_multiple_of(count),
+                    "Amount must be evenly divisible among receivers"
+                );
+                let booster = message.booster.unwrap_or(0);
+                self.airdrop(
+                    message.ticket,
+                    amount.0 / count,
+                    message.receivers,
+                    message.signature.as_ref(),
+                    booster,
+                    message.booster_timestamp,
                 );
             }
         }
@@ -129,7 +186,6 @@ mod tests {
             ticket_valid_until,
             0,
         );
-        dbg!(message.to_string());
         let signature: Base64String = signer.sign(message.as_str()).into();
 
         let msg = json!({
@@ -200,5 +256,25 @@ mod tests {
         let alice_account = contract.get_account(&alice);
         assert_eq!(4, alice_account.jars.len());
         assert_eq!(1_630_000_000_000_000_000_000, alice_account.get_total_principal());
+    }
+
+    #[rstest]
+    #[should_panic(expected = "Refusing to overwrite a non-empty account via migration")]
+    fn migrate_rejects_overwrite_of_existing_account(admin: AccountId, alice_migration_message: String) {
+        let mut context = Context::new(admin);
+
+        context.switch_account_to_ft_contract_account();
+        context.contract().ft_on_transfer(
+            context.legacy_jar_contract_id.clone(),
+            U128(1_630_000_000_000_000_000_000),
+            alice_migration_message.clone(),
+        );
+
+        // Second migration for the same already-migrated account must be rejected.
+        context.contract().ft_on_transfer(
+            context.legacy_jar_contract_id.clone(),
+            U128(1_630_000_000_000_000_000_000),
+            alice_migration_message,
+        );
     }
 }

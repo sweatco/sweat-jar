@@ -2,8 +2,9 @@ use near_sdk::{
     json_types::{Base64VecU8, U128, U64},
     near,
 };
+use sweat_jar_primitives::UDecimal;
 
-use crate::{Duration, Score, TokenAmount, UDecimal};
+use crate::{ConfigurableValue, Duration, Score, TokenAmount};
 
 pub type ProductId = String;
 
@@ -43,6 +44,9 @@ pub enum Terms {
 
     /// TODO: doc
     ScoreBased(ScoreBasedProductTerms),
+
+    /// TODO: doc
+    TieredScoreBased(TieredScoreBasedProductTerms),
 }
 
 /// The `FixedProductTerms` struct contains terms specific to Fixed products.
@@ -72,6 +76,31 @@ pub struct ScoreBasedProductTerms {
     pub lockup_term: U64,
 }
 
+/// TODO: doc
+#[near(serializers=[borsh, json])]
+#[derive(Clone, Debug, PartialEq)]
+pub struct TieredScoreBasedProductTerms {
+    pub score_cap: ConfigurableValue<Score>,
+    /// The maturity term of the jar in milliseconds, during which it yields interest.
+    /// After this period, the user can withdraw principal or potentially restake the jar.
+    pub lockup_term: U64,
+}
+
+impl TieredScoreBasedProductTerms {
+    pub fn get_score_cap(&self, is_increased: bool) -> Score {
+        match self.score_cap {
+            ConfigurableValue::Constant(value) => value,
+            ConfigurableValue::Tier(value) => {
+                if is_increased {
+                    value.default
+                } else {
+                    value.fallback
+                }
+            }
+        }
+    }
+}
+
 /// The `Cap` struct defines the capacity of a deposit jar in terms of the minimum and maximum allowed principal amounts.
 /// - `.0` – The minimum amount of tokens that can be stored in the jar.
 /// - `.1` – The maximum amount of tokens that can be stored in the jar.
@@ -92,27 +121,7 @@ pub enum WithdrawalFee {
 }
 
 /// The `Apy` enum describes the Annual Percentage Yield (APY) of the product, which can be either constant or downgradable.
-#[near(serializers=[borsh, json])]
-#[serde(into = "serde_helpers::ApyHelper", from = "serde_helpers::ApyHelper")]
-#[derive(Clone, Debug, PartialEq)]
-pub enum Apy {
-    /// Describes a constant APY, where the interest remains the same throughout the product's term.
-    Constant(UDecimal),
-
-    /// Describes a downgradable APY, where an oracle can set a penalty if a user violates the product's terms.
-    Downgradable(DowngradableApy),
-}
-
-/// The `DowngradableApy` struct describes an APY that can be downgraded by an oracle.
-#[near(serializers=[borsh, json])]
-#[derive(Clone, Debug, PartialEq)]
-pub struct DowngradableApy {
-    /// The default APY value if the user meets all the terms of the product.
-    pub default: UDecimal,
-
-    /// The fallback APY value if the user violates some of the terms of the product.
-    pub fallback: UDecimal,
-}
+pub type Apy = ConfigurableValue<UDecimal>;
 
 impl Product {
     pub fn is_protected(&self) -> bool {
@@ -121,14 +130,14 @@ impl Product {
 }
 
 impl Apy {
-    pub fn get_effective(&self, is_penalty_applied: bool) -> UDecimal {
+    pub fn get_effective(&self, is_increased_apy_enabled: bool) -> UDecimal {
         match self {
             Apy::Constant(apy) => *apy,
-            Apy::Downgradable(apy) => {
-                if is_penalty_applied {
-                    apy.fallback
-                } else {
+            Apy::Tier(apy) => {
+                if is_increased_apy_enabled {
                     apy.default
+                } else {
+                    apy.fallback
                 }
             }
         }
@@ -155,47 +164,11 @@ impl Terms {
             Terms::Fixed(terms) => Some(terms.lockup_term.0),
             Terms::Flexible(_) => None,
             Terms::ScoreBased(terms) => Some(terms.lockup_term.0),
-        }
-    }
-}
-
-pub mod serde_helpers {
-    use near_sdk::near;
-
-    use super::{Apy, DowngradableApy};
-    use crate::UDecimal;
-
-    #[near(serializers=[json])]
-    pub struct ApyHelper {
-        default: UDecimal,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        fallback: Option<UDecimal>,
-    }
-
-    impl From<Apy> for ApyHelper {
-        fn from(apy: Apy) -> Self {
-            match apy {
-                Apy::Constant(value) => Self {
-                    default: value,
-                    fallback: None,
-                },
-                Apy::Downgradable(value) => Self {
-                    default: value.default,
-                    fallback: Some(value.fallback),
-                },
-            }
+            Terms::TieredScoreBased(terms) => Some(terms.lockup_term.0),
         }
     }
 
-    impl From<ApyHelper> for Apy {
-        fn from(helper: ApyHelper) -> Self {
-            match helper.fallback {
-                Some(fallback) => Apy::Downgradable(DowngradableApy {
-                    default: helper.default,
-                    fallback,
-                }),
-                None => Apy::Constant(helper.default),
-            }
-        }
+    pub fn is_score_based(&self) -> bool {
+        matches!(self, Terms::ScoreBased(_) | Terms::TieredScoreBased(_))
     }
 }

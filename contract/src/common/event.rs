@@ -3,7 +3,10 @@ use near_sdk::{
     log, near, serde_json, AccountId,
 };
 use sweat_jar_model::{
-    data::product::{Product, ProductId},
+    data::{
+        account::features::Feature,
+        product::{Product, ProductId},
+    },
     Local, Score, Timestamp, TokenAmount, UTC,
 };
 
@@ -29,6 +32,11 @@ pub enum EventKind {
     OldScoreWarning((Score, Local)),
     JarsMerge(AccountId),
     MigrateProducts(Vec<ProductId>),
+    MigrationDisabled,
+    MigrationEnabled(AccountId),
+    SetFeatureEnabled(AccountId, Feature, bool),
+    BatchSetFeatureEnabled(Vec<AccountId>, Feature, bool),
+    ApplyBooster(ApplyBoosterData),
 }
 
 #[derive(Debug)]
@@ -170,7 +178,16 @@ pub struct ChangeProductPublicKeyData {
 #[near(serializers=[json])]
 pub struct ScoreData {
     pub account_id: AccountId,
-    pub score: Vec<(Score, UTC)>,
+    pub score: Vec<(Score, Local)>,
+}
+
+#[derive(Debug, Clone)]
+#[near(serializers=[json])]
+pub struct ApplyBoosterData {
+    pub applied: Vec<AccountId>,
+    pub rejected: Vec<AccountId>,
+    pub timestamp: UTC,
+    pub score: Score,
 }
 
 impl From<EventKind> for SweatJarEvent {
@@ -216,19 +233,15 @@ mod test {
     use std::str::FromStr;
 
     use near_sdk::{json_types::U128, AccountId};
-    use rstest::rstest;
     use sweat_jar_model::Local;
 
-    use crate::common::{
-        event::{ClaimData, EventKind, SweatJarEvent},
-        testing::{accounts::admin, Context, WhitespaceTrimmer},
+    use crate::{
+        common::{
+            event::{ClaimData, EventKind, SweatJarEvent},
+            testing::WhitespaceTrimmer,
+        },
+        VERSION,
     };
-
-    #[rstest]
-    fn test_contract_version(admin: AccountId) {
-        let context = Context::new(admin);
-        assert_eq!(context.contract().contract_version(), "sweat_jar-4.0.6");
-    }
 
     #[test]
     fn event_to_string() {
@@ -245,7 +258,7 @@ mod test {
         .to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
-          "version": "4.0.6",
+          "version": "{VERSION}",
           "event": "claim",
           "data": [
             "someone.near",
@@ -254,17 +267,19 @@ mod test {
               "items": [ [ "product_0", "50" ], [ "product_1", "200" ] ]
             }
           ]
-        }"#;
+        }"#
+        .replace("{VERSION}", VERSION);
 
         assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());
 
         let event = SweatJarEvent::from(EventKind::OldScoreWarning((111, Local(5)))).to_json_event_string();
         let json = r#"EVENT_JSON:{
           "standard": "sweat_jar",
-          "version": "4.0.6",
+          "version": "{VERSION}",
           "event": "old_score_warning",
           "data": [ 111, 5 ]
-        }"#;
+        }"#
+        .replace("{VERSION}", VERSION);
 
         assert_eq!(json.trim_whitespaces(), event.trim_whitespaces());
     }

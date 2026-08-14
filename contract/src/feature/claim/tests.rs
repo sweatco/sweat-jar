@@ -4,11 +4,18 @@ use fake::Fake;
 use near_contract_standards::fungible_token::receiver::FungibleTokenReceiver;
 use near_sdk::{json_types::U128, AccountId, PromiseOrValue};
 use rstest::{fixture, rstest};
+use std::collections::HashMap;
+
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
-    data::{claim::ClaimedAmountView, jar::Jar, product::Product},
+    data::{
+        account::Account,
+        claim::ClaimedAmountView,
+        jar::{Jar, JarCompanion},
+        product::Product,
+    },
     interest::InterestCalculator,
-    TokenAmount, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
+    Timezone, TokenAmount, MS_IN_DAY, MS_IN_MINUTE, MS_IN_YEAR,
 };
 
 use crate::{
@@ -19,9 +26,25 @@ use crate::{
     },
     feature::{
         account::model::test_utils::{jar, JarBuilder},
+        claim::api::{claim_rollback, MAX_JARS_PER_CLAIM},
         product::model::test_utils::*,
     },
 };
+
+/// Guards `claim_rollback`'s field coverage: a field dropped from the snapshot
+/// would silently leak its mutation when the claim transfer fails.
+#[rstest]
+fn claim_rollback_snapshots_all_mutated_state() {
+    let mut account = Account::default();
+    account.timezone = Timezone::hour_shift(3);
+
+    let jars = HashMap::from([("product".to_string(), JarCompanion::default())]);
+    let rollback = claim_rollback(&account, jars.clone());
+
+    assert_eq!(rollback.timezone, Some(account.timezone));
+    assert_eq!(rollback.score, Some(account.score));
+    assert_eq!(rollback.jars, Some(jars));
+}
 
 #[rstest]
 fn claim_total_when_nothing_to_claim(
@@ -79,7 +102,7 @@ fn claim_pending_withdraw_jar(
     #[from(product_1_year_12_percent)] product: Product,
     #[with(vec![(0, 100_000_000), (1, 200_000_000)])] jar: Jar,
 ) {
-    let jar = jar.with_pending_withdraw();
+    let jar = jar.with_locked();
     let mut context = Context::new(admin)
         .with_products(&[product.clone()])
         .with_latest_account(&alice, &[(product.id.clone(), jar.clone())]);
@@ -287,5 +310,30 @@ fn first_claim_with_booster(
     context.set_block_timestamp_in_ms(1752503478000);
     let claimed_amount = context.claim_total(&alice);
 
-    assert_eq!(136_986_301_369_863, claimed_amount);
+    assert_eq!(136_996_174_213_597, claimed_amount);
+}
+
+#[rstest]
+#[should_panic(expected = "Too many jars in a single claim")]
+fn claim_total_rejects_more_than_max_jars(
+    alice: AccountId,
+    admin: AccountId,
+    #[from(product_1_year_12_percent)] base_product: Product,
+) {
+    // Regression test for PROD-3725: claim_total's callback gas budget used
+    // to be a flat constant sized for 200 jars regardless of how many jars
+    // an actual call processed -- this cap is what makes the now-dynamic
+    // budget safe to compute per call.
+    let products: Vec<Product> = (0..=MAX_JARS_PER_CLAIM)
+        .map(|i| base_product.clone().with_id(format!("product_{i}")))
+        .collect();
+    let jars: Vec<(String, Jar)> = products.iter().map(|p| (p.id.clone(), jar(vec![(0, 100_000_000)]))).collect();
+
+    let mut context = Context::new(admin)
+        .with_products(&products)
+        .with_latest_account(&alice, &jars);
+
+    context.set_block_timestamp_in_ms(MS_IN_DAY);
+    context.switch_account(alice);
+    context.contract().claim_total(None);
 }

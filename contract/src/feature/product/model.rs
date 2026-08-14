@@ -1,25 +1,39 @@
 #[cfg(test)]
 pub mod test_utils {
+
     use near_sdk::json_types::U128;
     use rstest::fixture;
     use sweat_jar_model::{
         data::product::{
-            Apy, Cap, DowngradableApy, FixedProductTerms, FlexibleProductTerms, Product, ProductId,
-            ScoreBasedProductTerms, Terms, WithdrawalFee,
+            Apy, Cap, FixedProductTerms, FlexibleProductTerms, Product, ProductId, ScoreBasedProductTerms, Terms,
+            TieredScoreBasedProductTerms, WithdrawalFee,
         },
         signer::test_utils::MessageSigner,
-        TokenAmount, UDecimal, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
+        ConfigurableValue, TokenAmount, ValueTier, MS_IN_DAY, MS_IN_HOUR, MS_IN_YEAR,
     };
+    use sweat_jar_primitives::UDecimal;
 
     use crate::common::testing::TokenUtils;
 
     /// Default product name. If product name wasn't specified it will have this name.
     pub const DEFAULT_PRODUCT_NAME: &str = "product";
-    pub const DEFAULT_SCORE_PRODUCT_NAME: &str = "score_product";
 
     pub struct ProtectedProduct {
         pub product: Product,
         pub signer: MessageSigner,
+    }
+
+    #[fixture]
+    pub fn tiered_score_based_product(product: Product) -> Product {
+        product
+            .with_id("product_ts_1_year_20_10_cap".to_string())
+            .with_terms(Terms::TieredScoreBased(TieredScoreBasedProductTerms {
+                lockup_term: (365 * MS_IN_DAY).into(),
+                score_cap: ConfigurableValue::Tier(ValueTier {
+                    default: 20_000,
+                    fallback: 10_000,
+                }),
+            }))
     }
 
     #[fixture]
@@ -245,7 +259,7 @@ pub mod test_utils {
         ProtectedProduct {
             product: product
                 .with_id("product_1_year_apy_downgradable_20_10_percent_protected".to_string())
-                .with_terms(terms(Apy::Downgradable(DowngradableApy {
+                .with_terms(terms(Apy::Tier(ValueTier {
                     default: UDecimal::new(20_000, 5),
                     fallback: UDecimal::new(10_000, 5),
                 })))
@@ -262,7 +276,7 @@ pub mod test_utils {
             product: product
                 .with_id("product_1_hour_apy_downgradable_23_10_percent_protected".to_string())
                 .with_terms(Terms::Fixed(FixedProductTerms {
-                    apy: Apy::Downgradable(DowngradableApy {
+                    apy: Apy::Tier(ValueTier {
                         default: UDecimal::new(23, 2),
                         fallback: UDecimal::new(10, 2),
                     }),
@@ -306,7 +320,7 @@ pub mod test_utils {
                 .with_public_key(message_signer.public_key().into())
                 .with_cap(0, 100_000_000_000)
                 .with_terms(Terms::Fixed(FixedProductTerms {
-                    apy: Apy::Downgradable(DowngradableApy {
+                    apy: Apy::Tier(ValueTier {
                         default: UDecimal::new(20, 2),
                         fallback: UDecimal::new(10, 2),
                     }),
@@ -341,7 +355,7 @@ pub mod test_utils {
 
     #[fixture]
     pub fn downgradable_apy() -> Apy {
-        Apy::Downgradable(DowngradableApy {
+        Apy::Tier(ValueTier {
             default: UDecimal::new(20, 2),
             fallback: UDecimal::new(10, 2),
         })
@@ -404,6 +418,7 @@ pub mod test_utils {
                 Terms::Fixed(value) => &value.apy,
                 Terms::Flexible(value) => &value.apy,
                 Terms::ScoreBased(_) => panic!("No APY for a score based product"),
+                Terms::TieredScoreBased(_) => panic!("No APY for a score based product"),
             }
         }
     }

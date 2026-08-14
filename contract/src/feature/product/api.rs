@@ -1,5 +1,6 @@
 use std::clone::Clone;
 
+use near_plugins::{access_control_any, AccessControllable};
 use near_sdk::{assert_one_yocto, near, require};
 use sweat_jar_model::{
     api::ProductApi,
@@ -8,28 +9,29 @@ use sweat_jar_model::{
 
 use crate::{
     common::event::{emit, ChangeProductPublicKeyData, EnableProductData, EventKind},
-    Base64VecU8, Contract, ContractExt,
+    Base64VecU8, Contract, ContractExt, Roles,
 };
 
 #[near]
 impl ProductApi for Contract {
+    #[access_control_any(roles(Roles::ProductManager))]
     #[payable]
     fn register_product(&mut self, product: Product) {
-        self.assert_manager();
         assert_one_yocto();
-        assert!(self.products.get(&product.id).is_none(), "Product already exists");
+        require!(self.products.get(&product.id).is_none(), "Product already exists");
         product.assert_score_based_product_is_protected();
         product.assert_fee_amount();
         product.assert_cap_order();
+        product.assert_udecimal_exponents_in_range();
 
         self.products.insert(&product.id, &product);
 
         emit(EventKind::RegisterProduct(product));
     }
 
+    #[access_control_any(roles(Roles::ProductManager))]
     #[payable]
     fn set_enabled(&mut self, product_id: ProductId, is_enabled: bool) {
-        self.assert_manager();
         assert_one_yocto();
 
         let mut product = self.get_product(&product_id);
@@ -43,9 +45,9 @@ impl ProductApi for Contract {
         emit(EventKind::EnableProduct(EnableProductData { product_id, is_enabled }));
     }
 
+    #[access_control_any(roles(Roles::ProductManager))]
     #[payable]
     fn set_public_key(&mut self, product_id: ProductId, public_key: Base64VecU8) {
-        self.assert_manager();
         assert_one_yocto();
 
         let mut product = self.get_product(&product_id);

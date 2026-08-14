@@ -1,11 +1,6 @@
 #![cfg(test)]
 
-use fake::Fake;
-use near_sdk::{
-    json_types::{I64, U128},
-    store::LookupMap,
-    AccountId, PromiseOrValue, Timestamp,
-};
+use near_sdk::{json_types::U128, store::LookupMap, AccountId, PromiseOrValue, Timestamp};
 use rstest::{fixture, rstest};
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, WithdrawApi},
@@ -35,157 +30,12 @@ mod score_tests {
     use super::*;
 
     #[rstest]
-    #[should_panic(expected = "Can be performed only by admin")]
-    fn record_score_by_non_manager(admin: AccountId) {
+    #[should_panic(expected = "Insufficient permissions")]
+    fn record_score_by_non_oracle(admin: AccountId) {
         let mut context = Context::new(admin);
 
         context.switch_account(alice());
         context.contract().record_score(vec![(alice(), vec![(100, 0.into())])]);
-    }
-
-    /// 12% jar should have the same interest as 12_000 score jar walking to the limit every day
-    /// Also this method tests score cap
-    #[rstest]
-    fn same_interest_in_score_jar_as_in_const_jar(
-        admin: AccountId,
-        alice: AccountId,
-        #[from(product_1_year_12_percent)] regular_product: Product,
-        #[from(product_1_year_12_cap_score_based)] score_product: Product,
-    ) {
-        test_env_ext::set_test_log_events(false);
-
-        let lockup_term = regular_product.terms.get_lockup_term().unwrap();
-        let term_in_days = lockup_term / MS_IN_DAY;
-        let half_period = term_in_days / 2;
-
-        let mut context = Context::new(admin).with_products(&[regular_product.clone(), score_product.clone()]);
-        context.deposit(&alice, &regular_product.id, 100.to_otto());
-        context.deposit_with_timezone(&alice, &score_product.id, 100.to_otto(), Timezone::hour_shift(3));
-
-        assert_eq!(context.contract().get_timezone(alice.clone()), Some(I64(10_800_000)));
-
-        // Difference of 1 is okay because the missing otto-sweat is stored in claim remainder
-        // and will eventually be added to total claimed balance
-        fn compare_interest(
-            context: &Context,
-            account_id: &AccountId,
-            regular_product_id: &ProductId,
-            score_product_id: &ProductId,
-        ) {
-            let regular_interest = context.interest(account_id, regular_product_id);
-            let score_interest = context.interest(account_id, score_product_id);
-            let diff = regular_interest.abs_diff(score_interest);
-
-            assert!(diff <= 1, "Diff is too big {diff}");
-        }
-
-        for day in 0..term_in_days {
-            let now = day * MS_IN_DAY;
-            context.set_block_timestamp_in_ms(now);
-            context.record_score(&alice, UTC(day * MS_IN_DAY), 20_000);
-
-            compare_interest(&context, &alice, &regular_product.id, &score_product.id);
-
-            if day == half_period {
-                let jar_interest = context.interest(&alice, &regular_product.id);
-                let score_interest = context.interest(&alice, &score_product.id);
-
-                let claimed = context.claim_total(&alice);
-                assert_eq!(claimed, jar_interest + score_interest);
-            }
-        }
-
-        assert_eq!(
-            context.jar(&alice, &regular_product.id).cache.unwrap().updated_at,
-            half_period * MS_IN_DAY
-        );
-        assert_eq!(
-            context.jar(&alice, &score_product.id).cache.unwrap().updated_at,
-            (term_in_days - 1) * MS_IN_DAY
-        );
-    }
-
-    #[rstest]
-    fn score_jar_claim_often_vs_claim_at_the_end(
-        admin: AccountId,
-        alice: AccountId,
-        bob: AccountId,
-        #[from(product_steps_365d_20000_score_cap)] product: Product,
-        #[with(vec![(0, 100.to_otto())])] jar: Jar,
-    ) {
-        test_env_ext::set_test_log_events(false);
-
-        let mut context = Context::new(admin.clone())
-            .with_products(&[product.clone()])
-            .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
-            .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
-        context.contract().get_account_mut(&bob).score = AccountScore::new(Timezone::hour_shift(0));
-
-        fn update_and_check(
-            day: u64,
-            context: &mut Context,
-            total_claimed_bob: &mut u128,
-            product_id: &ProductId,
-            admin: &AccountId,
-            alice: &AccountId,
-            bob: &AccountId,
-        ) {
-            let score: Score = (0..1000).fake();
-
-            context.switch_account(admin);
-            context.record_score(alice, UTC(day * MS_IN_DAY), score);
-            context.record_score(bob, UTC(day * MS_IN_DAY), score);
-
-            if day > 1 {
-                context.switch_account(admin);
-                context.record_score(alice, UTC((day - 1) * MS_IN_DAY), score);
-                context.record_score(bob, UTC((day - 1) * MS_IN_DAY), score);
-            }
-
-            *total_claimed_bob += context.claim_total(bob);
-            assert_eq!(context.interest(alice, product_id), *total_claimed_bob, "{day}");
-        }
-
-        let mut total_claimed_bob: u128 = 0;
-
-        // Update each hour for 10 days
-        for hour in 0..(24 * 10) {
-            context.set_block_timestamp_in_hours(hour);
-            update_and_check(
-                hour / 24,
-                &mut context,
-                &mut total_claimed_bob,
-                &product.id,
-                &admin,
-                &alice,
-                &bob,
-            );
-        }
-
-        // Update each day until 100 days has passed
-        for day in 10..100 {
-            context.set_block_timestamp_in_days(day);
-            update_and_check(
-                day,
-                &mut context,
-                &mut total_claimed_bob,
-                &product.id,
-                &admin,
-                &alice,
-                &bob,
-            );
-        }
-
-        total_claimed_bob += context.claim_total(&bob);
-
-        assert_eq!(context.interest(&alice, &product.id), total_claimed_bob);
-        assert_eq!(context.claim_total(&alice), total_claimed_bob);
-
-        assert_eq!(
-            context.jar(&alice, &product.id).cache.unwrap().updated_at,
-            MS_IN_DAY * 99
-        );
     }
 
     #[rstest]
@@ -200,7 +50,8 @@ mod score_tests {
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
+        context.contract().get_account_mut(&alice).score = AccountScore::default();
+        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
 
         context.set_block_timestamp_in_days(5);
 
@@ -208,12 +59,12 @@ mod score_tests {
 
         assert_eq!(context.interest(&alice, &product.id), 0);
 
-        context.set_block_timestamp_in_days(6);
+        context.set_block_timestamp_in_days(7);
 
         let interest_for_one_day = context.interest(&alice, &product.id);
         assert_ne!(interest_for_one_day, 0);
 
-        context.set_block_timestamp_in_days(7);
+        context.set_block_timestamp_in_days(8);
         assert_eq!(interest_for_one_day, context.interest(&alice, &product.id));
 
         context.set_block_timestamp_in_days(50);
@@ -237,8 +88,10 @@ mod score_tests {
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar.clone())])
             .with_latest_account(&bob, &[(product.id.clone(), jar.clone())]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
-        context.contract().get_account_mut(&bob).score = AccountScore::new(Timezone::hour_shift(0));
+        context.contract().get_account_mut(&alice).score = AccountScore::default();
+        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
+        context.contract().get_account_mut(&bob).score = AccountScore::default();
+        context.contract().get_account_mut(&bob).timezone = Timezone::hour_shift(0);
 
         for i in 0..=10 {
             context.set_block_timestamp_in_days(i);
@@ -272,6 +125,9 @@ mod score_tests {
         // All jars were closed and deleted after full withdraw and claim
         assert!(context.contract().get_jars_for_account(alice.clone()).is_empty());
         assert!(context.contract().get_jars_for_account(bob.clone()).is_empty());
+
+        assert!(context.contract().get_jars_for_account_detailed(&alice).is_empty());
+        assert!(context.contract().get_jars_for_account_detailed(&bob).is_empty());
     }
 
     #[rstest]
@@ -288,7 +144,8 @@ mod score_tests {
         let mut context = Context::new(admin)
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        context.contract().get_account_mut(&alice).score = AccountScore::new(Timezone::hour_shift(0));
+        context.contract().get_account_mut(&alice).score = AccountScore::default();
+        context.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(0);
 
         for day in 0..=term_in_days {
             context.set_block_timestamp_in_days(day);
@@ -304,61 +161,39 @@ mod score_tests {
                 context.contract().accounts = LookupMap::new(StorageKey::Accounts);
             }
 
-            // Normal claim. Score should change:
+            // Normal claim. Score shouldn't change:
             if day == 4 {
-                assert_eq!(context.score(&alice).scores(), (500, 1000));
+                assert_eq!(context.score(&alice).scores(), (500, 1500));
                 assert_ne!(context.claim_total(&alice), 0);
-                assert_eq!(context.score(&alice).scores(), (500, 0));
+                assert_eq!(context.score(&alice).scores(), (500, 1500));
             }
 
             // Failed claim. Score should stay the same:
             if day == 8 {
                 test_env_ext::set_test_future_success(false);
-                assert_eq!(context.score(&alice).scores(), (500, 1000));
+                assert_eq!(context.score(&alice).scores(), (500, 1500));
                 assert_eq!(context.claim_total(&alice), 0);
-                assert_eq!(context.score(&alice).scores(), (500, 1000));
+                assert_eq!(context.score(&alice).scores(), (500, 1500));
             }
         }
     }
 
     #[rstest]
-    fn timestamps(admin: AccountId, alice: AccountId, #[from(product_10_days_20_cap_score_based)] product: Product) {
-        const BASE_TIME: Timestamp = 1_729_692_817_027;
-        const TEST_TIME: Timestamp = 1_729_694_971_000;
+    #[should_panic(expected = "Timezone is not set for account 'alice.near'")]
+    fn test_score_recording_before_before_tizone_is_set(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_10_days_20_cap_score_based)] product: Product,
+        #[with(vec![(0, 100)])] jar: Jar,
+    ) {
+        let mut context = Context::new(admin.clone())
+            .with_products(&[product.clone()])
+            .with_latest_account(&alice, &[(product.id.clone(), jar)]);
 
-        test_env_ext::set_test_log_events(false);
-
-        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
-
-        ctx.set_block_timestamp_in_ms(BASE_TIME);
-        ctx.switch_account(admin);
-        ctx.contract().deposit(
-            alice.clone(),
-            DepositTicket {
-                product_id: product.id.clone(),
-                valid_until: (BASE_TIME + MS_IN_YEAR).into(),
-                timezone: Some(Timezone::hour_shift(4)),
-            },
-            100_000_000.to_otto(),
-            None,
-        ); // Wed Oct 23 2024 14:13:37
-
-        ctx.set_block_timestamp_in_ms(TEST_TIME);
-        ctx.record_score(&alice, UTC(1_729_592_064_000), 8245);
-
-        assert_eq!(
-            22_589_041_095_890_410_958_904,
-            ctx.contract().get_total_interest(alice.clone()).amount.total.0
-        );
-
-        for i in 0..100 {
-            ctx.set_block_timestamp_in_ms(TEST_TIME + MS_IN_HOUR * i);
-
-            assert_eq!(
-                22_589_041_095_890_410_958_904,
-                ctx.contract().get_total_interest(alice.clone()).amount.total.0
-            );
-        }
+        context.switch_account_to_operator();
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(0, 10_000.into())])]);
     }
 
     #[rstest]
@@ -374,7 +209,7 @@ mod score_tests {
         let mut ctx = Context::new(admin.clone())
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(4);
+        ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(4);
 
         let check_score_interest = |ctx: &Context, val: u128| {
             assert_eq!(ctx.contract().get_score(alice.clone()), Some(U128(val)));
@@ -424,7 +259,7 @@ mod score_tests {
         let mut ctx = Context::new(admin.clone())
             .with_products(&[product.clone()])
             .with_latest_account(&alice, &[(product.id.clone(), jar)]);
-        ctx.contract().get_account_mut(&alice).score.timezone = Timezone::hour_shift(4);
+        ctx.contract().get_account_mut(&alice).timezone = Timezone::hour_shift(4);
 
         ctx.record_score(&alice, UTC(0), 25000);
         ctx.record_score(&alice, UTC(0), 25000);
@@ -446,86 +281,583 @@ mod score_tests {
 
         let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
 
+        let ticket = DepositTicket {
+            product_id: product.id.clone(),
+            valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
+            timezone: Some(Timezone::hour_shift(0)),
+        };
+
         ctx.switch_account(admin.clone());
         ctx.set_block_timestamp_in_ms(1_732_653_318_018 - MS_IN_DAY);
-        ctx.contract().deposit(
-            alice.clone(),
-            DepositTicket {
-                product_id: product.id.clone(),
-                valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
-                timezone: Some(Timezone::hour_shift(0)),
-            },
-            0,
-            None,
-        );
+        ctx.contract().deposit(alice.clone(), ticket.clone(), 0, None);
 
         ctx.set_block_timestamp_in_ms(1_732_653_318_018);
         ctx.contract()
             .record_score(vec![(alice.clone(), vec![(15100, 1_732_653_318_018.into())])]);
 
         ctx.set_block_timestamp_in_ms(1_733_139_450_015);
-        ctx.contract().deposit(
-            alice.clone(),
-            DepositTicket {
-                product_id: product.id.clone(),
-                valid_until: (1_733_139_450_015 + MS_IN_YEAR).into(),
-                timezone: None,
-            },
-            100_000_000.to_otto(),
-            None,
-        );
+        ctx.contract()
+            .deposit(alice.clone(), ticket, 100_000_000.to_otto(), None);
 
         ctx.set_block_timestamp_in_ms(1_733_140_384_365); // Mon Dec 02 2024 11:53:04
 
         assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
     }
+
+    #[rstest]
+    fn record_multiple_scores_exceeding_cap_for_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract().get_or_create_account_mut(&alice).deposit(
+            &product.id,
+            365_000_000_000_000_000_000,
+            star_time.into(),
+        );
+        ctx.contract()
+            .get_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        let record_timestamp = star_time - 5 * MS_IN_HOUR;
+
+        // STEP 1: record score_1: score_1 < score_cap
+        {
+            ctx.switch_account_to_operator();
+            ctx.contract()
+                .record_score(vec![(alice.clone(), vec![(15_000, record_timestamp.into())])]);
+
+            ctx.set_block_timestamp_in_ms(star_time + MS_IN_DAY / 2);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(75_000_000_000_000_000, ctx.claim_total(&alice));
+            assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
+        }
+
+        // STEP 2: record score_2: (score_1 + score_2) > score_cap
+        {
+            ctx.switch_account_to_operator();
+            ctx.contract()
+                .record_score(vec![(alice.clone(), vec![(15_000, record_timestamp.into())])]);
+
+            assert_eq!(0, ctx.contract().get_total_interest(alice.clone()).amount.total.0);
+
+            ctx.set_block_timestamp_in_ms(star_time + MS_IN_DAY);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(90_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+    }
+
+    #[rstest]
+    fn record_multiple_scores_exceeding_cap_for_tiered_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract().get_or_create_account_mut(&alice).deposit(
+            &product.id,
+            365_000_000_000_000_000_000,
+            star_time.into(),
+        );
+        ctx.contract()
+            .get_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        let recording_time = star_time - 5 * MS_IN_HOUR;
+
+        // STEP 1: record score_1: score_1 < score_cap
+        {
+            ctx.switch_account_to_operator();
+            ctx.contract()
+                .record_score(vec![(alice.clone(), vec![(7_000, recording_time.into())])]);
+
+            ctx.set_block_timestamp_in_ms(star_time + 12 * MS_IN_HOUR);
+            ctx.switch_account(alice.clone());
+            assert_eq!(35_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+
+        // STEP 2: record score_2: (score_1 + score_2) > score_cap
+        {
+            ctx.switch_account_to_operator();
+            ctx.contract()
+                .record_score(vec![(alice.clone(), vec![(5_000, recording_time.into())])]);
+
+            ctx.set_block_timestamp_in_ms(star_time + 24 * MS_IN_HOUR);
+            ctx.switch_account(alice.clone());
+            assert_eq!(50_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+    }
+
+    #[rstest]
+    fn apply_finalized_to_new_deposit_after_claim_from_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 365_000_000_000_000_000_000, star_time.into());
+
+        let mut action_time = star_time + MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 1: record score and claim
+        {
+            ctx.switch_account_to_operator();
+            ctx.contract().record_score(vec![(
+                alice.clone(),
+                vec![(5_000, (action_time - 5 * MS_IN_HOUR).into())],
+            )]);
+
+            action_time += 6 * MS_IN_HOUR;
+            ctx.set_block_timestamp_in_ms(action_time);
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(12_500_000_000_000_000, ctx.claim_total(&alice));
+        }
+
+        action_time += MS_IN_HOUR;
+        ctx.set_block_timestamp_in_ms(action_time);
+
+        // STEP 2: new deposit and claim
+        {
+            ctx.contract().get_account_mut(&alice).deposit(
+                &product.id,
+                365_000_000_000_000_000_000,
+                action_time.into(),
+            );
+
+            ctx.switch_account(alice.clone());
+            assert_eq!(2_083_333_333_333_333, ctx.claim_total(&alice));
+        }
+    }
+
+    #[rstest]
+    fn apply_finalized_to_new_deposit_after_claim_from_tiered_score_based_product(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 365_000_000_000_000_000_000, start_time.into());
+
+        let recording_time = start_time - 5 * MS_IN_HOUR;
+
+        // STEP 1: record score and claim
+        {
+            ctx.switch_account_to_operator();
+            ctx.contract()
+                .record_score(vec![(alice.clone(), vec![(5_000, recording_time.into())])]);
+            ctx.contract()
+                .apply_booster(vec![alice.clone()], 30_000, recording_time.into());
+
+            ctx.set_block_timestamp_in_ms(start_time + 12 * MS_IN_HOUR);
+            ctx.switch_account(alice.clone());
+            assert_eq!(175_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+
+        // STEP 2: new deposit and claim
+        {
+            ctx.contract().get_account_mut(&alice).deposit(
+                &product.id,
+                365_000_000_000_000_000_000,
+                (start_time + 12 * MS_IN_HOUR).into(),
+            );
+
+            ctx.set_block_timestamp_in_ms(start_time + 24 * MS_IN_HOUR);
+            ctx.switch_account(alice.clone());
+            assert_eq!(350_000_000_000_000_000, ctx.claim_total(&alice));
+        }
+    }
+
+    /// Tests that settle_interest correctly adds (not multiplies) remainder values.
+    /// This catches mutation: replace + with * in `let remainder = jar.claim_remainder + remainder`
+    #[rstest]
+    fn settle_interest_accumulates_remainder_correctly(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = MS_IN_DAY * 100;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        // Small deposit to generate non-trivial remainders
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 1_000_000, start_time.into());
+
+        // Record score for day 0
+        ctx.switch_account_to_operator();
+        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move to day 1 and claim - this will set claim_remainder
+        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
+        let first_claim = ctx.claim_total(&alice);
+
+        let remainder_after_first_claim = ctx.contract().get_account(&alice).get_jar(&product.id).claim_remainder;
+
+        // Record score for day 1
+        ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move to day 2 - settle_interest will be called during claim
+        // At this point: claim_remainder = remainder_after_first_claim (non-zero)
+        // and new remainder will be calculated from get_settled_interest
+        ctx.set_block_timestamp_in_ms(start_time + 2 * MS_IN_DAY);
+
+        // Directly test settle_interest accumulation
+        ctx.contract().settle_interest(&alice);
+
+        // After settle_interest, the remainder should be: old_remainder + new_remainder
+        // If multiplication was used, it would be: old_remainder * new_remainder (different value)
+        let remainder_after_settle = ctx.contract().get_account(&alice).get_jar(&product.id).claim_remainder;
+
+        // The remainder should have accumulated (added), not multiplied
+        // With same conditions each day, remainder should roughly double (addition)
+        // With multiplication: if both are ~X, then X*X >> X+X which would overflow u64
+
+        // First, verify we have non-zero remainder to test with
+        assert!(
+            remainder_after_first_claim > 0,
+            "Test setup error: first claim should produce non-zero remainder"
+        );
+
+        // With addition: result ≈ 2 * remainder_after_first_claim
+        // With multiplication: result would overflow or be wildly different
+        // We check that the result is close to 2x (within 50% margin)
+        let expected_sum = remainder_after_first_claim * 2;
+        assert!(
+            remainder_after_settle >= expected_sum / 2 && remainder_after_settle <= expected_sum * 2,
+            "Remainder should accumulate via addition, not multiplication. \
+             First remainder: {}, After settle: {}, Expected ~{}",
+            remainder_after_first_claim,
+            remainder_after_settle,
+            expected_sum
+        );
+
+        let second_claim = ctx.claim_total(&alice);
+
+        // Both claims should be roughly equal (same score, same duration)
+        assert!(first_claim > 0, "First claim should be non-zero");
+        assert!(second_claim > 0, "Second claim should be non-zero");
+        // The claims should be approximately equal (within 1 unit due to remainder accumulation)
+        assert!(
+            (first_claim as i128 - second_claim as i128).abs() <= 1,
+            "Claims should be approximately equal: first={}, second={}",
+            first_claim,
+            second_claim
+        );
+    }
+
+    /// Tests that get_settled_interest correctly calculates day offsets using multiplication.
+    /// This catches mutation: replace * with / in `(i as u64) * ms_in_day()`
+    ///
+    /// Key insight: With `/`, the mutation causes `i / ms_in_day() = 0` for all reasonable i values,
+    /// so all loop iterations use the SAME day_start. This causes duplicate interest calculation
+    /// for one day instead of calculating interest for different days.
+    ///
+    /// IMPORTANT: The code uses `adjust_relative()` which shifts timestamps back by 1 day.
+    /// So a deposit at day 1 + 12h has deposit_created_at_relative = day 0 + 12h.
+    ///
+    /// To catch this mutation, we create deposit at day 1 + 12h so that (after adjust_relative):
+    /// - With `*`: day 0 gets 12h interest, day 1 gets 24h interest → ~1.5 days total
+    /// - With `/`: both iterations calculate for day 1 (24h each) → ~2 days total (WRONG)
+    #[rstest]
+    fn get_settled_interest_calculates_multiple_days_correctly(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        // Day 0 starts at this time
+        let day0_start = MS_IN_DAY * 100;
+        let day1_start = day0_start + MS_IN_DAY;
+
+        // Record score for day 0 first (need to do this before deposit for timezone setup)
+        ctx.set_block_timestamp_in_ms(day0_start + 6 * MS_IN_HOUR);
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        ctx.switch_account_to_operator();
+        ctx.record_score(&alice, (day0_start + 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Create deposit at MID-DAY of day 1 (12 hours into day 1)
+        // After adjust_relative (-1 day), this becomes day 0 + 12h
+        // This means:
+        // - Day 0 period: deposit_created_at_relative = day0 + 12h, so term = 12h (partial)
+        // - Day 1 period: deposit_created_at_relative = day0 + 12h < day1 start, so term = 24h (full)
+        let deposit_time = day1_start + 12 * MS_IN_HOUR;
+        ctx.set_block_timestamp_in_ms(deposit_time);
+
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 365_000_000_000_000_000_000, deposit_time.into());
+
+        // Move to day 1 + 18h and record score for day 1
+        ctx.set_block_timestamp_in_ms(day1_start + 18 * MS_IN_HOUR);
+        ctx.record_score(&alice, (day1_start + 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move forward to day 4 (more than 1 day since last score update triggers Greater branch)
+        ctx.set_block_timestamp_in_ms(day0_start + 4 * MS_IN_DAY);
+
+        let interest = ctx.interest(&alice, &product.id);
+
+        // With 10k score = 10% APY, 365_000 SWEAT deposit:
+        // - Day 0: deposit_created_at_relative = day0+12h, so 12h interest → 50 SWEAT
+        // - Day 1: deposit_created_at_relative < day1 start, so full 24h → 100 SWEAT
+        // - Total with correct `*`: ~150 SWEAT (1.5 days)
+        //
+        // With mutation `/`:
+        // - Both iterations use day 1's time range (day_start = day1 for both i=0 and i=1)
+        // - For both: deposit_created_at_relative = day0+12h < day1 start
+        // - Each calculates full 24 hours → 100 SWEAT each
+        // - Total: ~200 SWEAT (2 days - WRONG, duplicate!)
+        //
+        // We check that interest is around 150 SWEAT, NOT 200 SWEAT
+        let expected_interest = 150_000_000_000_000_000u128; // ~150 SWEAT
+
+        assert!(
+            interest >= expected_interest - 20_000_000_000_000_000
+                && interest <= expected_interest + 20_000_000_000_000_000,
+            "Interest should be ~150 SWEAT (1.5 days: 12h day 0 + 24h day 1). Got: {}. \
+             If this is ~200 SWEAT, the day calculation is using `/` instead of `*`, \
+             causing duplicate calculation for day 1.",
+            interest
+        );
+    }
+
+    /// Tests that interest from multiple deposits is summed (not multiplied) in fold.
+    /// This catches mutation: replace + with * in `(acc.0 + interest, acc.1 + remainder)`
+    #[rstest]
+    fn get_settled_interest_sums_multiple_deposits(
+        admin: AccountId,
+        alice: AccountId,
+        bob: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = MS_IN_DAY * 100;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        // Setup Alice with two separate deposits
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        let deposit_amount = 365_000_000_000_000_000_000u128;
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, deposit_amount, start_time.into());
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, deposit_amount, start_time.into());
+
+        // Setup Bob with single deposit of double amount
+        ctx.contract()
+            .get_or_create_account_mut(&bob)
+            .try_set_timezone(Timezone::new(0).into());
+
+        ctx.contract()
+            .get_account_mut(&bob)
+            .deposit(&product.id, deposit_amount * 2, start_time.into());
+
+        // Record same score for both
+        ctx.switch_account_to_operator();
+        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+        ctx.record_score(&bob, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move to next day and compare interest
+        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
+        let interest_two_deposits = ctx.interest(&alice, &product.id);
+        let interest_single_deposit = ctx.interest(&bob, &product.id);
+
+        // CRITICAL: Interest must be non-zero!
+        // If multiplication was used in fold (0 * interest = 0), all interest would be 0.
+        // With 10k score = 10% APY, 365_000 SWEAT * 2 deposits * 10% / 365 = ~200 SWEAT
+        assert!(
+            interest_two_deposits >= 180_000_000_000_000_000,
+            "Interest from two deposits should be ~200 SWEAT (non-zero). Got: {}. \
+             If this is 0, the fold is using multiplication instead of addition.",
+            interest_two_deposits
+        );
+
+        // Two deposits should produce the same interest as one deposit of double amount
+        assert_eq!(
+            interest_two_deposits, interest_single_deposit,
+            "Interest from two deposits ({}) should equal interest from single double deposit ({})",
+            interest_two_deposits, interest_single_deposit
+        );
+    }
+
+    /// Tests that remainders are accumulated (added, not multiplied) across multiple score days.
+    /// This catches mutation: replace += with *= in `current_increment.1 += increment.1`
+    #[rstest]
+    fn get_settled_interest_accumulates_remainder_across_days(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let start_time = MS_IN_DAY * 100;
+        ctx.set_block_timestamp_in_ms(start_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+
+        // Small deposit that generates non-trivial remainders
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 7_000_000, start_time.into());
+
+        // Record scores for two days
+        ctx.switch_account_to_operator();
+        ctx.record_score(&alice, (start_time - 6 * MS_IN_HOUR).into(), 10_000);
+        ctx.set_block_timestamp_in_ms(start_time + MS_IN_DAY);
+        ctx.record_score(&alice, (start_time + MS_IN_DAY - 6 * MS_IN_HOUR).into(), 10_000);
+
+        // Move forward 3+ days to trigger Greater branch (processes multiple days)
+        ctx.set_block_timestamp_in_ms(start_time + 4 * MS_IN_DAY);
+
+        // Directly call get_settled_interest to verify remainder accumulation
+        let settled = ctx.contract().get_settled_interest(&alice);
+        let (interest, remainder) = settled.get(&product.id).expect("Should have interest for product");
+
+        // With multiplication instead of addition, remainder would be 0 (0 * X = 0)
+        // With addition, remainder should be the sum of remainders from both days
+        assert!(
+            *remainder > 0,
+            "Remainder should be non-zero (sum of remainders from multiple days). Got: {}. \
+             If this is 0, the accumulation is using multiplication instead of addition.",
+            remainder
+        );
+
+        // Interest should also be non-zero
+        // The interest depends on how many days of score history are processed
+        assert!(
+            *interest > 0,
+            "Interest should be non-zero. Got: {}. \
+             If this is 0, the fold accumulation is using multiplication instead of addition.",
+            interest
+        );
+    }
 }
 
 mod account_score_tests {
     use near_sdk::env::block_timestamp_ms;
-    use sweat_jar_model::{data::account::Account, Chain, Day};
+    use sweat_jar_model::{
+        convert_to_days_offset,
+        data::account::{features::Feature, versioned::AccountVersioned, Account},
+        DailyScore, ScoreIncrementProcessor, ScoreIncrements,
+    };
+    use sweat_jar_primitives::UDecimal;
 
     use super::*;
-    use crate::feature::account::model::AccountScoreUpdate;
 
     const TIMEZONE: Timezone = Timezone::hour_shift(3);
     const TODAY: u64 = 1_722_234_632_000;
 
     #[fixture]
-    fn chain() -> Chain {
-        let today: Day = TODAY.into();
+    fn increments() -> ScoreIncrements {
+        let today: UTC = TODAY.into();
 
         vec![
             (1_000, today),
-            (1_000, today - (MS_IN_HOUR * 3).into()),
-            (1_000, today - (MS_IN_HOUR * 12).into()),
-            (1_000, today - (MS_IN_HOUR * 25).into()),
-            (1_000, today - (MS_IN_HOUR * 28).into()),
-            (1_000, today - (MS_IN_HOUR * 40).into()),
-            (1_000, today - (MS_IN_HOUR * 45).into()),
-            (1_000, today - (MS_IN_HOUR * 48).into()),
-            (1_000, today - (MS_IN_HOUR * 55).into()),
-            (1_000, today - (MS_IN_HOUR * 550).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 3)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 12)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 25)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 28)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 40)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 45)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 48)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 55)).into()),
+            (1_000, (today.0 - (MS_IN_HOUR * 550)).into()),
         ]
     }
+
     #[fixture]
     fn context(admin: AccountId) -> Context {
         Context::new(admin)
+    }
+
+    #[fixture]
+    fn daily_score(#[default(0)] value: Score, #[default(0)] booster: Score) -> DailyScore {
+        DailyScore { value, booster }
     }
 
     #[rstest]
     fn test_account_score(
         mut context: Context,
         #[from(product_10_days_20_cap_score_based)] product: Product,
-        chain: Chain,
+        increments: ScoreIncrements,
     ) {
         let mut now = TODAY;
         context.set_block_timestamp_in_ms(now);
 
-        let mut score = AccountScore::new(TIMEZONE);
-        score.update(chain);
-        let mut account = Account {
+        let segmented_increments = ScoreIncrementProcessor::new(&increments, TIMEZONE).process();
+        let normalized_increments = convert_to_days_offset(segmented_increments.valid, TIMEZONE);
+
+        let mut score = AccountScore::default();
+        score.update(normalized_increments);
+
+        let account = Account {
             score,
+            timezone: TIMEZONE,
             ..Account::default()
         };
 
@@ -533,90 +865,238 @@ mod account_score_tests {
 
         now += MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
-        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
+        assert_eq!(0.02, product.terms.get_apy(&account).to_f32());
 
         now += MS_IN_DAY;
         context.set_block_timestamp_in_ms(now);
-        assert_eq!(0.05, product.terms.get_apy(&account).to_f32());
-
-        assert_eq!(vec![2000, 3000], account.score.reset_score().score);
-        assert_eq!(0.00, product.terms.get_apy(&account).to_f32());
+        assert_eq!(0.0, product.terms.get_apy(&account).to_f32());
     }
 
     #[rstest]
-    #[should_panic(expected = "Walk data from future")]
+    #[should_panic(expected = "Timestamp from future: Local(1722331832000). Now: Local(1722245432000)")]
     fn steps_from_future(mut context: Context) {
         context.set_block_timestamp_in_ms(TODAY);
 
-        let mut account_score = AccountScore::new(TIMEZONE);
-        account_score.update(vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())]);
+        let increments = vec![(1_000, (block_timestamp_ms() + MS_IN_DAY).into())];
+        let segmented_increments = ScoreIncrementProcessor::new(&increments, TIMEZONE).process();
+        let normalized_increments = convert_to_days_offset(segmented_increments.valid, TIMEZONE);
+
+        let mut account_score = AccountScore::default();
+        account_score.update(normalized_increments);
     }
 
     #[rstest]
     fn updated_on_different_days(mut context: Context) {
-        let mut score = AccountScore {
-            updated: UTC(MS_IN_DAY * 10),
-            timezone: Timezone::hour_shift(0),
-            scores: [1000, 2000],
-            scores_history: [1000, 2000],
-        };
+        let timezone = Timezone::hour_shift(0);
+        let mut score = AccountScore::new(UTC(MS_IN_DAY * 10), [DailyScore::new(1000), DailyScore::new(2000)]);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
-        score.update(vec![(6, (MS_IN_DAY * 10).into()), (5, (MS_IN_DAY * 9).into())]);
+        let increments = vec![(6, (MS_IN_DAY * 10).into()), (5, (MS_IN_DAY * 9).into())];
+        let segmented_increments = ScoreIncrementProcessor::new(&increments, timezone).process();
+        let normalized_increments = convert_to_days_offset(segmented_increments.valid.clone(), timezone);
+        score.update(normalized_increments);
 
-        assert_eq!(score.updated, (MS_IN_DAY * 10).into());
+        assert_eq!(score.updated_at(), MS_IN_DAY * 10);
         assert_eq!(score.scores(), (1006, 2005));
-        assert_eq!(score.reset_score().score, vec![2005]);
-        assert_eq!(score.active_score(), 2005);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 2005);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 11);
-        assert_eq!(score.reset_score().score, vec![1006, 0]);
-        assert_eq!(score.active_score(), 1006);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 1006);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 12);
-        assert_eq!(score.reset_score().score, vec![0, 0]);
-        assert_eq!(score.active_score(), 0);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 0);
     }
 
     #[rstest]
     fn active_score(mut context: Context) {
-        let score = AccountScore {
-            updated: UTC(MS_IN_DAY * 10),
-            timezone: Timezone::hour_shift(0),
-            scores: [1000, 2000],
-            scores_history: [1000, 2000],
-        };
+        let timezone = Timezone::hour_shift(0);
+        let score = AccountScore::new(UTC(MS_IN_DAY * 10), [DailyScore::new(1000), DailyScore::new(2000)]);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 10);
 
-        assert_eq!(score.active_score(), 2000);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 2000);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 11);
 
-        assert_eq!(score.active_score(), 1000);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 1000);
 
         context.set_block_timestamp_in_ms(MS_IN_DAY * 12);
 
-        assert_eq!(score.active_score(), 0);
+        assert_eq!(score.get_last_finalized_record(timezone).value, 0);
+    }
+
+    #[rstest]
+    fn claim_from_tiered_score_jar_with_increased_cap_fearure(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        context.switch_account_to_operator();
+
+        context
+            .contract()
+            .accounts
+            .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+        context
+            .contract()
+            .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
+        context.contract().set_timezone(alice.clone(), 0.into());
+        context.contract().deposit(
+            alice.clone(),
+            DepositTicket {
+                product_id: product.id.clone(),
+                valid_until: MS_IN_YEAR.into(),
+                timezone: Some(Timezone::hour_shift(0)),
+            },
+            365_000.to_otto(),
+            None,
+        );
+
+        context.set_block_timestamp_in_ms(0);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(25_000, 0.into())])]);
+
+        context.set_block_timestamp_in_ms(MS_IN_DAY);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(30_000, MS_IN_DAY.into())])]);
+
+        context.set_block_timestamp_in_ms(3 * MS_IN_DAY);
+        let interest = context.contract().get_total_interest(alice.clone());
+        assert_eq!(400.to_otto(), interest.amount.total.0);
+    }
+
+    #[rstest]
+    fn claim_from_tiered_score_jar_with_increased_cap_fearure_disabled_later(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(tiered_score_based_product)] product: Product,
+    ) {
+        let mut context = Context::new(admin.clone()).with_products(&[product.clone()]);
+        context.switch_account_to_operator();
+
+        context
+            .contract()
+            .accounts
+            .set(alice.clone(), AccountVersioned::new(Account::default()).into());
+        context
+            .contract()
+            .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, true);
+        context.contract().set_timezone(alice.clone(), 0.into());
+        context.contract().deposit(
+            alice.clone(),
+            DepositTicket {
+                product_id: product.id.clone(),
+                valid_until: MS_IN_YEAR.into(),
+                timezone: Some(Timezone::hour_shift(0)),
+            },
+            365_000.to_otto(),
+            None,
+        );
+
+        context.set_block_timestamp_in_ms(0);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(25_000, 0.into())])]);
+
+        context.set_block_timestamp_in_ms(2 * MS_IN_DAY);
+        context
+            .contract()
+            .set_feature_enabled(alice.clone(), Feature::IncreasedScoreCap, false);
+        context
+            .contract()
+            .record_score(vec![(alice.clone(), vec![(30_000, MS_IN_DAY.into())])]);
+
+        context.set_block_timestamp_in_ms(3 * MS_IN_DAY);
+        let interest = context.contract().get_total_interest(alice.clone());
+        assert_eq!(300.to_otto(), interest.amount.total.0);
+    }
+
+    #[rstest]
+    fn continuous_claim_from_score_based_jar(
+        admin: AccountId,
+        alice: AccountId,
+        #[from(product_7_days_18_cap_score_based)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let mut ctx = Context::new(admin.clone()).with_products(&[product.clone()]);
+
+        let star_time = 1_761_955_200_000;
+        ctx.set_block_timestamp_in_ms(star_time);
+
+        ctx.contract()
+            .get_or_create_account_mut(&alice)
+            .try_set_timezone(Timezone::new(0).into());
+        ctx.contract()
+            .get_account_mut(&alice)
+            .deposit(&product.id, 365_000_000_000_000_000_000, star_time.into());
+
+        {
+            ctx.switch_account_to_operator();
+            ctx.record_score(&alice, (star_time - 6 * MS_IN_HOUR).into(), 10_000);
+
+            ctx.set_block_timestamp_in_ms(star_time + 2 * MS_IN_HOUR);
+            assert_eq!(8_333_333_333_333_333, ctx.interest(&alice, &product.id));
+
+            ctx.set_block_timestamp_in_ms(star_time + 6 * MS_IN_HOUR);
+            assert_eq!(25_000_000_000_000_000, ctx.interest(&alice, &product.id));
+
+            ctx.set_block_timestamp_in_ms(star_time + 12 * MS_IN_HOUR);
+            assert_eq!(50_000_000_000_000_000, ctx.interest(&alice, &product.id));
+        }
+
+        let claimed_amount = ctx.claim_total(&alice);
+        assert_eq!(50_000_000_000_000_000, claimed_amount);
+
+        assert_eq!(0, ctx.interest(&alice, &product.id));
+
+        {
+            ctx.set_block_timestamp_in_ms(star_time + 14 * MS_IN_HOUR);
+            assert_eq!(8_333_333_333_333_333, ctx.interest(&alice, &product.id));
+
+            ctx.set_block_timestamp_in_ms(star_time + 18 * MS_IN_HOUR);
+            assert_eq!(25_000_000_000_000_000, ctx.interest(&alice, &product.id));
+
+            ctx.set_block_timestamp_in_ms(star_time + 24 * MS_IN_HOUR);
+            assert_eq!(50_000_000_000_000_000, ctx.interest(&alice, &product.id));
+        }
+    }
+
+    #[rstest]
+    fn when_include_booster_then_return_compound_capped_apy(#[with(20_000, 5_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(25_000, 5), daily_score.to_capped_apy(30_000, true));
+        assert_eq!(UDecimal::new(6_000, 5), daily_score.to_capped_apy(1_000, true));
+    }
+
+    #[rstest]
+    fn when_exclude_booster_then_return_score_capped_apy(#[with(20_000, 5_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(20_000, 5), daily_score.to_capped_apy(30_000, false));
+        assert_eq!(UDecimal::new(1_000, 5), daily_score.to_capped_apy(1_000, false));
+    }
+
+    #[rstest]
+    fn when_compound_apy_exceeds_type_bounds_shouldnt_fail(#[with(65_000, 20_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(85_000, 5), daily_score.to_capped_apy(Score::MAX, true));
+    }
+
+    #[rstest]
+    fn when_compound_apy_exceeds_max_value_it_gets_capped(#[with(65_000, 50_000)] daily_score: DailyScore) {
+        assert_eq!(UDecimal::new(100_000, 5), daily_score.to_capped_apy(Score::MAX, true));
     }
 }
 
 impl Context {
     pub(crate) fn interest(&self, account_id: &AccountId, product_id: &ProductId) -> TokenAmount {
-        let contract = self.contract();
-        let product = &contract.get_product(product_id);
-        let account = contract.get_account(account_id);
-        let jar = account.get_jar(product_id);
-
-        product.terms.get_interest(account, jar, self.now()).0
-    }
-
-    fn jar(&self, account_id: &AccountId, product_id: &ProductId) -> Jar {
-        let contract = self.contract();
-        let account = contract.get_account(account_id);
-
-        account.get_jar(product_id).clone()
+        self.contract()
+            .get_total_interest(account_id.clone())
+            .amount
+            .detailed
+            .get(product_id)
+            .map_or(0, |value| value.0)
     }
 
     pub(crate) fn claim_total(&mut self, account_id: &AccountId) -> TokenAmount {
@@ -648,39 +1128,5 @@ impl Context {
 
     pub(crate) fn score(&self, account_id: &AccountId) -> AccountScore {
         self.contract().get_account(account_id).score
-    }
-
-    fn deposit(&mut self, account_id: &AccountId, product_id: &ProductId, amount: TokenAmount) {
-        self.deposit_internal(account_id, product_id, amount, None);
-    }
-
-    fn deposit_with_timezone(
-        &mut self,
-        account_id: &AccountId,
-        product_id: &ProductId,
-        amount: TokenAmount,
-        timezone: Timezone,
-    ) {
-        self.deposit_internal(account_id, product_id, amount, Some(timezone));
-    }
-
-    fn deposit_internal(
-        &mut self,
-        account_id: &AccountId,
-        product_id: &ProductId,
-        amount: TokenAmount,
-        timezone: Option<Timezone>,
-    ) {
-        self.switch_account(admin());
-        self.contract().deposit(
-            account_id.clone(),
-            DepositTicket {
-                product_id: product_id.clone(),
-                valid_until: (self.now() + MS_IN_YEAR).into(),
-                timezone,
-            },
-            amount,
-            None,
-        );
     }
 }
