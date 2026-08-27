@@ -165,11 +165,13 @@ impl AccountScore {
 
     pub fn wipe(&mut self) {
         self.history = [DailyScore::default(); DAYS_STORED];
+        self.updated_at = block_timestamp_ms().into();
     }
 
     pub fn shift(&mut self) {
         self.history.copy_within(0..DAYS_STORED - 1, 1);
         self.history[0] = DailyScore::default();
+        self.updated_at = block_timestamp_ms().into();
     }
 
     #[allow(clippy::unused_self)]
