@@ -2,7 +2,7 @@
   "schema_version": "0.4.0",
   "metadata": {
     "name": "sweat_jar",
-    "version": "4.2.2",
+    "version": "4.2.3",
     "authors": [
       "Sweat Economy"
     ],
@@ -10,7 +10,7 @@
       "compiler": "rustc 1.93.1",
       "builder": "cargo-near cargo-near-build 0.11.3"
     },
-    "wasm_hash": "23pH8vndmAW5RSHUo2FQ8K7jbnjH8ZUHHBeSqCkREEmC"
+    "wasm_hash": "FyUMGPYGdN4t8TTEtqTsejcZk4QrpEstLH5Ar6t6Ni5k"
   },
   "body": {
     "functions": [
