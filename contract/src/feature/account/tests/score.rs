@@ -1087,6 +1087,260 @@ mod account_score_tests {
     fn when_compound_apy_exceeds_max_value_it_gets_capped(#[with(65_000, 50_000)] daily_score: DailyScore) {
         assert_eq!(UDecimal::new(100_000, 5), daily_score.to_capped_apy(Score::MAX, true));
     }
+
+    /// Reproduces the step-jar interest-destruction bug reported for the legacy
+    /// step jar (tickets from Mar-2026 onwards).
+    ///
+    /// Two identical score-based accounts: same principal, same daily score,
+    /// same total elapsed time. The ONLY difference is the intra-day ordering of
+    /// `record_score` vs `claim_total`:
+    ///   * `healthy` — the oracle records first, then the user claims
+    ///     (this is the "Aug 2" ordering that paid full yield);
+    ///   * `racing`  — the user claims first, then the oracle records
+    ///     (the ticket account, which claims ~04:30 before the ~06:00 batch).
+    ///
+    /// Claim ordering must not change the total interest paid. Today it does:
+    /// `racing` receives roughly an order of magnitude less, because each early
+    /// claim runs `settle_interest` -> `score.shift()` while leaving
+    /// `score.updated_at` on the previous day (`shift()`/`wipe()` never stamp
+    /// it), so the following `record_score` sees `days_since_last_update == 1`
+    /// again and shifts the window a SECOND time — the finalized day falls out
+    /// of the 2-day buffer before it is ever settled. Fixed by stamping
+    /// `updated_at` in `AccountScore::shift()` / `wipe()`, as the pre-v4.1.0
+    /// `reset_score()` did.
+    #[rstest]
+    fn claim_before_record_score_does_not_destroy_interest(
+        admin: AccountId,
+        #[from(product_steps_365d_20000_score_cap)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let healthy: AccountId = "healthy.near".parse().unwrap();
+        let racing: AccountId = "racing.near".parse().unwrap();
+
+        let mut ctx = Context::new(admin).with_products(&[product.clone()]);
+
+        let day0 = MS_IN_DAY * 100;
+        let principal: TokenAmount = 365_000_000_000_000_000_000; // 365_000 SWEAT
+        let score: Score = 10_000; // 10% APY, below the 20_000 cap
+
+        ctx.set_block_timestamp_in_ms(day0);
+        for acc in [&healthy, &racing] {
+            ctx.contract()
+                .get_or_create_account_mut(acc)
+                .try_set_timezone(Timezone::new(0).into());
+            ctx.contract().get_account_mut(acc).deposit(&product.id, principal, day0.into());
+        }
+
+        // Baseline: day-0 steps delivered for both accounts.
+        ctx.record_score(&healthy, day0.into(), score);
+        ctx.record_score(&racing, day0.into(), score);
+
+        let mut total_healthy: TokenAmount = 0;
+        let mut total_racing: TokenAmount = 0;
+
+        // A week of identical daily activity, differing only in call ordering.
+        for day in 1..=6u64 {
+            let start = day0 + day * MS_IN_DAY;
+
+            // healthy.near: oracle batch at 01:00, user claims at 08:00
+            ctx.set_block_timestamp_in_ms(start + MS_IN_HOUR);
+            ctx.record_score(&healthy, start.into(), score);
+            ctx.set_block_timestamp_in_ms(start + 8 * MS_IN_HOUR);
+            total_healthy += ctx.claim_total(&healthy);
+
+            // racing.near: user claims at 05:00, oracle batch at 07:00
+            ctx.set_block_timestamp_in_ms(start + 5 * MS_IN_HOUR);
+            total_racing += ctx.claim_total(&racing);
+            ctx.set_block_timestamp_in_ms(start + 7 * MS_IN_HOUR);
+            ctx.record_score(&racing, start.into(), score);
+        }
+
+        // Identical final flush so every bit of still-settleable interest is paid
+        // out to both accounts before we compare cumulative totals.
+        let flush_day = day0 + 7 * MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(flush_day + 12 * MS_IN_HOUR);
+        ctx.record_score(&healthy, flush_day.into(), score);
+        ctx.record_score(&racing, flush_day.into(), score);
+        total_healthy += ctx.claim_total(&healthy);
+        total_racing += ctx.claim_total(&racing);
+
+        // Sanity: the healthy account actually earned several days of interest.
+        assert!(
+            total_healthy > 100_000_000_000_000_000,
+            "test setup: healthy account should have earned interest, got {total_healthy}"
+        );
+
+        // The actual invariant. Allow 0.001 SWEAT of integer-division slack.
+        let slack: i128 = 1_000_000_000_000;
+        assert!(
+            (total_healthy as i128 - total_racing as i128).abs() <= slack,
+            "claim ordering changed total interest: healthy(oracle-first)={total_healthy}, \
+             racing(claim-first)={total_racing}, delta={}",
+            total_healthy as i128 - total_racing as i128,
+        );
+    }
+
+    /// Regression guard for the `Ordering::Greater` (`wipe()`) branch of
+    /// `settle_interest`: the oracle goes silent for several days, then the user
+    /// claims before the batch resumes. `healthy` lets the resumed batch land
+    /// first, `racing` claims first.
+    ///
+    /// Unlike the `shift()` branch, this path is already safe today: the
+    /// `Greater` branch of `get_settled_interest` settles BOTH window slots into
+    /// the jar cache and then `wipe()` clears the source, so a second `wipe()`
+    /// from the resumed `record_score` neither loses nor double-counts. This
+    /// test locks that behaviour in (it also passes without the `updated_at`
+    /// fix).
+    #[rstest]
+    fn claim_before_resumed_batch_after_oracle_gap_does_not_destroy_interest(
+        admin: AccountId,
+        #[from(product_steps_365d_20000_score_cap)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let healthy: AccountId = "healthy.near".parse().unwrap();
+        let racing: AccountId = "racing.near".parse().unwrap();
+
+        let mut ctx = Context::new(admin).with_products(&[product.clone()]);
+
+        let day0 = MS_IN_DAY * 100;
+        let principal: TokenAmount = 365_000_000_000_000_000_000;
+        let score: Score = 10_000;
+
+        ctx.set_block_timestamp_in_ms(day0);
+        for acc in [&healthy, &racing] {
+            ctx.contract()
+                .get_or_create_account_mut(acc)
+                .try_set_timezone(Timezone::new(0).into());
+            ctx.contract().get_account_mut(acc).deposit(&product.id, principal, day0.into());
+        }
+
+        // Day 0 steps delivered, then the oracle goes silent for days 1..=3.
+        ctx.record_score(&healthy, day0.into(), score);
+        ctx.record_score(&racing, day0.into(), score);
+
+        // Day 4: the batch resumes (> 1 day since the last update -> `wipe()`).
+        let resume = day0 + 4 * MS_IN_DAY;
+
+        // healthy.near: resumed batch at 01:00, then the user claims at 08:00.
+        ctx.set_block_timestamp_in_ms(resume + MS_IN_HOUR);
+        ctx.record_score(&healthy, resume.into(), score);
+        ctx.set_block_timestamp_in_ms(resume + 8 * MS_IN_HOUR);
+        let mut total_healthy = ctx.claim_total(&healthy);
+
+        // racing.near: the user claims at 05:00, then the resumed batch at 07:00.
+        ctx.set_block_timestamp_in_ms(resume + 5 * MS_IN_HOUR);
+        let mut total_racing = ctx.claim_total(&racing);
+        ctx.set_block_timestamp_in_ms(resume + 7 * MS_IN_HOUR);
+        ctx.record_score(&racing, resume.into(), score);
+
+        // Identical flush a day later.
+        let flush_day = day0 + 5 * MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(flush_day + 12 * MS_IN_HOUR);
+        ctx.record_score(&healthy, flush_day.into(), score);
+        ctx.record_score(&racing, flush_day.into(), score);
+        total_healthy += ctx.claim_total(&healthy);
+        total_racing += ctx.claim_total(&racing);
+
+        assert!(
+            total_healthy > 100_000_000_000_000_000,
+            "test setup: healthy account should have earned interest, got {total_healthy}"
+        );
+
+        let slack: i128 = 1_000_000_000_000;
+        assert!(
+            (total_healthy as i128 - total_racing as i128).abs() <= slack,
+            "ordering changed total interest across an oracle gap: \
+             healthy(batch-first)={total_healthy}, racing(claim-first)={total_racing}, delta={}",
+            total_healthy as i128 - total_racing as i128,
+        );
+    }
+
+    /// `withdraw_all` funnels through `update_account_cache` -> `settle_interest`
+    /// (as do `set_penalty` batches, airdrops and the feature-flag setters), so
+    /// it can roll the score window just like a claim. A `withdraw_all` before
+    /// the day's `record_score` must not destroy that day's accrual either.
+    ///
+    /// (Single `withdraw` and `restake` do NOT call `settle_interest` — they use
+    /// the account-level cache update — so they are not exposed to this.)
+    #[rstest]
+    fn withdraw_all_before_record_score_does_not_destroy_interest(
+        admin: AccountId,
+        #[from(product_steps_365d_20000_score_cap)] product: Product,
+    ) {
+        test_env_ext::set_test_log_events(false);
+
+        let healthy: AccountId = "healthy.near".parse().unwrap();
+        let racing: AccountId = "racing.near".parse().unwrap();
+
+        let mut ctx = Context::new(admin).with_products(&[product.clone()]);
+
+        let day0 = MS_IN_DAY * 100;
+        let principal: TokenAmount = 365_000_000_000_000_000_000;
+        let score: Score = 10_000;
+
+        ctx.set_block_timestamp_in_ms(day0);
+        for acc in [&healthy, &racing] {
+            ctx.contract()
+                .get_or_create_account_mut(acc)
+                .try_set_timezone(Timezone::new(0).into());
+            ctx.contract().get_account_mut(acc).deposit(&product.id, principal, day0.into());
+        }
+
+        ctx.record_score(&healthy, day0.into(), score);
+        ctx.record_score(&racing, day0.into(), score);
+
+        let mut total_healthy: TokenAmount = 0;
+        let mut total_racing: TokenAmount = 0;
+
+        for day in 1..=6u64 {
+            let start = day0 + day * MS_IN_DAY;
+
+            // healthy.near: oracle first, then the user acts.
+            ctx.set_block_timestamp_in_ms(start + MS_IN_HOUR);
+            ctx.record_score(&healthy, start.into(), score);
+            ctx.set_block_timestamp_in_ms(start + 8 * MS_IN_HOUR);
+            withdraw_all(&mut ctx, &healthy);
+            total_healthy += ctx.claim_total(&healthy);
+
+            // racing.near: withdraw_all (nothing liquid, but it settles) BEFORE
+            // the oracle batch, then the batch, then the claim.
+            ctx.set_block_timestamp_in_ms(start + 4 * MS_IN_HOUR);
+            withdraw_all(&mut ctx, &racing);
+            ctx.set_block_timestamp_in_ms(start + 7 * MS_IN_HOUR);
+            ctx.record_score(&racing, start.into(), score);
+            ctx.set_block_timestamp_in_ms(start + 9 * MS_IN_HOUR);
+            total_racing += ctx.claim_total(&racing);
+        }
+
+        let flush_day = day0 + 7 * MS_IN_DAY;
+        ctx.set_block_timestamp_in_ms(flush_day + 12 * MS_IN_HOUR);
+        ctx.record_score(&healthy, flush_day.into(), score);
+        ctx.record_score(&racing, flush_day.into(), score);
+        total_healthy += ctx.claim_total(&healthy);
+        total_racing += ctx.claim_total(&racing);
+
+        assert!(
+            total_healthy > 100_000_000_000_000_000,
+            "test setup: healthy account should have earned interest, got {total_healthy}"
+        );
+
+        let slack: i128 = 1_000_000_000_000;
+        assert!(
+            (total_healthy as i128 - total_racing as i128).abs() <= slack,
+            "withdraw_all ordering changed total interest: healthy={total_healthy}, \
+             racing={total_racing}, delta={}",
+            total_healthy as i128 - total_racing as i128,
+        );
+    }
+
+    fn withdraw_all(ctx: &mut Context, account_id: &AccountId) {
+        ctx.switch_account(account_id);
+        let PromiseOrValue::Value(_) = ctx.contract().withdraw_all(None) else {
+            panic!("expected an immediate value from withdraw_all");
+        };
+    }
 }
 
 impl Context {
