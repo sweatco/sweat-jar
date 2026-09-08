@@ -1,14 +1,14 @@
 pub(crate) mod env_ext {
-    #[cfg(test)]
+    #[cfg(any(test, feature = "replay-engine"))]
     use super::test_env_ext;
 
-    #[cfg(not(test))]
+    #[cfg(not(any(test, feature = "replay-engine")))]
     #[mutants::skip] // Covered by integration tests
     pub fn is_promise_success() -> bool {
         near_sdk::is_promise_success()
     }
 
-    #[cfg(test)]
+    #[cfg(any(test, feature = "replay-engine"))]
     pub fn is_promise_success() -> bool {
         test_env_ext::get_test_future_success()
     }
@@ -28,7 +28,7 @@ pub(crate) mod env_ext {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "replay-engine"))]
 pub(crate) mod test_env_ext {
     use std::{
         collections::BTreeMap,

@@ -18,8 +18,8 @@ mod common;
 mod doc;
 mod feature;
 mod migration;
-#[cfg(test)]
-mod replay;
+#[cfg(any(test, feature = "replay-engine"))]
+pub mod replay;
 
 pub const PACKAGE_NAME: &str = env!("CARGO_PKG_NAME");
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");

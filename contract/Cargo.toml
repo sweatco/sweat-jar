@@ -29,6 +29,9 @@ integration-test = [
     "sweat-jar-model/release-api",
     "integration-methods",
 ]
+# Compiles the test-only simulation helpers (`common::testing`, `common::env::test_env_ext`,
+# the store-events `emit`) into a non-test build so the `replay/` reconciliation crate can reuse them.
+replay-engine = ["dep:rstest", "near-sdk/unit-testing", "sweat-jar-model/testing"]
 
 [dependencies]
 mutants = { workspace = true }
@@ -41,6 +44,10 @@ strum = { workspace = true }
 
 sweat-jar-model = { workspace = true }
 sweat-jar-primitives = { workspace = true }
+
+# Test-only helper deps, compiled into the lib only under `replay-engine`
+# (otherwise dev-only — see `[dev-dependencies]`).
+rstest = { workspace = true, optional = true }
 
 [dev-dependencies]
 fake = { workspace = true }

@@ -10,7 +10,7 @@ use sweat_jar_model::{
     Local, Score, Timestamp, TokenAmount, UTC,
 };
 
-#[cfg(test)]
+#[cfg(any(test, feature = "replay-engine"))]
 use super::env::test_env_ext;
 use crate::{env, PACKAGE_NAME, VERSION};
 
@@ -201,15 +201,14 @@ impl From<EventKind> for SweatJarEvent {
 }
 
 #[mutants::skip]
-#[cfg(not(test))]
+#[cfg(not(any(test, feature = "replay-engine")))]
 pub(crate) fn emit(event: EventKind) {
     log!("{}", SweatJarEvent::from(event).to_json_event_string());
 }
 
 #[mutants::skip]
-#[cfg(test)]
+#[cfg(any(test, feature = "replay-engine"))]
 pub(crate) fn emit(event: EventKind) {
-    #[cfg(test)]
     test_env_ext::store_event(&event);
 
     if test_env_ext::should_log_events() {
