@@ -8,7 +8,9 @@ use sweat_jar::replay::engine::{Action, Event, Score, Timeline};
 
 use crate::parse::yocto_str_to_u128;
 
-/// `seq` base for `step_packages`-derived events (jar_events keep their stored seq).
+// jar_events keep their stored `seq` (a file-order ingest counter assumed to stay
+// well below 1e9); the synthetic bases below sit above it so they never collide.
+/// `seq` base for `step_packages`-derived events.
 const SCORE_SEQ_BASE: u64 = 1_000_000_000;
 /// `seq` base for `subscriptions`-derived events.
 const SUB_SEQ_BASE: u64 = 2_000_000_000;
@@ -97,7 +99,7 @@ pub fn load_user(conn: &Connection, account_id: i64) -> Result<(UserSlice, Timel
 
     // step_packages -> RecordScore, seq = SCORE_SEQ_BASE + row_index (ts order).
     let step_rows: Vec<(u64, i64)> = conn
-        .prepare("SELECT ts_ms, steps FROM step_packages WHERE account_id = ?1 ORDER BY ts_ms")?
+        .prepare("SELECT ts_ms, steps FROM step_packages WHERE account_id = ?1 ORDER BY ts_ms, rowid")?
         .query_map([account_id], |r| Ok((r.get::<_, i64>(0)? as u64, r.get::<_, i64>(1)?)))?
         .collect::<rusqlite::Result<_>>()?;
     for (i, (ts_ms, steps)) in step_rows.into_iter().enumerate() {
@@ -111,7 +113,7 @@ pub fn load_user(conn: &Connection, account_id: i64) -> Result<(UserSlice, Timel
 
     // subscriptions -> SetIncreasedScoreCap, seq = SUB_SEQ_BASE + row_index.
     let sub_rows: Vec<(u64, i64)> = conn
-        .prepare("SELECT ts_ms, active FROM subscriptions WHERE account_id = ?1 ORDER BY ts_ms")?
+        .prepare("SELECT ts_ms, active FROM subscriptions WHERE account_id = ?1 ORDER BY ts_ms, rowid")?
         .query_map([account_id], |r| Ok((r.get::<_, i64>(0)? as u64, r.get::<_, i64>(1)?)))?
         .collect::<rusqlite::Result<_>>()?;
     for (i, (ts_ms, active)) in sub_rows.into_iter().enumerate() {

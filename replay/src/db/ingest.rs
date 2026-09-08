@@ -226,6 +226,8 @@ fn ingest_jar_events(
 }
 
 /// Load `max_subscriptions.csv` -> `subscriptions(account_id, ts_ms, active)`.
+///
+/// Rows are kept only when `ts_ms` lands inside `(H_MS, T_END_MS]`.
 fn ingest_subscriptions(
     conn: &mut rusqlite::Connection,
     keep: Option<&HashSet<i64>>,
@@ -251,8 +253,11 @@ fn ingest_subscriptions(
                 }
             }
             let ts_ms = parse::iso8601_ms_to_epoch_ms(rec[1].trim())
-                .with_context(|| format!("subscription datetime for account {account_id}"))?
-                as i64;
+                .with_context(|| format!("subscription datetime for account {account_id}"))?;
+            if !(parse::H_MS < ts_ms && ts_ms <= parse::T_END_MS) {
+                continue;
+            }
+            let ts_ms = ts_ms as i64;
             let active: i64 = match rec[2].trim() {
                 "subscribed" => 1,
                 "expired" => 0,

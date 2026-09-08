@@ -33,9 +33,12 @@ fn ingest_users_and_subscriptions() {
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
-    assert_eq!(subs.len(), 3);
-    assert_eq!(subs[0], (4, 1_766_133_726_000, 1));
-    assert_eq!(subs.iter().filter(|(_, _, a)| *a == 0).count(), 1);
+    // Window filter drops account 4's pre-H `subscribed` (2025-12-19) and
+    // post-T_end `expired` (2026-12-19); only 36988193's in-window row survives.
+    assert_eq!(subs.len(), 1);
+    let apr1 = replay::parse::iso8601_ms_to_epoch_ms("2026-04-01T00:00:00.000Z").unwrap() as i64;
+    assert_eq!(subs[0], (36988193, apr1, 1));
+    assert_eq!(subs.iter().filter(|(_, _, a)| *a == 0).count(), 0);
 }
 
 #[test]
@@ -71,8 +74,9 @@ fn build_db_sample_limits_to_first_user() {
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
-    assert_eq!(sub_accts.len(), 2);
-    assert!(sub_accts.iter().all(|&a| a == 4));
+    // sample(1) keeps account 4, whose two subscription rows both fall outside
+    // the replay window, so nothing is ingested.
+    assert_eq!(sub_accts.len(), 0);
 }
 
 #[test]
