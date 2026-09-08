@@ -7,6 +7,8 @@ use anyhow::{bail, Context};
 
 /// Snapshot block time (ms): start of the replay window.
 pub const H_MS: u64 = 1_774_017_710_156;
+/// Snapshot block height on NEAR mainnet (the `H_MS` block).
+pub const H_BLOCK: u64 = 190_375_496;
 /// End of the replay window (ms).
 pub const T_END_MS: u64 = 1_788_174_657_961;
 

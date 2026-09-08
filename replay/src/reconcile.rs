@@ -61,7 +61,9 @@ pub fn reconcile_user(
     let actual = slice.onchain_claimed;
 
     let baseline_raw: std::thread::Result<Result<Option<Vec<u8>>>> =
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| snapshot.raw_account(account_id)));
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            snapshot.raw_account(account_id, &slice.near_account_id)
+        }));
 
     let (raw_account, no_baseline) = match baseline_raw {
         Err(_) => return Ok(zero_calc_row(&slice, "error:snapshot panic")),

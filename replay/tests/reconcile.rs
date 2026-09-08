@@ -74,16 +74,18 @@ fn reconcile_user_no_baseline_status() {
 }
 
 #[test]
-fn reconcile_user_archival_stub_is_error_row() {
+fn reconcile_user_archival_unreachable_is_error_row() {
     let d = tempfile::tempdir().unwrap();
     let (conn, _path) = fixture_db(d.path());
+    // Unroutable endpoint: raw_account returns Err quickly; reconcile_user must
+    // turn that into an `error:` row, not propagate it.
     let snap = ArchivalRpcSnapshotSource {
-        rpc_url: "x".into(),
-        block_height: 1,
+        rpc_url: "http://127.0.0.1:1/".into(),
+        jar_contract: "v2.jars.sweat".into(),
+        block_height: replay::parse::H_BLOCK,
     };
     let row = reconcile_user(&conn, 36988193, &products(), &snap).unwrap();
     assert!(row.status.starts_with("error:"), "status {}", row.status);
-    assert!(row.status.contains("not implemented"), "status {}", row.status);
 }
 
 #[test]

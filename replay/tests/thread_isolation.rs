@@ -77,6 +77,7 @@ fn second_user_on_a_worker_is_not_polluted_by_the_first() {
         accounts: Some(accounts),
         sample: None,
         tolerance: 1e-6,
+        archival_rpc_url: None,
     })
     .unwrap();
     assert_eq!(summary.processed, 2);

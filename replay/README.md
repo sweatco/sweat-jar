@@ -84,6 +84,16 @@ each line's `near_account_id` against the `users` table, so ingest `users`
 | `--accounts <file>` | — | same format as `build-db --accounts`; restrict the worklist |
 | `--sample <N>` | — | process only the first `N` accounts of the (already filtered) worklist |
 | `--tolerance <f>` | `1e-6` | an `ok` row with `|rel_delta| > tolerance` is counted in `over_tolerance` |
+| `--archival` | off | fetch each account's block-`H` state live from a NEAR archival node (`get_account` view at block 190375496) instead of the local `snapshots` table |
+| `--archival-rpc-url <url>` | `https://archival-rpc.mainnet.fastnear.com` | archival endpoint used with `--archival` |
+
+**`--archival`** removes the need for a pre-populated `snapshots` table — every
+account gets a real baseline. Cost: one RPC round-trip per account (3 retries on
+transient failure), so ~0.2 s/account with `--threads 12`; a full 1.2M-account
+run is many hours. Use `--shard i/n` to spread it across machines, or `--sample`
+/ `--accounts` for spot checks. `view_state` over the whole contract is refused
+by public archival nodes ("state too large"), so the per-account view call is
+the only route.
 
 ## Input CSVs (`test_data/`)
 
@@ -168,15 +178,22 @@ compose: run `--shard i/n --threads T` on each machine.
 
 ## Known limitations
 
-- **No baseline snapshots yet.** `snapshots.ndjson` needs an archival-RPC
-  extraction of every account's state at block `H`, which is not built —
-  `ArchivalRpcSnapshotSource` in `snapshot.rs` is a stub that always errors.
-  Until it exists, any account that held jars before `H` replays without that
-  prior state: a claim/withdraw against a jar we don't have is caught and the
-  row is marked `status = no_baseline` (with `calculated = 0` and a large
-  negative `delta`). A no-baseline account whose replay panics for an unrelated
-  reason (e.g. a score-based deposit with no timezone) shows `error:` instead.
-  **Only accounts that first appear after `H` are trustworthy today.**
+- **Baseline snapshots.** Two ways to give an account its block-`H` state:
+  `run --archival` (fetches it live from an archival node, no setup) or a
+  pre-populated `snapshots` table / `snapshots.ndjson` (fast, offline, but the
+  bulk extractor that writes it is not built yet). Without either, an account
+  that held jars before `H` replays without that prior state — see below.
+- **Without a baseline (`run` with no `--archival` and no `snapshots` rows):**
+  a claim/withdraw against a jar we don't have is caught and the row is marked
+  `status = no_baseline` (`calculated = 0`, large negative `delta`). A
+  no-baseline account whose replay panics for an unrelated reason (e.g. a
+  score-based deposit with no timezone) shows `error:` instead. Such rows are
+  informational only — use `--archival` (or populate `snapshots`) to reconcile
+  pre-`H` holders.
+- **No bulk snapshot extractor.** `run --archival` fetches baselines one account
+  at a time. There is no tool yet to bulk-populate the `snapshots` table /
+  `snapshots.ndjson` for fast repeated offline runs — a `fetch-snapshots`
+  subcommand wrapping the same archival call is the obvious next step.
 - **Product config is current-state only.** `fetch-products` captures
   `get_products()` as of now, not as it stood during the window. APY, cap, and
   enable/disable changes inside `(H, T_end]` are not modeled.

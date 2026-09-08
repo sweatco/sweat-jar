@@ -48,6 +48,8 @@ fn main() -> anyhow::Result<()> {
             accounts,
             sample,
             tolerance,
+            archival,
+            archival_rpc_url,
         } => {
             let threads = threads.unwrap_or_else(|| {
                 std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)
@@ -62,6 +64,7 @@ fn main() -> anyhow::Result<()> {
                 accounts,
                 sample,
                 tolerance,
+                archival_rpc_url: archival.then_some(archival_rpc_url),
             })?;
             println!(
                 "processed {} | ok {} | error {} | no_baseline {} | over_tolerance {}",

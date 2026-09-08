@@ -40,6 +40,7 @@ fn opts(db: PathBuf, out: PathBuf) -> RunOpts {
         accounts: None,
         sample: None,
         tolerance: 1e-6,
+        archival_rpc_url: None,
     }
 }
 

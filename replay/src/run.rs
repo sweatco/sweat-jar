@@ -24,6 +24,9 @@ pub struct RunOpts {
     pub accounts: Option<PathBuf>,
     pub sample: Option<usize>,
     pub tolerance: f64,
+    /// `Some(url)` fetches each account's block-H state from that archival RPC
+    /// endpoint; `None` reads the local `snapshots` table.
+    pub archival_rpc_url: Option<String>,
 }
 
 /// Aggregate outcome of a run, accumulated as rows are written.
@@ -100,7 +103,14 @@ pub fn run(opts: &RunOpts) -> Result<RunSummary> {
 
     let products: Arc<Vec<Product>> =
         Arc::new(crate::products::load_products(&opts.products)?);
-    let snapshot: Arc<dyn SnapshotSource> = Arc::new(DbSnapshotSource::new(&opts.db));
+    let snapshot: Arc<dyn SnapshotSource> = match &opts.archival_rpc_url {
+        Some(url) => Arc::new(crate::snapshot::ArchivalRpcSnapshotSource {
+            rpc_url: url.clone(),
+            jar_contract: crate::products::JAR_CONTRACT.to_string(),
+            block_height: crate::parse::H_BLOCK,
+        }),
+        None => Arc::new(DbSnapshotSource::new(&opts.db)),
+    };
     let queue = Arc::new(Mutex::new(worklist.into_iter()));
 
     let (tx, rx) = mpsc::channel::<ReconRow>();
