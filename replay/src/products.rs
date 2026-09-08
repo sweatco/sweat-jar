@@ -58,7 +58,16 @@ pub fn fetch_products(rpc_url: &str, contract: &str, out: &Path) -> anyhow::Resu
 pub fn load_products(path: &Path) -> anyhow::Result<Vec<Product>> {
     let text =
         std::fs::read_to_string(path).with_context(|| format!("read {}", path.display()))?;
-    serde_json::from_str(&text).with_context(|| format!("parse {} into Vec<Product>", path.display()))
+    let products: Vec<Product> = serde_json::from_str(&text)
+        .with_context(|| format!("parse {} into Vec<Product>", path.display()))?;
+    // The replay submits unsigned deposits; signature verification is out of scope.
+    Ok(products
+        .into_iter()
+        .map(|p| Product {
+            public_key: None,
+            ..p
+        })
+        .collect())
 }
 
 #[cfg(test)]
@@ -70,6 +79,7 @@ mod tests {
         let products =
             load_products(std::path::Path::new("tests/fixtures/products.json")).unwrap();
         assert!(products.len() >= 20);
+        assert!(products.iter().all(|p| p.public_key.is_none()));
 
         let p = products
             .iter()
