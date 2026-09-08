@@ -19,7 +19,7 @@ Same fixed bounds as `REPLAY_DATA_SPEC.md` / the current replay test:
 
 | bound | value |
 |-------|-------|
-| start `H` | block `190375496` = `2026-03-20T14:41:50.156Z` = `1742481710156` ms |
+| start `H` | block `190375496` = `2026-03-20T14:41:50.156Z` = `1774017710156` ms |
 | end `T_end` | `2026-08-31T11:10:57.961Z` = `1788174657961` ms |
 
 - Baseline account state = state at `H`.

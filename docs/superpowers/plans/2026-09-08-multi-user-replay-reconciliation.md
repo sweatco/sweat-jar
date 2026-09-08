@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Window bounds, verbatim: `H = 1742481710156` (block 190375496, 2026-03-20T14:41:50.156Z), `T_end = 1788174657961` (2026-08-31T11:10:57.961Z). Events kept iff `H < ts_ms <= T_end`.
+- Window bounds, verbatim: `H = 1774017710156` (block 190375496, 2026-03-20T14:41:50.156Z), `T_end = 1788174657961` (2026-08-31T11:10:57.961Z). Events kept iff `H < ts_ms <= T_end`. (Verify with `python3 -c "import datetime as d; print(int(d.datetime(2026,3,20,14,41,50,156000,tzinfo=d.timezone.utc).timestamp()*1000))"`.)
 - `account_id` (integer) is the join key across all four CSVs (`users.account_id == jar_events.account_id == step_packages.account_id == max_subscriptions.user_id`). `near_account_id` (64-hex string) is the on-chain `AccountId`. `sweatcoin_user_id` is NOT ingested.
 - Amounts are stored as decimal strings and parsed to `u128` (yocto, the SWEAT base unit = `10^18`); never parse token amounts as `f64`.
 - `merge` jar-events are dropped. `deposit_ids`, `fee_amount`, `product_name` columns are dropped.
@@ -610,13 +610,13 @@ git commit -m "feat(replay): scaffold replay binary crate"
 **Interfaces:**
 - Produces:
   ```rust
-  /// "2026-03-20T14:41:54.953Z" -> 1742481714953
+  /// "2026-03-20T14:41:54.953Z" -> 1774017714953
   pub fn iso8601_ms_to_epoch_ms(s: &str) -> anyhow::Result<u64>;
   /// "2026-03-21 19:30:53 UTC" -> epoch ms
   pub fn space_utc_to_epoch_ms(s: &str) -> anyhow::Result<u64>;
   /// decimal string of yocto -> u128 (no decimal point expected; trims whitespace)
   pub fn yocto_str_to_u128(s: &str) -> anyhow::Result<u128>;
-  pub const H_MS: u64 = 1_742_481_710_156;
+  pub const H_MS: u64 = 1_774_017_710_156;
   pub const T_END_MS: u64 = 1_788_174_657_961;
   ```
 
@@ -628,12 +628,12 @@ mod tests {
     use super::*;
     #[test]
     fn iso_ms() {
-        assert_eq!(iso8601_ms_to_epoch_ms("2026-03-20T14:41:54.953Z").unwrap(), 1_742_481_714_953);
+        assert_eq!(iso8601_ms_to_epoch_ms("2026-03-20T14:41:54.953Z").unwrap(), 1_774_017_714_953);
         assert_eq!(iso8601_ms_to_epoch_ms("2025-12-19T08:42:06.000Z").unwrap(), 1_766_133_726_000);
     }
     #[test]
     fn space_utc() {
-        assert_eq!(space_utc_to_epoch_ms("2026-03-21 19:30:53 UTC").unwrap(), 1_742_585_453_000);
+        assert_eq!(space_utc_to_epoch_ms("2026-03-21 19:30:53 UTC").unwrap(), 1_774_121_453_000);
     }
     #[test]
     fn yocto() {
@@ -907,7 +907,7 @@ account_id,created_at,steps
 `snapshots.ndjson` (single line; reuse the shape of the real file, trimmed to one jar):
 
 ```
-{"near_account_id":"9b6b8403e3ccbd6ba868c58d3e583939f62ca3abc3b2fa22f72b5030cd04efa8","account_state":{"nonce":1,"jars":{},"score":{"updated_at":1742481710156,"history":[{"value":0,"booster":0},{"value":0,"booster":0}]},"features":{"increased_score_cap":false,"increased_apy":true},"timezone":0},"products_referenced":[]}
+{"near_account_id":"9b6b8403e3ccbd6ba868c58d3e583939f62ca3abc3b2fa22f72b5030cd04efa8","account_state":{"nonce":1,"jars":{},"score":{"updated_at":1774017710156,"history":[{"value":0,"booster":0},{"value":0,"booster":0}]},"features":{"increased_score_cap":false,"increased_apy":true},"timezone":0},"products_referenced":[]}
 ```
 
 - [ ] **Step 2: Write failing tests**
@@ -930,7 +930,7 @@ fn ingest_snapshots_joins_on_near_account_id() {
 }
 ```
 
-Note on the pre-`H` boundary: `2026-03-20 14:41:50 UTC` → `1742481710000` which is `< H_MS` (1742481710156), so it is correctly dropped by the `H_MS < ts_ms` rule.
+Note on the pre-`H` boundary: `2026-03-20 14:41:50 UTC` → `1774017710000` which is `< H_MS` (1774017710156), so it is correctly dropped by the `H_MS < ts_ms` rule.
 
 Run: `cargo test -p replay 'ingest_step_packages|ingest_snapshots' 2>&1 | tail -12` — Expected: FAIL.
 
