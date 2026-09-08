@@ -21,7 +21,7 @@ fn ingest_users_and_subscriptions() {
     let users: i64 = conn
         .query_row("SELECT count(*) FROM users", [], |r| r.get(0))
         .unwrap();
-    assert_eq!(users, 2);
+    assert_eq!(users, 3);
     let near: String = conn
         .query_row("SELECT near_account_id FROM users WHERE account_id=4", [], |r| r.get(0))
         .unwrap();

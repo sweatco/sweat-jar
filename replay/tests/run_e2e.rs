@@ -56,15 +56,15 @@ fn run_end_to_end_writes_csv() {
     let out = d.path().join("rec.csv");
     let summary = run(&opts(db, out.clone())).unwrap();
 
-    assert_eq!(summary.processed, 2);
-    assert_eq!(summary.ok + summary.errored + summary.no_baseline, 2);
+    assert_eq!(summary.processed, 3);
+    assert_eq!(summary.ok + summary.errored + summary.no_baseline, 3);
 
     let body = std::fs::read_to_string(&out).unwrap();
     assert_eq!(
         body.lines().next().unwrap(),
         "account_id,near_account_id,calculated_total_claim,actual_total_claim,delta,rel_delta,n_claims,status"
     );
-    assert_eq!(body.lines().count(), 3);
+    assert_eq!(body.lines().count(), 4);
 
     let row = body
         .lines()
@@ -111,7 +111,7 @@ fn run_shard_splits_worklist() {
     o1.shard = Some((1, 2));
     let s1 = run(&o1).unwrap();
 
-    assert_eq!(s0.processed + s1.processed, 2);
+    assert_eq!(s0.processed + s1.processed, 3);
 
     let ids = |p: &Path| -> Vec<String> {
         std::fs::read_to_string(p)
