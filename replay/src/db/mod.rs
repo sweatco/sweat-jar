@@ -1,5 +1,6 @@
 //! SQLite connection helpers for the replay database.
 
+pub mod ingest;
 pub mod schema;
 
 use std::path::Path;
