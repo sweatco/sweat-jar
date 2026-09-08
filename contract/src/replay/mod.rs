@@ -29,22 +29,17 @@ mod engine_tests;
 
 #[cfg(test)]
 mod scenario {
-    use std::{collections::HashMap, fs};
+    use std::fs;
 
     use near_sdk::{borsh::to_vec, serde_json, serde_json::Value, AccountId};
     use sweat_jar_model::{
         data::{
-            account::{
-                features::{Feature, Features},
-                versioned::AccountVersioned,
-                Account,
-            },
-            jar::{Deposit, Jar, JarCache},
+            account::{versioned::AccountVersioned, Account},
             product::{
                 Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms, TieredScoreBasedProductTerms,
             },
         },
-        AccountScore, ConfigurableValue, DailyScore, Score, Timezone, ValueTier, MS_IN_HOUR, UTC,
+        ConfigurableValue, Score, ValueTier,
     };
     use sweat_jar_primitives::UDecimal;
 
@@ -137,68 +132,7 @@ mod scenario {
             .map(parse_utc_datetime)
             .expect("block_time_utc");
 
-        let state = &json["account_state"];
-
-        let mut jars: HashMap<String, Jar> = HashMap::new();
-        for (product_id, jar_json) in state["jars"].as_object().expect("jars object") {
-            let deposits = jar_json["deposits"]
-                .as_array()
-                .expect("deposits array")
-                .iter()
-                .map(|pair| {
-                    let created_at: u64 = pair[0].as_str().unwrap().parse().unwrap();
-                    let principal: u128 = pair[1].as_str().unwrap().parse().unwrap();
-                    Deposit::new(created_at, principal)
-                })
-                .collect();
-
-            let cache = jar_json.get("cache").filter(|c| !c.is_null()).map(|c| JarCache {
-                updated_at: c["updated_at"].as_str().unwrap().parse().unwrap(),
-                interest: c["interest"].as_str().unwrap().parse().unwrap(),
-            });
-
-            jars.insert(
-                product_id.clone(),
-                Jar {
-                    deposits,
-                    cache,
-                    is_locked: jar_json["is_pending_withdraw"].as_bool().unwrap_or(false),
-                    claim_remainder: jar_json["claim_remainder"]
-                        .as_str()
-                        .and_then(|s| s.parse().ok())
-                        .unwrap_or(0),
-                },
-            );
-        }
-
-        let score_json = &state["score"];
-        let history = score_json["history"].as_array().expect("score history");
-        let daily = |i: usize| -> DailyScore {
-            history.get(i).map_or_else(DailyScore::default, |d| DailyScore {
-                value: d["value"].as_u64().unwrap_or(0) as Score,
-                booster: d["booster"].as_u64().unwrap_or(0) as Score,
-            })
-        };
-        let score = AccountScore::new(
-            UTC(score_json["updated_at"].as_u64().expect("score.updated_at")),
-            [daily(0), daily(1)],
-        );
-
-        let mut features = Features::new();
-        let f = &state["features"];
-        features.set_feature_enabled(&Feature::IncreasedApy, f["increased_apy"].as_bool().unwrap_or(false));
-        features.set_feature_enabled(
-            &Feature::IncreasedScoreCap,
-            f["increased_score_cap"].as_bool().unwrap_or(false),
-        );
-
-        let account = Account {
-            nonce: state["nonce"].as_u64().unwrap_or(0) as u32,
-            jars,
-            timezone: Timezone::new(state["timezone"].as_i64().unwrap_or(0) * MS_IN_HOUR as i64),
-            score,
-            features,
-        };
+        let account = engine::parse_account_state(&json["account_state"], block_time_ms);
 
         Snapshot {
             account_id,
