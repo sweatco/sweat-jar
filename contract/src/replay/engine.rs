@@ -12,6 +12,7 @@ pub use sweat_jar_model::data::product::Product;
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, RestakeApi, WithdrawApi},
     data::{account::features::Feature, deposit::DepositTicket},
+    Timezone,
 };
 pub use sweat_jar_model::{Score, UTC};
 
@@ -123,7 +124,10 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
                     let ticket = DepositTicket {
                         product_id,
                         valid_until: 0.into(),
-                        timezone: None,
+                        // Score-based products require a timezone on first deposit; the
+                        // jar_events feed carries none, so default to UTC. The contract
+                        // keeps an already-set (baseline) timezone and ignores this.
+                        timezone: Some(Timezone::hour_shift(0)),
                     };
                     context.switch_account_to_ft_contract_account();
                     context.contract().deposit(account_id.clone(), ticket, amount, None);
@@ -216,7 +220,7 @@ pub fn parse_account_state(
             },
             jar::{Deposit, Jar, JarCache},
         },
-        AccountScore, DailyScore, Score, Timezone, MS_IN_HOUR, UTC,
+        AccountScore, DailyScore, Score, UTC,
     };
 
     let mut jars: HashMap<String, Jar> = HashMap::new();
@@ -277,7 +281,9 @@ pub fn parse_account_state(
     Account {
         nonce: state["nonce"].as_u64().unwrap_or(0) as u32,
         jars,
-        timezone: Timezone::new(state["timezone"].as_i64().unwrap_or(0) * MS_IN_HOUR as i64),
+        // `AccountView.timezone` is the raw ms shift from UTC (or `i64::MIN` when
+        // the account never set one) — stored verbatim, no hours→ms conversion.
+        timezone: Timezone::new(state["timezone"].as_i64().unwrap_or(i64::MIN)),
         score,
         features,
     }
