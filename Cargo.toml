@@ -3,7 +3,7 @@
 resolver = "2"
 
 default-members = ["contract"]
-members = ["primitives", "model", "contract"]
+members = ["primitives", "model", "contract", "replay"]
 
 [workspace.dependencies]
 anyhow = "1.0.75"
