@@ -20,8 +20,15 @@
 //!
 //! Run with output visible:
 //! `cargo test -p sweat_jar replay -- --nocapture`
-#![cfg(test)]
+#![cfg(any(test, feature = "replay-engine"))]
 
+pub mod engine;
+
+#[cfg(test)]
+mod engine_tests;
+
+#[cfg(test)]
+mod scenario {
 use std::{collections::HashMap, fs};
 
 use near_sdk::{borsh::to_vec, json_types::Base64VecU8, serde_json, serde_json::Value, AccountId, PromiseOrValue};
@@ -426,4 +433,5 @@ fn replay_account_history() {
 
 fn admin() -> AccountId {
     "admin.near".parse().unwrap()
+}
 }
