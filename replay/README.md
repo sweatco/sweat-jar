@@ -25,23 +25,35 @@ including `T_end`). The bounds live in `replay/src/parse.rs` (`H_MS`,
 
 ## Workflow
 
-Three commands, in order. Use `--release` — the `step_packages` ingest is ~285M
-rows and the `run` loop replays the contract once per account.
+Build once with the **`release-replay`** profile, then run the three subcommands
+in order. `release-replay` is an optimized build with `panic = "unwind"` — the
+plain `release` profile sets `panic = "abort"` (for the contract wasm), which
+disables the per-account panic recovery in `run` and makes the first contract
+panic kill the whole run.
 
 ```sh
+cargo build -p replay --profile release-replay
+BIN=./target/release-replay/replay
+
 # 1. Refresh the on-chain product catalogue (committed to the repo).
 #    Calls get_products() on v2.jars.sweat via mainnet JSON RPC.
-cargo run -p replay --release -- fetch-products --out test_data/products.json
+$BIN fetch-products --out test_data/products.json
 
 # 2. Ingest the 4 source CSVs (+ optional snapshots.ndjson) into SQLite.
-cargo run -p replay --release -- build-db --db replay.db --test-data-dir test_data
+#    Re-runnable: each table is cleared and re-populated. (DELETE doesn't
+#    reclaim pages, so a re-run keeps replay.db at its high-water mark;
+#    `rm replay.db` first if you want a smaller file.)
+$BIN build-db --db replay.db --test-data-dir test_data
 
-# 3. Reconcile and write the report.
-cargo run -p replay --release -- run --db replay.db --out reconciliation.csv --products test_data/products.json
+# 3. Reconcile and write the report. Set --threads to your core count.
+$BIN run --db replay.db --out reconciliation.csv --products test_data/products.json --threads "$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
 ```
 
-For dev iteration, restrict the build and run to a handful of accounts (see the
-flags below): `build-db --sample 50` then `run --sample 50`.
+`build-db` streams the full `step_packages.csv` (~285M rows / ~10 GB) even with
+`--sample`, so it takes tens of minutes; `replay.db` lands around 15–25 GB. For
+dev iteration, skip that file: `build-db --sample 50 --only users,jar_events,subscriptions`
+then `run --sample 50` (no score events, so score-based totals are incomplete —
+fine for a plumbing check).
 
 ## `build-db` flags
 
@@ -159,10 +171,12 @@ compose: run `--shard i/n --threads T` on each machine.
 - **No baseline snapshots yet.** `snapshots.ndjson` needs an archival-RPC
   extraction of every account's state at block `H`, which is not built —
   `ArchivalRpcSnapshotSource` in `snapshot.rs` is a stub that always errors.
-  Until it exists, any account that held jars before `H` replays from an empty
-  account and shows a large negative `delta` with `status = no_baseline` (or
-  `error:` if the empty-account replay panics). **Only accounts that first
-  appear after `H` are trustworthy today.**
+  Until it exists, any account that held jars before `H` replays without that
+  prior state: a claim/withdraw against a jar we don't have is caught and the
+  row is marked `status = no_baseline` (with `calculated = 0` and a large
+  negative `delta`). A no-baseline account whose replay panics for an unrelated
+  reason (e.g. a score-based deposit with no timezone) shows `error:` instead.
+  **Only accounts that first appear after `H` are trustworthy today.**
 - **Product config is current-state only.** `fetch-products` captures
   `get_products()` as of now, not as it stood during the window. APY, cap, and
   enable/disable changes inside `(H, T_end]` are not modeled.

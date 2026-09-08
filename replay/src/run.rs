@@ -49,6 +49,21 @@ pub fn parse_shard(s: &str) -> Result<(u64, u64)> {
     Ok((i, n))
 }
 
+fn install_quiet_panic_hook() {
+    use std::sync::Once;
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        let prev = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let msg = info.to_string();
+            if msg.contains("GuestPanic") || msg.contains("mocked_blockchain") {
+                return;
+            }
+            prev(info);
+        }));
+    });
+}
+
 fn build_worklist(opts: &RunOpts) -> Result<Vec<i64>> {
     let conn = db::open_read(&opts.db)?;
     let mut ids: Vec<i64> = conn
@@ -72,6 +87,15 @@ fn build_worklist(opts: &RunOpts) -> Result<Vec<i64>> {
 /// Run reconciliation over the worklist and write `opts.out`.
 pub fn run(opts: &RunOpts) -> Result<RunSummary> {
     anyhow::ensure!(opts.threads > 0, "threads must be > 0");
+
+    // `run_timeline` catches contract panics into `error:` rows, but near-sdk's
+    // default hook still prints every one (with a "GuestPanic" message) to
+    // stderr first — thousands of lines on a real run. Install a process-global
+    // hook that swallows exactly those and forwards everything else (a genuine
+    // bug in our own code still prints). Set once; harmless if `run` is called
+    // again.
+    install_quiet_panic_hook();
+
     let worklist = build_worklist(opts)?;
 
     let products: Arc<Vec<Product>> =

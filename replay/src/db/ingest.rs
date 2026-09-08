@@ -66,6 +66,16 @@ pub fn build_db(
     };
     let keep: Option<&HashSet<i64>> = opts.accounts.or(owned_keep.as_ref());
 
+    // Idempotent re-runs: the loaders use plain `INSERT`, so clear each table
+    // we're about to (re)populate. Without this, a second `build-db` against the
+    // same file silently doubles every row.
+    for &t in &TABLES {
+        if opts.wants(t) {
+            conn.execute(&format!("DELETE FROM {t}"), [])
+                .with_context(|| format!("clear {t} before ingest"))?;
+        }
+    }
+
     let mut counts: Vec<(&'static str, usize)> = Vec::new();
 
     if opts.wants("users") {

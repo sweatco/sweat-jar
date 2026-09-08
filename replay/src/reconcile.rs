@@ -93,6 +93,10 @@ pub fn reconcile_user(
     let rel_delta = if actual == 0 { 0.0 } else { delta as f64 / actual as f64 };
 
     let status = match &outcome.status {
+        // A no-baseline account whose replay panicked only because an account or
+        // jar "is not found" is exactly the no-baseline case: it claimed/withdrew
+        // against pre-H state we don't have. Label it `no_baseline`, not `error:`.
+        ReplayStatus::Error(msg) if no_baseline && msg.contains("is not found") => "no_baseline".to_string(),
         ReplayStatus::Error(msg) => format!("error:{}", truncate(msg)),
         ReplayStatus::Ok if no_baseline => "no_baseline".to_string(),
         ReplayStatus::Ok => "ok".to_string(),

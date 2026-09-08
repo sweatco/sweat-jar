@@ -167,7 +167,7 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
             status: ReplayStatus::Ok,
         },
         Err(e) => {
-            let msg = e
+            let raw = e
                 .downcast_ref::<&str>()
                 .map(|s| (*s).to_string())
                 .or_else(|| e.downcast_ref::<String>().cloned())
@@ -175,7 +175,7 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
             ReplayOutcome {
                 total_claimed: 0,
                 per_claim: Vec::new(),
-                status: ReplayStatus::Error(msg),
+                status: ReplayStatus::Error(unwrap_guest_panic(&raw)),
             }
         }
     }
@@ -183,6 +183,19 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
 
 fn admin() -> AccountId {
     "admin.near".parse().unwrap()
+}
+
+/// near-sdk's mock wraps a guest `panic_str` as
+/// `called \`Result::unwrap()\` on an \`Err\` value: HostError(GuestPanic { panic_msg: "…" })`.
+/// Pull the inner `panic_msg` out so `error:` rows carry the real reason.
+fn unwrap_guest_panic(raw: &str) -> String {
+    if let Some(start) = raw.find("panic_msg: \"") {
+        let rest = &raw[start + "panic_msg: \"".len()..];
+        if let Some(end) = rest.rfind("\" }") {
+            return rest[..end].to_string();
+        }
+    }
+    raw.to_string()
 }
 
 /// Parses an `account_state` JSON object (the shape of
