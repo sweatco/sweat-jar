@@ -53,8 +53,6 @@ pub fn space_utc_to_epoch_ms(s: &str) -> anyhow::Result<u64> {
 }
 
 /// Decimal string of yocto -> `u128`. Trims whitespace. Errors on a decimal point or non-digits.
-// TODO(task-12): consumed by amount-parsing ingest.
-#[allow(dead_code)]
 pub fn yocto_str_to_u128(s: &str) -> anyhow::Result<u128> {
     s.trim()
         .parse::<u128>()
