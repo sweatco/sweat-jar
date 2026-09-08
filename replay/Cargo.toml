@@ -23,7 +23,7 @@ clap = { version = "4.5", features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = "1.0"
 anyhow = { workspace = true }
-ureq = "2.10"
+ureq = { version = "2.10", features = ["json"] }
 
 [dev-dependencies]
 tempfile = "3"

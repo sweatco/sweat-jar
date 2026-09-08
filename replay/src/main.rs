@@ -3,12 +3,16 @@ use std::collections::HashSet;
 use anyhow::Context;
 use clap::Parser;
 
-use replay::{cli, db};
+use replay::{cli, db, products};
 
 fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
     match cli.cmd {
-        cli::Cmd::FetchProducts { .. } => anyhow::bail!("unimplemented: fetch-products"),
+        cli::Cmd::FetchProducts { out } => {
+            let n = products::fetch_products(products::MAINNET_RPC, products::JAR_CONTRACT, &out)?;
+            println!("wrote {n} products to {}", out.display());
+            Ok(())
+        }
         cli::Cmd::BuildDb {
             db: db_path,
             test_data_dir,
