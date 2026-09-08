@@ -47,6 +47,7 @@ mod gas {
 }
 
 #[ext_contract(ext_self)]
+#[cfg_attr(all(feature = "replay-engine", not(test)), allow(dead_code))]
 pub trait ClaimCallbacks {
     fn after_claim(
         &mut self,

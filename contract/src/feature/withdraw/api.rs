@@ -89,6 +89,7 @@ use crate::{
 };
 
 #[ext_contract(ext_self)]
+#[cfg_attr(all(feature = "replay-engine", not(test)), allow(dead_code))]
 pub(super) trait WithdrawCallbacks {
     fn after_withdraw(&mut self, account_id: AccountId, request: WithdrawalRequest) -> WithdrawView;
 

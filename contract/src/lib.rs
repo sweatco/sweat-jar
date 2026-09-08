@@ -14,6 +14,9 @@ use sweat_jar_model::{
     TokenAmount,
 };
 
+#[cfg(all(feature = "replay-engine", target_arch = "wasm32"))]
+compile_error!("replay-engine is a host-only feature and must never reach the contract wasm");
+
 mod common;
 mod doc;
 mod feature;
