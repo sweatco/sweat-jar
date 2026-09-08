@@ -76,6 +76,102 @@ fn build_db_sample_limits_to_first_user() {
 }
 
 #[test]
+fn ingest_jar_events_filters_window_and_merge() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &["users".into(), "jar_events".into()],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+
+    let rows: Vec<(i64, String, String, i64)> = conn
+        .prepare("SELECT account_id,event_type,amount,ts_ms FROM jar_events ORDER BY ts_ms,seq")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?, r.get(3)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+
+    assert_eq!(rows.len(), 3);
+    assert_eq!(rows[0].1, "deposit");
+    assert_eq!(rows[0].2, "15760000000000000000");
+    let claim = rows.iter().find(|r| r.1 == "claim").unwrap();
+    assert_eq!(claim.2, "81505017066108257");
+    assert_eq!(rows.iter().filter(|r| r.1 == "withdraw" && r.0 == 4).count(), 1);
+    assert!(rows.iter().all(|r| r.1 != "merge"));
+    assert!(rows.iter().all(|r| r.2 != "999"));
+    assert!(rows.iter().all(|r| r.3 != 1_774_017_710_100));
+}
+
+#[test]
+fn ingest_jar_events_respects_keep() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &["users".into(), "jar_events".into()],
+            accounts: None,
+            sample: Some(1),
+        },
+    )
+    .unwrap();
+
+    let rows: Vec<(i64, String)> = conn
+        .prepare("SELECT account_id,event_type FROM jar_events")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0], (4, "withdraw".to_string()));
+}
+
+#[test]
+fn ingest_jar_events_rejects_unknown_event_type() {
+    use std::io::Write;
+    let dir = tempfile::tempdir().unwrap();
+    let mut f = std::fs::File::create(dir.path().join("jar_events.csv")).unwrap();
+    writeln!(
+        f,
+        "account_id,jar_id,product_id,product_name,near_block_timestamp,event_type,amount,fee_amount,deposit_ids"
+    )
+    .unwrap();
+    writeln!(
+        f,
+        "4,7,90d_3apy,The Starter,2026-05-01T00:00:00.000Z,frobnicate,5,0,9"
+    )
+    .unwrap();
+    drop(f);
+
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    let err = build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: dir.path(),
+            only: &["jar_events".into()],
+            accounts: None,
+            sample: None,
+        },
+    );
+    assert!(err.is_err());
+}
+
+#[test]
 fn schema_creates_expected_tables() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("t.db");

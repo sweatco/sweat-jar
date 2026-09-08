@@ -3,8 +3,8 @@
 //! Hand-rolled UTC date math (Howard Hinnant's civil-date algorithm), ported
 //! from `contract/src/replay/mod.rs`. No chrono/time dependency.
 
-// TODO(task-8): H_MS/T_END_MS, space_utc_to_epoch_ms and yocto_str_to_u128 are
-// unused until jar_events / snapshot ingest lands.
+// TODO(task-9): space_utc_to_epoch_ms and yocto_str_to_u128 stay unconsumed until
+// snapshot / amount-parsing ingest lands (jar_events stores amounts raw).
 #![allow(dead_code)]
 
 use anyhow::{bail, Context};

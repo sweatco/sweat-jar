@@ -46,7 +46,7 @@ pub fn build_db(conn: &mut rusqlite::Connection, opts: &BuildOpts) -> anyhow::Re
         ingest_subscriptions(conn, keep, dir)?;
     }
     if opts.wants("jar_events") {
-        println!("jar_events ingest: not yet implemented (task 8)");
+        ingest_jar_events(conn, keep, dir)?;
     }
     if opts.wants("step_packages") {
         println!("step_packages ingest: not yet implemented (task 8)");
@@ -106,6 +106,75 @@ fn ingest_users(
         }
     }
     tx.commit()?;
+    Ok(())
+}
+
+/// Load `jar_events.csv` -> `jar_events(account_id, ts_ms, seq, event_type, product_id, amount)`.
+///
+/// Header: `account_id,jar_id,product_id,product_name,near_block_timestamp,event_type,amount,fee_amount,deposit_ids`.
+/// `seq` is a 0-based counter over every data row in file order, assigned before
+/// filtering so it is a stable global tie-breaker. Rows are kept only when the
+/// event lands inside `(H_MS, T_END_MS]`, the `event_type` is one of
+/// `{deposit, claim, withdraw, restake}` (`merge` is dropped), and — when `keep`
+/// is set — the `account_id` is in it. `amount` is stored as the raw CSV string.
+fn ingest_jar_events(
+    conn: &mut rusqlite::Connection,
+    keep: Option<&HashSet<i64>>,
+    dir: &Path,
+) -> anyhow::Result<()> {
+    let path = dir.join("jar_events.csv");
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(&path)
+        .with_context(|| format!("open {}", path.display()))?;
+
+    let mut inserted = 0u64;
+    let tx = conn.transaction()?;
+    {
+        let mut stmt = tx.prepare(
+            "INSERT INTO jar_events (account_id, ts_ms, seq, event_type, product_id, amount) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        )?;
+        for (seq, rec) in rdr.records().enumerate() {
+            let rec = rec?;
+            let seq = seq as i64;
+
+            let account_id: i64 = rec[0].trim().parse().context("parse account_id")?;
+
+            let event_type = rec[5].trim();
+            match event_type {
+                "deposit" | "claim" | "withdraw" | "restake" => {}
+                "merge" => continue,
+                other => bail!("unknown jar_events event_type: {other:?}"),
+            }
+
+            let ts_ms = parse::iso8601_ms_to_epoch_ms(rec[4].trim())
+                .with_context(|| format!("jar_events timestamp for account {account_id}"))?;
+            if !(parse::H_MS < ts_ms && ts_ms <= parse::T_END_MS) {
+                continue;
+            }
+
+            if let Some(k) = keep {
+                if !k.contains(&account_id) {
+                    continue;
+                }
+            }
+
+            let product_id = rec[2].trim();
+            let amount = rec[6].trim();
+            stmt.execute(rusqlite::params![
+                account_id,
+                ts_ms as i64,
+                seq,
+                event_type,
+                product_id,
+                amount
+            ])?;
+            inserted += 1;
+        }
+    }
+    tx.commit()?;
+    println!("jar_events: inserted {inserted} rows");
     Ok(())
 }
 

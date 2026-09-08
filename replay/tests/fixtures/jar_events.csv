@@ -1,0 +1,7 @@
+account_id,jar_id,product_id,product_name,near_block_timestamp,event_type,amount,fee_amount,deposit_ids
+36988193,1,365d_12apy,The Rockstar,2026-03-20T14:41:50.100Z,deposit,1000000000000000000,0,1
+36988193,1,365d_12apy,The Rockstar,2026-03-20T14:42:00.000Z,deposit,15760000000000000000,0,2
+36988193,2,steps_365d_20000_score_cap,The Stepper,2026-04-01T00:00:00.000Z,merge,0,0,3 4
+36988193,1,365d_12apy,The Rockstar,2026-06-14T15:04:10.853Z,claim,81505017066108257,0,2
+36988193,1,365d_12apy,The Rockstar,2026-09-01T00:00:00.000Z,claim,999,0,2
+4,7,90d_3apy,The Starter,2026-05-01T00:00:00.000Z,withdraw,5000000000000000000,0,9
