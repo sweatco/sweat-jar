@@ -1,4 +1,5 @@
 #![cfg(any(test, feature = "replay-engine"))]
+#![cfg_attr(all(feature = "replay-engine", not(test)), allow(dead_code))]
 
 use std::{
     borrow::Borrow,

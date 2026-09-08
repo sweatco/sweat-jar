@@ -9,6 +9,7 @@ pub(crate) mod env_ext {
     }
 
     #[cfg(any(test, feature = "replay-engine"))]
+    #[cfg_attr(all(feature = "replay-engine", not(test)), allow(dead_code))]
     pub fn is_promise_success() -> bool {
         test_env_ext::get_test_future_success()
     }
@@ -29,6 +30,7 @@ pub(crate) mod env_ext {
 }
 
 #[cfg(any(test, feature = "replay-engine"))]
+#[cfg_attr(all(feature = "replay-engine", not(test)), allow(dead_code))]
 pub(crate) mod test_env_ext {
     use std::{
         collections::BTreeMap,
