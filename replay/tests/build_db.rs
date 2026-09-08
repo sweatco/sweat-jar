@@ -172,6 +172,152 @@ fn ingest_jar_events_rejects_unknown_event_type() {
 }
 
 #[test]
+fn ingest_step_packages_clamps_and_windows() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &["users".into(), "step_packages".into()],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+
+    let rows: Vec<(i64, i64, i64)> = conn
+        .prepare("SELECT account_id,ts_ms,steps FROM step_packages ORDER BY ts_ms")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+
+    assert_eq!(rows.len(), 2);
+    assert!(rows.iter().any(|r| r.2 == 65535));
+    assert!(rows.iter().any(|r| r.0 == 4 && r.2 == 7000));
+    assert!(rows.iter().all(|r| r.1 != 1_774_017_710_000));
+    let sept5 = replay::parse::space_utc_to_epoch_ms("2026-09-05 00:00:00 UTC").unwrap() as i64;
+    assert!(rows.iter().all(|r| r.1 != sept5));
+}
+
+#[test]
+fn ingest_step_packages_negative_steps_errs() {
+    use std::io::Write;
+    let dir = tempfile::tempdir().unwrap();
+    let mut f = std::fs::File::create(dir.path().join("step_packages.csv")).unwrap();
+    writeln!(f, "account_id,created_at,steps").unwrap();
+    writeln!(f, "4,2026-05-02 12:00:00 UTC,-5").unwrap();
+    drop(f);
+
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    let err = build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: dir.path(),
+            only: &["step_packages".into()],
+            accounts: None,
+            sample: None,
+        },
+    );
+    assert!(err.is_err());
+}
+
+#[test]
+fn ingest_snapshots_joins_on_near_account_id() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &["users".into(), "snapshots".into()],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+
+    let cnt: i64 = conn
+        .query_row("SELECT count(*) FROM snapshots WHERE account_id=36988193", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(cnt, 1);
+    let json: String = conn
+        .query_row("SELECT state_json FROM snapshots WHERE account_id=36988193", [], |r| r.get(0))
+        .unwrap();
+    assert!(json.starts_with("{\"near_account_id\":\"9b6b8403"));
+}
+
+#[test]
+fn ingest_snapshots_missing_file_is_noop() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: dir.path(),
+            only: &["snapshots".into()],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+    let cnt: i64 = conn
+        .query_row("SELECT count(*) FROM snapshots", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(cnt, 0);
+}
+
+#[test]
+fn build_db_rejects_unknown_only() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    let err = build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &["users".into(), "bogus".into()],
+            accounts: None,
+            sample: None,
+        },
+    );
+    assert!(err.is_err());
+}
+
+#[test]
+fn build_db_writes_meta() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &[],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+    let v: String = conn
+        .query_row("SELECT value FROM meta WHERE key='window_h_ms'", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(v, "1774017710156");
+}
+
+#[test]
 fn schema_creates_expected_tables() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("t.db");

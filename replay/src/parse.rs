@@ -3,10 +3,6 @@
 //! Hand-rolled UTC date math (Howard Hinnant's civil-date algorithm), ported
 //! from `contract/src/replay/mod.rs`. No chrono/time dependency.
 
-// TODO(task-9): space_utc_to_epoch_ms and yocto_str_to_u128 stay unconsumed until
-// snapshot / amount-parsing ingest lands (jar_events stores amounts raw).
-#![allow(dead_code)]
-
 use anyhow::{bail, Context};
 
 /// Snapshot block time (ms): start of the replay window.
@@ -57,6 +53,8 @@ pub fn space_utc_to_epoch_ms(s: &str) -> anyhow::Result<u64> {
 }
 
 /// Decimal string of yocto -> `u128`. Trims whitespace. Errors on a decimal point or non-digits.
+// TODO(task-12): consumed by amount-parsing ingest.
+#[allow(dead_code)]
 pub fn yocto_str_to_u128(s: &str) -> anyhow::Result<u128> {
     s.trim()
         .parse::<u128>()

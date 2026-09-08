@@ -22,7 +22,7 @@ fn main() -> anyhow::Result<()> {
             };
             let mut conn = db::open_write(&db_path)?;
             db::schema::init_schema(&conn)?;
-            db::ingest::build_db(
+            let counts = db::ingest::build_db(
                 &mut conn,
                 &db::ingest::BuildOpts {
                     test_data_dir: &test_data_dir,
@@ -30,7 +30,11 @@ fn main() -> anyhow::Result<()> {
                     accounts: accounts.as_ref(),
                     sample,
                 },
-            )
+            )?;
+            for (table, n) in counts {
+                println!("{table}: {n}");
+            }
+            Ok(())
         }
         cli::Cmd::Run { .. } => anyhow::bail!("unimplemented: run"),
     }
