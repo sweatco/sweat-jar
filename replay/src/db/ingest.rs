@@ -280,6 +280,21 @@ fn ingest_step_packages(
     keep: Option<&HashSet<i64>>,
     dir: &Path,
 ) -> anyhow::Result<usize> {
+    // Tests override the batch size to exercise the commit-boundary seam.
+    let batch = std::env::var("REPLAY_STEP_BATCH")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(BATCH);
+    ingest_step_packages_with_batch(conn, keep, dir, batch)
+}
+
+fn ingest_step_packages_with_batch(
+    conn: &mut rusqlite::Connection,
+    keep: Option<&HashSet<i64>>,
+    dir: &Path,
+    batch: usize,
+) -> anyhow::Result<usize> {
     let path = dir.join("step_packages.csv");
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)
@@ -311,14 +326,15 @@ fn ingest_step_packages(
         }
         let steps = steps_raw.min(65535);
 
-        tx.execute(
-            "INSERT INTO step_packages (account_id, ts_ms, steps) VALUES (?1, ?2, ?3)",
-            rusqlite::params![account_id, ts_ms as i64, steps],
-        )?;
+        // prepare_cached keys off the Connection cache, which survives the
+        // per-batch commit/reopen cycle — one reused compiled statement across
+        // the whole ~285M-row load.
+        tx.prepare_cached("INSERT INTO step_packages (account_id, ts_ms, steps) VALUES (?1, ?2, ?3)")?
+            .execute(rusqlite::params![account_id, ts_ms as i64, steps])?;
         inserted += 1;
         since_commit += 1;
 
-        if since_commit >= BATCH {
+        if since_commit >= batch {
             tx.commit()?;
             tx = conn.transaction()?;
             since_commit = 0;

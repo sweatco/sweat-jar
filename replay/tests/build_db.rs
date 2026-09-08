@@ -205,6 +205,45 @@ fn ingest_step_packages_clamps_and_windows() {
 }
 
 #[test]
+fn ingest_step_packages_batch_seam() {
+    use std::io::Write;
+    let dir = tempfile::tempdir().unwrap();
+    let mut f = std::fs::File::create(dir.path().join("step_packages.csv")).unwrap();
+    writeln!(f, "account_id,created_at,steps").unwrap();
+    for (i, mm) in [10, 11, 12, 13, 14].iter().enumerate() {
+        // all in-window (2026-04), distinct timestamps
+        writeln!(f, "4,2026-04-01 00:00:{mm} UTC,{}", 100 + i).unwrap();
+    }
+    drop(f);
+
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    std::env::set_var("REPLAY_STEP_BATCH", "2");
+    let r = build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: dir.path(),
+            only: &["step_packages".into()],
+            accounts: None,
+            sample: None,
+        },
+    );
+    std::env::remove_var("REPLAY_STEP_BATCH");
+    r.unwrap();
+
+    let rows: Vec<(i64, i64)> = conn
+        .prepare("SELECT ts_ms,steps FROM step_packages ORDER BY ts_ms")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(rows.len(), 5);
+    assert_eq!(rows.iter().map(|r| r.1).collect::<Vec<_>>(), vec![100, 101, 102, 103, 104]);
+}
+
+#[test]
 fn ingest_step_packages_negative_steps_errs() {
     use std::io::Write;
     let dir = tempfile::tempdir().unwrap();
