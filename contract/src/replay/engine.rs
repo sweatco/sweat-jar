@@ -27,7 +27,9 @@ pub enum Action {
     RecordScore(Score),
     Deposit { product_id: String, amount: u128 },
     Withdraw { product_id: String },
-    Restake { product_id: String },
+    /// `amount` is the principal restaked on-chain (`jar_events.amount`); the
+    /// rest of the matured principal is withdrawn.
+    Restake { product_id: String, amount: u128 },
     SetIncreasedScoreCap(bool),
     Claim,
 }
@@ -136,14 +138,18 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
                     context.switch_account(&account_id);
                     let _ = context.contract().withdraw(product_id);
                 }
-                Action::Restake { product_id } => {
+                Action::Restake { product_id, amount } => {
                     context.switch_account(&account_id);
                     let ticket = DepositTicket {
                         product_id: product_id.clone(),
                         valid_until: 0.into(),
-                        timezone: None,
+                        timezone: Some(Timezone::hour_shift(0)),
                     };
-                    let _ = context.contract().restake(product_id, ticket, None, None);
+                    // Restake exactly what was restaked on-chain; the rest of the
+                    // matured principal is withdrawn (matching the contract).
+                    let _ = context
+                        .contract()
+                        .restake(product_id, ticket, None, Some(amount.into()));
                 }
                 Action::SetIncreasedScoreCap(enabled) => {
                     context.switch_account_to_operator();

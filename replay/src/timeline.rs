@@ -75,7 +75,10 @@ pub fn load_user(conn: &Connection, account_id: i64) -> Result<(UserSlice, Timel
             "restake" => events.push(Event {
                 ts_ms,
                 seq,
-                action: Action::Restake { product_id },
+                action: Action::Restake {
+                    product_id,
+                    amount: yocto_str_to_u128(&amount)?,
+                },
             }),
             "claim" => {
                 onchain_claimed = onchain_claimed
