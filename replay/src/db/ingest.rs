@@ -28,7 +28,8 @@ impl BuildOpts<'_> {
 pub fn build_db(conn: &mut rusqlite::Connection, opts: &BuildOpts) -> anyhow::Result<()> {
     let dir = opts.test_data_dir;
 
-    // Compute the keep set once.
+    // Compute the keep set once — final, single-sourced. Threaded into every
+    // per-account loader (users here; jar_events/step_packages/snapshots later).
     let owned_keep: Option<HashSet<i64>> = if opts.accounts.is_some() {
         None
     } else if let Some(n) = opts.sample {
@@ -39,7 +40,7 @@ pub fn build_db(conn: &mut rusqlite::Connection, opts: &BuildOpts) -> anyhow::Re
     let keep: Option<&HashSet<i64>> = opts.accounts.or(owned_keep.as_ref());
 
     if opts.wants("users") {
-        ingest_users(conn, opts)?;
+        ingest_users(conn, keep, dir)?;
     }
     if opts.wants("subscriptions") {
         ingest_subscriptions(conn, keep, dir)?;
@@ -76,20 +77,13 @@ fn first_n_account_ids(dir: &Path, n: usize) -> anyhow::Result<HashSet<i64>> {
 }
 
 /// Load `users.csv` -> `users(account_id, near_account_id)`. `sweatcoin_user_id`
-/// is dropped. Returns the effective keep set (`None` when no filter applies).
+/// is dropped. Rows outside `keep` (when a filter is active) are skipped.
 fn ingest_users(
     conn: &mut rusqlite::Connection,
-    opts: &BuildOpts,
-) -> anyhow::Result<Option<HashSet<i64>>> {
-    let keep: Option<HashSet<i64>> = if let Some(accounts) = opts.accounts {
-        Some(accounts.clone())
-    } else {
-        opts.sample
-            .map(|n| first_n_account_ids(opts.test_data_dir, n))
-            .transpose()?
-    };
-
-    let path = opts.test_data_dir.join("users.csv");
+    keep: Option<&HashSet<i64>>,
+    dir: &Path,
+) -> anyhow::Result<()> {
+    let path = dir.join("users.csv");
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)
         .from_path(&path)
@@ -102,7 +96,7 @@ fn ingest_users(
         for rec in rdr.records() {
             let rec = rec?;
             let account_id: i64 = rec[0].trim().parse().context("parse account_id")?;
-            if let Some(k) = &keep {
+            if let Some(k) = keep {
                 if !k.contains(&account_id) {
                     continue;
                 }
@@ -112,7 +106,7 @@ fn ingest_users(
         }
     }
     tx.commit()?;
-    Ok(keep)
+    Ok(())
 }
 
 /// Load `max_subscriptions.csv` -> `subscriptions(account_id, ts_ms, active)`.

@@ -33,6 +33,7 @@ fn ingest_users_and_subscriptions() {
         .unwrap()
         .collect::<Result<_, _>>()
         .unwrap();
+    assert_eq!(subs.len(), 3);
     assert_eq!(subs[0], (4, 1_766_133_726_000, 1));
     assert_eq!(subs.iter().filter(|(_, _, a)| *a == 0).count(), 1);
 }
