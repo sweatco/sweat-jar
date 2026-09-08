@@ -87,6 +87,18 @@ pub fn build_db(
     Ok(counts)
 }
 
+/// Parse an account-id list file: one `account_id` per line, blank lines and
+/// `#` comments ignored. Shared by `build-db --accounts` and `run --accounts`.
+pub fn read_accounts(path: &Path) -> anyhow::Result<Vec<i64>> {
+    let text = std::fs::read_to_string(path)
+        .with_context(|| format!("read accounts file {}", path.display()))?;
+    text.lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        .map(|l| l.parse::<i64>().with_context(|| format!("parse account_id {l:?}")))
+        .collect()
+}
+
 /// Record the replay window bounds and build time into `meta`.
 fn write_meta(conn: &rusqlite::Connection) -> anyhow::Result<()> {
     let built_at = std::time::SystemTime::now()

@@ -5,5 +5,6 @@ pub mod db;
 pub mod parse;
 pub mod products;
 pub mod reconcile;
+pub mod run;
 pub mod snapshot;
 pub mod timeline;

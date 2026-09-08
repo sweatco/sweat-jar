@@ -1,9 +1,8 @@
 use std::collections::HashSet;
 
-use anyhow::Context;
 use clap::Parser;
 
-use replay::{cli, db, products};
+use replay::{cli, db, products, run};
 
 fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
@@ -21,7 +20,7 @@ fn main() -> anyhow::Result<()> {
             sample,
         } => {
             let accounts: Option<HashSet<i64>> = match accounts {
-                Some(path) => Some(read_accounts(&path)?),
+                Some(path) => Some(db::ingest::read_accounts(&path)?.into_iter().collect()),
                 None => None,
             };
             let mut conn = db::open_write(&db_path)?;
@@ -40,17 +39,43 @@ fn main() -> anyhow::Result<()> {
             }
             Ok(())
         }
-        cli::Cmd::Run { .. } => anyhow::bail!("unimplemented: run"),
+        cli::Cmd::Run {
+            db,
+            out,
+            products,
+            threads,
+            shard,
+            accounts,
+            sample,
+            tolerance,
+        } => {
+            let threads = threads.unwrap_or_else(|| {
+                std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)
+            });
+            let shard = shard.as_deref().map(run::parse_shard).transpose()?;
+            let summary = run::run(&run::RunOpts {
+                db,
+                out,
+                products,
+                threads,
+                shard,
+                accounts,
+                sample,
+                tolerance,
+            })?;
+            println!(
+                "processed {} | ok {} | error {} | no_baseline {} | over_tolerance {}",
+                summary.processed,
+                summary.ok,
+                summary.errored,
+                summary.no_baseline,
+                summary.over_tolerance
+            );
+            println!(
+                "sum_calculated {} | sum_actual {}",
+                summary.sum_calculated, summary.sum_actual
+            );
+            Ok(())
+        }
     }
-}
-
-/// One `account_id` per line; blank lines and `#` comments ignored.
-fn read_accounts(path: &std::path::Path) -> anyhow::Result<HashSet<i64>> {
-    let text = std::fs::read_to_string(path)
-        .with_context(|| format!("read accounts file {}", path.display()))?;
-    text.lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .map(|l| l.parse::<i64>().with_context(|| format!("parse account_id {l:?}")))
-        .collect()
 }
