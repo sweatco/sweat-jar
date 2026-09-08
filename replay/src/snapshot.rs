@@ -1,7 +1,8 @@
 //! Baseline snapshot source: a user's account state at block H as borsh bytes
 //! of an `AccountVersioned`, for the engine's `Baseline.raw_account`.
 
-use std::path::PathBuf;
+use std::cell::RefCell;
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 use rusqlite::OptionalExtension;
@@ -25,17 +26,44 @@ impl DbSnapshotSource {
     }
 }
 
+thread_local! {
+    /// One read-only SQLite connection per worker thread, reused across the
+    /// ~1.2M `raw_account` calls a run makes. Keyed by db path so a thread that
+    /// somehow sees two different paths reopens rather than querying the wrong DB.
+    static CONN: RefCell<Option<(PathBuf, rusqlite::Connection)>> = const { RefCell::new(None) };
+}
+
+impl DbSnapshotSource {
+    /// Run `f` with this thread's cached connection for `db_path`, opening one on
+    /// first use (or when the path changed).
+    fn with_conn<T>(
+        db_path: &Path,
+        f: impl FnOnce(&rusqlite::Connection) -> Result<T>,
+    ) -> Result<T> {
+        CONN.with(|cell| {
+            let mut slot = cell.borrow_mut();
+            let needs_open = !matches!(&*slot, Some((p, _)) if p == db_path);
+            if needs_open {
+                let conn = crate::db::open_read(db_path)?;
+                *slot = Some((db_path.to_path_buf(), conn));
+            }
+            let (_, conn) = slot.as_ref().expect("connection just set");
+            f(conn)
+        })
+    }
+}
+
 impl SnapshotSource for DbSnapshotSource {
     fn raw_account(&self, account_id: i64) -> Result<Option<Vec<u8>>> {
-        let conn = crate::db::open_read(&self.db_path)?;
-        let line: Option<String> = conn
-            .query_row(
+        let line: Option<String> = Self::with_conn(&self.db_path, |conn| {
+            conn.query_row(
                 "SELECT state_json FROM snapshots WHERE account_id = ?1",
                 [account_id],
                 |r| r.get(0),
             )
             .optional()
-            .context("querying snapshots table")?;
+            .context("querying snapshots table")
+        })?;
 
         let Some(line) = line else { return Ok(None) };
 
@@ -103,6 +131,24 @@ mod tests {
         .raw_account(1)
         .unwrap_err();
         assert!(err.to_string().contains("not implemented"));
+    }
+
+    #[test]
+    fn parse_account_state_stamps_zero_updated_at_to_window_start() {
+        let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(
+            r#"{"jars":{},"score":{"updated_at":0,"history":[{"value":10,"booster":0}]},"features":{}}"#,
+        )
+        .unwrap();
+        let account = sweat_jar::replay::engine::parse_account_state(&v, crate::parse::H_MS);
+        assert_eq!(account.score.updated_at(), crate::parse::H_MS);
+    }
+
+    #[test]
+    fn parse_account_state_stamps_missing_updated_at_to_window_start() {
+        let v: near_sdk::serde_json::Value =
+            near_sdk::serde_json::from_str(r#"{"jars":{},"score":{"history":[]},"features":{}}"#).unwrap();
+        let account = sweat_jar::replay::engine::parse_account_state(&v, crate::parse::H_MS);
+        assert_eq!(account.score.updated_at(), crate::parse::H_MS);
     }
 
     #[test]

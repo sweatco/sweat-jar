@@ -142,4 +142,5 @@ fn parse_shard_validates() {
     assert!(parse_shard("4/4").is_err());
     assert!(parse_shard("0/0").is_err());
     assert!(parse_shard("x").is_err());
+    assert!(parse_shard("1/2/3").is_err());
 }

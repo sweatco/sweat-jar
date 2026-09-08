@@ -71,6 +71,7 @@ fn build_worklist(opts: &RunOpts) -> Result<Vec<i64>> {
 
 /// Run reconciliation over the worklist and write `opts.out`.
 pub fn run(opts: &RunOpts) -> Result<RunSummary> {
+    anyhow::ensure!(opts.threads > 0, "threads must be > 0");
     let worklist = build_worklist(opts)?;
 
     let products: Arc<Vec<Product>> =
@@ -98,6 +99,10 @@ pub fn run(opts: &RunOpts) -> Result<RunSummary> {
             for row in rx {
                 s.processed += 1;
                 s.sum_calculated += row.calculated_total_claim.parse::<u128>().unwrap_or(0);
+                // Hard-failed rows (`status` "error:...") carry `actual_total_claim`
+                // "0" because `load_user` failed and the on-chain figure is
+                // genuinely unavailable, so `sum_actual` under-counts by those
+                // users' real claims. They are tallied in `errored` instead.
                 s.sum_actual += row.actual_total_claim.parse::<u128>().unwrap_or(0);
                 if row.status == "ok" {
                     s.ok += 1;

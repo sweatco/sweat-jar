@@ -1,7 +1,4 @@
-use sweat_jar_model::{
-    data::product::{Apy, Cap, FixedProductTerms, Product, Terms},
-    Score,
-};
+use sweat_jar_model::data::product::{Apy, Cap, FixedProductTerms, Product, Terms};
 use sweat_jar_primitives::UDecimal;
 
 use super::engine::{run_timeline, Action, Baseline, Event, ReplayStatus, Timeline};

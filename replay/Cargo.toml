@@ -15,7 +15,6 @@ path = "src/main.rs"
 [dependencies]
 sweat_jar = { path = "../contract", features = ["replay-engine"] }
 sweat-jar-model = { workspace = true }
-sweat-jar-primitives = { workspace = true }
 near-sdk = { workspace = true }
 rusqlite = { version = "0.32", features = ["bundled"] }
 csv = "1.3"

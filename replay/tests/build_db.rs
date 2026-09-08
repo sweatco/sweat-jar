@@ -144,7 +144,7 @@ fn ingest_jar_events_respects_keep() {
 }
 
 #[test]
-fn ingest_jar_events_rejects_unknown_event_type() {
+fn ingest_jar_events_skips_unknown_event_type() {
     use std::io::Write;
     let dir = tempfile::tempdir().unwrap();
     let mut f = std::fs::File::create(dir.path().join("jar_events.csv")).unwrap();
@@ -153,17 +153,14 @@ fn ingest_jar_events_rejects_unknown_event_type() {
         "account_id,jar_id,product_id,product_name,near_block_timestamp,event_type,amount,fee_amount,deposit_ids"
     )
     .unwrap();
-    writeln!(
-        f,
-        "4,7,90d_3apy,The Starter,2026-05-01T00:00:00.000Z,frobnicate,5,0,9"
-    )
-    .unwrap();
+    writeln!(f, "4,7,90d_3apy,The Starter,2026-05-01T00:00:00.000Z,frobnicate,5,0,9").unwrap();
+    writeln!(f, "4,8,90d_3apy,The Starter,2026-05-02T00:00:00.000Z,deposit,42,0,10").unwrap();
     drop(f);
 
     let path = dir.path().join("t.db");
     let mut conn = db::open_write(&path).unwrap();
     db::schema::init_schema(&conn).unwrap();
-    let err = build_db(
+    build_db(
         &mut conn,
         &BuildOpts {
             test_data_dir: dir.path(),
@@ -171,8 +168,18 @@ fn ingest_jar_events_rejects_unknown_event_type() {
             accounts: None,
             sample: None,
         },
-    );
-    assert!(err.is_err());
+    )
+    .unwrap();
+
+    let rows: Vec<(String, String)> = conn
+        .prepare("SELECT event_type,amount FROM jar_events")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    // The unknown row is skipped; the valid deposit still ingested.
+    assert_eq!(rows, vec![("deposit".to_string(), "42".to_string())]);
 }
 
 #[test]
@@ -223,18 +230,8 @@ fn ingest_step_packages_batch_seam() {
     let path = dir.path().join("t.db");
     let mut conn = db::open_write(&path).unwrap();
     db::schema::init_schema(&conn).unwrap();
-    std::env::set_var("REPLAY_STEP_BATCH", "2");
-    let r = build_db(
-        &mut conn,
-        &BuildOpts {
-            test_data_dir: dir.path(),
-            only: &["step_packages".into()],
-            accounts: None,
-            sample: None,
-        },
-    );
-    std::env::remove_var("REPLAY_STEP_BATCH");
-    r.unwrap();
+    // Drive the commit-boundary seam directly with batch = 2 — no env var.
+    replay::db::ingest::ingest_step_packages_with_batch(&mut conn, None, dir.path(), 2).unwrap();
 
     let rows: Vec<(i64, i64)> = conn
         .prepare("SELECT ts_ms,steps FROM step_packages ORDER BY ts_ms")
@@ -248,18 +245,19 @@ fn ingest_step_packages_batch_seam() {
 }
 
 #[test]
-fn ingest_step_packages_negative_steps_errs() {
+fn ingest_step_packages_skips_negative_steps() {
     use std::io::Write;
     let dir = tempfile::tempdir().unwrap();
     let mut f = std::fs::File::create(dir.path().join("step_packages.csv")).unwrap();
     writeln!(f, "account_id,created_at,steps").unwrap();
     writeln!(f, "4,2026-05-02 12:00:00 UTC,-5").unwrap();
+    writeln!(f, "4,2026-05-03 12:00:00 UTC,900").unwrap();
     drop(f);
 
     let path = dir.path().join("t.db");
     let mut conn = db::open_write(&path).unwrap();
     db::schema::init_schema(&conn).unwrap();
-    let err = build_db(
+    build_db(
         &mut conn,
         &BuildOpts {
             test_data_dir: dir.path(),
@@ -267,8 +265,18 @@ fn ingest_step_packages_negative_steps_errs() {
             accounts: None,
             sample: None,
         },
-    );
-    assert!(err.is_err());
+    )
+    .unwrap();
+
+    let steps: Vec<i64> = conn
+        .prepare("SELECT steps FROM step_packages")
+        .unwrap()
+        .query_map([], |r| r.get(0))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    // The negative row is skipped; the valid row still ingested.
+    assert_eq!(steps, vec![900]);
 }
 
 #[test]

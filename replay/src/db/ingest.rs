@@ -1,6 +1,10 @@
 //! CSV -> SQLite loaders for the replay database.
 
-use std::{collections::HashSet, path::Path};
+use std::{
+    collections::HashSet,
+    io::BufRead,
+    path::Path,
+};
 
 use anyhow::{bail, Context};
 use rusqlite::OptionalExtension;
@@ -177,6 +181,8 @@ fn ingest_users(
 /// event lands inside `(H_MS, T_END_MS]`, the `event_type` is one of
 /// `{deposit, claim, withdraw, restake}` (`merge` is dropped), and — when `keep`
 /// is set — the `account_id` is in it. `amount` is stored as the raw CSV string.
+/// Rows with an unknown `event_type` or an unparseable `account_id`/timestamp are
+/// skipped and counted rather than aborting the ingest.
 fn ingest_jar_events(
     conn: &mut rusqlite::Connection,
     keep: Option<&HashSet<i64>>,
@@ -189,6 +195,7 @@ fn ingest_jar_events(
         .with_context(|| format!("open {}", path.display()))?;
 
     let mut inserted = 0usize;
+    let mut skipped = 0usize;
     let tx = conn.transaction()?;
     {
         let mut stmt = tx.prepare(
@@ -199,17 +206,31 @@ fn ingest_jar_events(
             let rec = rec?;
             let seq = seq as i64;
 
-            let account_id: i64 = rec[0].trim().parse().context("parse account_id")?;
+            let Ok(account_id) = rec[0].trim().parse::<i64>() else {
+                eprintln!("jar_events: skipping row {}: unparseable account_id {:?}", seq + 1, &rec[0]);
+                skipped += 1;
+                continue;
+            };
 
             let event_type = rec[5].trim();
             match event_type {
                 "deposit" | "claim" | "withdraw" | "restake" => {}
                 "merge" => continue,
-                other => bail!("unknown jar_events event_type: {other:?}"),
+                other => {
+                    eprintln!("jar_events: skipping row {}: unknown event_type {other:?}", seq + 1);
+                    skipped += 1;
+                    continue;
+                }
             }
 
-            let ts_ms = parse::iso8601_ms_to_epoch_ms(rec[4].trim())
-                .with_context(|| format!("jar_events timestamp for account {account_id}"))?;
+            let ts_ms = match parse::iso8601_ms_to_epoch_ms(rec[4].trim()) {
+                Ok(ts) => ts,
+                Err(e) => {
+                    eprintln!("jar_events: skipping row {}: bad timestamp for account {account_id}: {e}", seq + 1);
+                    skipped += 1;
+                    continue;
+                }
+            };
             if !(parse::H_MS < ts_ms && ts_ms <= parse::T_END_MS) {
                 continue;
             }
@@ -234,6 +255,9 @@ fn ingest_jar_events(
         }
     }
     tx.commit()?;
+    if skipped > 0 {
+        eprintln!("jar_events: skipped {skipped} malformed rows");
+    }
     Ok(inserted)
 }
 
@@ -288,7 +312,9 @@ fn ingest_subscriptions(
 /// Header: `account_id,created_at,steps`. `created_at` is `"YYYY-MM-DD HH:MM:SS UTC"`.
 /// Rows are kept only when `ts_ms` lands inside `(H_MS, T_END_MS]` and — when
 /// `keep` is set — the `account_id` is in it. `steps` is parsed as `i64`
-/// (negative is an error) then clamped to `u16::MAX` (65535).
+/// (negative rows are skipped and counted) then clamped to `u16::MAX` (65535).
+/// Malformed rows (bad `account_id`, `created_at`, or `steps`) are skipped and
+/// counted rather than aborting the multi-hour ingest.
 ///
 /// This is the largest input (~285M rows), so the transaction is committed and
 /// reopened every `BATCH` inserted rows to bound journal/statement-cache growth.
@@ -306,7 +332,10 @@ fn ingest_step_packages(
     ingest_step_packages_with_batch(conn, keep, dir, batch)
 }
 
-fn ingest_step_packages_with_batch(
+/// Exposed for the batch-seam test, which drives a tiny `batch` directly instead
+/// of going through the `REPLAY_STEP_BATCH` env var. Not part of the public API.
+#[doc(hidden)]
+pub fn ingest_step_packages_with_batch(
     conn: &mut rusqlite::Connection,
     keep: Option<&HashSet<i64>>,
     dir: &Path,
@@ -319,14 +348,25 @@ fn ingest_step_packages_with_batch(
         .with_context(|| format!("open {}", path.display()))?;
 
     let mut inserted = 0usize;
+    let mut skipped = 0usize;
     let mut since_commit = 0usize;
     let mut tx = conn.transaction()?;
-    for rec in rdr.records() {
+    for (row, rec) in rdr.records().enumerate() {
         let rec = rec?;
-        let account_id: i64 = rec[0].trim().parse().context("parse account_id")?;
+        let Ok(account_id) = rec[0].trim().parse::<i64>() else {
+            eprintln!("step_packages: skipping row {}: unparseable account_id {:?}", row + 1, &rec[0]);
+            skipped += 1;
+            continue;
+        };
 
-        let ts_ms = parse::space_utc_to_epoch_ms(rec[1].trim())
-            .with_context(|| format!("step_packages created_at for account {account_id}"))?;
+        let ts_ms = match parse::space_utc_to_epoch_ms(rec[1].trim()) {
+            Ok(ts) => ts,
+            Err(e) => {
+                eprintln!("step_packages: skipping row {}: bad created_at for account {account_id}: {e}", row + 1);
+                skipped += 1;
+                continue;
+            }
+        };
         if !(parse::H_MS < ts_ms && ts_ms <= parse::T_END_MS) {
             continue;
         }
@@ -337,9 +377,15 @@ fn ingest_step_packages_with_batch(
             }
         }
 
-        let steps_raw: i64 = rec[2].trim().parse().context("parse steps")?;
+        let Ok(steps_raw) = rec[2].trim().parse::<i64>() else {
+            eprintln!("step_packages: skipping row {}: unparseable steps {:?} for account {account_id}", row + 1, &rec[2]);
+            skipped += 1;
+            continue;
+        };
         if steps_raw < 0 {
-            bail!("negative steps for account {account_id}: {steps_raw}");
+            eprintln!("step_packages: skipping row {}: negative steps {steps_raw} for account {account_id}", row + 1);
+            skipped += 1;
+            continue;
         }
         let steps = steps_raw.min(65535);
 
@@ -358,6 +404,9 @@ fn ingest_step_packages_with_batch(
         }
     }
     tx.commit()?;
+    if skipped > 0 {
+        eprintln!("step_packages: skipped {skipped} malformed rows");
+    }
     Ok(inserted)
 }
 
@@ -379,8 +428,8 @@ fn ingest_snapshots(
     if !path.exists() {
         return Ok(0);
     }
-    let text = std::fs::read_to_string(&path)
-        .with_context(|| format!("read {}", path.display()))?;
+    let file = std::fs::File::open(&path).with_context(|| format!("open {}", path.display()))?;
+    let reader = std::io::BufReader::new(file);
 
     let mut inserted = 0usize;
     let mut skipped = 0usize;
@@ -390,17 +439,25 @@ fn ingest_snapshots(
             tx.prepare("SELECT account_id FROM users WHERE near_account_id = ?1")?;
         let mut ins =
             tx.prepare("INSERT OR REPLACE INTO snapshots (account_id, state_json) VALUES (?1, ?2)")?;
-        for line in text.lines() {
+        for (n, line) in reader.lines().enumerate() {
+            let line = line.with_context(|| format!("read {}", path.display()))?;
             let line = line.trim();
             if line.is_empty() {
                 continue;
             }
-            let v: serde_json::Value =
-                serde_json::from_str(line).context("parse snapshots.ndjson line")?;
-            let near = v
-                .get("near_account_id")
-                .and_then(|n| n.as_str())
-                .context("snapshots line missing near_account_id string")?;
+            let v: serde_json::Value = match serde_json::from_str(line) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("snapshots: skipping row {}: invalid JSON: {e}", n + 1);
+                    skipped += 1;
+                    continue;
+                }
+            };
+            let Some(near) = v.get("near_account_id").and_then(|n| n.as_str()) else {
+                eprintln!("snapshots: skipping row {}: missing near_account_id string", n + 1);
+                skipped += 1;
+                continue;
+            };
 
             let account_id: Option<i64> = lookup
                 .query_row(rusqlite::params![near], |r| r.get(0))
@@ -422,7 +479,7 @@ fn ingest_snapshots(
     }
     tx.commit()?;
     if skipped > 0 {
-        eprintln!("snapshots: skipped {skipped} lines with unknown near_account_id");
+        eprintln!("snapshots: skipped {skipped} malformed rows");
     }
     Ok(inserted)
 }
