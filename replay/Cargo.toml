@@ -4,6 +4,14 @@ version = "0.1.0"
 edition = "2021"
 publish = false
 
+[lib]
+name = "replay"
+path = "src/lib.rs"
+
+[[bin]]
+name = "replay"
+path = "src/main.rs"
+
 [dependencies]
 sweat_jar = { path = "../contract", features = ["replay-engine"] }
 sweat-jar-model = { workspace = true }

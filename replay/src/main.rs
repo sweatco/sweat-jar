@@ -1,7 +1,6 @@
-mod cli;
-mod parse;
-
 use clap::Parser;
+
+use replay::cli;
 
 fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
