@@ -48,16 +48,14 @@ fn reconcile_user_produces_a_row() {
     let actual = row.actual_total_claim.parse::<i128>().unwrap();
     assert_eq!(delta, calc - actual);
 
-    // 36988193 has a fixture snapshot + a deposit into 365d_12apy: signature
-    // verification is disabled (public_key stripped) so the deposit lands and the
-    // replay completes cleanly rather than erroring.
+    // 36988193 has a fixture snapshot + a deposit into 365d_12apy and one claim.
+    // Signature verification is disabled (public_key stripped) so the deposit
+    // lands, and the contract's FT gates now cover `feature="replay-engine"`, so
+    // `claim_total` returns a synchronous value: the replay reconciles to a real
+    // non-zero accrued-interest figure with exactly one recorded claim.
     assert_eq!(row.status, "ok");
-    // NOTE: `calculated_total_claim` stays "0" / `n_claims` stays 0 here because
-    // the engine's `claim_interest` only returns a synchronous value under
-    // `#[cfg(test)]`; compiled via the `replay-engine` feature it returns a
-    // Promise and `run_timeline` cannot observe the claimed amount. Tracked as an
-    // engine-side blocker (contract/src/feature/claim/api.rs).
-    row.calculated_total_claim.parse::<u128>().unwrap();
+    assert_ne!(row.calculated_total_claim, "0");
+    assert_eq!(row.n_claims, 1);
 }
 
 #[test]
