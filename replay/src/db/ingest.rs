@@ -364,6 +364,8 @@ pub fn ingest_step_packages_with_batch(
     let path = dir.join("step_packages.csv");
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)
+        // Tolerate a short/truncated final row (e.g. a partially-downloaded file).
+        .flexible(true)
         .from_path(&path)
         .with_context(|| format!("open {}", path.display()))?;
 
@@ -373,6 +375,11 @@ pub fn ingest_step_packages_with_batch(
     let mut tx = conn.transaction()?;
     for (row, rec) in rdr.records().enumerate() {
         let rec = rec?;
+        if rec.len() < 3 {
+            eprintln!("step_packages: skipping row {}: only {} fields", row + 1, rec.len());
+            skipped += 1;
+            continue;
+        }
         let Ok(account_id) = rec[0].trim().parse::<i64>() else {
             eprintln!("step_packages: skipping row {}: unparseable account_id {:?}", row + 1, &rec[0]);
             skipped += 1;
@@ -452,6 +459,7 @@ fn ingest_boosted_step_packages(
     }
     let mut rdr = csv::ReaderBuilder::new()
         .has_headers(true)
+        .flexible(true)
         .from_path(&path)
         .with_context(|| format!("open {}", path.display()))?;
 
@@ -463,6 +471,11 @@ fn ingest_boosted_step_packages(
             tx.prepare("INSERT INTO boosted_step_packages (account_id, ts_ms, steps) VALUES (?1, ?2, ?3)")?;
         for (row, rec) in rdr.records().enumerate() {
             let rec = rec?;
+            if rec.len() < 4 {
+                eprintln!("boosted_step_packages: skipping row {}: only {} fields", row + 1, rec.len());
+                skipped += 1;
+                continue;
+            }
             let Ok(account_id) = rec[0].trim().parse::<i64>() else {
                 eprintln!("boosted_step_packages: skipping row {}: unparseable account_id {:?}", row + 1, &rec[0]);
                 skipped += 1;
