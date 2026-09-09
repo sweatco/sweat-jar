@@ -51,10 +51,12 @@ fn load_user_builds_sorted_timeline() {
         .events
         .iter()
         .any(|e| matches!(e.action, Action::Deposit { amount: 15_760_000_000_000_000_000, .. })));
-    assert!(timeline
-        .events
-        .iter()
-        .any(|e| matches!(e.action, Action::RecordScore(65535))));
+    // 99999 steps -> clamped 65535, plus a (3000, ts-24h) yesterday increment.
+    assert!(timeline.events.iter().any(|e| matches!(
+        &e.action,
+        Action::RecordScore(incs) if incs.iter().any(|&(s, _)| s == 65535)
+            && incs.iter().any(|&(s, _)| s == 3000)
+    )));
     assert!(timeline
         .events
         .iter()
@@ -91,6 +93,45 @@ fn load_user_collapses_same_ts_claims() {
     // collapsed claim at ts 1000 keeps the MIN seq (4)
     assert_eq!(claims.iter().find(|e| e.ts_ms == 1000).unwrap().seq, 4);
     assert_eq!(slice.onchain_claimed, 357);
+}
+
+#[test]
+fn load_user_includes_boosted_and_yesterday_score_events() {
+    let d = tempfile::tempdir().unwrap();
+    let dir = d.path();
+    let path = dir.join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &[
+                "users".into(),
+                "step_packages".into(),
+                "boosted_step_packages".into(),
+            ],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+
+    let (_slice, timeline) = load_user(&conn, 36988193).unwrap();
+    let score_events: Vec<&Vec<(u16, u64)>> = timeline
+        .events
+        .iter()
+        .filter_map(|e| match &e.action {
+            Action::RecordScore(v) => Some(v),
+            _ => None,
+        })
+        .collect();
+    // regular package with steps + yesterday_steps -> one event, two increments,
+    // the yesterday one 24h earlier.
+    assert!(score_events.iter().any(|v| v.len() == 2
+        && v[1].1 == v[0].1 - 86_400_000));
+    // boosted (executed) package -> its own single-increment event.
+    assert!(score_events.iter().any(|v| v.len() == 1 && v[0].0 == 4000));
 }
 
 #[test]

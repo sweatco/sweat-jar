@@ -13,7 +13,14 @@ use crate::{db, parse};
 
 /// Tables that `build_db` knows how to ingest. An `only` value outside this set
 /// is a typo and is rejected.
-const TABLES: [&str; 5] = ["users", "jar_events", "step_packages", "subscriptions", "snapshots"];
+const TABLES: [&str; 6] = [
+    "users",
+    "jar_events",
+    "step_packages",
+    "boosted_step_packages",
+    "subscriptions",
+    "snapshots",
+];
 
 /// Commit and reopen the transaction every this many inserted `step_packages`
 /// rows to bound journal/statement-cache growth on the ~285M-row table.
@@ -89,6 +96,9 @@ pub fn build_db(
     }
     if opts.wants("step_packages") {
         counts.push(("step_packages", ingest_step_packages(conn, keep, dir)?));
+    }
+    if opts.wants("boosted_step_packages") {
+        counts.push(("boosted_step_packages", ingest_boosted_step_packages(conn, keep, dir)?));
     }
     if opts.wants("snapshots") {
         counts.push(("snapshots", ingest_snapshots(conn, keep, dir)?));
@@ -398,12 +408,17 @@ pub fn ingest_step_packages_with_batch(
             continue;
         }
         let steps = steps_raw.min(65535);
+        // `yesterday_steps` is the 4th column in the enriched export; absent or
+        // unparseable -> 0 (the oracle only sends it when > 0).
+        let yesterday_steps = rec.get(3).and_then(|s| s.trim().parse::<i64>().ok()).unwrap_or(0).clamp(0, 65535);
 
         // prepare_cached keys off the Connection cache, which survives the
         // per-batch commit/reopen cycle — one reused compiled statement across
         // the whole ~285M-row load.
-        tx.prepare_cached("INSERT INTO step_packages (account_id, ts_ms, steps) VALUES (?1, ?2, ?3)")?
-            .execute(rusqlite::params![account_id, ts_ms as i64, steps])?;
+        tx.prepare_cached(
+            "INSERT INTO step_packages (account_id, ts_ms, steps, yesterday_steps) VALUES (?1, ?2, ?3, ?4)",
+        )?
+        .execute(rusqlite::params![account_id, ts_ms as i64, steps, yesterday_steps])?;
         inserted += 1;
         since_commit += 1;
 
@@ -416,6 +431,80 @@ pub fn ingest_step_packages_with_batch(
     tx.commit()?;
     if skipped > 0 {
         eprintln!("step_packages: skipped {skipped} malformed rows");
+    }
+    Ok(inserted)
+}
+
+/// Load `boosted_step_packages.csv` -> `boosted_step_packages(account_id, ts_ms, steps)`.
+///
+/// Header: `account_id,created_at,steps,status,processing_type`. Only rows that
+/// actually landed on-chain (`status == "executed"`) are kept; both
+/// `processing_type` values (`oracle`/`manual`) reach the contract via
+/// `record_score`. Window-filtered like the other event tables.
+fn ingest_boosted_step_packages(
+    conn: &mut rusqlite::Connection,
+    keep: Option<&HashSet<i64>>,
+    dir: &Path,
+) -> anyhow::Result<usize> {
+    let path = dir.join("boosted_step_packages.csv");
+    if !path.exists() {
+        return Ok(0);
+    }
+    let mut rdr = csv::ReaderBuilder::new()
+        .has_headers(true)
+        .from_path(&path)
+        .with_context(|| format!("open {}", path.display()))?;
+
+    let mut inserted = 0usize;
+    let mut skipped = 0usize;
+    let tx = conn.transaction()?;
+    {
+        let mut stmt =
+            tx.prepare("INSERT INTO boosted_step_packages (account_id, ts_ms, steps) VALUES (?1, ?2, ?3)")?;
+        for (row, rec) in rdr.records().enumerate() {
+            let rec = rec?;
+            let Ok(account_id) = rec[0].trim().parse::<i64>() else {
+                eprintln!("boosted_step_packages: skipping row {}: unparseable account_id {:?}", row + 1, &rec[0]);
+                skipped += 1;
+                continue;
+            };
+            // status is the 4th column; only executed rows landed on-chain.
+            if rec.get(3).map(|s| s.trim()) != Some("executed") {
+                continue;
+            }
+            let ts_ms = match parse::space_utc_to_epoch_ms(rec[1].trim()) {
+                Ok(ts) => ts,
+                Err(e) => {
+                    eprintln!("boosted_step_packages: skipping row {}: bad created_at for account {account_id}: {e}", row + 1);
+                    skipped += 1;
+                    continue;
+                }
+            };
+            if !(parse::H_MS < ts_ms && ts_ms <= parse::T_END_MS) {
+                continue;
+            }
+            if let Some(k) = keep {
+                if !k.contains(&account_id) {
+                    continue;
+                }
+            }
+            let Ok(steps_raw) = rec[2].trim().parse::<i64>() else {
+                eprintln!("boosted_step_packages: skipping row {}: unparseable steps {:?}", row + 1, &rec[2]);
+                skipped += 1;
+                continue;
+            };
+            if steps_raw < 0 {
+                eprintln!("boosted_step_packages: skipping row {}: negative steps {steps_raw}", row + 1);
+                skipped += 1;
+                continue;
+            }
+            stmt.execute(rusqlite::params![account_id, ts_ms as i64, steps_raw.min(65535)])?;
+            inserted += 1;
+        }
+    }
+    tx.commit()?;
+    if skipped > 0 {
+        eprintln!("boosted_step_packages: skipped {skipped} malformed rows");
     }
     Ok(inserted)
 }

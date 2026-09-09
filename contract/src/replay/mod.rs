@@ -191,11 +191,10 @@ mod scenario {
             .filter(|l| !l.trim().is_empty())
             .map(|line| {
                 let (ts, steps) = line.split_once(',').expect("steps row");
+                let ts: u64 = ts.trim().parse().expect("steps timestamp");
                 let steps: u64 = steps.trim().parse().expect("steps value");
-                (
-                    ts.trim().parse().expect("steps timestamp"),
-                    engine::Action::RecordScore(Score::try_from(steps).unwrap_or(Score::MAX)),
-                )
+                let score = Score::try_from(steps).unwrap_or(Score::MAX);
+                (ts, engine::Action::RecordScore(vec![(score, ts)]))
             })
             .collect()
     }

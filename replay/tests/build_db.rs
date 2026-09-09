@@ -216,6 +216,60 @@ fn ingest_step_packages_clamps_and_windows() {
 }
 
 #[test]
+fn ingest_step_packages_reads_yesterday_steps() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &["users".into(), "step_packages".into()],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+    // The in-window 36988193 row (99999/3000) keeps yesterday_steps as-is.
+    let ys: i64 = conn
+        .query_row(
+            "SELECT yesterday_steps FROM step_packages WHERE account_id=36988193 AND steps=65535",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert_eq!(ys, 3000);
+}
+
+#[test]
+fn ingest_boosted_step_packages_keeps_only_executed_in_window() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("t.db");
+    let mut conn = db::open_write(&path).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    build_db(
+        &mut conn,
+        &BuildOpts {
+            test_data_dir: std::path::Path::new("tests/fixtures"),
+            only: &["users".into(), "boosted_step_packages".into()],
+            accounts: None,
+            sample: None,
+        },
+    )
+    .unwrap();
+    let rows: Vec<(i64, i64)> = conn
+        .prepare("SELECT account_id, steps FROM boosted_step_packages ORDER BY account_id")
+        .unwrap()
+        .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    // executed rows only: 36988193/4000 and 4/500; the `pending` 9999 is dropped.
+    assert_eq!(rows, vec![(4, 500), (36988193, 4000)]);
+}
+
+#[test]
 fn ingest_step_packages_batch_seam() {
     use std::io::Write;
     let dir = tempfile::tempdir().unwrap();
@@ -385,6 +439,7 @@ fn schema_creates_expected_tables() {
     assert_eq!(
         names,
         vec![
+            "boosted_step_packages",
             "jar_events",
             "meta",
             "snapshots",
@@ -420,6 +475,7 @@ fn create_indexes_after_init_schema_registers_ix() {
     assert_eq!(
         names,
         vec![
+            "ix_boosted_step_packages_acct",
             "ix_jar_events_acct",
             "ix_step_packages_acct",
             "ix_subscriptions_acct"

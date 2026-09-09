@@ -24,7 +24,10 @@ use crate::{
 /// A single account interaction to replay.
 #[derive(Clone, Debug)]
 pub enum Action {
-    RecordScore(Score),
+    /// One `record_score` call: `(score, timestamp_ms)` increments, exactly as
+    /// the oracle batched them for this step package — a regular package sends
+    /// `[(steps, created_at), (yesterday_steps, created_at − 24h)]`.
+    RecordScore(Vec<(Score, u64)>),
     Deposit { product_id: String, amount: u128 },
     Withdraw { product_id: String },
     /// `amount` is the principal restaked on-chain (`jar_events.amount`); the
@@ -116,11 +119,13 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
         for event in timeline.events {
             context.set_block_timestamp_in_ms(event.ts_ms);
             match event.action {
-                Action::RecordScore(score) => {
+                Action::RecordScore(increments) => {
                     context.switch_account_to_operator();
+                    let increments: Vec<(Score, UTC)> =
+                        increments.into_iter().map(|(s, ts)| (s, UTC(ts))).collect();
                     context
                         .contract()
-                        .record_score(vec![(account_id.clone(), vec![(score, UTC(event.ts_ms))])]);
+                        .record_score(vec![(account_id.clone(), increments)]);
                 }
                 Action::Deposit { product_id, amount } => {
                     let ticket = DepositTicket {

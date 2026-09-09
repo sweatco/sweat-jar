@@ -39,7 +39,7 @@ BIN=./target/release-replay/replay
 #    Calls get_products() on v2.jars.sweat via mainnet JSON RPC.
 $BIN fetch-products --out test_data/products.json
 
-# 2. Ingest the 4 source CSVs (+ optional snapshots.ndjson) into SQLite.
+# 2. Ingest the source CSVs (+ optional snapshots.ndjson) into SQLite.
 #    Re-runnable: each table is cleared and re-populated. (DELETE doesn't
 #    reclaim pages, so a re-run keeps replay.db at its high-water mark;
 #    `rm replay.db` first if you want a smaller file.)
@@ -61,7 +61,7 @@ fine for a plumbing check).
 |------|---------|---------|
 | `--db <path>` | — | SQLite file to create / append to (required) |
 | `--test-data-dir <dir>` | `test_data` | directory holding the source CSVs |
-| `--only <t1,t2,...>` | all | ingest only these tables: `users`, `jar_events`, `step_packages`, `subscriptions`, `snapshots` (an unknown name is rejected) |
+| `--only <t1,t2,...>` | all | ingest only these tables: `users`, `jar_events`, `step_packages`, `boosted_step_packages`, `subscriptions`, `snapshots` (an unknown name is rejected) |
 | `--accounts <file>` | — | keep only these `account_id`s; one integer per line, blank lines and `#` comments ignored |
 | `--sample <N>` | — | keep only the first `N` accounts from `users.csv` (file order) and their event rows |
 
@@ -101,10 +101,11 @@ the only route.
 |------|------------------|-----------|
 | `users.csv` | `near_account_id` is the on-chain `AccountId`; `sweatcoin_user_id` is not ingested | `account_id` |
 | `jar_events.csv` | `event_type` ∈ `deposit`/`claim`/`withdraw`/`restake`/`merge`; `near_block_timestamp` is ISO-8601 ms `Z`; `amount` is the token base unit as a decimal string | `account_id` |
-| `step_packages.csv` | `created_at` is `YYYY-MM-DD HH:MM:SS UTC`; `steps` clamped to `65535` at ingest | `account_id` |
+| `step_packages.csv` | `account_id,created_at,steps,yesterday_steps`; `created_at` is `YYYY-MM-DD HH:MM:SS UTC`; each package replays as one `record_score` with `(steps, created_at)` **and** `(yesterday_steps, created_at−24h)` (each if `>0`), matching the oracle's `to_args`; `steps` clamped to `65535` | `account_id` |
+| `boosted_step_packages.csv` | `account_id,created_at,steps,status,processing_type`; only `status = executed` rows are ingested; each replays as one `record_score` with a single `(steps, created_at)` increment | `account_id` |
 | `max_subscriptions.csv` | `action_type` ∈ `subscribed`/`expired` → `active` `1`/`0` | `user_id` (== `account_id`) |
 
-`account_id` is the same integer across all four files. Optional
+`account_id` is the same integer across all files. Optional
 **`snapshots.ndjson`** — one JSON object per line with `near_account_id`,
 `account_state`, and `products_referenced` (mirrors
 `test_data/account_full_state_190375496.json`). **Not produced yet** — see
@@ -112,22 +113,24 @@ Limitations.
 
 ## SQLite schema
 
-Six tables (verbatim from `replay/src/db/schema.rs`):
+Tables (verbatim from `replay/src/db/schema.rs`):
 
 ```
-users         (account_id PK, near_account_id)
-jar_events    (account_id, ts_ms, seq, event_type, product_id, amount)
-step_packages (account_id, ts_ms, steps)
-subscriptions (account_id, ts_ms, active)          -- subscribed=1, expired=0
-snapshots     (account_id PK, state_json)          -- verbatim ndjson line
-meta          (key PK, value)
+users                 (account_id PK, near_account_id)
+jar_events            (account_id, ts_ms, seq, event_type, product_id, amount)
+step_packages         (account_id, ts_ms, steps, yesterday_steps)
+boosted_step_packages (account_id, ts_ms, steps)   -- executed rows only
+subscriptions         (account_id, ts_ms, active)  -- subscribed=1, expired=0
+snapshots             (account_id PK, state_json)  -- verbatim ndjson line
+meta                  (key PK, value)
 ```
 
 `meta` rows: `window_h_ms`, `window_t_end_ms`, `built_at` (build time, epoch ms).
 
 Notes:
 - Indexes (`ix_jar_events_acct`, `ix_step_packages_acct`,
-  `ix_subscriptions_acct`) are created **after** the bulk load.
+  `ix_boosted_step_packages_acct`, `ix_subscriptions_acct`) are created
+  **after** the bulk load.
 - Build connection runs `PRAGMA synchronous = OFF; PRAGMA journal_mode =
   MEMORY;`; one transaction per table (the `step_packages` load commits and
   reopens every 1M rows).
@@ -211,6 +214,16 @@ compose: run `--shard i/n --threads T` on each machine.
 - **Subscription events outside `(H, T_end]` are dropped at ingest** like every
   other event row. Pre-`H` subscription state must come from the baseline
   snapshot.
+- **Score interest depends on matching the oracle's `record_score` cadence.**
+  Each `step_packages` row replays as one `record_score` with `(steps, created_at)`
+  + `(yesterday_steps, created_at−24h)`, and each executed `boosted_step_packages`
+  row adds another. Days with no package earn nothing (the oracle skips them
+  too). What is *not* modeled: on-chain the oracle transaction executes some
+  time after `created_at`, so an increment that arrives ≥2 days late is
+  discarded by the contract (`ScoreIncrementProcessor`); the replay applies
+  every increment at `created_at`, so accounts whose oracle was delayed
+  reconcile slightly high. The `BoosterApplication` / `apply_booster` path (the
+  `score.booster` field) is not modeled at all.
 
 ## Build requirements
 

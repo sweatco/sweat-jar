@@ -12,8 +12,16 @@ use crate::parse::yocto_str_to_u128;
 // well below 1e9); the synthetic bases below sit above it so they never collide.
 /// `seq` base for `step_packages`-derived events.
 const SCORE_SEQ_BASE: u64 = 1_000_000_000;
+/// `seq` base for `boosted_step_packages`-derived events.
+const BOOSTED_SEQ_BASE: u64 = 1_500_000_000;
 /// `seq` base for `subscriptions`-derived events.
 const SUB_SEQ_BASE: u64 = 2_000_000_000;
+/// One calendar day in ms — the `yesterday_steps` increment sits here before `created_at`.
+const DAY_MS: u64 = 86_400_000;
+
+fn clamp_score(steps: i64) -> Score {
+    u16::try_from(steps.max(0)).unwrap_or(u16::MAX)
+}
 
 /// One account's on-chain summary alongside its synthesized timeline.
 pub struct UserSlice {
@@ -100,18 +108,51 @@ pub fn load_user(conn: &Connection, account_id: i64) -> Result<(UserSlice, Timel
         });
     }
 
-    // step_packages -> RecordScore, seq = SCORE_SEQ_BASE + row_index (ts order).
-    let step_rows: Vec<(u64, i64)> = conn
-        .prepare("SELECT ts_ms, steps FROM step_packages WHERE account_id = ?1 ORDER BY ts_ms, rowid")?
+    // step_packages -> one RecordScore per package with both increments the
+    // oracle sends: (steps, created_at) and (yesterday_steps, created_at - 24h).
+    let step_rows: Vec<(u64, i64, i64)> = conn
+        .prepare(
+            "SELECT ts_ms, steps, yesterday_steps FROM step_packages \
+             WHERE account_id = ?1 ORDER BY ts_ms, rowid",
+        )?
+        .query_map([account_id], |r| {
+            Ok((r.get::<_, i64>(0)? as u64, r.get::<_, i64>(1)?, r.get::<_, i64>(2)?))
+        })?
+        .collect::<rusqlite::Result<_>>()?;
+    for (i, (ts_ms, steps, yesterday_steps)) in step_rows.into_iter().enumerate() {
+        let mut incs: Vec<(Score, u64)> = Vec::with_capacity(2);
+        if steps > 0 {
+            incs.push((clamp_score(steps), ts_ms));
+        }
+        if yesterday_steps > 0 {
+            incs.push((clamp_score(yesterday_steps), ts_ms.saturating_sub(DAY_MS)));
+        }
+        if !incs.is_empty() {
+            events.push(Event {
+                ts_ms,
+                seq: SCORE_SEQ_BASE + i as u64,
+                action: Action::RecordScore(incs),
+            });
+        }
+    }
+
+    // boosted_step_packages -> RecordScore with a single (steps, created_at)
+    // increment (same as a regular package's "today" half). Only executed rows
+    // are in the table.
+    let boosted_rows: Vec<(u64, i64)> = conn
+        .prepare(
+            "SELECT ts_ms, steps FROM boosted_step_packages WHERE account_id = ?1 ORDER BY ts_ms, rowid",
+        )?
         .query_map([account_id], |r| Ok((r.get::<_, i64>(0)? as u64, r.get::<_, i64>(1)?)))?
         .collect::<rusqlite::Result<_>>()?;
-    for (i, (ts_ms, steps)) in step_rows.into_iter().enumerate() {
-        let score: Score = u16::try_from(steps).unwrap_or(u16::MAX);
-        events.push(Event {
-            ts_ms,
-            seq: SCORE_SEQ_BASE + i as u64,
-            action: Action::RecordScore(score),
-        });
+    for (i, (ts_ms, steps)) in boosted_rows.into_iter().enumerate() {
+        if steps > 0 {
+            events.push(Event {
+                ts_ms,
+                seq: BOOSTED_SEQ_BASE + i as u64,
+                action: Action::RecordScore(vec![(clamp_score(steps), ts_ms)]),
+            });
+        }
     }
 
     // subscriptions -> SetIncreasedScoreCap, seq = SUB_SEQ_BASE + row_index.
