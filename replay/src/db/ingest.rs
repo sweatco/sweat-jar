@@ -327,9 +327,9 @@ fn ingest_subscriptions(
     Ok(inserted)
 }
 
-/// Load `step_packages.csv` -> `step_packages(account_id, ts_ms, steps)`.
+/// Load `step_packages.csv` -> `step_packages(account_id, ts_ms, steps, yesterday_steps)`.
 ///
-/// Header: `account_id,created_at,steps`. `created_at` is `"YYYY-MM-DD HH:MM:SS UTC"`.
+/// Header: `account_id,created_at,steps[,yesterday_steps]`. `created_at` is ISO-8601 or `"YYYY-MM-DD HH:MM:SS UTC"`.
 /// Rows are kept only when `ts_ms` lands inside `(H_MS, T_END_MS]` and — when
 /// `keep` is set — the `account_id` is in it. `steps` is parsed as `i64`
 /// (negative rows are skipped and counted) then clamped to `u16::MAX` (65535).
@@ -379,7 +379,7 @@ pub fn ingest_step_packages_with_batch(
             continue;
         };
 
-        let ts_ms = match parse::space_utc_to_epoch_ms(rec[1].trim()) {
+        let ts_ms = match parse::timestamp_to_epoch_ms(rec[1].trim()) {
             Ok(ts) => ts,
             Err(e) => {
                 eprintln!("step_packages: skipping row {}: bad created_at for account {account_id}: {e}", row + 1);
@@ -472,7 +472,7 @@ fn ingest_boosted_step_packages(
             if rec.get(3).map(|s| s.trim()) != Some("executed") {
                 continue;
             }
-            let ts_ms = match parse::space_utc_to_epoch_ms(rec[1].trim()) {
+            let ts_ms = match parse::timestamp_to_epoch_ms(rec[1].trim()) {
                 Ok(ts) => ts,
                 Err(e) => {
                     eprintln!("boosted_step_packages: skipping row {}: bad created_at for account {account_id}: {e}", row + 1);

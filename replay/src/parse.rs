@@ -54,6 +54,17 @@ pub fn space_utc_to_epoch_ms(s: &str) -> anyhow::Result<u64> {
     datetime_to_epoch_ms(date.trim(), time.trim())
 }
 
+/// Parse a timestamp in either the ISO-8601 (`2026-03-21T19:30:53.230Z`) or the
+/// space-`UTC` (`2026-03-21 19:30:53 UTC`) form — CSV exports use both.
+pub fn timestamp_to_epoch_ms(s: &str) -> anyhow::Result<u64> {
+    let t = s.trim();
+    if t.ends_with(" UTC") {
+        space_utc_to_epoch_ms(t)
+    } else {
+        iso8601_ms_to_epoch_ms(t)
+    }
+}
+
 /// Decimal string of yocto -> `u128`. Trims whitespace. Errors on a decimal point or non-digits.
 pub fn yocto_str_to_u128(s: &str) -> anyhow::Result<u128> {
     s.trim()
@@ -143,6 +154,18 @@ mod tests {
         assert_eq!(
             space_utc_to_epoch_ms("2026-08-31 06:35:19 UTC").unwrap(),
             1_788_158_119_000
+        );
+    }
+
+    #[test]
+    fn timestamp_flexible() {
+        assert_eq!(
+            timestamp_to_epoch_ms("2026-03-21T19:30:53.230Z").unwrap(),
+            1_774_121_453_230
+        );
+        assert_eq!(
+            timestamp_to_epoch_ms("2026-03-21 19:30:53 UTC").unwrap(),
+            1_774_121_453_000
         );
     }
 
