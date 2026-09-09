@@ -50,4 +50,18 @@ pub enum Cmd {
         #[arg(long, default_value = crate::snapshot::FASTNEAR_ARCHIVAL_RPC)]
         archival_rpc_url: String,
     },
+    /// Replay one account and print its per-claim breakdown vs the on-chain
+    /// claim amounts (to trace where a non-zero `delta` comes from).
+    Explain {
+        #[arg(long)]
+        db: PathBuf,
+        #[arg(long)]
+        account: i64,
+        #[arg(long, default_value = "test_data/products.json")]
+        products: PathBuf,
+        #[arg(long)]
+        archival: bool,
+        #[arg(long, default_value = crate::snapshot::FASTNEAR_ARCHIVAL_RPC)]
+        archival_rpc_url: String,
+    },
 }

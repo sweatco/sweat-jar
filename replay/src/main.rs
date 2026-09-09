@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use clap::Parser;
 
-use replay::{cli, db, products, run};
+use replay::{cli, db, explain, products, run};
 
 fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
@@ -80,5 +80,17 @@ fn main() -> anyhow::Result<()> {
             );
             Ok(())
         }
+        cli::Cmd::Explain {
+            db,
+            account,
+            products,
+            archival,
+            archival_rpc_url,
+        } => explain::explain(&explain::ExplainOpts {
+            db,
+            account,
+            products,
+            archival_rpc_url: archival.then_some(archival_rpc_url),
+        }),
     }
 }
