@@ -5,9 +5,9 @@
 //! Contract panics are caught into [`ReplayStatus::Error`].
 //!
 //! NOTE: a second caught panic on one thread has been observed to escape this
-//! guard (near-sdk mock harness state after the upfront `set_timezone`), so
-//! callers replaying many accounts on one worker thread MUST wrap this call in
-//! their own `catch_unwind` (see `replay::reconcile::reconcile_user`).
+//! guard (near-sdk mock harness state), so callers replaying many accounts on
+//! one worker thread MUST wrap this call in their own `catch_unwind` (see
+//! `replay::reconcile::reconcile_user`).
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -136,13 +136,14 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
         }
         context.set_block_timestamp_in_ms(window_start_ms);
 
-        if let Some(tz) = baseline.timezone_ms.filter(|t| *t != i64::MIN) {
-            context.switch_account_to_operator();
-            context.contract().set_timezone(account_id.clone(), I64(tz));
-        }
-
         let mut total_claimed = 0u128;
         let mut per_claim: Vec<(u64, u128)> = Vec::new();
+        // The timezone is set (Oracle) right before the account's first
+        // score-based jar is created — mirroring the oracle setting it ahead of
+        // the first score deposit. `try_set_timezone` on the contract is a no-op
+        // when the baseline already carried a valid timezone, so this never
+        // overrides on-chain state.
+        let mut timezone_applied = false;
 
         for event in timeline.events {
             context.set_block_timestamp_in_ms(event.ts_ms);
@@ -156,12 +157,19 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
                         .record_score(vec![(account_id.clone(), increments)]);
                 }
                 Action::Deposit { product_id, amount } => {
+                    set_timezone_before_score_jar(
+                        &mut context,
+                        &account_id,
+                        baseline.timezone_ms,
+                        products,
+                        &product_id,
+                        &mut timezone_applied,
+                    );
                     let ticket = DepositTicket {
                         product_id,
                         valid_until: 0.into(),
-                        // Score-based products require a timezone on first deposit; the
-                        // jar_events feed carries none, so default to UTC. The contract
-                        // keeps an already-set (baseline) timezone and ignores this.
+                        // Fallback for accounts the feed has no timezone for; the
+                        // contract keeps an already-set timezone and ignores this.
                         timezone: Some(Timezone::hour_shift(0)),
                     };
                     context.switch_account_to_ft_contract_account();
@@ -172,6 +180,14 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
                     let _ = context.contract().withdraw(product_id);
                 }
                 Action::Restake { from, into, amount } => {
+                    set_timezone_before_score_jar(
+                        &mut context,
+                        &account_id,
+                        baseline.timezone_ms,
+                        products,
+                        &into,
+                        &mut timezone_applied,
+                    );
                     context.switch_account(&account_id);
                     let ticket = DepositTicket {
                         product_id: into.clone(),
@@ -208,6 +224,14 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
                     let _ = context.contract().withdraw_all(Some(set));
                 }
                 Action::RestakeAll { product_id, amount } => {
+                    set_timezone_before_score_jar(
+                        &mut context,
+                        &account_id,
+                        baseline.timezone_ms,
+                        products,
+                        &product_id,
+                        &mut timezone_applied,
+                    );
                     context.switch_account(&account_id);
                     let ticket = DepositTicket {
                         product_id: product_id.clone(),
@@ -244,6 +268,37 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
 
 fn admin() -> AccountId {
     "admin.near".parse().unwrap()
+}
+
+/// Set the account's timezone (Oracle) immediately before its first score-based
+/// jar is created, if the feed supplied one and it has not been set yet this
+/// run. `product_id` is the product the jar is being created in; the call is a
+/// no-op unless that product is score-based. The contract's `try_set_timezone`
+/// additionally no-ops when a baseline already carried a valid timezone.
+fn set_timezone_before_score_jar(
+    context: &mut Context,
+    account_id: &AccountId,
+    timezone_ms: Option<i64>,
+    products: &[Product],
+    product_id: &str,
+    applied: &mut bool,
+) {
+    if *applied {
+        return;
+    }
+    let Some(tz) = timezone_ms.filter(|t| *t != i64::MIN) else {
+        return;
+    };
+    let is_score_based = products
+        .iter()
+        .find(|p| p.id == product_id)
+        .is_some_and(|p| p.terms.is_score_based());
+    if !is_score_based {
+        return;
+    }
+    context.switch_account_to_operator();
+    context.contract().set_timezone(account_id.clone(), I64(tz));
+    *applied = true;
 }
 
 /// near-sdk's mock wraps a guest `panic_str` as
@@ -347,7 +402,7 @@ pub fn parse_account_state(
 }
 
 #[cfg(test)]
-mod engine_tests {
+mod action_tests {
     use super::*;
 
     #[test]

@@ -1,7 +1,13 @@
-use sweat_jar_model::data::product::{Apy, Cap, FixedProductTerms, Product, Terms};
+use sweat_jar_model::{
+    data::product::{Apy, Cap, FixedProductTerms, Product, ScoreBasedProductTerms, Terms},
+    Timezone,
+};
 use sweat_jar_primitives::UDecimal;
 
 use super::engine::{run_timeline, Action, Baseline, Event, ReplayStatus, Timeline};
+
+const DAY_MS: u64 = 86_400_000;
+const HOUR_MS: u64 = 3_600_000;
 
 fn fixed_product() -> Product {
     Product {
@@ -10,6 +16,20 @@ fn fixed_product() -> Product {
         terms: Terms::Fixed(FixedProductTerms {
             lockup_term: 31_536_000_000u64.into(),
             apy: Apy::Constant(UDecimal::new(12, 2)),
+        }),
+        withdrawal_fee: None,
+        public_key: None,
+        is_enabled: true,
+    }
+}
+
+fn score_product() -> Product {
+    Product {
+        id: "steps_365d_20000".to_string(),
+        cap: Cap::new(0, 500_000 * 10u128.pow(24)),
+        terms: Terms::ScoreBased(ScoreBasedProductTerms {
+            score_cap: 20_000,
+            lockup_term: 31_536_000_000u64.into(),
         }),
         withdrawal_fee: None,
         public_key: None,
@@ -69,4 +89,66 @@ fn claim_with_no_jars_is_reported_not_panicked() {
         ReplayStatus::Ok => assert_eq!(outcome.total_claimed, 0),
         ReplayStatus::Error(_) => {}
     }
+}
+
+#[test]
+fn score_deposit_gets_its_timezone_before_the_jar_is_created() {
+    // A fresh account (no baseline) whose feed carries a timezone: the score jar
+    // must be created without the contract's "score based jar without providing
+    // time zone" panic. That only holds if `set_timezone` ran *before* the
+    // deposit — which is what `set_timezone_before_score_jar` does in the
+    // `Deposit` arm.
+    let account_id: near_sdk::AccountId = "tz.near".parse().unwrap();
+    let steps = 10_000u16;
+    let timeline = Timeline {
+        events: vec![
+            Event {
+                ts_ms: DAY_MS,
+                seq: 0,
+                action: Action::Deposit { product_id: "steps_365d_20000".into(), amount: 1_000 * 10u128.pow(18) },
+            },
+            Event { ts_ms: 2 * DAY_MS + HOUR_MS, seq: 1, action: Action::RecordScore(vec![(steps, 2 * DAY_MS + HOUR_MS)]) },
+            Event { ts_ms: 3 * DAY_MS + HOUR_MS, seq: 2, action: Action::RecordScore(vec![(steps, 3 * DAY_MS + HOUR_MS)]) },
+            Event { ts_ms: 4 * DAY_MS, seq: 3, action: Action::Claim },
+        ],
+    }
+    .sorted();
+
+    let outcome = run_timeline(
+        Baseline { account_id, raw_account: None, timezone_ms: Some(*Timezone::hour_shift(3)) },
+        &[score_product()],
+        0,
+        timeline,
+    );
+    assert!(matches!(outcome.status, ReplayStatus::Ok), "status: {:?}", outcome.status);
+    assert_eq!(outcome.per_claim.len(), 1);
+    assert!(outcome.total_claimed > 0, "score jar accrued nothing");
+}
+
+#[test]
+fn fixed_only_account_with_no_feed_timezone_is_fine() {
+    // `set_timezone_before_score_jar` must NOT fire for a non-score deposit: this
+    // account's feed timezone is the invalid sentinel and its only jar is Fixed,
+    // so no `set_timezone` is attempted and the deposit/claim just work.
+    let account_id: near_sdk::AccountId = "fixed.near".parse().unwrap();
+    let timeline = Timeline {
+        events: vec![
+            Event {
+                ts_ms: 10,
+                seq: 0,
+                action: Action::Deposit { product_id: "365d_12apy".into(), amount: 1_000 * 10u128.pow(18) },
+            },
+            Event { ts_ms: 31_536_000_000 + 100, seq: 1, action: Action::Claim },
+        ],
+    }
+    .sorted();
+
+    let outcome = run_timeline(
+        Baseline { account_id, raw_account: None, timezone_ms: Some(i64::MIN) },
+        &[fixed_product(), score_product()],
+        0,
+        timeline,
+    );
+    assert!(matches!(outcome.status, ReplayStatus::Ok), "status: {:?}", outcome.status);
+    assert!(outcome.total_claimed > 0);
 }
