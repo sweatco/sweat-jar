@@ -169,8 +169,7 @@ mod tests {
 
     #[test]
     fn json_snapshot_round_trips_to_borsh() {
-        let json = std::fs::read_to_string("tests/fixtures/snapshots.ndjson").unwrap();
-        let line = json.lines().next().unwrap();
+        let line = r#"{"near_account_id":"9b6b8403e3ccbd6ba868c58d3e583939f62ca3abc3b2fa22f72b5030cd04efa8","account_state":{"nonce":1,"jars":{},"score":{"updated_at":1774017710156,"history":[{"value":0,"booster":0},{"value":0,"booster":0}]},"features":{"increased_score_cap":false,"increased_apy":true},"timezone":0},"products_referenced":[]}"#;
         let v: near_sdk::serde_json::Value = near_sdk::serde_json::from_str(line).unwrap();
         let raw = account_state_json_to_raw(&v["account_state"].to_string()).unwrap();
         assert!(!raw.is_empty());
