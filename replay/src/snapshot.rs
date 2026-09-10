@@ -1,11 +1,9 @@
 //! Baseline snapshot source: a user's account state at block H as borsh bytes
 //! of an `AccountVersioned`, for the engine's `Baseline.raw_account`.
 
-use std::cell::RefCell;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::{Context, Result};
-use rusqlite::OptionalExtension;
 use sweat_jar_model::data::account::{versioned::AccountVersioned, Account};
 
 /// Public FastNEAR archival JSON-RPC endpoint.
@@ -22,6 +20,8 @@ pub trait SnapshotSource: Send + Sync {
 
 /// Reads the `snapshots` table of a replay DB.
 pub struct DbSnapshotSource {
+    // Read by `raw_account` once its body is restored in Task 6.
+    #[allow(dead_code)]
     db_path: PathBuf,
 }
 
@@ -31,53 +31,10 @@ impl DbSnapshotSource {
     }
 }
 
-thread_local! {
-    /// One read-only SQLite connection per worker thread, reused across the
-    /// ~1.2M `raw_account` calls a run makes. Keyed by db path so a thread that
-    /// somehow sees two different paths reopens rather than querying the wrong DB.
-    static CONN: RefCell<Option<(PathBuf, rusqlite::Connection)>> = const { RefCell::new(None) };
-}
-
-impl DbSnapshotSource {
-    /// Run `f` with this thread's cached connection for `db_path`, opening one on
-    /// first use (or when the path changed).
-    fn with_conn<T>(
-        db_path: &Path,
-        f: impl FnOnce(&rusqlite::Connection) -> Result<T>,
-    ) -> Result<T> {
-        CONN.with(|cell| {
-            let mut slot = cell.borrow_mut();
-            let needs_open = !matches!(&*slot, Some((p, _)) if p == db_path);
-            if needs_open {
-                let conn = crate::db::open_read(db_path)?;
-                *slot = Some((db_path.to_path_buf(), conn));
-            }
-            let (_, conn) = slot.as_ref().expect("connection just set");
-            f(conn)
-        })
-    }
-}
-
 impl SnapshotSource for DbSnapshotSource {
-    fn raw_account(&self, account_id: i64, _near_account_id: &str) -> Result<Option<Vec<u8>>> {
-        let line: Option<String> = Self::with_conn(&self.db_path, |conn| {
-            conn.query_row(
-                "SELECT state_json FROM snapshots WHERE account_id = ?1",
-                [account_id],
-                |r| r.get(0),
-            )
-            .optional()
-            .context("querying snapshots table")
-        })?;
-
-        let Some(line) = line else { return Ok(None) };
-
-        let v: near_sdk::serde_json::Value =
-            near_sdk::serde_json::from_str(&line).context("snapshot row is not valid JSON")?;
-        let account_state = v
-            .get("account_state")
-            .context("snapshot row has no `account_state` field")?;
-        Ok(Some(account_state_value_to_raw(account_state)?))
+    fn raw_account(&self, _account_id: i64, _near_account_id: &str) -> Result<Option<Vec<u8>>> {
+        // Reads the `snapshots` table of the DuckDB replay database.
+        anyhow::bail!("DbSnapshotSource::raw_account: rewritten in Task 6 of docs/superpowers/plans/2026-09-10-event-sourced-replay.md")
     }
 }
 
@@ -199,10 +156,6 @@ mod tests {
     use sweat_jar_model::data::account::versioned::AccountVersioned;
 
     use super::*;
-    use crate::db::{
-        self,
-        ingest::{build_db, BuildOpts},
-    };
 
     #[test]
     fn json_snapshot_round_trips_to_borsh() {
@@ -280,29 +233,5 @@ mod tests {
             near_sdk::serde_json::from_str(r#"{"jars":{},"score":{"history":[]},"features":{}}"#).unwrap();
         let account = sweat_jar::replay::engine::parse_account_state(&v, crate::parse::H_MS);
         assert_eq!(account.score.updated_at(), crate::parse::H_MS);
-    }
-
-    #[test]
-    fn db_snapshot_source_reads_table() {
-        let dir = tempfile::tempdir().unwrap();
-        let path = dir.path().join("t.db");
-        let mut conn = db::open_write(&path).unwrap();
-        db::schema::init_schema(&conn).unwrap();
-        build_db(
-            &mut conn,
-            &BuildOpts {
-                test_data_dir: std::path::Path::new("tests/fixtures"),
-                only: &["users".into(), "snapshots".into()],
-                accounts: None,
-                sample: None,
-            },
-        )
-        .unwrap();
-        drop(conn);
-
-        let src = DbSnapshotSource::new(&path);
-        let bytes = src.raw_account(36988193, "").unwrap().expect("snapshot present");
-        AccountVersioned::try_from_slice(&bytes).unwrap();
-        assert!(src.raw_account(999999, "").unwrap().is_none());
     }
 }

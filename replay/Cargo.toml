@@ -16,7 +16,7 @@ path = "src/main.rs"
 sweat_jar = { path = "../contract", features = ["replay-engine"] }
 sweat-jar-model = { workspace = true }
 near-sdk = { workspace = true }
-rusqlite = { version = "0.32", features = ["bundled"] }
+duckdb = { version = "1.4", features = ["bundled"] }
 csv = "1.3"
 clap = { version = "4.5", features = ["derive"] }
 serde = { workspace = true, features = ["derive"] }
