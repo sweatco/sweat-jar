@@ -15,10 +15,8 @@ pub enum Cmd {
     BuildDb {
         #[arg(long)]
         db: PathBuf,
-        #[arg(long, default_value = "test_data")]
-        test_data_dir: PathBuf,
-        #[arg(long, value_delimiter = ',')]
-        only: Vec<String>,
+        #[arg(long, default_value = "test_data/interest_replay")]
+        source: PathBuf,
         #[arg(long)]
         accounts: Option<PathBuf>,
         #[arg(long)]

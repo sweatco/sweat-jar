@@ -14,8 +14,7 @@ fn main() -> anyhow::Result<()> {
         }
         cli::Cmd::BuildDb {
             db: db_path,
-            test_data_dir,
-            only: _,
+            source,
             accounts,
             sample,
         } => {
@@ -28,7 +27,7 @@ fn main() -> anyhow::Result<()> {
             let counts = db::ingest::build_db(
                 &mut conn,
                 &db::ingest::BuildOpts {
-                    source_dir: &test_data_dir,
+                    source_dir: &source,
                     accounts: accounts.as_ref(),
                     sample,
                 },
