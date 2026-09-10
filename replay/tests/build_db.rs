@@ -1,7 +1,7 @@
 mod common;
 use common::write_fixture_dataset;
 use replay::db;
-use replay::db::ingest::{build_db, BuildOpts};
+use replay::db::ingest::{build_db, read_accounts, BuildOpts};
 
 fn built(dir: &std::path::Path) -> duckdb::Connection {
     let src = dir.join("src");
@@ -18,7 +18,7 @@ fn events_are_success_only_and_sorted() {
     let d = tempfile::tempdir().unwrap();
     let conn = built(d.path());
     let n: i64 = conn.query_row("SELECT count(*) FROM events", [], |r| r.get(0)).unwrap();
-    assert_eq!(n, 7); // all fixture rows are SUCCESS_VALUE
+    assert_eq!(n, 11); // all fixture rows are SUCCESS_VALUE
     let ordered: bool = conn
         .query_row(
             "SELECT bool_and(ok) FROM (SELECT (backend_account_id, ts_ms, log_index) >= \
@@ -72,4 +72,38 @@ fn sample_limits_accounts_and_their_events() {
         )
         .unwrap();
     assert_eq!(stray, 0);
+}
+
+#[test]
+fn read_accounts_parses_ids_ignoring_blanks_and_comments() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("ids.txt");
+    std::fs::write(&p, "# header\n100\n\n  200  \n").unwrap();
+    assert_eq!(read_accounts(&p).unwrap(), vec![100, 200]);
+}
+
+#[test]
+fn read_accounts_empty_file_errors() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("empty.txt");
+    std::fs::write(&p, "# only comments\n\n").unwrap();
+    let err = read_accounts(&p).unwrap_err().to_string();
+    assert!(err.contains("no account ids"), "unexpected error: {err}");
+}
+
+#[test]
+fn build_db_with_empty_account_filter_errors() {
+    let d = tempfile::tempdir().unwrap();
+    let src = d.path().join("src");
+    write_fixture_dataset(&src);
+    let mut conn = db::open_write(&d.path().join("e.duckdb")).unwrap();
+    db::schema::init_schema(&conn).unwrap();
+    let empty = std::collections::HashSet::new();
+    let err = build_db(
+        &mut conn,
+        &BuildOpts { source_dir: &src, accounts: Some(&empty), sample: None },
+    )
+    .unwrap_err()
+    .to_string();
+    assert!(err.contains("account filter is empty"), "unexpected error: {err}");
 }

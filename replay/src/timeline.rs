@@ -55,17 +55,30 @@ pub fn load_user(conn: &Connection, backend_account_id: i64) -> Result<(UserSlic
             continue;
         };
         let action = match parsed {
-            ParsedEvent::RecordScore(pairs) => Action::RecordScore(pairs),
+            // Only `SUCCESS_VALUE` rows are ingested, so the on-chain call already
+            // passed `assert_not_future` against this very block time: an increment
+            // timestamp after `ts_ms` is an export artifact (the payload ts
+            // disagreeing with its own `block_timestamp_utc`), never a real state.
+            // Clamping keeps replay from panicking on it; `assert_not_future`
+            // adjusts both sides by the timezone, so this is timezone-independent.
+            ParsedEvent::RecordScore(pairs) => Action::RecordScore(
+                pairs.into_iter().map(|(score, ts)| (score, ts.min(ts_ms))).collect(),
+            ),
             ParsedEvent::ApplyBooster { score, timestamp_ms } => {
-                Action::ApplyBooster { score, timestamp_ms }
+                Action::ApplyBooster { score, timestamp_ms: timestamp_ms.min(ts_ms) }
             }
             ParsedEvent::Deposit { product_id, amount } => Action::Deposit { product_id, amount },
             ParsedEvent::WithdrawAll { product_ids } => Action::WithdrawAll { product_ids },
+            // `from` is the set of jars actually consumed. One source -> the
+            // single-jar `restake(from, into)` call, which may cross products;
+            // more than one -> the `restake_all` sweep.
             ParsedEvent::Restake { into, from, restaked } => {
-                if from == [into.clone()] {
-                    Action::Restake { product_id: into, amount: restaked }
-                } else {
-                    Action::RestakeAll { product_id: into, amount: restaked }
+                let mut from = from.into_iter();
+                match (from.next(), from.next()) {
+                    (Some(single), None) => {
+                        Action::Restake { from: single, into, amount: restaked }
+                    }
+                    _ => Action::RestakeAll { product_id: into, amount: restaked },
                 }
             }
             ParsedEvent::SetIncreasedScoreCap(v) => Action::SetIncreasedScoreCap(v),

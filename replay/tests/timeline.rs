@@ -53,6 +53,55 @@ fn account_300_withdraw_all_and_empty_score_skipped() {
 }
 
 #[test]
+fn single_jar_restake_keeps_source_and_target_products() {
+    let d = tempfile::tempdir().unwrap();
+    let c = conn(d.path());
+    let (_slice, tl) = load_user(&c, 400).unwrap();
+    let restake = tl
+        .events
+        .iter()
+        .find(|e| matches!(e.action, Action::Restake { .. }))
+        .expect("restake action");
+    assert!(matches!(restake.action, Action::Restake { ref from, ref into, amount: 7 }
+        if from == "365d_12apy" && into == "steps_365d_20000_10000_tiered_v1"));
+}
+
+#[test]
+fn multi_jar_restake_becomes_restake_all() {
+    let d = tempfile::tempdir().unwrap();
+    let c = conn(d.path());
+    let (_slice, tl) = load_user(&c, 500).unwrap();
+    assert_eq!(tl.events.len(), 1);
+    assert!(matches!(tl.events[0].action, Action::RestakeAll { ref product_id, amount: 9 }
+        if product_id == "365d_12apy"));
+}
+
+#[test]
+fn future_increment_timestamps_are_clamped_to_block_time() {
+    let d = tempfile::tempdir().unwrap();
+    let c = conn(d.path());
+    let (_slice, tl) = load_user(&c, 400).unwrap();
+
+    let score = tl
+        .events
+        .iter()
+        .find(|e| matches!(e.action, Action::RecordScore(_)))
+        .expect("record_score action");
+    let Action::RecordScore(ref pairs) = score.action else { unreachable!() };
+    // First increment was dated in the future -> clamped; second was already in the past.
+    assert_eq!(pairs[0], (9000, score.ts_ms));
+    assert_eq!(pairs[1], (1000, 1_774_054_800_000));
+
+    let booster = tl
+        .events
+        .iter()
+        .find(|e| matches!(e.action, Action::ApplyBooster { .. }))
+        .expect("apply_booster action");
+    assert!(matches!(booster.action, Action::ApplyBooster { score: 3000, timestamp_ms }
+        if timestamp_ms == booster.ts_ms));
+}
+
+#[test]
 fn unknown_account_is_err() {
     let d = tempfile::tempdir().unwrap();
     let c = conn(d.path());

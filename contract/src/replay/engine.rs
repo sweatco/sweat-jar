@@ -2,8 +2,12 @@
 //!
 //! [`run_timeline`] runs an ordered list of [`Event`]s against a fresh
 //! in-process contract on the current thread, returning a [`ReplayOutcome`].
-//! Contract panics are caught and surfaced as [`ReplayStatus::Error`] — the
-//! function never panics.
+//! Contract panics are caught into [`ReplayStatus::Error`].
+//!
+//! NOTE: a second caught panic on one thread has been observed to escape this
+//! guard (near-sdk mock harness state after the upfront `set_timezone`), so
+//! callers replaying many accounts on one worker thread MUST wrap this call in
+//! their own `catch_unwind` (see `replay::reconcile::reconcile_user`).
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
@@ -33,9 +37,11 @@ pub enum Action {
     RecordScore(Vec<(Score, u64)>),
     Deposit { product_id: String, amount: u128 },
     Withdraw { product_id: String },
+    /// `restake(from, ticket(into), None, Some(amount))` — a single-source
+    /// restake, which may target a different product (`from != into`).
     /// `amount` is the principal restaked on-chain (`jar_events.amount`); the
     /// rest of the matured principal is withdrawn.
-    Restake { product_id: String, amount: u128 },
+    Restake { from: String, into: String, amount: u128 },
     SetIncreasedScoreCap(bool),
     Claim,
     /// `apply_booster([account], score, UTC(timestamp_ms))` — the oracle booster path.
@@ -107,9 +113,13 @@ pub struct ReplayOutcome {
 
 /// Runs the timeline against a fresh in-process contract on the current thread.
 ///
-/// Resets thread-local mock storage before starting (a fresh [`Context`] takes
-/// the mock storage). Never panics: contract panics are caught and surfaced as
-/// [`ReplayStatus::Error`].
+/// Resets thread-local mock storage before starting: the fresh [`Context`] the
+/// closure builds calls `blockchain.take_storage()`, so nothing carries over
+/// from a previous account on this thread.
+///
+/// Contract panics are caught into [`ReplayStatus::Error`], but see the module
+/// doc: a second caught panic on one thread can still escape, so a caller
+/// looping over many accounts must add its own `catch_unwind`.
 ///
 /// Note: `Action::Withdraw` withdraws the entire liquid principal of the
 /// product's jar — the contract has no partial-amount withdraw — so historical
@@ -161,18 +171,16 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
                     context.switch_account(&account_id);
                     let _ = context.contract().withdraw(product_id);
                 }
-                Action::Restake { product_id, amount } => {
+                Action::Restake { from, into, amount } => {
                     context.switch_account(&account_id);
                     let ticket = DepositTicket {
-                        product_id: product_id.clone(),
+                        product_id: into.clone(),
                         valid_until: 0.into(),
                         timezone: Some(Timezone::hour_shift(0)),
                     };
                     // Restake exactly what was restaked on-chain; the rest of the
                     // matured principal is withdrawn (matching the contract).
-                    let _ = context
-                        .contract()
-                        .restake(product_id, ticket, None, Some(amount.into()));
+                    let _ = context.contract().restake(from, ticket, None, Some(amount.into()));
                 }
                 Action::SetIncreasedScoreCap(enabled) => {
                     context.switch_account_to_operator();
@@ -349,5 +357,9 @@ mod engine_tests {
         let _ = Action::RestakeAll { product_id: "p".into(), amount: 1 };
         assert_eq!(Action::ApplyBooster { score: 0, timestamp_ms: 0 }.rank(), 0);
         assert_eq!(Action::WithdrawAll { product_ids: vec![] }.rank(), 1);
+        assert_eq!(
+            Action::Restake { from: "a".into(), into: "b".into(), amount: 1 }.rank(),
+            1
+        );
     }
 }

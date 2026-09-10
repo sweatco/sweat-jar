@@ -38,8 +38,13 @@ pub fn explain(opts: &ExplainOpts) -> Result<()> {
         None => Box::new(DbSnapshotSource::new(&opts.db)),
     };
 
-    let raw_account = snapshot.raw_account(opts.account, &slice.near_account_id)?;
-    let no_baseline = raw_account.is_none();
+    // Only accounts that existed at block H have a baseline to fetch.
+    let raw_account = if slice.existed_at_start {
+        snapshot.raw_account(opts.account, &slice.near_account_id)?
+    } else {
+        None
+    };
+    let no_baseline = slice.existed_at_start && raw_account.is_none();
     let account_id: near_sdk::AccountId = slice
         .near_account_id
         .parse()
@@ -72,7 +77,14 @@ pub fn explain(opts: &ExplainOpts) -> Result<()> {
     let calc: BTreeMap<u64, u128> = outcome.per_claim.iter().copied().collect();
 
     println!("account {} ({})", opts.account, slice.near_account_id);
-    println!("baseline: {}", if no_baseline { "MISSING (no_baseline)" } else { "loaded" });
+    let baseline_label = if !slice.existed_at_start {
+        "none needed (account created in window)"
+    } else if no_baseline {
+        "MISSING (no_baseline)"
+    } else {
+        "loaded"
+    };
+    println!("baseline: {baseline_label}");
     println!("status: {:?}", outcome.status);
     println!();
     println!(

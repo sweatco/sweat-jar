@@ -31,6 +31,8 @@ pub fn build_db(conn: &mut Connection, opts: &BuildOpts) -> Result<Vec<(String, 
     // 1. accounts (+ timezone join), optionally filtered/sampled.
     let where_acc = match opts.accounts {
         Some(set) => {
+            // `IN ()` is a DuckDB parser error; refuse before building the SQL.
+            anyhow::ensure!(!set.is_empty(), "account filter is empty: nothing to ingest");
             let list = set.iter().map(i64::to_string).collect::<Vec<_>>().join(",");
             format!("WHERE a.backend_account_id IN ({list})")
         }
@@ -93,12 +95,22 @@ pub fn build_db(conn: &mut Connection, opts: &BuildOpts) -> Result<Vec<(String, 
 
 /// Parse an account-id list file: one `account_id` per line, blank lines and
 /// `#` comments ignored. Shared by `build-db --accounts` and `run --accounts`.
+///
+/// Errors on a file with no ids: an empty filter would otherwise become an
+/// `IN ()` clause (a DuckDB parser error) or a silent empty run.
 pub fn read_accounts(path: &Path) -> anyhow::Result<Vec<i64>> {
     let text = std::fs::read_to_string(path)
         .with_context(|| format!("read accounts file {}", path.display()))?;
-    text.lines()
+    let ids = text
+        .lines()
         .map(str::trim)
         .filter(|l| !l.is_empty() && !l.starts_with('#'))
         .map(|l| l.parse::<i64>().with_context(|| format!("parse account_id {l:?}")))
-        .collect()
+        .collect::<anyhow::Result<Vec<i64>>>()?;
+    anyhow::ensure!(
+        !ids.is_empty(),
+        "--accounts file contains no account ids: {}",
+        path.display()
+    );
+    Ok(ids)
 }

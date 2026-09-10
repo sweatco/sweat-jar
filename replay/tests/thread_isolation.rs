@@ -50,6 +50,6 @@ fn one_and_three_threads_produce_the_same_rows() {
     let rows_1 = run_with(&dbp, &d.path().join("t1.csv"), 1);
     let rows_3 = run_with(&dbp, &d.path().join("t3.csv"), 3);
 
-    assert_eq!(rows_1.len(), 3, "expected one row per fixture account");
+    assert_eq!(rows_1.len(), 5, "expected one row per fixture account");
     assert_eq!(rows_1, rows_3);
 }

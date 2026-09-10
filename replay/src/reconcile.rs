@@ -49,6 +49,10 @@ fn zero_calc_row(slice: &UserSlice, status: impl Into<String>) -> ReconRow {
 /// Reconcile one user. Never panics — a panic in snapshot parsing or the engine
 /// becomes `status = "error:<msg>"`. Returns `Err` only for a DB/IO failure that
 /// isn't user-specific.
+///
+/// The `catch_unwind` around `run_timeline` is load-bearing, not
+/// belt-and-suspenders: `run_timeline`'s own guard has been observed to leak a
+/// second panic on the same thread.
 pub fn reconcile_user(
     conn: &duckdb::Connection,
     backend_account_id: i64,
@@ -58,17 +62,23 @@ pub fn reconcile_user(
     let (slice, timeline) = timeline::load_user(conn, backend_account_id)?;
     let actual = slice.onchain_claimed;
 
-    let baseline_raw: std::thread::Result<Result<Option<Vec<u8>>>> =
-        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            snapshot.raw_account(backend_account_id, &slice.near_account_id)
-        }));
+    // An account created inside the window has no block-H state by definition —
+    // don't ask the snapshot source (an archival RPC round-trip) for one.
+    let raw_account = if slice.existed_at_start {
+        let baseline_raw: std::thread::Result<Result<Option<Vec<u8>>>> =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                snapshot.raw_account(backend_account_id, &slice.near_account_id)
+            }));
 
-    let raw_account = match baseline_raw {
-        Err(_) => return Ok(zero_calc_row(&slice, "error:snapshot panic")),
-        Ok(Err(e)) => {
-            return Ok(zero_calc_row(&slice, format!("error:{}", truncate(&e.to_string()))));
+        match baseline_raw {
+            Err(_) => return Ok(zero_calc_row(&slice, "error:snapshot panic")),
+            Ok(Err(e)) => {
+                return Ok(zero_calc_row(&slice, format!("error:{}", truncate(&e.to_string()))));
+            }
+            Ok(Ok(v)) => v,
         }
-        Ok(Ok(v)) => v,
+    } else {
+        None
     };
 
     let no_baseline = slice.existed_at_start && raw_account.is_none();
@@ -83,6 +93,11 @@ pub fn reconcile_user(
     // `catch_unwind` (near-sdk mock harness state after the upfront
     // `set_timezone`); this guard keeps one bad account from killing the worker —
     // it becomes an `error:` row like any other.
+    //
+    // After an escaped panic the worker's thread-local mock storage is in an
+    // unknown state; the NEXT account relies on `run_timeline`'s internal
+    // `Context::new` calling `blockchain.take_storage()` to drain it. If that
+    // drain ever goes away, this guard turns into a silent-divergence risk.
     let outcome = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         engine::run_timeline(
             engine::Baseline { account_id, raw_account, timezone_ms: slice.timezone_ms },
