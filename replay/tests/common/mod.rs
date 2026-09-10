@@ -58,8 +58,8 @@ pub fn write_fixture_dataset(dir: &Path) -> PathBuf {
                 col5::VARCHAR      AS payload
             FROM (VALUES
                 (200, TIMESTAMP '2026-03-21 00:00:00', 0, 'deposit',        NULL::VARCHAR,      '["h",["steps_365d_20000_10000_tiered_v1","2000000000000000000000"]]'),
-                (200, TIMESTAMP '2026-03-21 06:00:00', 0, 'record_score',   NULL::VARCHAR,      '[[9000,1774419000000]]'),
-                (200, TIMESTAMP '2026-03-22 06:00:00', 0, 'apply_booster',  'applied'::VARCHAR, '{{"timestamp":"1774497600000","score":"3000"}}'),
+                (200, TIMESTAMP '2026-03-21 06:00:00', 0, 'record_score',   NULL::VARCHAR,      '[[9000,1774065600000]]'),
+                (200, TIMESTAMP '2026-03-22 06:00:00', 0, 'apply_booster',  'applied'::VARCHAR, '{{"timestamp":"1774155600000","score":"3000"}}'),
                 (200, TIMESTAMP '2026-03-25 12:00:00', 0, 'claim',          NULL::VARCHAR,      '["h",{{"items":[["steps_365d_20000_10000_tiered_v1","123"]],"timestamp":1774785600000}}]'),
                 (300, TIMESTAMP '2026-03-21 00:00:00', 0, 'deposit',        NULL::VARCHAR,      '["h",["365d_12apy","1000000000000000000000"]]'),
                 (300, TIMESTAMP '2026-03-30 00:00:00', 0, 'withdraw_all',   NULL::VARCHAR,      '["h",[["365d_12apy","0","1000000000000000000000"]]]'),

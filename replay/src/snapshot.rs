@@ -20,8 +20,6 @@ pub trait SnapshotSource: Send + Sync {
 
 /// Reads the `snapshots` table of a replay DB.
 pub struct DbSnapshotSource {
-    // Read by `raw_account` once its body is restored in Task 6.
-    #[allow(dead_code)]
     db_path: PathBuf,
 }
 
@@ -32,9 +30,21 @@ impl DbSnapshotSource {
 }
 
 impl SnapshotSource for DbSnapshotSource {
-    fn raw_account(&self, _account_id: i64, _near_account_id: &str) -> Result<Option<Vec<u8>>> {
-        // Reads the `snapshots` table of the DuckDB replay database.
-        anyhow::bail!("DbSnapshotSource::raw_account: rewritten in Task 6 of docs/superpowers/plans/2026-09-10-event-sourced-replay.md")
+    fn raw_account(&self, account_id: i64, _near_account_id: &str) -> Result<Option<Vec<u8>>> {
+        let conn = crate::db::open_read(&self.db_path)?;
+        let mut stmt = conn
+            .prepare("SELECT state_json FROM snapshots WHERE backend_account_id = ?")
+            .context("prepare snapshots query")?;
+        let mut rows = stmt
+            .query_map(duckdb::params![account_id], |r| r.get::<_, String>(0))
+            .context("query snapshots table")?;
+        match rows.next() {
+            Some(row) => {
+                let state_json = row.context("read snapshots row")?;
+                account_state_json_to_raw(&state_json).map(Some)
+            }
+            None => Ok(None),
+        }
     }
 }
 

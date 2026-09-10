@@ -70,7 +70,7 @@ fn install_quiet_panic_hook() {
 fn build_worklist(opts: &RunOpts) -> Result<Vec<i64>> {
     let conn = db::open_read(&opts.db)?;
     let mut ids: Vec<i64> = conn
-        .prepare("SELECT account_id FROM users ORDER BY account_id")?
+        .prepare("SELECT backend_account_id FROM accounts ORDER BY backend_account_id")?
         .query_map([], |r| r.get(0))?
         .collect::<Result<_, _>>()?;
 
