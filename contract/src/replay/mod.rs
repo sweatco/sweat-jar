@@ -294,6 +294,7 @@ mod scenario {
             engine::Baseline {
                 account_id: snapshot.account_id.clone(),
                 raw_account: Some(to_vec(&AccountVersioned::new(snapshot.account)).unwrap()),
+                timezone_ms: None,
             },
             &catalogue(),
             snapshot.block_time_ms,

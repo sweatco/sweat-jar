@@ -7,7 +7,10 @@
 
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
-use near_sdk::{json_types::Base64VecU8, AccountId, PromiseOrValue};
+use near_sdk::{
+    json_types::{Base64VecU8, I64},
+    AccountId, PromiseOrValue,
+};
 pub use sweat_jar_model::data::product::Product;
 use sweat_jar_model::{
     api::{AccountApi, ClaimApi, RestakeApi, WithdrawApi},
@@ -35,6 +38,12 @@ pub enum Action {
     Restake { product_id: String, amount: u128 },
     SetIncreasedScoreCap(bool),
     Claim,
+    /// `apply_booster([account], score, UTC(timestamp_ms))` — the oracle booster path.
+    ApplyBooster { score: Score, timestamp_ms: u64 },
+    /// `withdraw_all(Some(product_ids))` — matured balance of the named jars.
+    WithdrawAll { product_ids: Vec<String> },
+    /// `restake_all(ticket(into=product_id), None, Some(amount))`.
+    RestakeAll { product_id: String, amount: u128 },
 }
 
 impl Action {
@@ -42,11 +51,13 @@ impl Action {
     /// state-changing calls, then claims (so a claim sees up-to-date state).
     pub fn rank(&self) -> u8 {
         match self {
-            Action::RecordScore(_) => 0,
+            Action::RecordScore(_) | Action::ApplyBooster { .. } => 0,
             Action::Deposit { .. }
             | Action::Withdraw { .. }
             | Action::Restake { .. }
-            | Action::SetIncreasedScoreCap(_) => 1,
+            | Action::SetIncreasedScoreCap(_)
+            | Action::WithdrawAll { .. }
+            | Action::RestakeAll { .. } => 1,
             Action::Claim => 2,
         }
     }
@@ -77,6 +88,8 @@ impl Timeline {
 pub struct Baseline {
     pub account_id: AccountId,
     pub raw_account: Option<Vec<u8>>,
+    /// Authoritative account timezone (ms offset). `None` or `i64::MIN` -> not set.
+    pub timezone_ms: Option<i64>,
 }
 
 #[derive(Debug)]
@@ -112,6 +125,11 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
             store_account_raw(account_id.clone(), Base64VecU8(raw.clone()));
         }
         context.set_block_timestamp_in_ms(window_start_ms);
+
+        if let Some(tz) = baseline.timezone_ms.filter(|t| *t != i64::MIN) {
+            context.switch_account_to_operator();
+            context.contract().set_timezone(account_id.clone(), I64(tz));
+        }
 
         let mut total_claimed = 0u128;
         let mut per_claim: Vec<(u64, u128)> = Vec::new();
@@ -169,6 +187,26 @@ pub fn run_timeline(baseline: Baseline, products: &[Product], window_start_ms: u
                         total_claimed += amount;
                         per_claim.push((event.ts_ms, amount));
                     }
+                }
+                Action::ApplyBooster { score, timestamp_ms } => {
+                    context.switch_account_to_operator();
+                    context
+                        .contract()
+                        .apply_booster(vec![account_id.clone()], score, UTC(timestamp_ms));
+                }
+                Action::WithdrawAll { product_ids } => {
+                    context.switch_account(&account_id);
+                    let set: std::collections::HashSet<String> = product_ids.into_iter().collect();
+                    let _ = context.contract().withdraw_all(Some(set));
+                }
+                Action::RestakeAll { product_id, amount } => {
+                    context.switch_account(&account_id);
+                    let ticket = DepositTicket {
+                        product_id: product_id.clone(),
+                        valid_until: 0.into(),
+                        timezone: Some(Timezone::hour_shift(0)),
+                    };
+                    let _ = context.contract().restake_all(ticket, None, Some(amount.into()));
                 }
             }
         }
@@ -297,5 +335,19 @@ pub fn parse_account_state(
         timezone: Timezone::new(state["timezone"].as_i64().unwrap_or(i64::MIN)),
         score,
         features,
+    }
+}
+
+#[cfg(test)]
+mod engine_tests {
+    use super::*;
+
+    #[test]
+    fn new_action_variants_construct() {
+        let _ = Action::ApplyBooster { score: 3000, timestamp_ms: 1 };
+        let _ = Action::WithdrawAll { product_ids: vec!["p".into()] };
+        let _ = Action::RestakeAll { product_id: "p".into(), amount: 1 };
+        assert_eq!(Action::ApplyBooster { score: 0, timestamp_ms: 0 }.rank(), 0);
+        assert_eq!(Action::WithdrawAll { product_ids: vec![] }.rank(), 1);
     }
 }

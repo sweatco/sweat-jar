@@ -42,7 +42,7 @@ fn deposit_then_claim_after_a_year_yields_roughly_apy() {
     }
     .sorted();
 
-    let outcome = run_timeline(Baseline { account_id, raw_account: None }, &[fixed_product()], 0, timeline);
+    let outcome = run_timeline(Baseline { account_id, raw_account: None, timezone_ms: None }, &[fixed_product()], 0, timeline);
 
     assert!(matches!(outcome.status, ReplayStatus::Ok));
     assert_eq!(outcome.per_claim.len(), 1);
@@ -63,7 +63,7 @@ fn claim_with_no_jars_is_reported_not_panicked() {
         }],
     }
     .sorted();
-    let outcome = run_timeline(Baseline { account_id, raw_account: None }, &[fixed_product()], 0, timeline);
+    let outcome = run_timeline(Baseline { account_id, raw_account: None, timezone_ms: None }, &[fixed_product()], 0, timeline);
     // Either Ok with zero claims, or Error — never a process panic.
     match outcome.status {
         ReplayStatus::Ok => assert_eq!(outcome.total_claimed, 0),
