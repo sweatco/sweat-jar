@@ -60,6 +60,7 @@ mutants.out*
 /test_data/users.csv
 /test_data/max_subscriptions.csv
 /test_data/user_ids.txt
+/test_data/interest_replay
 /test_data/b64steps
 /replay.db
 /reconciliation.csv
