@@ -53,21 +53,47 @@ the first `N` accounts. `--accounts` beats `--sample`.
 ### `run`
 
 ```
-replay run --db x.duckdb --out reconciliation.csv
+replay run --db x.duckdb [--out reconciliation.csv]
   [--threads N] [--archival] [--archival-rpc-url URL]
-  [--shard i/n] [--accounts file] [--sample N] [--tolerance f]
+  [--shard i/n] [--accounts file] [--sample N] [--tolerance f] [--force]
 ```
 
-Threaded per-account reconciliation. Workers are named `replay-worker-*`, the CSV
+Threaded per-account reconciliation. Workers are named `replay-worker-*`, the DB
 writer `replay-writer`. `--shard i/n` processes only accounts where
 `backend_account_id.rem_euclid(n) == i` (multi-process / multi-machine fan-out
-over one read-only DB). `--tolerance` (default `1e-6`): an `ok` row with
-`|rel_delta|` above it is counted in `over_tolerance`.
+over one DB). `--tolerance` (default `1e-6`): an `ok` row with `|rel_delta|`
+above it is counted in `over_tolerance`.
 
 `--archival` fetches each `existed_at_start` account's block-`H` state live from a
 NEAR archival node (`get_account` on `v2.jars.sweat` at block `H_BLOCK`).
 `--archival-rpc-url` overrides the endpoint. Without `--archival`, pre-`H`
 holders replay from empty state and are marked `no_baseline`.
+
+**Results live in the database, not just the CSV.** Each `ReconRow` is upserted
+into the `results` table (keyed by `backend_account_id`) as soon as it's
+computed — a crash or a killed process loses at most the row currently in
+flight, never the ones already done. **`run` is resumable by default**: the
+worklist is `accounts` minus whatever's already in `results`, so re-running the
+exact same command after an interruption (or just periodically, e.g. against a
+`--shard`ed worklist run over several sessions) only computes what's still
+missing. Pass `--force` to recompute everyone regardless. `--out`, if given, is
+still written at the end — but it's a full export of `results` (in
+`backend_account_id` order), not just what this invocation computed; a resumed
+run with nothing left to do still (re-)writes a complete, up-to-date CSV. Omit
+`--out` to update only the database and export later with `export-csv`.
+
+### `export-csv`
+
+```
+replay export-csv --db x.duckdb --out reconciliation.csv
+```
+
+Writes the current `results` table to CSV without recomputing anything —
+re-export after the fact, or after interrupting a `run`. DuckDB locks the file
+for exclusive access while `run` holds it open, so a concurrent `export-csv`
+from another process fails with a lock error; run it after `run` exits (Ctrl-C
+included — the writer thread only holds one row's upsert at a time, so what's
+already committed to `results` is safe to export).
 
 ### `explain`
 
@@ -145,8 +171,11 @@ For each account:
 
 1. Load the baseline — archival `get_account` at block `H` for `existed_at_start`
    accounts, else empty state.
-2. Call `set_timezone` upfront with the authoritative `timezone_ms` from
-   `account_timezones/`.
+2. Set the authoritative `timezone_ms` from `account_timezones/` (Oracle
+   `set_timezone`) immediately before the account's first score-based jar is
+   created — a deposit or restake into a `ScoreBased`/`TieredScoreBased`
+   product — not upfront; a no-op for accounts with no score jar, and for a
+   baseline that already carries a valid on-chain timezone.
 3. Replay every event in `(block_timestamp_utc, log_index)` order, mapped to an
    engine `Action`:
 
@@ -167,7 +196,9 @@ For each account:
 `replay/src/db/schema.rs`. Tables: `events` (`backend_account_id, ts_ms,
 log_index, event, role, payload`), `accounts` (`backend_account_id,
 near_account_id, existed_at_start, timezone_ms`), `snapshots`
-(`backend_account_id, state_json`), `meta` (`key, value`).
+(`backend_account_id, state_json`), `meta` (`key, value`), `results` (`run`'s
+output — `backend_account_id` PK, the `reconciliation.csv` columns, plus
+`computed_at`; see [`run`](#run)).
 
 ## Known divergences / limitations
 
@@ -179,9 +210,9 @@ near_account_id, existed_at_start, timezone_ms`), `snapshots`
 - `apply_booster` rows with `role = rejected` are ignored (they had no on-chain
   effect).
 - `reconcile_user` wraps `run_timeline` in its own `catch_unwind`: the near-sdk
-  unit-test mock can, after the upfront `set_timezone`, let a second panic on one
-  worker thread escape the engine's internal guard; the wrapper turns that
-  account into an `error:` row rather than killing the worker.
+  unit-test mock can let a second panic on one worker thread escape the
+  engine's internal guard; the wrapper turns that account into an `error:` row
+  rather than killing the worker.
 
 ## Testing
 

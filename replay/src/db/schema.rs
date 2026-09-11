@@ -26,6 +26,17 @@ CREATE TABLE IF NOT EXISTS meta (
     key    VARCHAR PRIMARY KEY,
     value  VARCHAR NOT NULL
 );
+CREATE TABLE IF NOT EXISTS results (
+    backend_account_id      BIGINT PRIMARY KEY,
+    near_account_id         VARCHAR NOT NULL,
+    calculated_total_claim  VARCHAR NOT NULL,
+    actual_total_claim      VARCHAR NOT NULL,
+    delta                   VARCHAR NOT NULL,
+    rel_delta                DOUBLE NOT NULL,
+    n_claims                BIGINT NOT NULL,
+    status                  VARCHAR NOT NULL,
+    computed_at             BIGINT NOT NULL
+);
 ";
 
 pub fn init_schema(conn: &Connection) -> anyhow::Result<()> {

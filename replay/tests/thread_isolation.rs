@@ -26,10 +26,10 @@ fn sorted_rows(csv: &str) -> Vec<String> {
     lines
 }
 
-fn run_with(dbp: &std::path::Path, out: &std::path::Path, threads: usize) -> Vec<String> {
+fn run_with(dbp: &std::path::Path, out: &std::path::Path, threads: usize, force: bool) -> Vec<String> {
     run(&RunOpts {
         db: dbp.to_path_buf(),
-        out: out.to_path_buf(),
+        out: Some(out.to_path_buf()),
         products: "tests/fixtures/products.json".into(),
         threads,
         shard: None,
@@ -37,6 +37,7 @@ fn run_with(dbp: &std::path::Path, out: &std::path::Path, threads: usize) -> Vec
         sample: None,
         tolerance: 1e-6,
         archival_rpc_url: None,
+        force,
     })
     .unwrap();
     sorted_rows(&std::fs::read_to_string(out).unwrap())
@@ -47,8 +48,10 @@ fn one_and_three_threads_produce_the_same_rows() {
     let d = tempfile::tempdir().unwrap();
     let dbp = build_fixture_db(d.path());
 
-    let rows_1 = run_with(&dbp, &d.path().join("t1.csv"), 1);
-    let rows_3 = run_with(&dbp, &d.path().join("t3.csv"), 3);
+    let rows_1 = run_with(&dbp, &d.path().join("t1.csv"), 1, false);
+    // Same db as the first run: force a genuine recompute rather than
+    // observing the (trivially-identical) resumed no-op export.
+    let rows_3 = run_with(&dbp, &d.path().join("t3.csv"), 3, true);
 
     assert_eq!(rows_1.len(), 5, "expected one row per fixture account");
     assert_eq!(rows_1, rows_3);

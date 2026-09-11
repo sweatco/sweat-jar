@@ -3,6 +3,7 @@
 pub mod cli;
 pub mod db;
 pub mod explain;
+pub mod export;
 pub mod parse;
 pub mod payload;
 pub mod products;

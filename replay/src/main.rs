@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use clap::Parser;
 
-use replay::{cli, db, explain, products, run};
+use replay::{cli, db, explain, export, products, run};
 
 fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
@@ -48,6 +48,7 @@ fn main() -> anyhow::Result<()> {
             tolerance,
             archival,
             archival_rpc_url,
+            force,
         } => {
             let threads = threads.unwrap_or_else(|| {
                 std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4)
@@ -63,6 +64,7 @@ fn main() -> anyhow::Result<()> {
                 sample,
                 tolerance,
                 archival_rpc_url: archival.then_some(archival_rpc_url),
+                force,
             })?;
             println!(
                 "processed {} | ok {} | error {} | no_baseline {} | over_tolerance {}",
@@ -76,6 +78,11 @@ fn main() -> anyhow::Result<()> {
                 "sum_calculated {} | sum_actual {}",
                 summary.sum_calculated, summary.sum_actual
             );
+            Ok(())
+        }
+        cli::Cmd::ExportCsv { db, out } => {
+            export::export_csv(&db, &out)?;
+            println!("wrote {}", out.display());
             Ok(())
         }
         cli::Cmd::Explain {

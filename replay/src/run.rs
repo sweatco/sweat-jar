@@ -1,21 +1,27 @@
 //! Threaded reconciliation driver: build an account worklist, fan it out across
-//! named worker threads, and stream `ReconRow`s to a CSV via a writer thread.
+//! named worker threads, and upsert `ReconRow`s into the `results` table via a
+//! writer thread. Resumable — accounts already in `results` are skipped on a
+//! later run unless `--force`, so a killed process picks up where it left off.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result};
 use sweat_jar_model::data::product::Product;
 
 use crate::db::{self, ingest};
+use crate::export;
 use crate::reconcile::{reconcile_user, ReconRow};
 use crate::snapshot::{DbSnapshotSource, SnapshotSource};
 
 /// Resolved options for a reconciliation run.
 pub struct RunOpts {
     pub db: PathBuf,
-    pub out: PathBuf,
+    /// Export `results` to this CSV once the run completes. `None` skips the
+    /// export (the database is still updated) — use `export-csv` later.
+    pub out: Option<PathBuf>,
     pub products: PathBuf,
     /// Worker-thread count (already resolved from `None` by the caller).
     pub threads: usize,
@@ -27,6 +33,8 @@ pub struct RunOpts {
     /// `Some(url)` fetches each account's block-H state from that archival RPC
     /// endpoint; `None` reads the local `snapshots` table.
     pub archival_rpc_url: Option<String>,
+    /// Recompute accounts that already have a `results` row (default: skip them).
+    pub force: bool,
 }
 
 /// Aggregate outcome of a run, accumulated as rows are written.
@@ -69,10 +77,14 @@ fn install_quiet_panic_hook() {
 
 fn build_worklist(opts: &RunOpts) -> Result<Vec<i64>> {
     let conn = db::open_read(&opts.db)?;
-    let mut ids: Vec<i64> = conn
-        .prepare("SELECT backend_account_id FROM accounts ORDER BY backend_account_id")?
-        .query_map([], |r| r.get(0))?
-        .collect::<Result<_, _>>()?;
+    let sql = if opts.force {
+        "SELECT backend_account_id FROM accounts ORDER BY backend_account_id"
+    } else {
+        "SELECT backend_account_id FROM accounts \
+         WHERE backend_account_id NOT IN (SELECT backend_account_id FROM results) \
+         ORDER BY backend_account_id"
+    };
+    let mut ids: Vec<i64> = conn.prepare(sql)?.query_map([], |r| r.get(0))?.collect::<Result<_, _>>()?;
 
     if let Some(path) = &opts.accounts {
         let allow: HashSet<i64> = ingest::read_accounts(path)?.into_iter().collect();
@@ -87,7 +99,9 @@ fn build_worklist(opts: &RunOpts) -> Result<Vec<i64>> {
     Ok(ids)
 }
 
-/// Run reconciliation over the worklist and write `opts.out`.
+/// Run reconciliation over the worklist, upserting each result into the
+/// `results` table (resumable: rerunning skips accounts already there unless
+/// `opts.force`), then export to `opts.out` if given.
 pub fn run(opts: &RunOpts) -> Result<RunSummary> {
     anyhow::ensure!(opts.threads > 0, "threads must be > 0");
 
@@ -98,6 +112,9 @@ pub fn run(opts: &RunOpts) -> Result<RunSummary> {
     // bug in our own code still prints). Set once; harmless if `run` is called
     // again.
     install_quiet_panic_hook();
+
+    // `results` may not exist yet (a db built before this table was added).
+    db::schema::init_schema(&db::open_write(&opts.db)?)?;
 
     let worklist = build_worklist(opts)?;
 
@@ -115,12 +132,29 @@ pub fn run(opts: &RunOpts) -> Result<RunSummary> {
 
     let (tx, rx) = mpsc::channel::<ReconRow>();
     let out_path = opts.out.clone();
+    let db_path_for_writer = opts.db.clone();
     let tolerance = opts.tolerance;
     let writer = std::thread::Builder::new()
         .name("replay-writer".to_string())
         .spawn(move || -> Result<RunSummary> {
-            let mut wtr = csv::Writer::from_path(&out_path)
-                .with_context(|| format!("open {}", out_path.display()))?;
+            let conn = db::open_write(&db_path_for_writer)?;
+            let mut upsert = conn
+                .prepare(
+                    "INSERT INTO results \
+                        (backend_account_id, near_account_id, calculated_total_claim, \
+                         actual_total_claim, delta, rel_delta, n_claims, status, computed_at) \
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) \
+                     ON CONFLICT (backend_account_id) DO UPDATE SET \
+                        near_account_id = excluded.near_account_id, \
+                        calculated_total_claim = excluded.calculated_total_claim, \
+                        actual_total_claim = excluded.actual_total_claim, \
+                        delta = excluded.delta, \
+                        rel_delta = excluded.rel_delta, \
+                        n_claims = excluded.n_claims, \
+                        status = excluded.status, \
+                        computed_at = excluded.computed_at",
+                )
+                .context("prepare results upsert")?;
             let mut s = RunSummary {
                 processed: 0,
                 ok: 0,
@@ -148,9 +182,25 @@ pub fn run(opts: &RunOpts) -> Result<RunSummary> {
                 } else if row.status.starts_with("error:") {
                     s.errored += 1;
                 }
-                wtr.serialize(&row)?;
+                let computed_at = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_millis() as i64;
+                upsert
+                    .execute(duckdb::params![
+                        row.account_id,
+                        row.near_account_id,
+                        row.calculated_total_claim,
+                        row.actual_total_claim,
+                        row.delta,
+                        row.rel_delta,
+                        row.n_claims as i64,
+                        row.status,
+                        computed_at,
+                    ])
+                    .with_context(|| format!("upsert result for account {}", row.account_id))?;
             }
-            wtr.flush()?;
+            drop(upsert);
+            if let Some(out_path) = &out_path {
+                export::export_csv_with(&conn, out_path)?;
+            }
             Ok(s)
         })
         .context("spawn writer thread")?;

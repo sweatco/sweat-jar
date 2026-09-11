@@ -23,7 +23,7 @@ fn fixture_db(dir: &Path) -> PathBuf {
 fn opts(db: PathBuf, out: PathBuf) -> RunOpts {
     RunOpts {
         db,
-        out,
+        out: Some(out),
         products: PRODUCTS.into(),
         threads: 2,
         shard: None,
@@ -31,6 +31,7 @@ fn opts(db: PathBuf, out: PathBuf) -> RunOpts {
         sample: None,
         tolerance: 1e-6,
         archival_rpc_url: None,
+        force: false,
     }
 }
 
@@ -79,6 +80,7 @@ fn run_threads_1_is_deterministic() {
     let out2 = d.path().join("b.csv");
     let mut o2 = opts(db, out2.clone());
     o2.threads = 1;
+    o2.force = true; // recompute for real — proves determinism, not export idempotency
     run(&o2).unwrap();
 
     let a = std::fs::read_to_string(&out1).unwrap();
@@ -92,29 +94,25 @@ fn run_shard_splits_worklist() {
     let d = tempfile::tempdir().unwrap();
     let db = fixture_db(d.path());
 
-    let out0 = d.path().join("s0.csv");
-    let mut o0 = opts(db.clone(), out0.clone());
+    // No `--out`: shard partitioning is a `results`-table property now, not a
+    // per-invocation CSV — each run's CSV export would cover the whole table.
+    let mut o0 = opts(db.clone(), d.path().join("unused0.csv"));
+    o0.out = None;
     o0.shard = Some((0, 2));
     let s0 = run(&o0).unwrap();
 
-    let out1 = d.path().join("s1.csv");
-    let mut o1 = opts(db, out1.clone());
+    let mut o1 = opts(db.clone(), d.path().join("unused1.csv"));
+    o1.out = None;
     o1.shard = Some((1, 2));
     let s1 = run(&o1).unwrap();
 
     assert_eq!(s0.processed + s1.processed, 5);
 
-    let ids = |p: &Path| -> Vec<String> {
-        std::fs::read_to_string(p)
-            .unwrap()
-            .lines()
-            .skip(1)
-            .map(|l| l.split(',').next().unwrap().to_string())
-            .collect()
-    };
-    for id in ids(&out0) {
-        assert!(!ids(&out1).contains(&id), "{id} in both shards");
-    }
+    // Every account landed in `results` exactly once, on the shard its id maps to.
+    let conn = db::open_read(&db).unwrap();
+    let mut stmt = conn.prepare("SELECT backend_account_id FROM results").unwrap();
+    let ids: Vec<i64> = stmt.query_map([], |r| r.get(0)).unwrap().collect::<Result<_, _>>().unwrap();
+    assert_eq!(ids.len(), 5, "each account reconciled exactly once across shards");
 }
 
 #[test]
@@ -125,6 +123,60 @@ fn run_sample_limits() {
     let mut o = opts(db, out);
     o.sample = Some(1);
     assert_eq!(run(&o).unwrap().processed, 1);
+}
+
+#[test]
+fn rerun_skips_already_computed_accounts_unless_forced() {
+    let d = tempfile::tempdir().unwrap();
+    let db = fixture_db(d.path());
+
+    let out = d.path().join("rec.csv");
+    let first = run(&opts(db.clone(), out.clone())).unwrap();
+    assert_eq!(first.processed, 5);
+
+    let count_results = || -> i64 {
+        db::open_read(&db)
+            .unwrap()
+            .query_row("SELECT count(*) FROM results", [], |r| r.get(0))
+            .unwrap()
+    };
+    assert_eq!(count_results(), 5);
+
+    // Rerun without --force: everything is already in `results`, so nothing
+    // is recomputed (this is the "process died and was restarted" case).
+    let second = run(&opts(db.clone(), out.clone())).unwrap();
+    assert_eq!(second.processed, 0);
+    assert_eq!(count_results(), 5);
+    // The CSV is still (re-)exported from the full `results` table.
+    assert_eq!(std::fs::read_to_string(&out).unwrap().lines().count(), 6);
+
+    // --force recomputes everyone.
+    let mut forced = opts(db.clone(), out);
+    forced.force = true;
+    let third = run(&forced).unwrap();
+    assert_eq!(third.processed, 5);
+    assert_eq!(count_results(), 5);
+}
+
+#[test]
+fn export_csv_reads_back_results_without_recomputing() {
+    let d = tempfile::tempdir().unwrap();
+    let db = fixture_db(d.path());
+
+    // `run` with no `--out`: results land in the db, no CSV yet.
+    let mut o = opts(db.clone(), d.path().join("unused.csv"));
+    o.out = None;
+    let summary = run(&o).unwrap();
+    assert_eq!(summary.processed, 5);
+
+    let out = d.path().join("exported.csv");
+    replay::export::export_csv(&db, &out).unwrap();
+    let body = std::fs::read_to_string(&out).unwrap();
+    assert_eq!(
+        body.lines().next().unwrap(),
+        "account_id,near_account_id,calculated_total_claim,actual_total_claim,delta,rel_delta,n_claims,status"
+    );
+    assert_eq!(body.lines().count(), 6);
 }
 
 #[test]

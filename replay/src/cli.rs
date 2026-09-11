@@ -22,11 +22,16 @@ pub enum Cmd {
         #[arg(long)]
         sample: Option<usize>,
     },
+    /// Reconcile the worklist, upserting each result into the `results` table
+    /// in `--db`. Resumable: an account already in `results` is skipped on a
+    /// later run (so a killed process just picks up where it left off) unless
+    /// `--force`. Optionally exports `results` to CSV when done — `export-csv`
+    /// does the same export on demand, without recomputing anything.
     Run {
         #[arg(long)]
         db: PathBuf,
-        #[arg(long, default_value = "reconciliation.csv")]
-        out: PathBuf,
+        #[arg(long)]
+        out: Option<PathBuf>,
         #[arg(long, default_value = "test_data/products.json")]
         products: PathBuf,
         #[arg(long)]
@@ -47,6 +52,18 @@ pub enum Cmd {
         /// Archival JSON-RPC endpoint used when `--archival` is set.
         #[arg(long, default_value = crate::snapshot::FASTNEAR_ARCHIVAL_RPC)]
         archival_rpc_url: String,
+        /// Recompute accounts that already have a `results` row instead of
+        /// skipping them.
+        #[arg(long)]
+        force: bool,
+    },
+    /// Export the `results` table (populated by `run`) to a CSV file, without
+    /// recomputing anything.
+    ExportCsv {
+        #[arg(long)]
+        db: PathBuf,
+        #[arg(long)]
+        out: PathBuf,
     },
     /// Replay one account and print its per-claim breakdown vs the on-chain
     /// claim amounts (to trace where a non-zero `delta` comes from).
