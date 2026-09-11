@@ -51,17 +51,9 @@ mutants.out*
 # res/ holds the committed production artifacts.
 /res-integration
 
-# Replay reconciliation: multi-GB full-population data extracts — kept locally,
-# never committed. Small fixtures under test_data/ and replay/tests/ are tracked.
-/test_data/jar_events.csv
-/test_data/step_packages.csv
-/test_data/boosted_step_packages.csv
-/boosted_step_packages.csv
-/test_data/users.csv
-/test_data/max_subscriptions.csv
-/test_data/user_ids.txt
-/test_data/interest_replay
-/test_data/b64steps
+# Replay reconciliation data (extracts + small fixtures alike) — kept locally,
+# never committed. replay/tests/fixtures/ (generated at test time) is tracked.
+/test_data/
 /replay.db
 /reconciliation.csv
 
