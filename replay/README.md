@@ -64,10 +64,16 @@ writer `replay-writer`. `--shard i/n` processes only accounts where
 over one DB). `--tolerance` (default `1e-6`): an `ok` row with `|rel_delta|`
 above it is counted in `over_tolerance`.
 
-`--archival` fetches each `existed_at_start` account's block-`H` state live from a
-NEAR archival node (`get_account` on `v2.jars.sweat` at block `H_BLOCK`).
-`--archival-rpc-url` overrides the endpoint. Without `--archival`, pre-`H`
-holders replay from empty state and are marked `no_baseline`.
+`--archival` fetches **every** account's block-`H` state live from a NEAR
+archival node (`get_account` on `v2.jars.sweat` at block `H_BLOCK`) —
+`existed_at_start` is the export's own classification, not trusted ground
+truth, so it no longer gates the fetch. A `null` response is a complete,
+authoritative answer ("no state at H"), not a gap: the account's first
+`Deposit` in its timeline creates it, exactly like the real contract's
+`get_or_create_account_mut`. `--archival-rpc-url` overrides the endpoint.
+Without `--archival` (the local `snapshots` table, normally unpopulated),
+a missing row for an `existed_at_start` account IS a gap and is marked
+`no_baseline` — that table isn't authoritative the way a live lookup is.
 
 **Results live in the database, not just the CSV.** Each `ReconRow` is upserted
 into the `results` table (keyed by `backend_account_id`) as soon as it's
@@ -130,6 +136,13 @@ DuckDB is vendored via the `duckdb` crate's `bundled` feature — no external
 binary is needed. (The `duckdb` CLI is only handy for ad-hoc parquet
 exploration.)
 
+Add `--features corrected-score-window` to reconcile against "what should have
+been paid" (current, fixed score-window logic) instead of "what was actually
+paid" (the default — reproduces the pre-v4.2.3 bug, see Known divergences
+below). It rebuilds `target/release-replay/replay` in place — the two modes
+aren't both available at once from one build; run one, save its output, then
+switch and rerun if you need both.
+
 `replay` depends on `sweat_jar` with the `replay-engine` feature, which pulls
 `near-sdk/unit-testing` — a **host-only** build. `replay` is not in the workspace
 `default-members`, so plain `cargo build` / `cargo test` and CI are unaffected;
@@ -169,8 +182,9 @@ sum_calculated <n> | sum_actual <n>
 
 For each account:
 
-1. Load the baseline — archival `get_account` at block `H` for `existed_at_start`
-   accounts, else empty state.
+1. Load the baseline — with `--archival`, `get_account` at block `H` for every
+   account (`null` = confirmed empty, not a gap); without it, the local
+   `snapshots` table.
 2. Set the authoritative `timezone_ms` from `account_timezones/` (Oracle
    `set_timezone`) immediately before the account's first score-based jar is
    created — a deposit or restake into a `ScoreBased`/`TieredScoreBased`

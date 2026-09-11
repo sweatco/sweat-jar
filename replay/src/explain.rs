@@ -38,13 +38,11 @@ pub fn explain(opts: &ExplainOpts) -> Result<()> {
         None => Box::new(DbSnapshotSource::new(&opts.db)),
     };
 
-    // Only accounts that existed at block H have a baseline to fetch.
-    let raw_account = if slice.existed_at_start {
-        snapshot.raw_account(opts.account, &slice.near_account_id)?
-    } else {
-        None
-    };
-    let no_baseline = slice.existed_at_start && raw_account.is_none();
+    // Always ask — `existed_at_start` is the export's classification, not
+    // ground truth; a live archival lookup is authoritative either way.
+    let raw_account = snapshot.raw_account(opts.account, &slice.near_account_id)?;
+    let had_baseline = raw_account.is_some();
+    let no_baseline = !had_baseline && !snapshot.is_authoritative() && slice.existed_at_start;
     let account_id: near_sdk::AccountId = slice
         .near_account_id
         .parse()
@@ -77,10 +75,10 @@ pub fn explain(opts: &ExplainOpts) -> Result<()> {
     let calc: BTreeMap<u64, u128> = outcome.per_claim.iter().copied().collect();
 
     println!("account {} ({})", opts.account, slice.near_account_id);
-    let baseline_label = if !slice.existed_at_start {
-        "none needed (account created in window)"
-    } else if no_baseline {
+    let baseline_label = if no_baseline {
         "MISSING (no_baseline)"
+    } else if !had_baseline {
+        "none (confirmed no state at H)"
     } else {
         "loaded"
     };

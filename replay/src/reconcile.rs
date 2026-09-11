@@ -62,9 +62,14 @@ pub fn reconcile_user(
     let (slice, timeline) = timeline::load_user(conn, backend_account_id)?;
     let actual = slice.onchain_claimed;
 
-    // An account created inside the window has no block-H state by definition —
-    // don't ask the snapshot source (an archival RPC round-trip) for one.
-    let raw_account = if slice.existed_at_start {
+    // Always ask the snapshot source — `existed_at_start` is the export's own
+    // classification and isn't trusted as ground truth on its own; a live
+    // archival lookup is the authoritative check for every account, fresh or
+    // not. `Ok(None)` from an authoritative source (archival) means the
+    // account genuinely had no state at H, which is a complete answer, not a
+    // gap: the first `Deposit` in its timeline creates it, exactly as the real
+    // contract's `get_or_create_account_mut` does.
+    let raw_account = {
         let baseline_raw: std::thread::Result<Result<Option<Vec<u8>>>> =
             std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                 snapshot.raw_account(backend_account_id, &slice.near_account_id)
@@ -77,11 +82,12 @@ pub fn reconcile_user(
             }
             Ok(Ok(v)) => v,
         }
-    } else {
-        None
     };
 
-    let no_baseline = slice.existed_at_start && raw_account.is_none();
+    // A non-authoritative source (the local `snapshots` cache) missing a row
+    // is only a real gap for an account the export says existed at H — a
+    // fresh account is correctly rowless there regardless.
+    let no_baseline = raw_account.is_none() && !snapshot.is_authoritative() && slice.existed_at_start;
 
     let account_id: near_sdk::AccountId = match slice.near_account_id.parse() {
         Ok(a) => a,

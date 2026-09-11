@@ -16,6 +16,12 @@ pub trait SnapshotSource: Send + Sync {
     /// engine's `Baseline.raw_account`, or `Ok(None)` if the account had no
     /// state at block H.
     fn raw_account(&self, account_id: i64, near_account_id: &str) -> Result<Option<Vec<u8>>>;
+
+    /// Whether `Ok(None)` from this source means "confirmed no state at H" (a
+    /// complete answer — the account is genuinely fresh, its first `Deposit`
+    /// creates it, exactly as the real contract's `get_or_create_account_mut`
+    /// does) rather than "this source doesn't know" (a gap — `no_baseline`).
+    fn is_authoritative(&self) -> bool;
 }
 
 /// Reads the `snapshots` table of a replay DB.
@@ -45,6 +51,12 @@ impl SnapshotSource for DbSnapshotSource {
             }
             None => Ok(None),
         }
+    }
+
+    /// The `snapshots` table is a local cache, typically unpopulated — a miss
+    /// only means "we didn't fetch one", not "confirmed absent".
+    fn is_authoritative(&self) -> bool {
+        false
     }
 }
 
@@ -143,6 +155,12 @@ impl SnapshotSource for ArchivalRpcSnapshotSource {
             .with_context(|| format!("get_account({near_account_id}) @ block {}", self.block_height))?;
         parse_get_account_response(&resp)
             .with_context(|| format!("parsing get_account({near_account_id}) response"))
+    }
+
+    /// A live `get_account` call is a definitive on-chain answer: `Ok(None)`
+    /// means the account genuinely had no state at block H.
+    fn is_authoritative(&self) -> bool {
+        true
     }
 }
 
