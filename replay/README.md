@@ -203,7 +203,15 @@ output — `backend_account_id` PK, the `reconciliation.csv` columns, plus
 ## Known divergences / limitations
 
 - The engine runs **current** contract code; the window spans contract versions
-  4.1.0–4.2.2, so version-specific historical behavior is not reproduced.
+  4.1.0–4.2.2, so version-specific historical behavior is not reproduced —
+  **except** the one instance that turned out to dominate reconciliation error:
+  `AccountScore::shift()`/`wipe()` are `replay-engine`-conditional (see
+  `model/src/data/score/mod.rs`) to intentionally revert the v4.2.3 fix
+  (`stamp score.updated_at when settle_interest rolls the window`), because
+  the entire replay window predates that fix and every historical claim that
+  raced the oracle's daily `record_score` lost a day of score accrual
+  on-chain. The golden regression (`contract/src/replay/mod.rs`) pins a
+  separate total for each build config accordingly.
 - `restake` with a multi-jar `from` set is replayed as `restake_all` with the
   exact `restaked` amount — the rest of the account's matured principal is
   withdrawn, which can differ from a genuine single-jar restake.

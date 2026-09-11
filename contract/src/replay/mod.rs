@@ -262,7 +262,22 @@ mod scenario {
     }
 
     /// Pinned replay total: fails loudly if an engine change alters replay behavior.
+    ///
+    /// This test runs both as a plain `#[cfg(test)]` unit test (default
+    /// features — `AccountScore::shift()`/`wipe()` stamp `updated_at`, the
+    /// v4.2.3 fix) and under `--features replay-engine` (host build for the
+    /// `replay/` crate — `shift()`/`wipe()` intentionally revert that fix to
+    /// reproduce real pre-v4.2.3 chain behavior; see `model/src/data/score/mod.rs`).
+    /// The two configurations replay different logic, so they pin different
+    /// totals. This fixture account claims on nearly every occasion (172
+    /// claims), so it hits the claim-races-oracle condition often; the ~93%
+    /// drop under `replay-engine` is the cumulative effect across its full
+    /// history, not a per-claim anomaly (single claims on real accounts move
+    /// by ~0.1-1%, see the `replay/` reconciliation reports).
+    #[cfg(not(feature = "replay-engine"))]
     const GOLDEN_TOTAL_CLAIMED: u128 = 430_841_686_064_034_204_316_387;
+    #[cfg(feature = "replay-engine")]
+    const GOLDEN_TOTAL_CLAIMED: u128 = 31_468_050_947_902_862_459_461;
 
     #[test]
     fn replay_account_history() {

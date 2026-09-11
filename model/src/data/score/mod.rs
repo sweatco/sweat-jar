@@ -163,15 +163,38 @@ impl AccountScore {
         true
     }
 
+    /// Stamps `updated_at` on the window roll — fixed in v4.2.3 (see
+    /// `fix: stamp score.updated_at when settle_interest rolls the window`).
+    /// The `replay-engine` build intentionally omits the stamp: the entire
+    /// replay window (2026-03-20..2026-08-31) ran on pre-v4.2.3 contract
+    /// versions (4.1.0..4.2.2), where an early claim rolling the window
+    /// without stamping `updated_at` let the following `record_score` roll it
+    /// a second time, discarding a day of score accrual that was never
+    /// settled — this is real on-chain history to reproduce, not a bug to
+    /// carry forward. `--features replay-engine` never ships to the live
+    /// contract (see the feature's own doc in `contract/Cargo.toml`).
+    #[cfg(not(feature = "replay-engine"))]
     pub fn wipe(&mut self) {
         self.history = [DailyScore::default(); DAYS_STORED];
         self.updated_at = block_timestamp_ms().into();
     }
 
+    #[cfg(feature = "replay-engine")]
+    pub fn wipe(&mut self) {
+        self.history = [DailyScore::default(); DAYS_STORED];
+    }
+
+    #[cfg(not(feature = "replay-engine"))]
     pub fn shift(&mut self) {
         self.history.copy_within(0..DAYS_STORED - 1, 1);
         self.history[0] = DailyScore::default();
         self.updated_at = block_timestamp_ms().into();
+    }
+
+    #[cfg(feature = "replay-engine")]
+    pub fn shift(&mut self) {
+        self.history.copy_within(0..DAYS_STORED - 1, 1);
+        self.history[0] = DailyScore::default();
     }
 
     #[allow(clippy::unused_self)]
