@@ -32,6 +32,11 @@ integration-test = [
 # Compiles the test-only simulation helpers (`common::testing`, `common::env::test_env_ext`,
 # the store-events `emit`) into a non-test build so the `replay/` reconciliation crate can reuse them.
 replay-engine = ["dep:rstest", "near-sdk/unit-testing", "sweat-jar-model/testing", "sweat-jar-model/replay-engine"]
+# On top of `replay-engine`: reconcile against "what should have been paid"
+# (current score-window logic) instead of "what was actually paid" (the
+# pre-v4.2.3 bug reproduced by `replay-engine` alone). See the feature's own
+# doc in `model/Cargo.toml` / `model/src/data/score/mod.rs`.
+corrected-score-window = ["sweat-jar-model/corrected-score-window"]
 
 [dependencies]
 mutants = { workspace = true }

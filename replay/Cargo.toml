@@ -12,6 +12,11 @@ path = "src/lib.rs"
 name = "replay"
 path = "src/main.rs"
 
+[features]
+# "What should have been paid" (current score-window logic) instead of "what
+# was actually paid" (default — reproduces the pre-v4.2.3 score-window bug).
+corrected-score-window = ["sweat_jar/corrected-score-window"]
+
 [dependencies]
 sweat_jar = { path = "../contract", features = ["replay-engine"] }
 sweat-jar-model = { workspace = true }

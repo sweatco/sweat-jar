@@ -165,33 +165,36 @@ impl AccountScore {
 
     /// Stamps `updated_at` on the window roll — fixed in v4.2.3 (see
     /// `fix: stamp score.updated_at when settle_interest rolls the window`).
-    /// The `replay-engine` build intentionally omits the stamp: the entire
+    /// A plain `replay-engine` build intentionally omits the stamp: the entire
     /// replay window (2026-03-20..2026-08-31) ran on pre-v4.2.3 contract
     /// versions (4.1.0..4.2.2), where an early claim rolling the window
     /// without stamping `updated_at` let the following `record_score` roll it
     /// a second time, discarding a day of score accrual that was never
-    /// settled — this is real on-chain history to reproduce, not a bug to
-    /// carry forward. `--features replay-engine` never ships to the live
-    /// contract (see the feature's own doc in `contract/Cargo.toml`).
-    #[cfg(not(feature = "replay-engine"))]
+    /// settled — real on-chain history to reproduce for reconciliation
+    /// (`replay run`/`explain`, matching `actual_total_claim`), not a bug to
+    /// carry forward. `corrected-score-window` restores the stamp on top of
+    /// `replay-engine` — "what should have been paid" instead of "what was
+    /// actually paid", for auditing the bug's cost. Neither feature ships to
+    /// the live contract (see `replay-engine`'s own doc in `contract/Cargo.toml`).
+    #[cfg(any(not(feature = "replay-engine"), feature = "corrected-score-window"))]
     pub fn wipe(&mut self) {
         self.history = [DailyScore::default(); DAYS_STORED];
         self.updated_at = block_timestamp_ms().into();
     }
 
-    #[cfg(feature = "replay-engine")]
+    #[cfg(all(feature = "replay-engine", not(feature = "corrected-score-window")))]
     pub fn wipe(&mut self) {
         self.history = [DailyScore::default(); DAYS_STORED];
     }
 
-    #[cfg(not(feature = "replay-engine"))]
+    #[cfg(any(not(feature = "replay-engine"), feature = "corrected-score-window"))]
     pub fn shift(&mut self) {
         self.history.copy_within(0..DAYS_STORED - 1, 1);
         self.history[0] = DailyScore::default();
         self.updated_at = block_timestamp_ms().into();
     }
 
-    #[cfg(feature = "replay-engine")]
+    #[cfg(all(feature = "replay-engine", not(feature = "corrected-score-window")))]
     pub fn shift(&mut self) {
         self.history.copy_within(0..DAYS_STORED - 1, 1);
         self.history[0] = DailyScore::default();

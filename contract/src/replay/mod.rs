@@ -274,9 +274,9 @@ mod scenario {
     /// drop under `replay-engine` is the cumulative effect across its full
     /// history, not a per-claim anomaly (single claims on real accounts move
     /// by ~0.1-1%, see the `replay/` reconciliation reports).
-    #[cfg(not(feature = "replay-engine"))]
+    #[cfg(any(not(feature = "replay-engine"), feature = "corrected-score-window"))]
     const GOLDEN_TOTAL_CLAIMED: u128 = 430_841_686_064_034_204_316_387;
-    #[cfg(feature = "replay-engine")]
+    #[cfg(all(feature = "replay-engine", not(feature = "corrected-score-window")))]
     const GOLDEN_TOTAL_CLAIMED: u128 = 31_468_050_947_902_862_459_461;
 
     #[test]

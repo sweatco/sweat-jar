@@ -1112,7 +1112,7 @@ mod account_score_tests {
     /// Not run under `replay-engine`: that build intentionally reverts this
     /// fix to reproduce real historical (pre-v4.2.3) chain behavior — see
     /// `model/src/data/score/mod.rs`.
-    #[cfg(not(feature = "replay-engine"))]
+    #[cfg(any(not(feature = "replay-engine"), feature = "corrected-score-window"))]
     #[rstest]
     fn claim_before_record_score_does_not_destroy_interest(
         admin: AccountId,
@@ -1271,7 +1271,7 @@ mod account_score_tests {
     /// the account-level cache update — so they are not exposed to this.)
     ///
     /// Not run under `replay-engine` — see `claim_before_record_score_does_not_destroy_interest`.
-    #[cfg(not(feature = "replay-engine"))]
+    #[cfg(any(not(feature = "replay-engine"), feature = "corrected-score-window"))]
     #[rstest]
     fn withdraw_all_before_record_score_does_not_destroy_interest(
         admin: AccountId,
