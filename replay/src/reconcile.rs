@@ -1,6 +1,9 @@
 //! Single-user reconciliation: replay a user's timeline and compare the
 //! calculated total claim against the on-chain total.
 
+use std::sync::OnceLock;
+use std::time::Instant;
+
 use anyhow::{Context, Result};
 use sweat_jar::replay::engine::{self, ReplayStatus};
 use sweat_jar_model::data::product::Product;
@@ -8,6 +11,33 @@ use sweat_jar_model::data::product::Product;
 use crate::parse;
 use crate::snapshot::SnapshotSource;
 use crate::timeline::{self, UserSlice};
+
+/// Set `REPLAY_TIMING=1` to print one `TIMING …` line per account to stderr —
+/// a load breakdown (snapshot fetch vs. DB load vs. engine replay) for sizing
+/// a run before committing to it.
+fn timing_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| std::env::var_os("REPLAY_TIMING").is_some())
+}
+
+#[derive(Default)]
+struct Timing {
+    load_us: u128,
+    fetch_us: u128,
+    replay_us: u128,
+}
+
+impl Timing {
+    fn log(&self, account_id: i64, status: &str) {
+        if timing_enabled() {
+            let total = self.load_us + self.fetch_us + self.replay_us;
+            eprintln!(
+                "TIMING account={account_id} status={status} load_us={} fetch_us={} replay_us={} total_us={total}",
+                self.load_us, self.fetch_us, self.replay_us,
+            );
+        }
+    }
+}
 
 /// One reconciliation result row.
 #[derive(Debug, serde::Serialize)]
@@ -59,7 +89,11 @@ pub fn reconcile_user(
     products: &[Product],
     snapshot: &dyn SnapshotSource,
 ) -> Result<ReconRow> {
+    let mut timing = Timing::default();
+
+    let t = Instant::now();
     let (slice, timeline) = timeline::load_user(conn, backend_account_id)?;
+    timing.load_us = t.elapsed().as_micros();
     let actual = slice.onchain_claimed;
 
     // Always ask the snapshot source — `existed_at_start` is the export's own
@@ -69,19 +103,24 @@ pub fn reconcile_user(
     // account genuinely had no state at H, which is a complete answer, not a
     // gap: the first `Deposit` in its timeline creates it, exactly as the real
     // contract's `get_or_create_account_mut` does.
-    let raw_account = {
-        let baseline_raw: std::thread::Result<Result<Option<Vec<u8>>>> =
-            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                snapshot.raw_account(backend_account_id, &slice.near_account_id)
-            }));
+    let t = Instant::now();
+    let baseline_raw: std::thread::Result<Result<Option<Vec<u8>>>> =
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            snapshot.raw_account(backend_account_id, &slice.near_account_id)
+        }));
+    timing.fetch_us = t.elapsed().as_micros();
 
-        match baseline_raw {
-            Err(_) => return Ok(zero_calc_row(&slice, "error:snapshot panic")),
-            Ok(Err(e)) => {
-                return Ok(zero_calc_row(&slice, format!("error:{}", truncate(&e.to_string()))));
-            }
-            Ok(Ok(v)) => v,
+    let raw_account = match baseline_raw {
+        Err(_) => {
+            timing.log(backend_account_id, "error:snapshot panic");
+            return Ok(zero_calc_row(&slice, "error:snapshot panic"));
         }
+        Ok(Err(e)) => {
+            let status = format!("error:{}", truncate(&e.to_string()));
+            timing.log(backend_account_id, &status);
+            return Ok(zero_calc_row(&slice, status));
+        }
+        Ok(Ok(v)) => v,
     };
 
     // A non-authoritative source (the local `snapshots` cache) missing a row
@@ -104,14 +143,18 @@ pub fn reconcile_user(
     // unknown state; the NEXT account relies on `run_timeline`'s internal
     // `Context::new` calling `blockchain.take_storage()` to drain it. If that
     // drain ever goes away, this guard turns into a silent-divergence risk.
-    let outcome = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+    let t = Instant::now();
+    let unwind_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         engine::run_timeline(
             engine::Baseline { account_id, raw_account, timezone_ms: slice.timezone_ms },
             products,
             parse::H_MS,
             timeline,
         )
-    })) {
+    }));
+    timing.replay_us = t.elapsed().as_micros();
+
+    let outcome = match unwind_result {
         Ok(o) => o,
         Err(e) => {
             let msg = e
@@ -119,7 +162,9 @@ pub fn reconcile_user(
                 .map(|s| (*s).to_string())
                 .or_else(|| e.downcast_ref::<String>().cloned())
                 .unwrap_or_else(|| "engine panic".to_string());
-            return Ok(zero_calc_row(&slice, format!("error:{}", truncate(&msg))));
+            let status = format!("error:{}", truncate(&msg));
+            timing.log(backend_account_id, &status);
+            return Ok(zero_calc_row(&slice, status));
         }
     };
 
@@ -136,6 +181,8 @@ pub fn reconcile_user(
         ReplayStatus::Ok if no_baseline => "no_baseline".to_string(),
         ReplayStatus::Ok => "ok".to_string(),
     };
+
+    timing.log(backend_account_id, &status);
 
     Ok(ReconRow {
         account_id: slice.backend_account_id,

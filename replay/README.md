@@ -75,6 +75,17 @@ Without `--archival` (the local `snapshots` table, normally unpopulated),
 a missing row for an `existed_at_start` account IS a gap and is marked
 `no_baseline` — that table isn't authoritative the way a live lookup is.
 
+**`REPLAY_TIMING=1`** makes `reconcile_user` print one `TIMING account=<id>
+status=<s> load_us=<..> fetch_us=<..> replay_us=<..> total_us=<..>` line per
+account to stderr — a load breakdown (DB load / snapshot fetch / engine
+replay) for sizing a run before committing to it. `replay_us` scales
+linearly with the account's event count (~9ms/event on this crate's
+`release-replay` build — the near-sdk mock's per-call overhead dominates, not
+the interest math); `fetch_us` is the archival RPC round-trip and is roughly
+flat per account (~0.4s on FastNEAR). For a lot of accounts, replay CPU time
+rivals or exceeds the archival fetch — worth measuring on a sample before
+assuming the RPC is the only bottleneck.
+
 **Results live in the database, not just the CSV.** Each `ReconRow` is upserted
 into the `results` table (keyed by `backend_account_id`) as soon as it's
 computed — a crash or a killed process loses at most the row currently in
